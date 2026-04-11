@@ -89,32 +89,11 @@ O projeto adota boas práticas de desenvolvimento e automação de qualidade de 
 
 ---
 
-## 📁 Estrutura do projeto
-
-tcc-project/
-├─ apps/
-│  ├─ backend/
-│  │  ├─ main.py
-│  │  ├─ requirements.txt
-│  │  └─ venv/
-│  ├─ frontend/
-│  └─ ml/
-│     ├─ requirements.txt
-│     └─ venv/
-├─ docs/
-├─ docker-compose.yml
-├─ .pre-commit-config.yaml
-├─ .gitignore
-└─ README.md
-
-Os diretórios venv/ não são versionados e devem ser criados localmente.
-
----
-
 ## 🧠 Observações importantes
 
 - Cada aplicação (backend e ml) possui seu próprio ambiente virtual (venv) e arquivo requirements.txt.
 - Dependências não são versionadas diretamente, apenas listadas.
+- Os diretórios venv/ não são versionados e devem ser criados localmente.
 - O projeto está preparado para execução local e futura expansão para ambientes de produção.
 
 ---
