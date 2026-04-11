@@ -1,0 +1,33 @@
+version: "3.9"
+
+services:
+  api:
+    build: ./apps/backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./apps/backend:/app
+    command: uvicorn main:app --host 0.0.0.0 --port 8000
+
+  frontend:
+    build: ./apps/frontend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./apps/frontend:/app
+    command: pnpm dev
+
+  ml:
+    build: ./apps/ml
+    volumes:
+      - ./apps/ml:/app
+    command: jupyter notebook --ip=0.0.0.0 --allow-root
+
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: tcc_db
+    ports:
+      - "5432:5432"
