@@ -68,6 +68,6 @@ docs/
 
 ## 👨‍💻 Autor
 
-Ronaldo Simeone Antonio
-Lucas Silveira
-Raphael Okuyama
+- Ronaldo Simeone Antonio
+- Lucas Silveira
+- Raphael Okuyama
