@@ -11,30 +11,51 @@ Projeto de TCC utilizando arquitetura de monorepo com:
 
 ---
 
+## 🏗️ Arquitetura
+
+O projeto segue o padrão monorepo, no qual múltiplas aplicações e serviços coexistem no mesmo repositório, cada um com suas responsabilidades bem definidas.
+
+### Tecnologias utilizadas
+
+- Backend: FastAPI (Python)
+- Frontend: Next.js (React + TypeScript)
+- Machine Learning: Python (scripts e notebooks)
+- Banco de dados: PostgreSQL
+- Infraestrutura: Docker e Docker Compose
+
+---
+
 ## ⚙️ Pré-requisitos
 
-- Docker e Docker Compose
-- Node.js + pnpm
-- Python 3.11+
+Antes de executar o projeto, é necessário ter instalado:
+
+- Docker
+- Docker Compose
+- Node.js
+- pnpm
+- Python 3.11 ou superior
 
 ---
 
 ## ▶️ Como rodar o projeto
 
-### 1. Clone o repositório
+### 1️⃣ Clone o repositório
 
-git clone <url-do-repositorio>
+git clone https://github.com/ronaldosimeone/tcc-project.git
 
-### 2. Acesse a pasta
+### 2️⃣ Acesse a pasta do projeto
 
 cd tcc-project
 
-### 3. Configure as variáveis de ambiente
+### 3️⃣ Configure as variáveis de ambiente
 
-Copie o arquivo:
+Copie o arquivo de exemplo:
+
 cp .env.example .env
 
-### 4. Suba os serviços
+Ajuste as variáveis conforme necessário para o seu ambiente.
+
+### 4️⃣ Suba os serviços com Docker
 
 docker-compose up --build
 
@@ -42,32 +63,70 @@ docker-compose up --build
 
 ## 🌐 Serviços disponíveis
 
+Após a inicialização, os serviços estarão acessíveis nos seguintes endereços:
+
 - Frontend: http://localhost:3000
 - Backend: http://localhost:8000
-- Banco de dados: localhost:5432
+- Banco de dados (PostgreSQL): localhost:5432
 
 ---
 
-## 🧪 Padrões do projeto
+## 🧪 Qualidade e padrões de código
 
-- Python: Ruff, Black, Mypy
-- TypeScript: ESLint, Prettier
-- Hooks automáticos com pre-commit
+O projeto adota boas práticas de desenvolvimento e automação de qualidade de código.
+
+### Backend (Python)
+- Ruff (linting)
+- Black (formatação)
+- Mypy (verificação de tipos)
+
+### Frontend (TypeScript)
+- ESLint (linting)
+- Prettier (formatação)
+
+### Automação
+- pre-commit para execução automática de checks antes dos commits
 
 ---
 
-## 📁 Estrutura
+## 📁 Estrutura do projeto
 
-apps/
-backend/
-frontend/
-ml/
-docs/
+tcc-project/
+├─ apps/
+│  ├─ backend/
+│  │  ├─ main.py
+│  │  ├─ requirements.txt
+│  │  └─ venv/
+│  ├─ frontend/
+│  └─ ml/
+│     ├─ requirements.txt
+│     └─ venv/
+├─ docs/
+├─ docker-compose.yml
+├─ .pre-commit-config.yaml
+├─ .gitignore
+└─ README.md
+
+Os diretórios venv/ não são versionados e devem ser criados localmente.
 
 ---
 
-## 👨‍💻 Autor
+## 🧠 Observações importantes
 
-- Ronaldo Simeone Antonio
-- Lucas Silveira
-- Raphael Okuyama
+- Cada aplicação (backend e ml) possui seu próprio ambiente virtual (venv) e arquivo requirements.txt.
+- Dependências não são versionadas diretamente, apenas listadas.
+- O projeto está preparado para execução local e futura expansão para ambientes de produção.
+
+---
+
+## 👨‍💻 Autores
+
+- Ronaldo Simeone Antonio  
+- Lucas Silveira  
+- Raphael Okuyama  
+
+---
+
+## 📄 Licença
+
+Este projeto é desenvolvido exclusivamente para fins acadêmicos.
