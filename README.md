@@ -4,50 +4,70 @@
 
 ## Descrição
 
-Projeto de Trabalho de Conclusão de Curso (Engenharia de Computação - FACENS) focado em uma plataforma integrada para gestão de ativos industriais no contexto da Indústria 4.0. O sistema une manutenção preditiva ao suporte técnico automatizado, utilizando uma arquitetura de monorepo.
+Projeto de Trabalho de Conclusão de Curso focado em uma plataforma integrada para gestão de ativos industriais no contexto da Indústria 4.0. O sistema une manutenção preditiva ao suporte técnico automatizado, utilizando uma arquitetura de monorepo.
 
 O ecossistema é composto por:
 - **Backend:** FastAPI
 - **Frontend:** Next.js
-- **Machine Learning & IA:** Python (Scripts, Notebooks, LLM via MCP)
+- **Machine Learning Preditivo:** Python (Scikit-learn, ONNX)
+- **Assistente Inteligente (IA Generativa):** LLM Local via Ollama + RAG (ChromaDB)
 - **Banco de dados:** PostgreSQL
 
 ---
 
-## Arquitetura
+## 🧠 Inteligência Artificial e Suporte Técnico via MCP
 
-O projeto segue o padrão monorepo, no qual múltiplas aplicações e serviços coexistem no mesmo repositório, cada um com suas responsabilidades bem definidas e orquestrados de forma unificada.
+O grande diferencial deste sistema é a capacidade de não apenas prever a falha através de Machine Learning clássico, mas também orientar o operador na sua resolução prática utilizando Inteligência Artificial Generativa e o **Model Context Protocol (MCP)**.
 
-### Tecnologias utilizadas
+### 1. O Agente de Manutenção Assistida
+Quando o modelo preditivo detecta uma anomalia (ex: aumento súbito no desvio padrão da vibração), o sistema aciona automaticamente nosso **Agente de Suporte**:
+* **Ollama (Cérebro):** Executa o LLM (Llama 3.2 de 3B) 100% localmente para processar o diagnóstico, garantindo privacidade e funcionamento offline.
+* **MCP (A Ponte de Conhecimento):** O Agente utiliza um servidor MCP customizado para conectar o LLM aos manuais de instrução técnicos da máquina armazenados no banco de dados vetorial.
+* **RAG (Retrieval-Augmented Generation):** Através do MCP, o Agente realiza uma busca semântica no **ChromaDB**, extrai o capítulo exato do manual sobre a falha iminente e entrega ao técnico um plano de ação passo a passo.
 
-- **Backend:** Python, FastAPI, SQLAlchemy, Pydantic, Celery, Redis
+### 2. Fluxo de Resolução
+1. **Detecção:** O sensor reporta anomalia (análise via Isolation Forest/XGBoost).
+2. **Consulta via MCP:** O Agente de IA é acionado e chama a ferramenta de busca vetorial nos manuais técnicos.
+3. **Suporte:** O técnico recebe no Dashboard do Next.js a causa provável e o procedimento de reparo extraído diretamente da documentação oficial do equipamento, eliminando alucinações.
+
+---
+
+## Arquitetura e Tecnologias
+
+O projeto segue o padrão monorepo, no qual múltiplas aplicações e serviços coexistem no mesmo repositório, cada um com suas responsabilidades bem definidas.
+
+### Stack Tecnológico
+
+- **Backend:** Python, FastAPI, SQLAlchemy, Pydantic v2, Celery, Redis
 - **Frontend:** Next.js 15 (App Router), React 19, TypeScript, Tailwind CSS, Shadcn/ui
-- **Machine Learning:** Scikit-learn, XGBoost, ONNX Runtime, ChromaDB, Anthropic SDK
+- **Machine Learning (Clássico):** Scikit-learn, XGBoost, ONNX Runtime
+- **IA Generativa & Agentes:** Ollama, ChromaDB, Model Context Protocol (MCP)
 - **Infraestrutura:** Docker e Docker Compose, Nginx
 
 ### Estrutura do Monorepo
 
-```
+```text
 projeto-tcc/
 ├── apps/
-│   ├── backend/                 # API FastAPI (Clean Architecture)
-│   │   ├── src/
-│   │   │   ├── core/            # config, database, exceptions
-│   │   │   ├── routers/         # I/O e injeção de dependência
-│   │   │   ├── schemas/         # DTOs Pydantic v2
-│   │   │   ├── services/        # Regras de negócio
-│   │   │   └── models/          # Modelos SQLAlchemy
-│   │   └── tests/
-│   ├── frontend/                # Dashboard Next.js 15
-│   └── ml/                      # Pipelines de Machine Learning
-│       ├── data/
-│       │   ├── raw/             # Datasets originais (ignorado pelo git)
-│       │   └── processed/       # Parquet prontos para uso (ignorado pelo git)
-│       ├── notebooks/           # Análise exploratória (EDA)
-│       ├── src/                 # Scripts e classes de ML
-│       └── tests/
+│   ├── backend/                 # API FastAPI (Clean Architecture)
+│   │   ├── src/
+│   │   │   ├── core/            # config, database, exceptions
+│   │   │   ├── routers/         # I/O e injeção de dependência
+│   │   │   ├── schemas/         # DTOs Pydantic v2
+│   │   │   ├── services/        # Regras de negócio
+│   │   │   └── models/          # Modelos SQLAlchemy
+│   │   └── tests/
+│   ├── frontend/                # Dashboard Next.js 15
+│   └── ml/                      # Pipelines de Machine Learning
+│       ├── data/
+│       │   ├── raw/             # Datasets originais (ignorado pelo git)
+│       │   └── processed/       # Parquet prontos para uso (ignorado pelo git)
+│       ├── notebooks/           # Análise exploratória (EDA)
+│       ├── src/                 # Scripts e classes de ML
+│       └── tests/
 ├── .env.example
-├── CLAUDE.md                    # Diretrizes de arquitetura e padrões de código
+├── CLAUDE.md                    # Diretrizes de arquitetura e padrões de código
+├── AGENTS.md                    # Definição de MCPs e Personas de IA utilizadas no dev
 └── docker-compose.yml
 ```
 
@@ -60,6 +80,7 @@ Antes de executar o projeto, é necessário ter instalado:
 - Docker e Docker Compose
 - Node.js + pnpm
 - Python 3.11 ou superior
+- [Ollama](https://ollama.com/) (para o módulo de Assistente de Manutenção)
 
 ---
 
@@ -68,7 +89,7 @@ Antes de executar o projeto, é necessário ter instalado:
 ### 1. Clone o repositório
 
 ```bash
-git clone https://github.com/ronaldosimeone/tcc-project.git
+git clone [https://github.com/ronaldosimeone/tcc-project.git](https://github.com/ronaldosimeone/tcc-project.git)
 cd tcc-project
 ```
 
@@ -76,7 +97,7 @@ cd tcc-project
 
 ```bash
 cp .env.example .env
-# Ajuste as variáveis (credenciais de banco, URLs, etc.)
+# Ajuste as variáveis (credenciais de banco, URLs do Ollama, etc.)
 ```
 
 ### 3. Suba os serviços com Docker
@@ -89,7 +110,7 @@ docker-compose up --build
 
 ## Serviços disponíveis
 
-Após a inicialização:
+Após a inicialização, os serviços estarão operando nas seguintes portas:
 
 | Serviço | URL |
 |---|---|
@@ -97,10 +118,11 @@ Após a inicialização:
 | Backend (API) | http://localhost:8000 |
 | Documentação Swagger | http://localhost:8000/docs |
 | PostgreSQL | localhost:5432 |
+| Ollama (LLM Local) | localhost:11434 |
 
 ---
 
-## Backend — Setup FastAPI (Sprint 1, Task 4)
+## Backend — Setup FastAPI
 
 API REST construída com FastAPI, SQLAlchemy assíncrono e Pydantic v2, seguindo Clean Architecture.
 
@@ -132,131 +154,43 @@ Resposta esperada:
 }
 ```
 
-Quando o banco não está acessível, `status` retorna `"degraded"` sem derrubar a API.
-
-### Variáveis de ambiente do backend
-
-| Variável | Padrão | Descrição |
-|---|---|---|
-| `DATABASE_URL` | `postgresql+asyncpg://postgres:postgres@localhost:5432/tcc_db` | Connection string do PostgreSQL |
-| `OLLAMA_BASE_URL` | `http://host.docker.internal:11434` | Endpoint do LLM local (Ollama) |
-| `ALLOWED_ORIGINS` | `["http://localhost:3000"]` | CORS — origens permitidas |
-| `DEBUG` | `false` | Ativa echo SQL e logs verbosos |
-
-### Testes do backend
-
-```bash
-cd apps/backend
-pytest tests/ -v
-```
-
-Os testes usam SQLite in-memory via `aiosqlite` — não exigem PostgreSQL rodando.
-
 ---
 
-## Machine Learning — Dataset MetroPT-3 (Sprint 1, Task 3)
+## Machine Learning — Dataset MetroPT-3
 
-Pipeline de ingestão do dataset [MetroPT-3](https://archive.ics.uci.edu/dataset/791/metropt-3+dataset) (UCI ML Repository): compressor de ar de um trem do metrô do Porto, utilizado para detecção de falhas preditivas.
+Pipeline de ingestão e processamento do dataset [MetroPT-3](https://archive.ics.uci.edu/dataset/791/metropt-3+dataset) (compressor de ar de um trem do metrô do Porto).
 
-### Ingestão dos dados
-
-O script baixa o ZIP da UCI, valida o schema e persiste como `.parquet`.
-**É idempotente**: se o `.parquet` já existir, a execução é ignorada.
+O script baixa o ZIP da UCI, valida o schema e persiste como `.parquet`. A ingestão é idempotente.
 
 ```bash
 # A partir da raiz do monorepo
 python -m apps.ml.src.ingest_metropt
-
-# Ou a partir de apps/ml/
-cd apps/ml
-python src/ingest_metropt.py
 ```
-
-Saída esperada:
-```
-[INFO] Data directories are ready: …/data/raw | …/data/processed
-[INFO] Downloading MetroPT-3 dataset from https://…
-[INFO] Download complete: … (XX.XX MB)
-[INFO] Loaded NNNNNN rows × 16 columns.
-[INFO] Schema validation passed – all 16 expected columns present.
-[INFO] Preprocessing complete. Final shape: NNNNNN rows × 16 columns.
-[INFO] Saved Parquet to …/data/processed/metropt3.parquet
-[INFO] Ingestion pipeline finished successfully.
-```
-
-### Análise Exploratória (EDA)
-
-```bash
-cd apps/ml
-jupyter lab notebooks/01_eda_metropt.ipynb
-```
-
-O notebook cobre:
-- Estatísticas descritivas e verificação de nulos
-- Distribuição de classes (labels de falha)
-- Séries temporais dos sensores (TP2, TP3, H1, DV_pressure, Motor_current, Oil_temperature)
-- Histogramas de distribuição individual
-- Matriz de correlação com anotações numéricas
-- Detecção de outliers via IQR
 
 ---
 
-## Machine Learning — Feature Engineering (Sprint 2, RF-02)
+## Machine Learning — Feature Engineering
 
-### Por que essas features?
+Para alimentar a IA preditiva, o sistema converte os dados brutos ruidosos em indicativos dinâmicos de falha através da classe `MetroPTPreprocessor`. O compressor opera em ciclos de carga/descarga a ~1 Hz, logo, falhas mecânicas manifestam-se como mudanças na dinâmica do sinal.
 
-O compressor opera em ciclos de carga/descarga a ~1 Hz. Falhas mecânicas não se manifestam como limiares violados em um único instante — elas aparecem como **mudanças na dinâmica** do sinal ao longo do tempo. As quatro transformações abaixo capturam essa dinâmica com custo computacional mínimo.
+As transformações incluem:
 
-#### 1. Imputação de Nulos (ffill → bfill)
+1. **Imputação de Nulos:** `ffill` seguido de `bfill` para cobrir perdas de pacote sem gerar saltos irreais.
+2. **Delta de Pressão (Δp):** Indicador de eventos anômalos de válvula.
+3. **Desvio Padrão Janelado (std_5):** Captura a instabilidade mecânica e desgaste de rolamentos (volatilidade do sinal).
+4. **Médias Móveis (MA_5 e MA_15):** Suaviza ruídos (alta frequência) e acusa tendências de degradação térmica (crossover).
 
-Sensores industriais produzem leituras ausentes por perda de pacote, reinicialização do CLP ou ruído elétrico. A **propagação da última leitura válida** (`ffill`) é semanticamente correta para séries temporais físicas: o compressor não muda de estado instantaneamente. O `bfill` subsequente cobre lacunas no início da série onde não há valor anterior.
-
-#### 2. Delta de Pressão — Δp(t)
-
-```
-Δp(t) = p(t) − p(t−1)
-```
-
-A derivada discreta da pressão de saída (`TP2`) é um indicador de **eventos de válvula**. Um `Δp` negativo abrupto indica abertura inesperada da válvula de alívio; um `Δp` positivo fora do perfil de carga sinaliza bloqueio na linha de descarga.
-
-#### 3. Desvio Padrão Janelado — std_w(t)
-
-```
-std_w(t) = σ( x[t−w+1 : t+1] )    (w = 5 por padrão)
-```
-
-A **volatilidade local** captura instabilidade mecânica crescente. Uma janela de 5 amostras cobre exatamente um ciclo de carga/descarga a 1 Hz. Um aumento em `Motor_current_std_5` antecede falhas de rolamentos; um aumento em `TP2_std_5` antecede falhas de anel de pistão (documentadas no paper original do MetroPT-3).
-
-#### 4. Médias Móveis — MA_5 e MA_15
-
-```
-MA_k(t) = mean( x[t−k+1 : t+1] )    k ∈ {5, 15}
-```
-
-- **Suavização de ruído**: `MA_5` remove oscilações de alta frequência sem atraso excessivo.
-- **Detecção de tendência**: quando `MA_5` cruza `MA_15` para cima em `Oil_temperature`, indica aquecimento acelerado antes de um desligamento térmico — sinal de manutenção preventiva.
+Essa engenharia é 100% compatível com a API do Scikit-Learn e entra direto no Pipeline de inferência.
 
 ### Uso do `MetroPTPreprocessor`
 
 ```python
+from sklearn.pipeline import Pipeline
+from sklearn.ensemble import IsolationForest
 from apps.ml.src.preprocessing import MetroPTPreprocessor
 import pandas as pd
 
 df_raw = pd.read_parquet("apps/ml/data/processed/metropt3.parquet")
-
-preprocessor = MetroPTPreprocessor(
-    window_std=5,
-    window_ma_short=5,
-    window_ma_long=15,
-)
-df_features = preprocessor.fit_transform(df_raw)
-```
-
-Por herdar `BaseEstimator` + `TransformerMixin` do scikit-learn, pode ser encadeado diretamente em um `Pipeline`:
-
-```python
-from sklearn.pipeline import Pipeline
-from sklearn.ensemble import IsolationForest
 
 pipe = Pipeline([
     ("features", MetroPTPreprocessor()),
@@ -270,43 +204,42 @@ pipe.fit(df_raw)
 ```bash
 # A partir da raiz do monorepo
 pytest apps/ml/tests/ -v
-
-# Com relatório de cobertura
-pytest apps/ml/tests/ -v --cov=apps.ml.src --cov-report=term-missing
 ```
 
 Os testes utilizam a fixture `tmp_path` do pytest — nenhum arquivo é gravado em `data/` durante a execução.
 
 ---
 
-## Qualidade e padrões de código
+## Qualidade e Padrões de Código
+
+O repositório é governado por regras estritas descritas no arquivo `CLAUDE.md`.
 
 ### Backend (Python)
-- **Ruff** — linting
-- **Black** — formatação
-- **Mypy** — tipagem estática
+- **Tipagem Estrita:** Pydantic v2 e Type Hints.
+- **Formatação e Linting:** Ruff e Black.
+- **Análise Estática:** Mypy.
 
-### Frontend (TypeScript)
-- **ESLint** — linting e regras de React
-- **Prettier** — formatação
+### Frontend (Next.js/TypeScript)
+- **Tipagem:** TypeScript estrito (proibido `any`).
+- **Arquitetura:** Prioridade para Server Components; Client Components isolados para streaming/SSE.
+- **UI:** Componentização com Shadcn/ui e TailwindCSS.
 
 ### Automação (Pre-commit)
+
+O pipeline de CI/CD barra pull requests que não passem nos testes ou linters. Para instalar os ganchos locais:
 
 ```bash
 pip install pre-commit
 pre-commit install
 ```
 
-O pipeline de CI/CD (GitHub Actions) barra pull requests que não passem nos testes ou linters.
-
 ---
 
-## Observações importantes
+## Observações Arquiteturais
 
 - Cada aplicação (`backend` e `ml`) possui seu próprio `requirements.txt`.
-- Os diretórios `venv/` e `node_modules/` estão no `.gitignore` e não devem ser versionados.
 - A pasta `apps/ml/data/` está no `.gitignore` — **nunca commite os datasets**.
-- Modelos treinados devem ser exportados para **ONNX** antes de serem servidos pela API (`CLAUDE.md §4`).
+- Modelos preditivos treinados devem ser exportados para **ONNX** antes de serem servidos pela API para garantir máxima performance de inferência.
 
 ---
 
