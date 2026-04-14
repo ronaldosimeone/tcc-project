@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   api:
     build: ./apps/backend
@@ -7,7 +5,14 @@ services:
       - "8000:8000"
     volumes:
       - ./apps/backend:/app
-    command: uvicorn main:app --host 0.0.0.0 --port 8000
+    env_file:
+      - .env
+    environment:
+      - PYTHONPATH=/app
+    depends_on:
+      db:
+        condition: service_healthy
+    command: uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
 
   frontend:
     build: ./apps/frontend
@@ -15,19 +20,30 @@ services:
       - "3000:3000"
     volumes:
       - ./apps/frontend:/app
+      - /app/node_modules
+    env_file:
+      - .env
     command: pnpm dev
 
   ml:
     build: ./apps/ml
+    ports:
+      - "8888:8888"
     volumes:
       - ./apps/ml:/app
-    command: jupyter notebook --ip=0.0.0.0 --allow-root
+    env_file:
+      - .env
+    # Adicionado --NotebookApp.token='admin' para facilitar seu acesso
+    command: jupyter notebook --ip=0.0.0.0 --allow-root --no-browser --NotebookApp.token='admin'
 
   db:
     image: postgres:15
-    environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: tcc_db
+    env_file:
+      - .env
     ports:
       - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d tcc_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
