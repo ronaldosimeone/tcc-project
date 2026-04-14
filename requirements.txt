@@ -5,3 +5,4 @@ scikit-learn
 imbalanced-learn
 pyarrow
 ipykernel
+pytest
