@@ -9,6 +9,8 @@ apps/ml/data/
 *.csv
 
 # Python
+# Python Virtual Environment
+.venv/
 *.pyc
 *.pyo
 .pytest_cache/
