@@ -70,8 +70,6 @@ projeto-tcc/
 │       ├── src/                 # Scripts (Ingestão, Preprocessing, Balancing, Train)
 │       └── tests/
 ├── .env.example
-├── CLAUDE.md                    # Diretrizes de arquitetura e padrões de código
-├── AGENTS.md                    # Definição de MCPs e Personas de IA utilizadas no dev
 └── docker-compose.yml
 ```
 
@@ -117,6 +115,7 @@ docker-compose up --build
 O módulo de ML é isolado do sistema global para garantir que as dependências pesadas de dados (Pandas, Scikit-Learn) não afetem o backend.
 
 ### Configuração do Ambiente Virtual (Local)
+
 Para desenvolver ou rodar análises localmente sem sujar o Python global:
 
 ```bash
@@ -126,6 +125,7 @@ python -m venv .venv
 
 # Instale as dependências isoladas do módulo de Machine Learning
 pip install -r apps/ml/requirements.txt
+```
 
 ### 1\. Ingestão de Dados (MetroPT-3)
 
@@ -170,9 +170,37 @@ API REST construída com FastAPI, SQLAlchemy assíncrono e Pydantic v2, seguindo
 
 ```bash
 cd apps/backend
+
+# Crie e ative uma venv exclusiva para o backend
+python -m venv .venv
+.\.venv\Scripts\activate  # No Windows
+
+# Instale as dependências
 pip install -r requirements.txt
+
+# Inicie o servidor
 uvicorn src.main:app --reload --port 8000
 ```
+
+-----
+
+## Frontend — Setup Next.js
+
+Dashboard interativo construído com Next.js 15, React 19 e Tailwind CSS.
+
+### Rodando o frontend localmente
+
+```bash
+cd apps/frontend
+
+# Instale as dependências usando pnpm
+pnpm install
+
+# Inicie o servidor de desenvolvimento
+pnpm dev
+```
+
+O painel estará disponível em `http://localhost:3000`.
 
 -----
 
