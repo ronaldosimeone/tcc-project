@@ -117,7 +117,6 @@ docker-compose up --build
 O módulo de ML é isolado do sistema global para garantir que as dependências pesadas de dados (Pandas, Scikit-Learn) não afetem o backend.
 
 ### Configuração do Ambiente Virtual (Local)
-
 Para desenvolver ou rodar análises localmente sem sujar o Python global:
 
 ```bash
@@ -125,9 +124,8 @@ Para desenvolver ou rodar análises localmente sem sujar o Python global:
 python -m venv .venv
 .\.venv\Scripts\activate  # No Windows
 
-# Instale as dependências isoladas
-pip install -r requirements.txt
-```
+# Instale as dependências isoladas do módulo de Machine Learning
+pip install -r apps/ml/requirements.txt
 
 ### 1\. Ingestão de Dados (MetroPT-3)
 
