@@ -42,6 +42,13 @@ class ForbiddenError(AppError):
     detail = "Insufficient permissions."
 
 
+class ModelNotAvailableError(AppError):
+    """Raised when the ML model singleton was not loaded during startup."""
+
+    status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+    detail = "Prediction model is not available. Check application startup logs."
+
+
 # ---------------------------------------------------------------------------
 # Global handler – registered in main.py
 # ---------------------------------------------------------------------------

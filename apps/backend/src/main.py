@@ -10,6 +10,7 @@ Responsibilities of this module:
 
 from __future__ import annotations
 
+import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
@@ -20,6 +21,10 @@ from src.core.config import settings
 from src.core.database import engine
 from src.core.exceptions import AppError, app_error_handler
 from src.routers import health as health_router
+from src.routers import predict as predict_router
+from src.services.model_service import load_model
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -40,7 +45,18 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         - Dispose the SQLAlchemy connection pool gracefully.
     """
     # ── Startup ──────────────────────────────────────────────────────────
-    # ONNX singleton will be loaded here in a future sprint (CLAUDE.md §4).
+    # [RNF-11] Load the Random Forest exactly once into app.state.
+    # A missing artefact degrades /predict to HTTP 503 but keeps the API alive.
+    try:
+        app.state.model_service = load_model(settings.model_path)
+    except FileNotFoundError:
+        app.state.model_service = None
+        logger.warning(
+            "[RNF-11] Model artefact not found at '%s' — POST /predict will "
+            "return HTTP 503 until the model is trained and placed at that path.",
+            settings.model_path,
+        )
+
     yield
 
     # ── Shutdown ─────────────────────────────────────────────────────────
@@ -77,6 +93,7 @@ def create_app() -> FastAPI:
 
     # ── Routers ───────────────────────────────────────────────────────────
     app.include_router(health_router.router)
+    app.include_router(predict_router.router)
 
     return app
 

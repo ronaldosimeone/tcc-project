@@ -7,8 +7,15 @@ placed at the project root.  Variable names are case-insensitive.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from pydantic import Field, PostgresDsn
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Resolved at import time: apps/backend/src/core/config.py → parents[3] = apps/
+_DEFAULT_MODEL_PATH: Path = (
+    Path(__file__).resolve().parents[3] / "ml" / "models" / "rf_model.joblib"
+)
 
 
 class Settings(BaseSettings):
@@ -43,6 +50,15 @@ class Settings(BaseSettings):
     allowed_origins: list[str] = Field(
         default=["http://localhost:3000", "http://127.0.0.1:3000"],
         alias="ALLOWED_ORIGINS",
+    )
+
+    # ── Machine Learning ──────────────────────────────────────────────────
+    # Override via MODEL_PATH env-var when deploying in Docker or CI.
+    # Default resolves to apps/ml/models/rf_model.joblib inside the monorepo.
+    model_path: Path = Field(
+        default=_DEFAULT_MODEL_PATH,
+        alias="MODEL_PATH",
+        description="Absolute path to the trained Random Forest .joblib artefact.",
     )
 
 

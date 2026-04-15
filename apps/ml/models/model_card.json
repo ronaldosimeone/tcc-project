@@ -1,0 +1,125 @@
+{
+  "schema_version": "1.0",
+  "trained_at": "2026-04-15T04:30:29.209938+00:00",
+  "model_type": "RandomForestClassifier",
+  "dataset": "MetroPT-3",
+  "target_column": "LPS",
+  "requirements": {
+    "RF-04": "F1-Score (class 1 / fault) >= 0.75",
+    "RNF-10": "Model versioned with structured metadata"
+  },
+  "train_size": 2418816,
+  "test_size": 303390,
+  "cv_folds": 3,
+  "test_size_ratio": 0.2,
+  "random_state": 42,
+  "param_grid_used": {
+    "n_estimators": [
+      100,
+      200
+    ],
+    "max_depth": [
+      10,
+      20,
+      null
+    ],
+    "min_samples_leaf": [
+      1,
+      2
+    ],
+    "max_features": [
+      "sqrt"
+    ]
+  },
+  "best_hyperparameters": {
+    "bootstrap": true,
+    "ccp_alpha": 0.0,
+    "class_weight": null,
+    "criterion": "gini",
+    "max_depth": null,
+    "max_features": "sqrt",
+    "max_leaf_nodes": null,
+    "max_samples": null,
+    "min_impurity_decrease": 0.0,
+    "min_samples_leaf": 1,
+    "min_samples_split": 2,
+    "min_weight_fraction_leaf": 0.0,
+    "monotonic_cst": null,
+    "n_estimators": 100,
+    "n_jobs": -1,
+    "oob_score": false,
+    "random_state": 42,
+    "verbose": 0,
+    "warm_start": false
+  },
+  "feature_count": 36,
+  "feature_names": [
+    "TP2",
+    "TP3",
+    "H1",
+    "DV_pressure",
+    "Reservoirs",
+    "Oil_temperature",
+    "Motor_current",
+    "COMP",
+    "DV_eletric",
+    "Towers",
+    "MPG",
+    "Pressure_switch",
+    "Oil_level",
+    "Caudal_impulses",
+    "TP2_delta",
+    "TP2_std_5",
+    "TP3_std_5",
+    "H1_std_5",
+    "DV_pressure_std_5",
+    "Reservoirs_std_5",
+    "Oil_temperature_std_5",
+    "Motor_current_std_5",
+    "TP2_ma_5",
+    "TP2_ma_15",
+    "TP3_ma_5",
+    "TP3_ma_15",
+    "H1_ma_5",
+    "H1_ma_15",
+    "DV_pressure_ma_5",
+    "DV_pressure_ma_15",
+    "Reservoirs_ma_5",
+    "Reservoirs_ma_15",
+    "Oil_temperature_ma_5",
+    "Oil_temperature_ma_15",
+    "Motor_current_ma_5",
+    "Motor_current_ma_15"
+  ],
+  "metrics": {
+    "f1_class1_test": 0.9909,
+    "roc_auc_test": 1.0,
+    "classification_report": {
+      "0": {
+        "precision": 0.9999966924107364,
+        "recall": 0.9999404667407525,
+        "f1-score": 0.9999685787853881,
+        "support": 302352.0
+      },
+      "1": {
+        "precision": 0.9829383886255925,
+        "recall": 0.9990366088631984,
+        "f1-score": 0.9909221213569039,
+        "support": 1038.0
+      },
+      "accuracy": 0.9999373743366624,
+      "macro avg": {
+        "precision": 0.9914675405181644,
+        "recall": 0.9994885378019756,
+        "f1-score": 0.995445350071146,
+        "support": 303390.0
+      },
+      "weighted avg": {
+        "precision": 0.9999383301729271,
+        "recall": 0.9999373743366624,
+        "f1-score": 0.9999376277889453,
+        "support": 303390.0
+      }
+    }
+  }
+}
