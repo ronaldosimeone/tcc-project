@@ -1,73 +1,48 @@
 {
   "schema_version": "1.0",
-  "trained_at": "2026-04-15T04:30:29.209938+00:00",
+  "trained_at": "2026-04-15T16:59:55.417948+00:00",
   "model_type": "RandomForestClassifier",
   "dataset": "MetroPT-3",
-  "target_column": "LPS",
+  "target_column": "anomaly",
   "requirements": {
     "RF-04": "F1-Score (class 1 / fault) >= 0.75",
     "RNF-10": "Model versioned with structured metadata"
   },
-  "train_size": 2418816,
+  "train_size": 2379190,
   "test_size": 303390,
-  "cv_folds": 3,
   "test_size_ratio": 0.2,
   "random_state": 42,
+  "cv_folds": 3,
   "param_grid_used": {
-    "n_estimators": [
+    "rf__n_estimators": [
       100,
       200
     ],
-    "max_depth": [
+    "rf__max_depth": [
       10,
-      20,
-      null
-    ],
-    "min_samples_leaf": [
-      1,
-      2
-    ],
-    "max_features": [
-      "sqrt"
+      15,
+      20
     ]
   },
   "best_hyperparameters": {
-    "bootstrap": true,
-    "ccp_alpha": 0.0,
-    "class_weight": null,
-    "criterion": "gini",
-    "max_depth": null,
-    "max_features": "sqrt",
-    "max_leaf_nodes": null,
-    "max_samples": null,
-    "min_impurity_decrease": 0.0,
-    "min_samples_leaf": 1,
-    "min_samples_split": 2,
-    "min_weight_fraction_leaf": 0.0,
-    "monotonic_cst": null,
-    "n_estimators": 100,
-    "n_jobs": -1,
-    "oob_score": false,
-    "random_state": 42,
-    "verbose": 0,
-    "warm_start": false
+    "rf__max_depth": 20,
+    "rf__n_estimators": 200
   },
-  "feature_count": 36,
+  "best_cv_f1": 0.9564,
+  "feature_count": 34,
   "feature_names": [
     "TP2",
     "TP3",
     "H1",
     "DV_pressure",
     "Reservoirs",
-    "Oil_temperature",
     "Motor_current",
+    "Oil_temperature",
     "COMP",
     "DV_eletric",
     "Towers",
     "MPG",
-    "Pressure_switch",
     "Oil_level",
-    "Caudal_impulses",
     "TP2_delta",
     "TP2_std_5",
     "TP3_std_5",
@@ -92,32 +67,32 @@
     "Motor_current_ma_15"
   ],
   "metrics": {
-    "f1_class1_test": 0.9909,
+    "f1_class1_test": 0.9703,
     "roc_auc_test": 1.0,
     "classification_report": {
       "0": {
-        "precision": 0.9999966924107364,
-        "recall": 0.9999404667407525,
-        "f1-score": 0.9999685787853881,
-        "support": 302352.0
+        "precision": 0.9999461397337283,
+        "recall": 0.9988231298693002,
+        "f1-score": 0.9993843193195887,
+        "support": 297399.0
       },
       "1": {
-        "precision": 0.9829383886255925,
-        "recall": 0.9990366088631984,
-        "f1-score": 0.9909221213569039,
-        "support": 1038.0
+        "precision": 0.9446640316205533,
+        "recall": 0.9973293273243198,
+        "f1-score": 0.9702825592724911,
+        "support": 5991.0
       },
-      "accuracy": 0.9999373743366624,
+      "accuracy": 0.9987936319588648,
       "macro avg": {
-        "precision": 0.9914675405181644,
-        "recall": 0.9994885378019756,
-        "f1-score": 0.995445350071146,
+        "precision": 0.9723050856771408,
+        "recall": 0.99807622859681,
+        "f1-score": 0.9848334392960398,
         "support": 303390.0
       },
       "weighted avg": {
-        "precision": 0.9999383301729271,
-        "recall": 0.9999373743366624,
-        "f1-score": 0.9999376277889453,
+        "precision": 0.9988544916579642,
+        "recall": 0.9987936319588648,
+        "f1-score": 0.9988096509243146,
         "support": 303390.0
       }
     }

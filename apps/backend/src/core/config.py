@@ -14,7 +14,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Resolved at import time: apps/backend/src/core/config.py → parents[3] = apps/
 _DEFAULT_MODEL_PATH: Path = (
-    Path(__file__).resolve().parents[3] / "ml" / "models" / "rf_model.joblib"
+    Path(__file__).resolve().parents[3] / "ml" / "models" / "random_forest_final.joblib"
 )
 
 

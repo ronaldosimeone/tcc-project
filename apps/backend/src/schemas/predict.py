@@ -1,8 +1,11 @@
 """
 Pydantic v2 DTOs for POST /predict.
 
-PredictRequest  — 14 raw MetroPT-3 sensor readings from a single acquisition cycle.
+PredictRequest  — 12 raw MetroPT-3 sensor readings from a single acquisition cycle.
 PredictResponse — [RF-05] predicted_class, failure_probability, timestamp.
+
+Excluded sensors (near-zero variance, negative model bias):
+    LPS, Pressure_switch, Caudal_impulses
 """
 
 from __future__ import annotations
@@ -26,15 +29,13 @@ class PredictRequest(BaseModel):
                 "H1": 8.97,
                 "DV_pressure": 2.10,
                 "Reservoirs": 8.85,
-                "Oil_temperature": 72.3,
                 "Motor_current": 4.5,
+                "Oil_temperature": 72.3,
                 "COMP": 1.0,
                 "DV_eletric": 0.0,
                 "Towers": 1.0,
                 "MPG": 1.0,
-                "Pressure_switch": 1.0,
                 "Oil_level": 1.0,
-                "Caudal_impulses": 1.0,
             }
         }
     )
@@ -49,8 +50,8 @@ class PredictRequest(BaseModel):
         ..., description="Differential pressure across air dryer (bar)"
     )
     Reservoirs: float = Field(..., description="Air reservoir pressure (bar)")
-    Oil_temperature: float = Field(..., description="Compressor oil temperature (°C)")
     Motor_current: float = Field(..., description="Electric motor current draw (A)")
+    Oil_temperature: float = Field(..., description="Compressor oil temperature (°C)")
 
     # ── Digital / switch sensors (0.0 = OFF, 1.0 = ON) ───────────────────
     COMP: float = Field(..., ge=0.0, le=1.0, description="Compressor active state")
@@ -61,13 +62,7 @@ class PredictRequest(BaseModel):
         ..., ge=0.0, le=1.0, description="Desiccant tower switch state"
     )
     MPG: float = Field(..., ge=0.0, le=1.0, description="MPG valve state")
-    Pressure_switch: float = Field(
-        ..., ge=0.0, le=1.0, description="High-pressure switch state"
-    )
     Oil_level: float = Field(..., ge=0.0, le=1.0, description="Oil-level switch state")
-    Caudal_impulses: float = Field(
-        ..., ge=0.0, le=1.0, description="Flow impulse counter state"
-    )
 
 
 class PredictResponse(BaseModel):

@@ -5,14 +5,19 @@ Entry point:
     python -m src.train_random_forest
 
 Pipeline:
-    1. Load processed Parquet.
-    2. Apply MetroPTPreprocessor (feature engineering).
-    3. Stratified Train/Test split BEFORE balancing (anti-leakage).
-    4. Apply MetroPTBalancer (SMOTE) on training split only.
-    5. GridSearchCV to find optimal RandomForestClassifier hyperparameters.
-    6. Evaluate on the untouched test set.
-    7. Persist model to models/rf_model.joblib.
-    8. Persist metadata to models/model_card.json.
+    1. Load processed Parquet (must contain 'anomaly' column from ingest step).
+    2. Select the 12 authoritative sensor features.
+    3. Apply MetroPTPreprocessor (rolling features on the 7 analogue sensors).
+    4. Stratified Train/Test split BEFORE any resampling (anti-leakage).
+    5. GridSearchCV over an imblearn Pipeline [SMOTE → RF]:
+       - SMOTE is applied INSIDE each CV fold → zero leakage during hyperparameter search.
+       - X_train is passed RAW (not pre-balanced) so GridSearchCV controls resampling.
+    6. Refit a bare RandomForestClassifier with the best hyperparameters on the
+       full SMOTE-balanced training set.  Fitting on a DataFrame preserves
+       feature_names_in_ so ModelService can use X[model.feature_names_in_].
+    7. Evaluate the final model on the untouched test set.
+    8. Persist the model to models/random_forest_final.joblib.
+    9. Persist metadata + best_params_ to models/model_card.json.
 """
 
 from __future__ import annotations
@@ -27,6 +32,8 @@ from typing import Any
 import joblib
 import numpy as np
 import pandas as pd
+from imblearn.over_sampling import SMOTE  # type: ignore
+from imblearn.pipeline import Pipeline as ImbPipeline  # type: ignore
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import (
     classification_report,
@@ -45,24 +52,43 @@ from src.preprocessing import MetroPTPreprocessor  # noqa: E402
 # Configuration
 # ---------------------------------------------------------------------------
 
-TARGET_COL: str = "LPS"
-DROP_COLS: list[str] = ["Unnamed: 0", "timestamp"]
+# Binary target created by label_anomalies() during ingestion.
+TARGET_COL: str = "anomaly"
+
+# Exactly 12 authoritative sensors — analogue first, then digital.
+# LPS, Pressure_switch and Caudal_impulses are intentionally excluded
+# (near-zero variance, negative bias on model performance).
+FEATURE_COLS: list[str] = [
+    # Analogue
+    "TP2",
+    "TP3",
+    "H1",
+    "DV_pressure",
+    "Reservoirs",
+    "Motor_current",
+    "Oil_temperature",
+    # Digital
+    "COMP",
+    "DV_eletric",
+    "Towers",
+    "MPG",
+    "Oil_level",
+]
 
 PARQUET_PATH: Path = _ML_ROOT / "data" / "processed" / "metropt3.parquet"
 MODELS_DIR: Path = _ML_ROOT / "models"
-MODEL_PATH: Path = MODELS_DIR / "rf_model.joblib"
+MODEL_PATH: Path = MODELS_DIR / "random_forest_final.joblib"
 MODEL_CARD_PATH: Path = MODELS_DIR / "model_card.json"
 
-PARAM_GRID: dict[str, list[Any]] = {
-    "n_estimators": [100, 200],
-    "max_depth": [10, 20, None],
-    "min_samples_leaf": [1, 2],
-    "max_features": ["sqrt"],
-}
-
 RANDOM_STATE: int = 42
-CV_FOLDS: int = 3
 TEST_SIZE: float = 0.2
+CV_FOLDS: int = 3
+
+# Hyperparameter search space — applied to the 'rf' step inside the pipeline.
+PARAM_GRID: dict[str, list[Any]] = {
+    "rf__n_estimators": [100, 200],
+    "rf__max_depth": [10, 15, 20],
+}
 
 logging.basicConfig(
     level=logging.INFO,
@@ -79,50 +105,62 @@ logger: logging.Logger = logging.getLogger(__name__)
 
 def load_and_preprocess(path: Path) -> tuple[pd.DataFrame, pd.Series]:
     """
-    Load the processed Parquet file and apply feature engineering.
+    Load the processed Parquet, select the 12 authoritative sensors,
+    and apply rolling-window feature engineering.
 
     Returns
     -------
     X : pd.DataFrame
-        Engineered feature matrix (preprocessor output).
+        Engineered feature matrix (MetroPTPreprocessor output).
     y : pd.Series
-        Binary target vector (0 = normal, 1 = fault / LPS trigger).
+        Binary anomaly target (0 = normal, 1 = fault).
     """
-    logger.info("Loading Parquet: %s", path)
+    logger.info("Carregando Parquet: %s", path)
     df: pd.DataFrame = pd.read_parquet(path)
 
-    y: pd.Series = df[TARGET_COL].astype(int).rename("fault")
-    X_raw: pd.DataFrame = df.drop(
-        columns=DROP_COLS + [TARGET_COL], errors="ignore"
-    ).select_dtypes(include=[np.number])
+    if TARGET_COL not in df.columns:
+        raise ValueError(
+            f"Coluna alvo '{TARGET_COL}' não encontrada no Parquet. "
+            "Execute o script de ingestão (ingest_metropt.py) primeiro."
+        )
 
-    logger.info("Applying MetroPTPreprocessor...")
+    missing_features: list[str] = [c for c in FEATURE_COLS if c not in df.columns]
+    if missing_features:
+        raise ValueError(f"Features ausentes no Parquet: {missing_features}")
+
+    y: pd.Series = df[TARGET_COL].astype(int).rename("anomaly")
+    X_raw: pd.DataFrame = df[FEATURE_COLS].copy()
+
+    logger.info(
+        "Aplicando MetroPTPreprocessor (rolling features nos sensores analógicos)..."
+    )
     preprocessor = MetroPTPreprocessor()
     X: pd.DataFrame = preprocessor.fit_transform(X_raw)
 
     logger.info(
-        "Dataset ready — shape: %s | fault ratio: %.4f%%",
+        "Dataset pronto — shape: %s | proporção de falhas: %.4f%%",
         X.shape,
         y.mean() * 100,
     )
     return X, y
 
 
-def split_and_balance(
+def split_data(
     X: pd.DataFrame,
     y: pd.Series,
 ) -> tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:
     """
-    Stratified split followed by SMOTE oversampling on the training set only.
+    Stratified train/test split.
 
-    The split is performed first to guarantee zero data leakage: synthetic
-    rows generated by SMOTE are never present in the test set.
+    SMOTE is NOT applied here — it is handled internally by the imblearn
+    Pipeline during GridSearchCV so that each fold is resampled independently,
+    preventing leakage of synthetic samples into validation folds.
 
     Returns
     -------
-    X_train_bal, X_test, y_train_bal, y_test
+    X_train, X_test, y_train, y_test
     """
-    logger.info("Stratified Train/Test split (test_size=%.0f%%)...", TEST_SIZE * 100)
+    logger.info("Split estratificado (test_size=%.0f%%)...", TEST_SIZE * 100)
     splits = MetroPTBalancer.train_test_split_safe(
         X, y, test_size=TEST_SIZE, random_state=RANDOM_STATE
     )
@@ -131,12 +169,12 @@ def split_and_balance(
     y_train: pd.Series = splits["y_train"]  # type: ignore[assignment]
     y_test: pd.Series = splits["y_test"]  # type: ignore[assignment]
 
-    logger.info("Applying SMOTE on training split only...")
-    balancer = MetroPTBalancer(random_state=RANDOM_STATE)
-    X_train_bal, y_train_bal = balancer.fit_resample(X_train, y_train)
-
-    logger.info("Balanced training set: %d rows", len(X_train_bal))
-    return X_train_bal, X_test, y_train_bal, y_test
+    logger.info(
+        "Split concluído — treino: %d linhas | teste: %d linhas",
+        len(X_train),
+        len(X_test),
+    )
+    return X_train, X_test, y_train, y_test
 
 
 def run_grid_search(
@@ -144,27 +182,38 @@ def run_grid_search(
     y_train: pd.Series,
 ) -> GridSearchCV:
     """
-    Run GridSearchCV over PARAM_GRID using F1 on the positive (fault) class.
+    GridSearchCV over an imblearn Pipeline [SMOTE → RandomForestClassifier].
+
+    The pipeline applies SMOTE inside each CV fold, so synthetic minority
+    samples are never present in validation folds — zero data leakage.
+
+    X_train is passed raw (not pre-balanced); the pipeline controls resampling.
 
     Returns
     -------
     GridSearchCV
-        Fitted searcher with best_estimator_ set and ready for inference.
+        Fitted searcher with best_estimator_ (Pipeline) and best_params_.
     """
+    pipeline: ImbPipeline = ImbPipeline(
+        steps=[
+            ("smote", SMOTE(random_state=RANDOM_STATE)),
+            ("rf", RandomForestClassifier(random_state=RANDOM_STATE, n_jobs=-1)),
+        ]
+    )
+
     n_combinations: int = 1
     for values in PARAM_GRID.values():
         n_combinations *= len(values)
 
     logger.info(
-        "GridSearchCV: %d combinations × %d folds = %d fits",
+        "GridSearchCV: %d combinações × %d folds = %d fits",
         n_combinations,
         CV_FOLDS,
         n_combinations * CV_FOLDS,
     )
 
-    rf = RandomForestClassifier(random_state=RANDOM_STATE, n_jobs=-1)
     grid_search: GridSearchCV = GridSearchCV(
-        estimator=rf,
+        estimator=pipeline,
         param_grid=PARAM_GRID,
         scoring="f1",
         cv=CV_FOLDS,
@@ -172,13 +221,67 @@ def run_grid_search(
         verbose=2,
         refit=True,
     )
-
     grid_search.fit(X_train, y_train)
 
-    logger.info("Best hyperparameters: %s", grid_search.best_params_)
-    logger.info("Best CV F1 (class 1): %.4f", grid_search.best_score_)
-
+    logger.info("Melhores hiperparâmetros: %s", grid_search.best_params_)
+    logger.info("Melhor CV F1 (class 1): %.4f", grid_search.best_score_)
     return grid_search
+
+
+def build_final_model(
+    X_train: pd.DataFrame,
+    y_train: pd.Series,
+    best_params: dict[str, Any],
+) -> tuple[RandomForestClassifier, int]:
+    """
+    Refit a bare RandomForestClassifier with the best hyperparameters on the
+    full SMOTE-balanced training set.
+
+    Fitting on a DataFrame (not ndarray) ensures sklearn sets
+    feature_names_in_ on the estimator — required by ModelService.
+
+    Parameters
+    ----------
+    X_train : pd.DataFrame
+        Raw (unbalanced) training features.
+    y_train : pd.Series
+        Raw training target.
+    best_params : dict
+        best_params_ from GridSearchCV (keys prefixed with 'rf__').
+
+    Returns
+    -------
+    tuple[RandomForestClassifier, int]
+        Fitted estimator and number of training rows after SMOTE.
+    """
+    # Strip pipeline prefix to get RF constructor kwargs
+    rf_kwargs: dict[str, Any] = {
+        k.replace("rf__", ""): v for k, v in best_params.items()
+    }
+    logger.info("Refitando RF final com melhores hiperparâmetros: %s", rf_kwargs)
+
+    # Apply SMOTE on the full training set (not per-fold — this is the final model)
+    smote: SMOTE = SMOTE(random_state=RANDOM_STATE)
+    X_arr, y_arr = smote.fit_resample(X_train.values, y_train.values)
+
+    # Reconstruct DataFrame to preserve column names → feature_names_in_
+    X_bal: pd.DataFrame = pd.DataFrame(X_arr, columns=X_train.columns)
+    y_bal: pd.Series = pd.Series(y_arr, name=y_train.name)
+
+    logger.info(
+        "Conjunto balanceado para treino final: %d linhas (classe 1: %d)",
+        len(X_bal),
+        int(y_bal.sum()),
+    )
+
+    final_rf: RandomForestClassifier = RandomForestClassifier(
+        random_state=RANDOM_STATE,
+        n_jobs=-1,
+        **rf_kwargs,
+    )
+    final_rf.fit(X_bal, y_bal)
+    logger.info("Modelo final treinado.")
+    return final_rf, len(X_bal)
 
 
 def evaluate(
@@ -234,7 +337,9 @@ def evaluate(
 def save_artefacts(
     model: RandomForestClassifier,
     metrics: dict[str, Any],
-    n_train: int,
+    best_params: dict[str, Any],
+    best_cv_score: float,
+    n_train_balanced: int,
     n_test: int,
     feature_names: list[str],
 ) -> None:
@@ -246,7 +351,7 @@ def save_artefacts(
     MODELS_DIR.mkdir(parents=True, exist_ok=True)
 
     joblib.dump(model, MODEL_PATH)
-    logger.info("Model saved: %s", MODEL_PATH)
+    logger.info("Modelo salvo: %s", MODEL_PATH)
 
     model_card: dict[str, Any] = {
         "schema_version": "1.0",
@@ -258,13 +363,14 @@ def save_artefacts(
             "RF-04": "F1-Score (class 1 / fault) >= 0.75",
             "RNF-10": "Model versioned with structured metadata",
         },
-        "train_size": n_train,
+        "train_size": n_train_balanced,
         "test_size": n_test,
-        "cv_folds": CV_FOLDS,
         "test_size_ratio": TEST_SIZE,
         "random_state": RANDOM_STATE,
+        "cv_folds": CV_FOLDS,
         "param_grid_used": PARAM_GRID,
-        "best_hyperparameters": model.get_params(),
+        "best_hyperparameters": best_params,
+        "best_cv_f1": round(best_cv_score, 4),
         "feature_count": len(feature_names),
         "feature_names": feature_names,
         "metrics": {
@@ -277,7 +383,7 @@ def save_artefacts(
     with MODEL_CARD_PATH.open("w", encoding="utf-8") as fh:
         json.dump(model_card, fh, indent=2, default=str)
 
-    logger.info("Model card saved: %s", MODEL_CARD_PATH)
+    logger.info("Model card salvo: %s", MODEL_CARD_PATH)
 
 
 # ---------------------------------------------------------------------------
@@ -289,17 +395,24 @@ def train() -> None:
     """Execute the full training pipeline end-to-end."""
     X, y = load_and_preprocess(PARQUET_PATH)
 
-    X_train_bal, X_test, y_train_bal, y_test = split_and_balance(X, y)
+    X_train, X_test, y_train, y_test = split_data(X, y)
 
-    grid_search = run_grid_search(X_train_bal, y_train_bal)
-    best_model: RandomForestClassifier = grid_search.best_estimator_
+    # Hyperparameter search: SMOTE inside pipeline per CV fold (anti-leakage)
+    grid_search = run_grid_search(X_train, y_train)
 
-    metrics = evaluate(best_model, X_test, y_test)
+    # Final model: bare RF with best params, fitted on full SMOTE-balanced train set
+    final_model, n_train_balanced = build_final_model(
+        X_train, y_train, grid_search.best_params_
+    )
+
+    metrics = evaluate(final_model, X_test, y_test)
 
     save_artefacts(
-        model=best_model,
+        model=final_model,
         metrics=metrics,
-        n_train=len(X_train_bal),
+        best_params=grid_search.best_params_,
+        best_cv_score=grid_search.best_score_,
+        n_train_balanced=n_train_balanced,
         n_test=len(X_test),
         feature_names=list(X.columns),
     )

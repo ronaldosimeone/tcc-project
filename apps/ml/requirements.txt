@@ -9,6 +9,7 @@ pandas==3.0.2
 scikit-learn==1.8.0
 matplotlib==3.10.0
 seaborn==0.13.2
+notebook==7.1.2
 
 # Class Balancing (RF-03)
 imbalanced-learn==0.14.1

@@ -131,24 +131,38 @@ def test_is_already_processed_returns_false_when_parquet_missing(
     assert ingest.is_already_processed() is False
 
 
-def test_is_already_processed_returns_true_when_parquet_exists(
+def test_is_already_processed_returns_true_when_parquet_has_anomaly_col(
     patched_paths: dict[str, Path],
 ) -> None:
-    """is_already_processed() must return True when the Parquet file already exists."""
-    patched_paths["parquet_path"].parent.mkdir(parents=True, exist_ok=True)
-    patched_paths["parquet_path"].touch()
+    """is_already_processed() must return True only when Parquet exists AND has 'anomaly'."""
+    parquet_path: Path = patched_paths["parquet_path"]
+    parquet_path.parent.mkdir(parents=True, exist_ok=True)
+    # Write a minimal Parquet that includes the 'anomaly' column
+    pd.DataFrame({"anomaly": [0, 1]}).to_parquet(parquet_path, index=False)
     assert ingest.is_already_processed() is True
 
 
-def test_run_ingestion_skips_when_parquet_exists(
+def test_is_already_processed_returns_false_when_parquet_lacks_anomaly_col(
+    patched_paths: dict[str, Path],
+) -> None:
+    """is_already_processed() must return False when Parquet exists but lacks 'anomaly'."""
+    parquet_path: Path = patched_paths["parquet_path"]
+    parquet_path.parent.mkdir(parents=True, exist_ok=True)
+    # Write a Parquet WITHOUT 'anomaly' (old format)
+    pd.DataFrame({"TP2": [5.0]}).to_parquet(parquet_path, index=False)
+    assert ingest.is_already_processed() is False
+
+
+def test_run_ingestion_skips_when_parquet_exists_with_anomaly_col(
     patched_paths: dict[str, Path]
 ) -> None:
     """
-    If the processed Parquet already exists, run_ingestion() must return early
-    without calling download_dataset().
+    If the processed Parquet already exists AND has the 'anomaly' column,
+    run_ingestion() must return early without calling download_dataset().
     """
-    patched_paths["parquet_path"].parent.mkdir(parents=True, exist_ok=True)
-    patched_paths["parquet_path"].touch()
+    parquet_path: Path = patched_paths["parquet_path"]
+    parquet_path.parent.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame({"anomaly": [0, 1]}).to_parquet(parquet_path, index=False)
 
     with patch.object(ingest, "download_dataset") as mock_download:
         ingest.run_ingestion()
@@ -294,3 +308,70 @@ def test_run_ingestion_full_pipeline(patched_paths: dict[str, Path]) -> None:
     assert patched_paths[
         "parquet_path"
     ].exists(), "Parquet not created after full pipeline run."
+
+
+# ---------------------------------------------------------------------------
+# Anomaly labeling (label_anomalies)
+# ---------------------------------------------------------------------------
+
+
+def test_label_anomalies_creates_column() -> None:
+    """label_anomalies() must add an 'anomaly' column to the DataFrame."""
+    df = pd.DataFrame(
+        {
+            "timestamp": pd.date_range("2020-01-01", periods=5, freq="1h"),
+            "TP2": [0.0] * 5,
+        }
+    )
+    result = ingest.label_anomalies(df)
+    assert "anomaly" in result.columns
+
+
+def test_label_anomalies_marks_failure_interval() -> None:
+    """Timestamps inside a failure interval must be labelled anomaly=1."""
+    # Pick a timestamp known to fall in the first failure interval
+    df = pd.DataFrame(
+        {
+            "timestamp": [pd.Timestamp("2020-04-18 12:00")],
+            "TP2": [0.0],
+        }
+    )
+    result = ingest.label_anomalies(df)
+    assert result["anomaly"].iloc[0] == 1
+
+
+def test_label_anomalies_marks_normal_period() -> None:
+    """Timestamps outside all failure intervals must be labelled anomaly=0."""
+    df = pd.DataFrame(
+        {
+            "timestamp": [pd.Timestamp("2020-03-01 00:00")],
+            "TP2": [0.0],
+        }
+    )
+    result = ingest.label_anomalies(df)
+    assert result["anomaly"].iloc[0] == 0
+
+
+def test_label_anomalies_does_not_mutate_input() -> None:
+    """label_anomalies() must return a copy and not mutate the original DataFrame."""
+    df = pd.DataFrame(
+        {
+            "timestamp": [pd.Timestamp("2020-04-18 12:00")],
+            "TP2": [0.0],
+        }
+    )
+    _ = ingest.label_anomalies(df)
+    assert "anomaly" not in df.columns
+
+
+def test_run_ingestion_parquet_contains_anomaly_column(
+    patched_paths: dict[str, Path]
+) -> None:
+    """The saved Parquet must contain the 'anomaly' column after ingestion."""
+    zip_bytes = _make_zip_bytes(_make_valid_df().to_csv(index=False))
+
+    with patch("requests.get", return_value=_mock_response(zip_bytes)):
+        ingest.run_ingestion()
+
+    result = pd.read_parquet(patched_paths["parquet_path"])
+    assert "anomaly" in result.columns, "Parquet is missing the 'anomaly' column."

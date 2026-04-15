@@ -1,8 +1,9 @@
 """
-MetroPT Dataset Ingestion Script (Fixed Version).
+MetroPT Dataset Ingestion Script.
 
-Downloads or uses local MetroPT-3 dataset, validates schema, 
-and persists it as Parquet.
+Downloads or uses local MetroPT-3 dataset, validates schema,
+creates the binary 'anomaly' target column from real failure intervals,
+and persists the result as Parquet.
 """
 
 from __future__ import annotations
@@ -41,6 +42,15 @@ EXPECTED_COLUMNS: list[str] = [
     "Caudal_impulses",
 ]
 
+# Real failure intervals from the MetroPT-3 incident report.
+# Each tuple is (start_inclusive, end_inclusive) in "YYYY-MM-DD HH:MM" format.
+FAILURE_INTERVALS: list[tuple[str, str]] = [
+    ("2020-04-18 00:00", "2020-04-18 23:59"),
+    ("2020-05-29 23:30", "2020-05-30 06:00"),
+    ("2020-06-05 10:00", "2020-06-07 14:30"),
+    ("2020-07-15 14:30", "2020-07-15 19:00"),
+]
+
 # Paths
 _MODULE_DIR: Path = Path(__file__).resolve().parent
 _ML_ROOT: Path = _MODULE_DIR.parent
@@ -75,12 +85,55 @@ def ensure_directories() -> None:
 
 
 def is_already_processed() -> bool:
-    if PROCESSED_PARQUET_PATH.exists():
+    """Return True only when the Parquet already exists AND contains the 'anomaly' column."""
+    if not PROCESSED_PARQUET_PATH.exists():
+        return False
+    try:
+        pd.read_parquet(PROCESSED_PARQUET_PATH, columns=["anomaly"])
         logger.info(
-            "Arquivo Parquet já existe em %s. Pulando...", PROCESSED_PARQUET_PATH
+            "Parquet com coluna 'anomaly' já existe em %s. Pulando...",
+            PROCESSED_PARQUET_PATH,
         )
         return True
-    return False
+    except Exception:
+        logger.info(
+            "Parquet existe mas sem coluna 'anomaly'. Regenerando...",
+        )
+        return False
+
+
+def label_anomalies(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Create binary 'anomaly' column by crossing timestamps with the real
+    failure intervals from the MetroPT-3 incident report.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Must contain a 'timestamp' column of datetime dtype.
+
+    Returns
+    -------
+    pd.DataFrame
+        Copy of *df* with a new 'anomaly' column (int8: 0 = normal, 1 = fault).
+    """
+    df = df.copy()
+    df["anomaly"] = 0
+    for start_str, end_str in FAILURE_INTERVALS:
+        start: pd.Timestamp = pd.Timestamp(start_str)
+        end: pd.Timestamp = pd.Timestamp(end_str)
+        mask: pd.Series = (df["timestamp"] >= start) & (df["timestamp"] <= end)
+        df.loc[mask, "anomaly"] = 1
+
+    n_anomalies: int = int(df["anomaly"].sum())
+    logger.info(
+        "Anomaly labels criados: %d anomalias / %d total (%.4f%%)",
+        n_anomalies,
+        len(df),
+        n_anomalies / len(df) * 100,
+    )
+    df["anomaly"] = df["anomaly"].astype("int8")
+    return df
 
 
 def download_dataset() -> None:
@@ -158,6 +211,9 @@ def run_ingestion() -> None:
     sensor_cols = [c for c in EXPECTED_COLUMNS if c != "timestamp"]
     df = df.sort_values("timestamp").reset_index(drop=True)
     df[sensor_cols] = df[sensor_cols].astype("float32")
+
+    # Rotulagem de anomalias com base nos intervalos de falha reais
+    df = label_anomalies(df)
 
     # Salva Parquet
     df.to_parquet(PROCESSED_PARQUET_PATH, index=False, compression="snappy")

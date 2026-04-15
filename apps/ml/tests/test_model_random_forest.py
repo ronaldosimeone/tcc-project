@@ -27,7 +27,7 @@ import pytest
 # ---------------------------------------------------------------------------
 
 _ML_ROOT: Path = Path(__file__).resolve().parent.parent
-MODEL_PATH: Path = _ML_ROOT / "models" / "rf_model.joblib"
+MODEL_PATH: Path = _ML_ROOT / "models" / "random_forest_final.joblib"
 MODEL_CARD_PATH: Path = _ML_ROOT / "models" / "model_card.json"
 
 
@@ -124,8 +124,8 @@ class TestModelCard:
     def test_dataset_field_is_metropt3(self, model_card: dict[str, Any]) -> None:
         assert model_card["dataset"] == "MetroPT-3"
 
-    def test_target_column_is_lps(self, model_card: dict[str, Any]) -> None:
-        assert model_card["target_column"] == "LPS"
+    def test_target_column_is_anomaly(self, model_card: dict[str, Any]) -> None:
+        assert model_card["target_column"] == "anomaly"
 
     def test_train_size_is_positive_int(self, model_card: dict[str, Any]) -> None:
         assert isinstance(model_card["train_size"], int)
@@ -147,7 +147,11 @@ class TestModelCard:
     def test_best_hyperparameters_contains_n_estimators(
         self, model_card: dict[str, Any]
     ) -> None:
-        assert "n_estimators" in model_card["best_hyperparameters"]
+        # best_hyperparameters stores GridSearchCV best_params_ (prefixed with 'rf__')
+        params: dict[str, Any] = model_card["best_hyperparameters"]
+        assert any(
+            k in params for k in ("rf__n_estimators", "n_estimators")
+        ), f"Neither 'rf__n_estimators' nor 'n_estimators' found in best_hyperparameters: {params}"
 
     def test_rf04_f1_class1_meets_threshold(self, model_card: dict[str, Any]) -> None:
         """[RF-04] F1-Score on class 1 (fault) must be >= 0.75."""
