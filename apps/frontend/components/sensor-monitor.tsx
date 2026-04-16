@@ -35,12 +35,13 @@ interface GaugeProps {
   riskLevel: RiskLevel;
 }
 
+// Lógica que garante as cores corretas para cada estado
 function riskColor(level: RiskLevel): string {
   return level === "NORMAL"
-    ? "hsl(142 71% 45%)"
+    ? "hsl(142 71% 45%)" // Verde
     : level === "ALERTA"
-    ? "hsl(38 92% 50%)"
-    : "hsl(0 72% 51%)";
+    ? "hsl(38 92% 50%)" // Amarelo/Âmbar
+    : "hsl(0 72% 51%)"; // Vermelho
 }
 
 function FailureGauge({ probability, riskLevel }: GaugeProps) {
@@ -49,22 +50,34 @@ function FailureGauge({ probability, riskLevel }: GaugeProps) {
   const r = 88;
   const strokeW = 14;
   const color = riskColor(riskLevel);
+  // Garante que o valor fique sempre entre 0 e 1 (0% a 100%)
   const pct = Math.min(1, Math.max(0, probability));
 
-  const bgPath = `M ${cx - r} ${cy} A ${r} ${r} 0 0 1 ${cx + r} ${cy}`;
-
-  function arcPoint(angleDeg: number): [number, number] {
+  // Função auxiliar para encontrar as coordenadas X e Y exatas no arco
+  function getPoint(angleDeg: number) {
     const rad = (angleDeg * Math.PI) / 180;
-    return [cx + r * Math.cos(rad), cy - r * Math.sin(rad)];
+    return {
+      x: cx + r * Math.cos(rad),
+      y: cy - r * Math.sin(rad), // Subtrai porque o Y inverte no SVG
+    };
   }
-  const [startX, startY] = arcPoint(180);
+
+  // O velocímetro vai da esquerda (180°) para a direita (0°)
+  const startAngle = 180;
   const endAngle = 180 - pct * 180;
-  const [endX, endY] = arcPoint(endAngle);
-  const largeArc = pct > 0.5 ? 1 : 0;
+
+  const p1 = getPoint(startAngle); // Início da barra
+  const p2 = getPoint(endAngle); // Onde o valor (cor) termina e o fundo cinza começa
+  const p3 = getPoint(0); // Fim da barra (lado direito)
+
+  // Caminho do Valor (Colorido) - Vai da esquerda até o valor atual
+  // large-arc é sempre 0 porque o ângulo nunca passa de 180°
   const valuePath =
-    pct <= 0.001
-      ? ""
-      : `M ${startX} ${startY} A ${r} ${r} 0 ${largeArc} 1 ${endX} ${endY}`;
+    pct > 0 ? `M ${p1.x} ${p1.y} A ${r} ${r} 0 0 1 ${p2.x} ${p2.y}` : "";
+
+  // Caminho do Fundo (Cinza) - Começa exatamente onde o valor parou e vai até o final
+  const bgPath =
+    pct < 1 ? `M ${p2.x} ${p2.y} A ${r} ${r} 0 0 1 ${p3.x} ${p3.y}` : "";
 
   const percentText = (pct * 100).toFixed(1);
 
@@ -74,13 +87,18 @@ function FailureGauge({ probability, riskLevel }: GaugeProps) {
       className="w-full max-w-[260px]"
       aria-label={`Probabilidade de quebra: ${percentText}%`}
     >
-      <path
-        d={bgPath}
-        fill="none"
-        stroke="hsl(217 18% 18%)"
-        strokeWidth={strokeW}
-        strokeLinecap="round"
-      />
+      {/* Desenha a trilha cinza contígua (apenas a parte vazia) */}
+      {bgPath && (
+        <path
+          d={bgPath}
+          fill="none"
+          stroke="hsl(217 18% 18%)"
+          strokeWidth={strokeW}
+          strokeLinecap="round"
+        />
+      )}
+
+      {/* Desenha a trilha de cor (apenas a parte cheia) */}
       {valuePath && (
         <path
           d={valuePath}
@@ -93,6 +111,7 @@ function FailureGauge({ probability, riskLevel }: GaugeProps) {
           }}
         />
       )}
+
       <text
         x={cx}
         y={cy - 10}

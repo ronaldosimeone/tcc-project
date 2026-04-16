@@ -133,4 +133,68 @@ jobs:
       - name: Run Vitest
         run: |
           cd apps/frontend
-          # pnpm test # Descomente quando configurar o Vitest
+          pnpm test
+
+  # 6. Testes E2E com Playwright + MSW (RNF-16 / RNF-17)
+  test-e2e:
+    name: E2E Tests (Playwright + MSW)
+    runs-on: ubuntu-latest
+    needs: test-typescript # Só roda após os testes unitários passarem
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+          cache-dependency-path: apps/frontend/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: |
+          cd apps/frontend
+          pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: |
+          cd apps/frontend
+          pnpm exec playwright install chromium --with-deps
+
+      - name: Generate MSW Service Worker
+        # Cria public/mockServiceWorker.js que o MswProvider carrega no browser.
+        # Deve rodar antes do build/dev server para que o arquivo esteja disponível.
+        run: |
+          cd apps/frontend
+          pnpm e2e:setup
+
+      - name: Run Playwright E2E tests
+        run: |
+          cd apps/frontend
+          pnpm e2e
+        env:
+          CI: true
+          # RNF-13: URL do backend — MSW intercepta esta origem no browser
+          NEXT_PUBLIC_API_URL: http://localhost:8000
+          # Ativa o MswProvider para os testes E2E
+          NEXT_PUBLIC_MSW_ENABLED: "true"
+
+      - name: Upload Playwright report
+        if: always() # Faz upload mesmo em caso de falha para facilitar debugging
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: apps/frontend/playwright-report/
+          retention-days: 7
+
+      - name: Upload test results (screenshots / traces)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-results
+          path: apps/frontend/e2e-results/
+          retention-days: 7

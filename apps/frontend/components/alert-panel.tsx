@@ -137,9 +137,9 @@ export function AlertPanel({ latest, riskLevel }: AlertPanelProps) {
       className={cn(
         "flex h-full w-72 shrink-0 flex-col border-l transition-colors duration-700",
         isCritical
-          ? "border-red-500/30 bg-red-500/[0.02]"
+          ? "border-red-500/30 bg-red-500/0.02"
           : isAlert
-          ? "border-amber-500/30 bg-amber-500/[0.02]"
+          ? "border-amber-500/30 bg-amber-500/0.02"
           : "border-border bg-background/50",
       )}
       data-testid="alert-panel"
@@ -168,7 +168,7 @@ export function AlertPanel({ latest, riskLevel }: AlertPanelProps) {
             Auditoria
           </span>
           {isMounted && history.length > 0 && (
-            <span className="flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-primary/20 px-1 text-[9px] font-bold text-primary">
+            <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-primary/20 px-1 text-[9px] font-bold text-primary">
               {history.length}
             </span>
           )}
