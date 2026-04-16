@@ -1,14 +1,28 @@
 """
 Custom domain exceptions and global FastAPI exception handlers.
 
-All service-layer errors should raise one of these typed exceptions.
-The handlers registered in main.py convert them to standardised JSON responses.
+Handler registration order in main.py
+--------------------------------------
+1. AppError          → app_error_handler        (domain errors, 4xx/5xx)
+2. RateLimitExceeded → rate_limit_exceeded_handler (429, in rate_limit.py)
+3. Exception         → unhandled_exception_handler (catch-all, RNF-18)
+
+FastAPI dispatches to the most specific handler by walking the exception
+MRO, so AppError always takes precedence over the generic Exception catch-all.
 """
 
 from __future__ import annotations
 
+import structlog
 from fastapi import Request, status
 from fastapi.responses import JSONResponse
+
+log = structlog.get_logger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Domain exceptions
+# ---------------------------------------------------------------------------
 
 
 class AppError(Exception):
@@ -50,13 +64,53 @@ class ModelNotAvailableError(AppError):
 
 
 # ---------------------------------------------------------------------------
-# Global handler – registered in main.py
+# Handlers
 # ---------------------------------------------------------------------------
 
 
 async def app_error_handler(request: Request, exc: AppError) -> JSONResponse:
     """Convert any AppError subclass into a standardised JSON error response."""
+    log.warning(
+        "app_error",
+        error=exc.__class__.__name__,
+        detail=exc.detail,
+        status_code=exc.status_code,
+        path=str(request.url.path),
+        method=request.method,
+    )
     return JSONResponse(
         status_code=exc.status_code,
         content={"error": exc.__class__.__name__, "detail": exc.detail},
+    )
+
+
+async def unhandled_exception_handler(
+    request: Request,
+    exc: Exception,
+) -> JSONResponse:
+    """
+    Catch-all handler for any exception not covered by a specific handler.
+
+    RNF-18 — guarantees:
+      • HTTP 500 is always returned (no 200 with a confusing body).
+      • The response body never contains stack traces, exception class
+        names, or internal details that could aid an attacker.
+      • The full exception — including traceback — is logged server-side
+        so engineers can diagnose the problem without exposing it to clients.
+    """
+    log.exception(
+        "unhandled_exception",
+        exc_type=type(exc).__name__,
+        path=str(request.url.path),
+        method=request.method,
+    )
+    return JSONResponse(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        content={
+            "error": "InternalServerError",
+            "detail": (
+                "An unexpected error occurred on the server. "
+                "Our team has been notified. Please try again later."
+            ),
+        },
     )

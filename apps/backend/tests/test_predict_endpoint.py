@@ -70,7 +70,7 @@ async def _override_get_db() -> AsyncGenerator[AsyncSession, None]:
             raise
 
 
-@pytest_asyncio.fixture(autouse=True, scope="module")
+@pytest_asyncio.fixture(autouse=True, scope="module", loop_scope="module")
 async def _setup_db_schema() -> AsyncGenerator[None, None]:
     """Create the predictions table once for the entire test module."""
     async with _test_engine.begin() as conn:
