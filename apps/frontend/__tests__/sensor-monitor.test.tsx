@@ -1,21 +1,27 @@
 import { render, screen, act } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { PredictResponse } from "@/lib/api-client";
 import SensorMonitor from "@/components/sensor-monitor";
+import { POLL_INTERVAL_MS } from "@/hooks/use-sensor-data";
 
-// ── Mocks ────────────────────────────────────────────────────────────────────
+// ── Mocks ─────────────────────────────────────────────────────────────────
+//
+// vi.mock() é hoistado pelo Vitest ANTES de todas as declarações de variável.
+// Por isso MOCK_RESPONSE deve ser criado com vi.hoisted() — garante que o
+// valor esteja disponível quando o factory do mock for executado.
 
-const MOCK_RESPONSE: PredictResponse = {
-  predicted_class: 0,
-  failure_probability: 0.08,
-  timestamp: new Date("2024-06-01T12:00:00Z").toISOString(),
-};
+const { MOCK_RESPONSE } = vi.hoisted(() => ({
+  MOCK_RESPONSE: {
+    predicted_class: 0 as const,
+    failure_probability: 0.08,
+    timestamp: new Date("2024-06-01T12:00:00Z").toISOString(),
+  },
+}));
 
 vi.mock("@/lib/api-client", () => ({
   predict: vi.fn().mockResolvedValue(MOCK_RESPONSE),
 }));
 
-// Recharts usa ResizeObserver — polyfill necessário em jsdom
+// Recharts usa ResizeObserver internamente — polyfill necessário em jsdom
 class MockResizeObserver {
   observe() {}
   unobserve() {}
@@ -23,7 +29,7 @@ class MockResizeObserver {
 }
 globalThis.ResizeObserver = MockResizeObserver;
 
-// ── Suite ────────────────────────────────────────────────────────────────────
+// ── Suite ──────────────────────────────────────────────────────────────────
 
 describe("SensorMonitor", () => {
   beforeEach(() => {
@@ -32,6 +38,7 @@ describe("SensorMonitor", () => {
   });
 
   afterEach(() => {
+    vi.clearAllTimers(); // cancela setInterval antes de restaurar os timers
     vi.useRealTimers();
     vi.clearAllMocks();
   });
@@ -51,42 +58,44 @@ describe("SensorMonitor", () => {
     expect(screen.getByText(/reservatório/i)).toBeInTheDocument();
   });
 
-  it("exibe a seção do Painel de Sensores com todos os labels", () => {
+  it("exibe a seção do Painel de Sensores com os labels corretos", () => {
     render(<SensorMonitor />);
-    const sensorLabels = ["TP3", "H1", "DV Pressure", "COMP", "Towers", "MPG"];
+    // Usa os labels exatos que sensor-monitor.tsx renderiza nos SensorChips
+    const sensorLabels = ["TP3", "H1", "DV Press.", "COMP", "Towers"];
     for (const label of sensorLabels) {
       expect(screen.getByText(label)).toBeInTheDocument();
     }
   });
 
-  it("exibe o status NORMAL após a primeira chamada à API ter sido resolvida", async () => {
+  it("exibe o status NORMAL após a primeira chamada à API ser resolvida", async () => {
     render(<SensorMonitor />);
-    // Avança timers para disparar o primeiro tick e resolver a Promise
+
+    // advanceTimersByTimeAsync(0) avança 0ms mas aguarda todas as Promises
+    // pendentes — resolve o void tick() inicial sem disparar o setInterval
     await act(async () => {
-      await vi.runAllTimersAsync();
+      await vi.advanceTimersByTimeAsync(0);
     });
-    expect(screen.getByText("NORMAL")).toBeInTheDocument();
+
+    expect(screen.getAllByText("NORMAL")[0]).toBeInTheDocument();
   });
 
   it("chama predict() a cada intervalo de polling", async () => {
     const { predict: mockPredict } = await import("@/lib/api-client");
-
     render(<SensorMonitor />);
 
-    // Tick inicial
+    // resolve o tick inicial
     await act(async () => {
-      await vi.runAllTimersAsync();
+      await vi.advanceTimersByTimeAsync(0);
     });
 
-    // Avança mais 3 intervalos
+    // avança 3 intervalos usando o POLL_INTERVAL_MS real do hook (5 s)
     for (let i = 0; i < 3; i++) {
       await act(async () => {
-        vi.advanceTimersByTime(3_000);
-        await vi.runAllTimersAsync();
+        await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS);
       });
     }
 
-    // Deve ter chamado pelo menos 4 vezes (1 inicial + 3 por intervalo)
+    // 1 chamada inicial + 3 por intervalo
     expect(mockPredict).toHaveBeenCalledTimes(4);
   });
 
@@ -95,8 +104,9 @@ describe("SensorMonitor", () => {
     vi.mocked(mockPredict).mockRejectedValueOnce(new Error("Network Error"));
 
     render(<SensorMonitor />);
+
     await act(async () => {
-      await vi.runAllTimersAsync();
+      await vi.advanceTimersByTimeAsync(0);
     });
 
     expect(screen.getByText(/backend offline/i)).toBeInTheDocument();
