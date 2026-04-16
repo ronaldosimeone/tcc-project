@@ -20,7 +20,7 @@ export default function HomePage() {
       <Header />
       <div className="flex flex-1 overflow-hidden">
         <Sidebar />
-        <main className="flex-1 overflow-y-auto">
+        <main className="flex-1 overflow-hidden">
           <ErrorBoundary>
             <SensorMonitor />
           </ErrorBoundary>

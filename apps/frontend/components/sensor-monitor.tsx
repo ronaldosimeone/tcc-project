@@ -21,6 +21,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { SensorChart } from "@/components/sensor-chart";
+import { AlertPanel } from "@/components/alert-panel";
 import {
   useSensorData,
   type RiskLevel,
@@ -219,151 +220,164 @@ export default function SensorMonitor() {
   const isOffline = error !== null && !isLoading;
 
   return (
-    <div className="flex flex-col gap-6 p-6">
-      {/* ── Cabeçalho ── */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight text-foreground">
-            Monitoramento em Tempo Real
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Compressor de ar · MetroPT-3 · Polling a cada{" "}
-            {POLL_INTERVAL_MS / 1000}s
-          </p>
-        </div>
+    <div className="flex h-full overflow-hidden">
+      {/* ── Área de conteúdo principal (rolável) ── */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="flex flex-col gap-6 p-6">
+          {/* ── Cabeçalho ── */}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h1 className="text-xl font-bold tracking-tight text-foreground">
+                Monitoramento em Tempo Real
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                Compressor de ar · MetroPT-3 · Polling a cada{" "}
+                {POLL_INTERVAL_MS / 1000}s
+              </p>
+            </div>
 
-        <div className="flex items-center gap-3">
-          {isOffline && (
-            <Badge
-              variant="outline"
-              className="gap-1.5 border-destructive/40 bg-destructive/10 text-destructive"
-            >
-              <WifiOff className="h-3 w-3" />
-              Backend offline
-            </Badge>
-          )}
-          {!isLoading && <StatusBadge level={riskLevel} />}
-        </div>
-      </div>
-
-      {/* ── KPI Cards ── */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <KpiCard
-          title="Pressão TP2"
-          value={currentPayload.TP2.toFixed(2)}
-          unit="bar"
-          icon={Gauge}
-        />
-        <KpiCard
-          title="Temperatura Óleo"
-          value={currentPayload.Oil_temperature.toFixed(1)}
-          unit="°C"
-          icon={Thermometer}
-        />
-        <KpiCard
-          title="Corrente Motor"
-          value={currentPayload.Motor_current.toFixed(2)}
-          unit="A"
-          icon={Zap}
-        />
-        <KpiCard
-          title="Reservatório"
-          value={currentPayload.Reservoirs.toFixed(2)}
-          unit="bar"
-          icon={Wind}
-        />
-      </div>
-
-      {/* ── Gráficos (RF-06 / RF-07) + Gauge ── */}
-      <div className="grid gap-4 lg:grid-cols-5">
-        {/* SensorChart: 4 séries, destaque de anomalia */}
-        <SensorChart
-          history={history}
-          isAnomaly={isAnomaly}
-          riskLevel={riskLevel}
-          className="lg:col-span-3"
-        />
-
-        {/* Gauge de probabilidade de falha */}
-        <Card className="border-border bg-card lg:col-span-2">
-          <div className="flex flex-col items-center gap-4 p-5">
-            <p className="self-start text-sm font-semibold text-foreground/90">
-              Risco de Falha
-            </p>
-            <p className="self-start text-xs text-muted-foreground">
-              Predição do modelo RandomForest
-            </p>
-
-            {isLoading ? (
-              <div className="flex h-[140px] w-full items-center justify-center text-sm text-muted-foreground">
-                Aguardando modelo…
-              </div>
-            ) : (
-              <>
-                <FailureGauge probability={probability} riskLevel={riskLevel} />
-                <StatusBadge level={riskLevel} />
-                {latest && (
-                  <p className="text-[10px] text-muted-foreground">
-                    Classe {latest.predicted_class} ·{" "}
-                    {new Date(latest.timestamp).toLocaleTimeString("pt-BR")}
-                  </p>
-                )}
-              </>
-            )}
+            <div className="flex items-center gap-3">
+              {isOffline && (
+                <Badge
+                  variant="outline"
+                  className="gap-1.5 border-destructive/40 bg-destructive/10 text-destructive"
+                >
+                  <WifiOff className="h-3 w-3" />
+                  Backend offline
+                </Badge>
+              )}
+              {!isLoading && <StatusBadge level={riskLevel} />}
+            </div>
           </div>
-        </Card>
-      </div>
 
-      {/* ── Grade de sensores secundários ── */}
-      <Card className="border-border bg-card">
-        <div className="px-5 pb-5 pt-4">
-          <p className="mb-3 text-sm font-semibold text-foreground/90">
-            Painel de Sensores
-          </p>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-8">
-            <SensorChip
-              label="TP3"
-              value={currentPayload.TP3.toFixed(2)}
+          {/* ── KPI Cards ── */}
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <KpiCard
+              title="Pressão TP2"
+              value={currentPayload.TP2.toFixed(2)}
               unit="bar"
+              icon={Gauge}
             />
-            <SensorChip
-              label="H1"
-              value={currentPayload.H1.toFixed(2)}
-              unit="bar"
+            <KpiCard
+              title="Temperatura Óleo"
+              value={currentPayload.Oil_temperature.toFixed(1)}
+              unit="°C"
+              icon={Thermometer}
             />
-            <SensorChip
-              label="DV Press."
-              value={currentPayload.DV_pressure.toFixed(2)}
-              unit="bar"
+            <KpiCard
+              title="Corrente Motor"
+              value={currentPayload.Motor_current.toFixed(2)}
+              unit="A"
+              icon={Zap}
             />
-            <SensorChip
-              label="Reserv."
+            <KpiCard
+              title="Reservatório"
               value={currentPayload.Reservoirs.toFixed(2)}
               unit="bar"
-            />
-            <SensorChip
-              label="COMP"
-              value={currentPayload.COMP === 1 ? "ON" : "OFF"}
-              unit=""
-            />
-            <SensorChip
-              label="DV Elétric"
-              value={currentPayload.DV_eletric === 1 ? "ON" : "OFF"}
-              unit=""
-            />
-            <SensorChip
-              label="Towers"
-              value={currentPayload.Towers === 1 ? "ON" : "OFF"}
-              unit=""
-            />
-            <SensorChip
-              label="Oil Level"
-              value={currentPayload.Oil_level === 1 ? "OK" : "LOW"}
-              unit=""
+              icon={Wind}
             />
           </div>
+
+          {/* ── Gráficos (RF-06 / RF-07) + Gauge ── */}
+          <div className="grid gap-4 lg:grid-cols-5">
+            {/* SensorChart: 4 séries, destaque de anomalia */}
+            <SensorChart
+              history={history}
+              isAnomaly={isAnomaly}
+              riskLevel={riskLevel}
+              className="lg:col-span-3"
+            />
+
+            {/* Gauge de probabilidade de falha */}
+            <Card className="border-border bg-card lg:col-span-2">
+              <div className="flex flex-col items-center gap-4 p-5">
+                <p className="self-start text-sm font-semibold text-foreground/90">
+                  Risco de Falha
+                </p>
+                <p className="self-start text-xs text-muted-foreground">
+                  Predição do modelo RandomForest
+                </p>
+
+                {isLoading ? (
+                  <div className="flex h-[140px] w-full items-center justify-center text-sm text-muted-foreground">
+                    Aguardando modelo…
+                  </div>
+                ) : (
+                  <>
+                    <FailureGauge
+                      probability={probability}
+                      riskLevel={riskLevel}
+                    />
+                    <StatusBadge level={riskLevel} />
+                    {latest && (
+                      <p className="text-[10px] text-muted-foreground">
+                        Classe {latest.predicted_class} ·{" "}
+                        {new Date(latest.timestamp).toLocaleTimeString("pt-BR")}
+                      </p>
+                    )}
+                  </>
+                )}
+              </div>
+            </Card>
+          </div>
+
+          {/* ── Grade de sensores secundários ── */}
+          <Card className="border-border bg-card">
+            <div className="px-5 pb-5 pt-4">
+              <p className="mb-3 text-sm font-semibold text-foreground/90">
+                Painel de Sensores
+              </p>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-8">
+                <SensorChip
+                  label="TP3"
+                  value={currentPayload.TP3.toFixed(2)}
+                  unit="bar"
+                />
+                <SensorChip
+                  label="H1"
+                  value={currentPayload.H1.toFixed(2)}
+                  unit="bar"
+                />
+                <SensorChip
+                  label="DV Press."
+                  value={currentPayload.DV_pressure.toFixed(2)}
+                  unit="bar"
+                />
+                <SensorChip
+                  label="Reserv."
+                  value={currentPayload.Reservoirs.toFixed(2)}
+                  unit="bar"
+                />
+                <SensorChip
+                  label="COMP"
+                  value={currentPayload.COMP === 1 ? "ON" : "OFF"}
+                  unit=""
+                />
+                <SensorChip
+                  label="DV Elétric"
+                  value={currentPayload.DV_eletric === 1 ? "ON" : "OFF"}
+                  unit=""
+                />
+                <SensorChip
+                  label="Towers"
+                  value={currentPayload.Towers === 1 ? "ON" : "OFF"}
+                  unit=""
+                />
+                <SensorChip
+                  label="Oil Level"
+                  value={currentPayload.Oil_level === 1 ? "OK" : "LOW"}
+                  unit=""
+                />
+              </div>
+            </div>
+          </Card>
         </div>
-      </Card>
+        {/* fim .flex-col.gap-6.p-6 */}
+      </div>
+      {/* fim .flex-1.overflow-y-auto */}
+
+      {/* ── Painel lateral de auditoria (RF-08 / RNF-14) ── */}
+      <AlertPanel latest={latest} riskLevel={riskLevel} />
     </div>
   );
 }

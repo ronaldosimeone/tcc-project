@@ -1,10 +1,4 @@
-import {
-  BarChart3,
-  Gauge,
-  History,
-  LayoutDashboard,
-  Settings,
-} from "lucide-react";
+import { BarChart3, Gauge, LayoutDashboard, Settings } from "lucide-react";
 
 interface NavItem {
   icon: React.ComponentType<{ className?: string }>;
