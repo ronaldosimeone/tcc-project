@@ -22,6 +22,7 @@ from src.core.database import engine
 from src.core.exceptions import AppError, app_error_handler
 from src.routers import health as health_router
 from src.routers import predict as predict_router
+from src.routers import predictions as predictions_router
 from src.services.model_service import load_model
 
 logger: logging.Logger = logging.getLogger(__name__)
@@ -94,6 +95,7 @@ def create_app() -> FastAPI:
     # ── Routers ───────────────────────────────────────────────────────────
     app.include_router(health_router.router)
     app.include_router(predict_router.router)
+    app.include_router(predictions_router.router)
 
     return app
 

@@ -7,6 +7,9 @@ The ModelService singleton is injected via `get_model_service`.  Tests override
 that dependency with a lightweight mock that returns deterministic outputs —
 no .joblib file or trained model is required to run this suite.
 
+Since RF-09 made POST /predict also persist to the DB, get_db is now
+overridden with an in-memory SQLite session so no live PostgreSQL is needed.
+
 The lifespan still executes (it handles FileNotFoundError gracefully), so the
 test verifies the full request/response cycle through the real router and
 Pydantic validation layers.
@@ -14,23 +17,68 @@ Pydantic validation layers.
 Fixtures
 --------
 mock_service       — A ModelService wrapping a sklearn DummyClassifier.
-app_with_mock_model — FastAPI instance with the model dependency overridden.
+app_with_mock_model — FastAPI instance with both model and DB overridden.
 async_client       — httpx.AsyncClient bound to the test app via ASGITransport.
 """
 
 from __future__ import annotations
 
 from datetime import datetime
+from typing import AsyncGenerator
 from unittest.mock import MagicMock
 
 import numpy as np
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
 
+from src.core.database import Base, get_db
 from src.main import create_app
+from src.models.prediction import Prediction  # noqa: F401 — registers with Base
 from src.schemas.predict import PredictRequest
 from src.services.model_service import ModelService, get_model_service
+
+# ---------------------------------------------------------------------------
+# Module-level in-memory SQLite (shared across all tests in this module)
+# ---------------------------------------------------------------------------
+
+_TEST_DB_URL = "sqlite+aiosqlite:///:memory:"
+_test_engine: AsyncEngine = create_async_engine(_TEST_DB_URL, echo=False)
+_TestSessionFactory: async_sessionmaker[AsyncSession] = async_sessionmaker(
+    bind=_test_engine,
+    class_=AsyncSession,
+    expire_on_commit=False,
+    autoflush=False,
+    autocommit=False,
+)
+
+
+async def _override_get_db() -> AsyncGenerator[AsyncSession, None]:
+    """SQLite-backed async session for test isolation (no PostgreSQL required)."""
+    async with _TestSessionFactory() as session:
+        try:
+            yield session
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise
+
+
+@pytest_asyncio.fixture(autouse=True, scope="module")
+async def _setup_db_schema() -> AsyncGenerator[None, None]:
+    """Create the predictions table once for the entire test module."""
+    async with _test_engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    yield
+    async with _test_engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -75,9 +123,10 @@ def mock_service() -> ModelService:
 
 @pytest.fixture()
 def app_with_mock_model(mock_service: ModelService) -> object:
-    """FastAPI test app with the model dependency replaced by mock_service."""
+    """FastAPI test app with both model and DB dependencies overridden."""
     application = create_app()
     application.dependency_overrides[get_model_service] = lambda: mock_service
+    application.dependency_overrides[get_db] = _override_get_db
     return application
 
 
@@ -264,11 +313,19 @@ class TestModelServiceUnit:
         assert result.failure_probability == pytest.approx(0.912346, abs=1e-5)
 
     def test_feature_matrix_has_correct_shape(self) -> None:
-        """_build_feature_row must produce a (1, 36) DataFrame."""
+        """_build_feature_row must produce a (1, 34) DataFrame.
+
+        Feature count breakdown:
+          12  raw sensor inputs
+           1  TP2_delta
+          21  rolling features (std_5, ma_5, ma_15) × 7 analogue sensors
+          ─────────────────
+          34  total
+        """
         service = self._make_service(0, 0.1)
         req = PredictRequest(**_VALID_PAYLOAD)
         df = service._build_feature_row(req)
-        assert df.shape == (1, 36), f"Expected (1, 36), got {df.shape}"
+        assert df.shape == (1, 34), f"Expected (1, 34), got {df.shape}"
 
     def test_feature_matrix_has_no_nulls(self) -> None:
         service = self._make_service(0, 0.1)
