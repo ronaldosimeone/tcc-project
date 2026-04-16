@@ -13,9 +13,9 @@ from pydantic import Field, PostgresDsn
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Resolved at import time: apps/backend/src/core/config.py → parents[3] = apps/
-_DEFAULT_MODEL_PATH: Path = (
-    Path(__file__).resolve().parents[3] / "ml" / "models" / "random_forest_final.joblib"
-)
+_ML_MODELS: Path = Path(__file__).resolve().parents[3] / "ml" / "models"
+_DEFAULT_MODEL_PATH: Path = _ML_MODELS / "random_forest_final.joblib"
+_DEFAULT_XGBOOST_PATH: Path = _ML_MODELS / "xgboost_v1.joblib"
 
 
 class Settings(BaseSettings):
@@ -54,11 +54,25 @@ class Settings(BaseSettings):
 
     # ── Machine Learning ──────────────────────────────────────────────────
     # Override via MODEL_PATH env-var when deploying in Docker or CI.
-    # Default resolves to apps/ml/models/rf_model.joblib inside the monorepo.
+    # Default resolves to apps/ml/models/random_forest_final.joblib inside the monorepo.
     model_path: Path = Field(
         default=_DEFAULT_MODEL_PATH,
         alias="MODEL_PATH",
         description="Absolute path to the trained Random Forest .joblib artefact.",
+    )
+
+    # RF-10 — multi-model selection without redeploy.
+    # Set ACTIVE_MODEL=xgboost to swap the inference engine at startup.
+    active_model: str = Field(
+        default="random_forest",
+        alias="ACTIVE_MODEL",
+        description="Active inference model: 'random_forest' or 'xgboost'.",
+    )
+
+    xgboost_model_path: Path = Field(
+        default=_DEFAULT_XGBOOST_PATH,
+        alias="XGBOOST_MODEL_PATH",
+        description="Absolute path to the trained XGBoost .joblib artefact.",
     )
 
 

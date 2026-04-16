@@ -32,7 +32,7 @@ from src.core.rate_limit import limiter, rate_limit_exceeded_handler
 from src.routers import health as health_router
 from src.routers import predict as predict_router
 from src.routers import predictions as predictions_router
-from src.services.model_service import load_model
+from src.services.model_service import load_active_model
 
 # ── Bootstrap structured logging immediately ──────────────────────────────
 # Must happen before any log.* call so processors are fully configured.
@@ -62,7 +62,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     app.state.limiter = limiter
 
     try:
-        app.state.model_service = load_model(settings.model_path)
+        app.state.model_service = load_active_model()
         log.info("model_loaded", path=str(settings.model_path))
     except FileNotFoundError:
         app.state.model_service = None

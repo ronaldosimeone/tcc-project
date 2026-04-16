@@ -1,0 +1,101 @@
+{
+  "schema_version": "1.0",
+  "trained_at": "2026-04-16T21:19:52.611210+00:00",
+  "model_type": "XGBClassifier",
+  "dataset": "MetroPT-3",
+  "target_column": "anomaly",
+  "requirements": {
+    "RF-04": "F1-Score (class 1 / fault) >= 0.75",
+    "RF-10": "Selectable via ACTIVE_MODEL=xgboost env-var",
+    "RNF-10": "Model versioned with structured metadata",
+    "RNF-23": "Optuna study persisted in SQLite"
+  },
+  "train_size": 1213558,
+  "test_size": 303390,
+  "test_size_ratio": 0.2,
+  "random_state": 42,
+  "optuna_trials": 100,
+  "best_cv_f1": 0.984,
+  "best_hyperparameters": {
+    "n_estimators": 598,
+    "max_depth": 7,
+    "learning_rate": 0.18774139796345557,
+    "subsample": 0.9201330827136216,
+    "colsample_bytree": 0.735116158084472,
+    "min_child_weight": 1,
+    "gamma": 0.0023189893058555575
+  },
+  "scale_pos_weight": 49.64,
+  "feature_count": 34,
+  "feature_names": [
+    "TP2",
+    "TP3",
+    "H1",
+    "DV_pressure",
+    "Reservoirs",
+    "Motor_current",
+    "Oil_temperature",
+    "COMP",
+    "DV_eletric",
+    "Towers",
+    "MPG",
+    "Oil_level",
+    "TP2_delta",
+    "TP2_std_5",
+    "TP3_std_5",
+    "H1_std_5",
+    "DV_pressure_std_5",
+    "Reservoirs_std_5",
+    "Oil_temperature_std_5",
+    "Motor_current_std_5",
+    "TP2_ma_5",
+    "TP2_ma_15",
+    "TP3_ma_5",
+    "TP3_ma_15",
+    "H1_ma_5",
+    "H1_ma_15",
+    "DV_pressure_ma_5",
+    "DV_pressure_ma_15",
+    "Reservoirs_ma_5",
+    "Reservoirs_ma_15",
+    "Oil_temperature_ma_5",
+    "Oil_temperature_ma_15",
+    "Motor_current_ma_5",
+    "Motor_current_ma_15"
+  ],
+  "metrics": {
+    "f1_class1_test": 0.9302,
+    "roc_auc_test": 1.0,
+    "latency_single_row_ms": {
+      "p50_ms": 1.674,
+      "p95_ms": 1.983
+    },
+    "classification_report": {
+      "0": {
+        "precision": 0.9999629033835487,
+        "recall": 0.9970174748401979,
+        "f1-score": 0.998488016944986,
+        "support": 297399.0
+      },
+      "1": {
+        "precision": 0.8708315130333479,
+        "recall": 0.9981639125354699,
+        "f1-score": 0.9301602115414528,
+        "support": 5991.0
+      },
+      "accuracy": 0.9970401133854115,
+      "macro avg": {
+        "precision": 0.9353972082084483,
+        "recall": 0.9975906936878338,
+        "f1-score": 0.9643241142432194,
+        "support": 303390.0
+      },
+      "weighted avg": {
+        "precision": 0.9974129638351519,
+        "recall": 0.9970401133854115,
+        "f1-score": 0.9971387573050093,
+        "support": 303390.0
+      }
+    }
+  }
+}

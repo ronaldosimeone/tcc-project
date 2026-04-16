@@ -16,3 +16,8 @@ imbalanced-learn==0.14.1
 
 # Parquet I/O
 pyarrow==20.0.0
+
+# Gradient Boosting + Hyperparameter Optimization (RF-10, RNF-23)
+xgboost>=2.1.0
+optuna>=3.6.0
+joblib>=1.4.0

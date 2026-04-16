@@ -11,7 +11,7 @@
 | **Frontend** | Next.js 16, TypeScript strict, Tailwind CSS v4, shadcn/ui, Recharts | Dashboard em tempo real, polling 5 s, alertas visuais |
 | **Backend** | FastAPI, SQLAlchemy 2 (async), Pydantic v2, Alembic | API REST, persistência, injeção de dependência |
 | **Banco de dados** | PostgreSQL 15 (Docker) | Histórico de predições |
-| **Machine Learning** | Scikit-learn, imbalanced-learn (SMOTE), Pandas, joblib | Treinamento e inferência do Random Forest |
+| **Machine Learning** | Scikit-learn, XGBoost, Optuna, imbalanced-learn, Pandas, joblib | Random Forest e XGBoost com selecção dinâmica via `ACTIVE_MODEL` |
 | **Infraestrutura** | Docker Desktop, Docker Compose | Orquestração dos serviços |
 | **IA Generativa** | Ollama (Llama 3.2 3B), ChromaDB, MCP | Assistente RAG de sugestões de reparo *(próxima fase)* |
 
@@ -129,8 +129,13 @@ Crie `projeto-tcc/apps/backend/.env`:
 #
 DATABASE_URL=postgresql+asyncpg://user:password@localhost:5432/tcc_db
 
-# ── Opcional: desabilitar cache do modelo entre reloads ───────────────────
+# ── RF-10: Selecção do modelo ativo (sem redeploy) ────────────────────────
+# Valores: random_forest (padrão) | xgboost
+ACTIVE_MODEL=random_forest
+
+# ── Caminhos alternativos para os artefatos ───────────────────────────────
 # MODEL_PATH=../../ml/models/random_forest_final.joblib
+# XGBOOST_MODEL_PATH=../../ml/models/xgboost_v1.joblib
 
 # ── Habilita logs SQL do SQLAlchemy (desenvolvimento) ────────────────────
 DEBUG=false
@@ -261,10 +266,15 @@ O servidor inicia em **`http://localhost:8000`**.
 | Endpoint | Método | Descrição |
 |---|---|---|
 | `/health` | `GET` | Probe de liveness e conectividade com o banco |
-| `/predict/` | `POST` | Inferência do Random Forest + persiste o resultado |
+| `/predict/` | `POST` | Inferência (RF ou XGBoost) + persiste o resultado — 100 req/min por IP (RNF-19) |
 | `/api/v1/predictions` | `GET` | Histórico paginado (`?page=1&size=20`) |
 | `/docs` | `GET` | Swagger UI interativo |
 | `/redoc` | `GET` | Documentação ReDoc |
+
+**Vitórias de infraestrutura recentes:**
+- **RNF-18** — Handler global de exceções: qualquer erro não tratado retorna HTTP 500 com JSON seguro (sem stack trace).
+- **RNF-19** — Rate limiting via `slowapi`: 100 req/min por IP em `POST /predict/`.
+- **Logging estruturado** via `structlog` (JSON em produção, legível em desenvolvimento).
 
 ### Exemplo — predição
 
@@ -368,20 +378,34 @@ python -m src.ingest_metropt
 ```
 
 ```bash
-# Passo 2 — Treinamento completo
+# Passo 2a — Random Forest (modelo padrão)
 # Pré-processa (rolling features), divide (80/20 estratificado),
 # executa GridSearchCV com SMOTE anti-leakage dentro de cada fold,
 # faz refit com best_params_ e salva os artefatos em models/
 python -m src.train_random_forest
 ```
 
+```bash
+# Passo 2b — XGBoost com Optuna (RF-10, RNF-23)
+# 100 trials de hiperparâmetros (retomável — SQLite persiste o estudo).
+# Use --n-trials 5 para um smoke run rápido (~2 min).
+python src/train_xgboost.py --n-trials 100
+```
+
 Após o treinamento, os seguintes artefatos são gerados:
 
 ```
 apps/ml/models/
-├── random_forest_final.joblib   ← carregado automaticamente pelo backend
-└── model_card.json              ← métricas F1, precisão, recall e parâmetros
+├── random_forest_final.joblib   ← padrão (ACTIVE_MODEL=random_forest)
+├── model_card.json              ← métricas RF
+├── xgboost_v1.joblib            ← ativado com ACTIVE_MODEL=xgboost
+└── xgboost_v1_card.json         ← métricas XGBoost + melhores hiperparâmetros
+
+apps/ml/data/optuna/
+└── xgboost_study.db             ← estudo Optuna persistido (RNF-23)
 ```
+
+> Veja `docs/model_comparison.md` para a tabela completa de métricas (F1, AUC, latência p50/p95).
 
 ### Detalhes do pipeline
 
@@ -390,7 +414,8 @@ apps/ml/models/
 | **Ingestão** | `ingest_metropt.py` | Lê CSV, cria coluna `anomaly` com 4 intervalos de falha real, salva Parquet |
 | **Pré-processamento** | `preprocessing.py` | `MetroPTPreprocessor`: delta, std_5, ma_5, ma_15 nos 7 sensores analógicos |
 | **Balanceamento** | `balancing.py` | `MetroPTBalancer`: SMOTE aplicado **somente** dentro de cada fold (anti-leakage) |
-| **Treinamento** | `train_random_forest.py` | `GridSearchCV` sobre `imblearn.Pipeline([SMOTE → RF])` com `cv=3, scoring='f1'` |
+| **Treinamento RF** | `train_random_forest.py` | `GridSearchCV` sobre `imblearn.Pipeline([SMOTE → RF])` com `cv=3, scoring='f1'` |
+| **Treinamento XGBoost** | `train_xgboost.py` | Optuna (100 trials, SQLite) + `scale_pos_weight` (sem SMOTE), `tree_method=hist` |
 
 ### Rodando os testes do ML
 
@@ -474,9 +499,34 @@ DATABASE_URL=postgresql+asyncpg://user:password@localhost:5432/tcc_db
 
 ### `POST /predict/` retorna HTTP 503
 
-**Causa:** O artefato `random_forest_final.joblib` não foi encontrado no caminho esperado.
+**Causa:** O artefato do modelo ativo não foi encontrado no caminho esperado.
 
-**Solução:** Execute o pipeline de treinamento (seção ML acima) ou confirme que o arquivo existe em `apps/ml/models/random_forest_final.joblib`.
+**Solução:** Confirme qual modelo está activo e execute o treinamento correspondente:
+
+```bash
+# Verificar qual modelo está configurado
+echo $ACTIVE_MODEL  # default: random_forest
+
+# Treinar o Random Forest (se necessário)
+cd apps/ml && python -m src.train_random_forest
+
+# Treinar o XGBoost (se ACTIVE_MODEL=xgboost)
+cd apps/ml && python src/train_xgboost.py --n-trials 5
+```
+
+---
+
+### `ACTIVE_MODEL=xgboost` mas a API continua usando o Random Forest
+
+**Causa:** A variável de ambiente não está sendo lida pelo processo FastAPI.
+
+**Solução:** Adicione ao `apps/backend/.env`:
+
+```dotenv
+ACTIVE_MODEL=xgboost
+```
+
+E reinicie o servidor (`uvicorn src.main:app --reload`). O log de startup exibirá `[RF-10] Active model = 'xgboost'`.
 
 ---
 

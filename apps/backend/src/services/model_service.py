@@ -1,6 +1,19 @@
 """
-ModelService — [RNF-11] Random Forest inference singleton.
-Refatorado para suportar o modelo random_forest_final.joblib com 12 sensores base.
+ModelService — [RNF-11] inference singleton, [RF-10] multi-model factory.
+
+The same ModelService class wraps any sklearn-compatible estimator that
+exposes `.predict()`, `.predict_proba()` and `.feature_names_in_` —
+both RandomForestClassifier and XGBClassifier satisfy this contract.
+
+Model selection at startup (RF-10)
+-----------------------------------
+The active model is determined by the `ACTIVE_MODEL` environment variable
+(via `settings.active_model`).  No code change or redeploy is required:
+
+    ACTIVE_MODEL=random_forest   →  loads random_forest_final.joblib  (default)
+    ACTIVE_MODEL=xgboost         →  loads xgboost_v1.joblib
+
+Use `load_active_model()` in the FastAPI lifespan instead of `load_model()`.
 """
 
 from __future__ import annotations
@@ -15,6 +28,7 @@ import numpy as np
 import pandas as pd
 from fastapi import Request
 
+from src.core.config import settings
 from src.core.exceptions import ModelNotAvailableError
 from src.schemas.predict import PredictRequest, PredictResponse
 
@@ -56,6 +70,29 @@ def load_model(path: Path) -> "ModelService":
     model: Any = joblib.load(path)
     logger.info("[RNF-11] Modelo carregado com sucesso: %s", path)
     return ModelService(model)
+
+
+# RF-10 registry — maps ACTIVE_MODEL values to their artefact paths.
+_MODEL_REGISTRY: dict[str, Path] = {
+    "random_forest": settings.model_path,
+    "xgboost": settings.xgboost_model_path,
+}
+
+
+def load_active_model() -> "ModelService":
+    """
+    Load whichever model is selected by `settings.active_model` (RF-10).
+
+    Override at runtime without code changes:
+        ACTIVE_MODEL=xgboost  →  loads xgboost_v1.joblib
+        ACTIVE_MODEL=random_forest  →  loads random_forest_final.joblib (default)
+
+    Falls back to the default random-forest path if the key is unrecognised.
+    """
+    model_name = settings.active_model.lower().strip()
+    path = _MODEL_REGISTRY.get(model_name, settings.model_path)
+    logger.info("[RF-10] Active model = '%s' | path = %s", model_name, path)
+    return load_model(path)
 
 
 # ---------------------------------------------------------------------------
