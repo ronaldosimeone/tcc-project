@@ -30,9 +30,10 @@ from src.core.exceptions import (
 from src.core.logging import configure_logging
 from src.core.rate_limit import limiter, rate_limit_exceeded_handler
 from src.routers import health as health_router
+from src.routers import models as models_router
 from src.routers import predict as predict_router
 from src.routers import predictions as predictions_router
-from src.services.model_service import load_active_model
+from src.services.model_registry import ModelRegistry
 
 # ── Bootstrap structured logging immediately ──────────────────────────────
 # Must happen before any log.* call so processors are fully configured.
@@ -61,15 +62,17 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # ── Startup ──────────────────────────────────────────────────────────
     app.state.limiter = limiter
 
+    registry = ModelRegistry()
+    app.state.model_registry = registry
+
     try:
-        app.state.model_service = load_active_model()
-        log.info("model_loaded", path=str(settings.model_path))
+        await registry.swap(settings.active_model)
+        log.info("model_loaded", model=settings.active_model)
     except FileNotFoundError:
-        app.state.model_service = None
         log.warning(
             "model_artefact_missing",
-            path=str(settings.model_path),
-            consequence="POST /predict will return HTTP 503 until the model is available",
+            model=settings.active_model,
+            consequence="POST /predict will return HTTP 503 until a model is loaded via PUT /models/active",
         )
 
     yield
@@ -126,6 +129,7 @@ def create_app() -> FastAPI:
     app.include_router(health_router.router)
     app.include_router(predict_router.router)
     app.include_router(predictions_router.router)
+    app.include_router(models_router.router)
 
     return app
 

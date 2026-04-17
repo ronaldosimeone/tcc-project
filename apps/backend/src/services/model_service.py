@@ -81,24 +81,28 @@ _MODEL_REGISTRY: dict[str, Path] = {
 }
 
 
-def load_active_model() -> "ModelService":
+def load_model_by_name(model_name: str) -> "ModelService":
     """
-    Load whichever model is selected by `settings.active_model` (RF-10).
+    Load a ModelService by explicit name (RF-10, RNF-25).
 
-    Override at runtime without code changes:
-        ACTIVE_MODEL=random_forest  →  loads random_forest_final.joblib (default)
-        ACTIVE_MODEL=xgboost        →  loads xgboost_v1.joblib
-        ACTIVE_MODEL=mlp            →  loads mlp_v1.onnx + mlp_scaler.joblib
+    Called by `load_active_model()` at startup and by `ModelRegistry.swap()`
+    at runtime.  Keeping the loading logic here (rather than in the registry)
+    preserves the single-responsibility boundary: model_service owns *how* to
+    load; model_registry owns *when* and *atomically*.
 
-    Falls back to the default random-forest path if the key is unrecognised.
+    Parameters
+    ----------
+    model_name : str
+        One of ``"random_forest"``, ``"xgboost"``, or ``"mlp"``.
+        Falls back to the default random-forest path for unrecognised keys.
     """
-    model_name = settings.active_model.lower().strip()
+    model_name = model_name.lower().strip()
 
     if model_name == "mlp":
         from src.services.mlp_adapter import OnnxMlpAdapter
 
         logger.info(
-            "[RF-10] Active model = 'mlp' | onnx=%s | scaler=%s",
+            "[RF-10] Loading model 'mlp' | onnx=%s | scaler=%s",
             settings.mlp_onnx_path,
             settings.mlp_scaler_path,
         )
@@ -109,8 +113,18 @@ def load_active_model() -> "ModelService":
         return ModelService(adapter)
 
     path = _MODEL_REGISTRY.get(model_name, settings.model_path)
-    logger.info("[RF-10] Active model = '%s' | path = %s", model_name, path)
+    logger.info("[RF-10] Loading model '%s' | path = %s", model_name, path)
     return load_model(path)
+
+
+def load_active_model() -> "ModelService":
+    """
+    Load whichever model is selected by `settings.active_model` (RF-10).
+
+    Thin wrapper around `load_model_by_name` for startup use.  The runtime
+    hot-swap path calls `load_model_by_name` directly via `ModelRegistry`.
+    """
+    return load_model_by_name(settings.active_model)
 
 
 # ---------------------------------------------------------------------------
@@ -188,8 +202,22 @@ class ModelService:
 # ---------------------------------------------------------------------------
 
 
-def get_model_service(request: Request) -> ModelService:
+async def get_model_service(request: Request) -> ModelService:
+    """
+    FastAPI dependency — resolves the active ModelService from the registry.
+
+    Reads from `app.state.model_registry` (set by the lifespan via ModelRegistry).
+    Falls back to the legacy `app.state.model_service` so that existing tests
+    that override this dependency via `dependency_overrides` continue to work
+    without modification.
+    """
+    registry = getattr(request.app.state, "model_registry", None)
+    if registry is not None:
+        return await registry.get()
+
+    # Legacy fallback (used by tests that override this dependency directly)
     service: ModelService | None = getattr(request.app.state, "model_service", None)
-    if service is None:
-        raise ModelNotAvailableError()
-    return service
+    if service is not None:
+        return service
+
+    raise ModelNotAvailableError()

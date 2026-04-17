@@ -9,9 +9,9 @@
 | Camada | Tecnologia | Responsabilidade |
 |---|---|---|
 | **Frontend** | Next.js 16, TypeScript strict, Tailwind CSS v4, shadcn/ui, Recharts | Dashboard em tempo real, polling 5 s, alertas visuais |
-| **Backend** | FastAPI, SQLAlchemy 2 (async), Pydantic v2, Alembic | API REST, persistência, injeção de dependência |
+| **Backend** | FastAPI, SQLAlchemy 2 (async), Pydantic v2, Alembic | API REST, persistência, injeção de dependência, Model Registry |
 | **Banco de dados** | PostgreSQL 15 (Docker) | Histórico de predições |
-| **Machine Learning** | Scikit-learn, XGBoost, Optuna, imbalanced-learn, Pandas, joblib | Random Forest e XGBoost com selecção dinâmica via `ACTIVE_MODEL` |
+| **Machine Learning** | Scikit-learn, XGBoost, Optuna, PyTorch Lightning, ONNX Runtime, MLflow | RF, XGBoost e MLP com hot-swap atômico via `ACTIVE_MODEL` |
 | **Infraestrutura** | Docker Desktop, Docker Compose | Orquestração dos serviços |
 | **IA Generativa** | Ollama (Llama 3.2 3B), ChromaDB, MCP | Assistente RAG de sugestões de reparo *(próxima fase)* |
 
@@ -263,16 +263,19 @@ uvicorn src.main:app --reload --port 8000
 
 O servidor inicia em **`http://localhost:8000`**.
 
-| Endpoint | Método | Descrição |
-|---|---|---|
-| `/health` | `GET` | Probe de liveness e conectividade com o banco |
-| `/predict/` | `POST` | Inferência (RF ou XGBoost) + persiste o resultado — 100 req/min por IP (RNF-19) |
-| `/api/v1/predictions` | `GET` | Histórico paginado (`?page=1&size=20`) |
-| `/docs` | `GET` | Swagger UI interativo |
-| `/redoc` | `GET` | Documentação ReDoc |
+| Endpoint | Método | Auth | Descrição |
+|---|---|---|---|
+| `/health` | `GET` | — | Probe de liveness e conectividade com o banco |
+| `/predict/` | `POST` | — | Inferência + persiste o resultado — 100 req/min por IP (RNF-19) |
+| `/api/v1/predictions` | `GET` | — | Histórico paginado (`?page=1&size=20`) |
+| `/models` | `GET` | `X-Admin-Token` | Lista modelos registrados e disponibilidade dos artefatos (RF-11) |
+| `/models/active` | `PUT` | `X-Admin-Token` | Hot-swap atômico do modelo ativo em tempo de execução (RNF-25) |
+| `/docs` | `GET` | — | Swagger UI interativo |
 
-**Vitórias de infraestrutura recentes:**
-- **RNF-18** — Handler global de exceções: qualquer erro não tratado retorna HTTP 500 com JSON seguro (sem stack trace).
+**Destaques de infraestrutura:**
+- **RNF-25 — Model Registry com Atomic Hot-Swap:** troque o modelo ativo (RF ↔ XGBoost ↔ MLP) sem reiniciar o servidor via `PUT /models/active`. O carregamento ocorre em background thread; apenas o ponteiro é trocado sob `asyncio.Lock`.
+- **RNF-24 — Deep Learning com ONNX Runtime:** o MLP é exportado em ONNX e serve via `OnnxMlpAdapter`, mantendo a mesma interface que RF e XGBoost — latência p95 < 500 ms.
+- **RNF-18** — Handler global: qualquer erro não tratado retorna HTTP 500 com JSON seguro (sem stack trace).
 - **RNF-19** — Rate limiting via `slowapi`: 100 req/min por IP em `POST /predict/`.
 - **Logging estruturado** via `structlog` (JSON em produção, legível em desenvolvimento).
 
@@ -322,6 +325,7 @@ curl "http://localhost:8000/api/v1/predictions?page=1&size=10"
 # Com o venv ativo, na pasta apps/backend
 # Não requer PostgreSQL — usa SQLite em memória
 pytest tests/ -v
+# Inclui testes de integração do ModelRegistry, autenticação e endpoints /models.
 ```
 
 ---
@@ -394,15 +398,30 @@ python src/train_xgboost.py --n-trials 100
 
 Após o treinamento, os seguintes artefatos são gerados:
 
+```bash
+# Passo 2c — MLP com PyTorch Lightning (RNF-24)
+# Treina uma rede [256→128→64], exporta ONNX e rastreia no MLflow local.
+# Use --max-epochs 10 para um smoke run rápido (~5 min).
+python src/train_mlp.py --max-epochs 50
+```
+
+Após o treinamento, os seguintes artefatos são gerados:
+
 ```
 apps/ml/models/
 ├── random_forest_final.joblib   ← padrão (ACTIVE_MODEL=random_forest)
 ├── model_card.json              ← métricas RF
 ├── xgboost_v1.joblib            ← ativado com ACTIVE_MODEL=xgboost
-└── xgboost_v1_card.json         ← métricas XGBoost + melhores hiperparâmetros
+├── xgboost_v1_card.json         ← métricas XGBoost + melhores hiperparâmetros
+├── mlp_v1.onnx                  ← ativado com ACTIVE_MODEL=mlp (ONNX Runtime)
+├── mlp_scaler.joblib            ← StandardScaler ajustado no X_train
+└── mlp_v1_card.json             ← métricas MLP + arquitetura
 
 apps/ml/data/optuna/
 └── xgboost_study.db             ← estudo Optuna persistido (RNF-23)
+
+apps/ml/mlruns/                  ← experimentos MLflow (RNF-24)
+└── mlp_metropt3/                   abra com: mlflow ui --backend-store-uri apps/ml/mlruns
 ```
 
 > Veja `docs/model_comparison.md` para a tabela completa de métricas (F1, AUC, latência p50/p95).
@@ -416,12 +435,15 @@ apps/ml/data/optuna/
 | **Balanceamento** | `balancing.py` | `MetroPTBalancer`: SMOTE aplicado **somente** dentro de cada fold (anti-leakage) |
 | **Treinamento RF** | `train_random_forest.py` | `GridSearchCV` sobre `imblearn.Pipeline([SMOTE → RF])` com `cv=3, scoring='f1'` |
 | **Treinamento XGBoost** | `train_xgboost.py` | Optuna (100 trials, SQLite) + `scale_pos_weight` (sem SMOTE), `tree_method=hist` |
+| **Treinamento MLP** | `train_mlp.py` | PyTorch Lightning `[256→128→64]`, AdamW, EarlyStopping; exporta ONNX + StandardScaler; rastreado no MLflow (RNF-24) |
 
 ### Rodando os testes do ML
 
 ```bash
 # Com o venv do ML ativo, na pasta apps/ml
 pytest tests/ -v
+# 137 testes: preprocessing, balancing, ingestão, RF, XGBoost, MLP (ONNX)
+# Os testes MLP são ignorados automaticamente se os artefatos ainda não existirem.
 ```
 
 ---
@@ -501,7 +523,7 @@ DATABASE_URL=postgresql+asyncpg://user:password@localhost:5432/tcc_db
 
 **Causa:** O artefato do modelo ativo não foi encontrado no caminho esperado.
 
-**Solução:** Confirme qual modelo está activo e execute o treinamento correspondente:
+**Solução:** Confirme qual modelo está ativo e execute o treinamento correspondente:
 
 ```bash
 # Verificar qual modelo está configurado
@@ -512,6 +534,18 @@ cd apps/ml && python -m src.train_random_forest
 
 # Treinar o XGBoost (se ACTIVE_MODEL=xgboost)
 cd apps/ml && python src/train_xgboost.py --n-trials 5
+
+# Treinar o MLP (se ACTIVE_MODEL=mlp)
+cd apps/ml && python src/train_mlp.py --max-epochs 10
+```
+
+Alternativamente, com o servidor rodando, use o hot-swap para carregar um modelo disponível sem reiniciar:
+
+```bash
+curl -X PUT http://localhost:8000/models/active \
+  -H "X-Admin-Token: $ADMIN_API_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"model_name": "random_forest"}'
 ```
 
 ---
@@ -526,7 +560,9 @@ cd apps/ml && python src/train_xgboost.py --n-trials 5
 ACTIVE_MODEL=xgboost
 ```
 
-E reinicie o servidor (`uvicorn src.main:app --reload`). O log de startup exibirá `[RF-10] Active model = 'xgboost'`.
+E reinicie o servidor (`uvicorn src.main:app --reload`). O log de startup exibirá `model_loaded model=xgboost`.
+
+> **Alternativa sem reiniciar:** use `PUT /models/active` para trocar o modelo em tempo de execução (RNF-25).
 
 ---
 

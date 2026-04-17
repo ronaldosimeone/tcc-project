@@ -68,7 +68,15 @@ class Settings(BaseSettings):
     active_model: str = Field(
         default="random_forest",
         alias="ACTIVE_MODEL",
-        description="Active inference model: 'random_forest' or 'xgboost'.",
+        description="Active inference model: 'random_forest', 'xgboost', or 'mlp'.",
+    )
+
+    # RF-11 — admin token for /models management endpoints.
+    # MUST be overridden in production via the ADMIN_API_TOKEN environment variable.
+    admin_api_token: str = Field(
+        default="change-me-in-production",
+        alias="ADMIN_API_TOKEN",
+        description="Bearer token required for all /models admin endpoints.",
     )
 
     xgboost_model_path: Path = Field(
