@@ -3,7 +3,8 @@ ModelService — [RNF-11] inference singleton, [RF-10] multi-model factory.
 
 The same ModelService class wraps any sklearn-compatible estimator that
 exposes `.predict()`, `.predict_proba()` and `.feature_names_in_` —
-both RandomForestClassifier and XGBClassifier satisfy this contract.
+RandomForestClassifier, XGBClassifier and OnnxMlpAdapter all satisfy this
+contract.
 
 Model selection at startup (RF-10)
 -----------------------------------
@@ -12,6 +13,7 @@ The active model is determined by the `ACTIVE_MODEL` environment variable
 
     ACTIVE_MODEL=random_forest   →  loads random_forest_final.joblib  (default)
     ACTIVE_MODEL=xgboost         →  loads xgboost_v1.joblib
+    ACTIVE_MODEL=mlp             →  loads mlp_v1.onnx + mlp_scaler.joblib
 
 Use `load_active_model()` in the FastAPI lifespan instead of `load_model()`.
 """
@@ -84,12 +86,28 @@ def load_active_model() -> "ModelService":
     Load whichever model is selected by `settings.active_model` (RF-10).
 
     Override at runtime without code changes:
-        ACTIVE_MODEL=xgboost  →  loads xgboost_v1.joblib
         ACTIVE_MODEL=random_forest  →  loads random_forest_final.joblib (default)
+        ACTIVE_MODEL=xgboost        →  loads xgboost_v1.joblib
+        ACTIVE_MODEL=mlp            →  loads mlp_v1.onnx + mlp_scaler.joblib
 
     Falls back to the default random-forest path if the key is unrecognised.
     """
     model_name = settings.active_model.lower().strip()
+
+    if model_name == "mlp":
+        from src.services.mlp_adapter import OnnxMlpAdapter
+
+        logger.info(
+            "[RF-10] Active model = 'mlp' | onnx=%s | scaler=%s",
+            settings.mlp_onnx_path,
+            settings.mlp_scaler_path,
+        )
+        adapter = OnnxMlpAdapter(
+            onnx_path=settings.mlp_onnx_path,
+            scaler_path=settings.mlp_scaler_path,
+        )
+        return ModelService(adapter)
+
     path = _MODEL_REGISTRY.get(model_name, settings.model_path)
     logger.info("[RF-10] Active model = '%s' | path = %s", model_name, path)
     return load_model(path)

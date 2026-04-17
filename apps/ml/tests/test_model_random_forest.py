@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
+import pandas as pd
 import pytest
 
 # ---------------------------------------------------------------------------
@@ -193,9 +194,11 @@ class TestModelBehaviour:
         self, model: Any, model_card: dict[str, Any]
     ) -> None:
         """predict must return only 0s and 1s for any numeric input."""
-        n_features: int = model_card["feature_count"]
         rng = np.random.default_rng(0)
-        X_dummy = rng.uniform(size=(20, n_features)).astype("float32")
+        X_dummy = pd.DataFrame(
+            rng.uniform(size=(20, model_card["feature_count"])).astype("float32"),
+            columns=model.feature_names_in_,
+        )
         y_pred: np.ndarray = model.predict(X_dummy)
         assert set(y_pred.tolist()).issubset(
             {0, 1}
@@ -204,27 +207,33 @@ class TestModelBehaviour:
     def test_predict_output_length_matches_input(
         self, model: Any, model_card: dict[str, Any]
     ) -> None:
-        n_features: int = model_card["feature_count"]
         rng = np.random.default_rng(1)
-        X_dummy = rng.uniform(size=(15, n_features)).astype("float32")
+        X_dummy = pd.DataFrame(
+            rng.uniform(size=(15, model_card["feature_count"])).astype("float32"),
+            columns=model.feature_names_in_,
+        )
         y_pred: np.ndarray = model.predict(X_dummy)
         assert len(y_pred) == 15
 
     def test_predict_proba_shape_is_n_samples_by_2(
         self, model: Any, model_card: dict[str, Any]
     ) -> None:
-        n_features: int = model_card["feature_count"]
         rng = np.random.default_rng(2)
-        X_dummy = rng.uniform(size=(8, n_features)).astype("float32")
+        X_dummy = pd.DataFrame(
+            rng.uniform(size=(8, model_card["feature_count"])).astype("float32"),
+            columns=model.feature_names_in_,
+        )
         proba: np.ndarray = model.predict_proba(X_dummy)
         assert proba.shape == (8, 2), f"Expected (8, 2), got {proba.shape}"
 
     def test_predict_proba_rows_sum_to_one(
         self, model: Any, model_card: dict[str, Any]
     ) -> None:
-        n_features: int = model_card["feature_count"]
         rng = np.random.default_rng(3)
-        X_dummy = rng.uniform(size=(10, n_features)).astype("float32")
+        X_dummy = pd.DataFrame(
+            rng.uniform(size=(10, model_card["feature_count"])).astype("float32"),
+            columns=model.feature_names_in_,
+        )
         proba: np.ndarray = model.predict_proba(X_dummy)
         np.testing.assert_allclose(
             proba.sum(axis=1),

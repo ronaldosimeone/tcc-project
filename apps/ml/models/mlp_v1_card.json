@@ -1,0 +1,116 @@
+{
+  "schema_version": "1.0",
+  "trained_at": "2026-04-17T16:30:34.958610+00:00",
+  "model_type": "MlpClassifier",
+  "framework": "PyTorch Lightning",
+  "export_format": "ONNX",
+  "dataset": "MetroPT-3",
+  "target_column": "anomaly",
+  "requirements": {
+    "RNF-24": "MLflow experiment tracking (local mlruns/)",
+    "RF-10": "Selectable via ACTIVE_MODEL=mlp env-var"
+  },
+  "train_size": 1213558,
+  "test_size": 303390,
+  "test_size_ratio": 0.2,
+  "random_state": 42,
+  "architecture": {
+    "input_dim": 34,
+    "hidden_dims": [
+      256,
+      128,
+      64
+    ],
+    "dropout": 0.3,
+    "output_dim": 2,
+    "activation": "ReLU",
+    "normalization": "BatchNorm1d"
+  },
+  "training": {
+    "optimizer": "AdamW",
+    "lr": 0.001,
+    "weight_decay": 0.0001,
+    "scheduler": "CosineAnnealingLR",
+    "batch_size": 1024,
+    "max_epochs": 10,
+    "early_stopping_patience": 10,
+    "monitor_metric": "val_f1",
+    "pos_weight": 49.643
+  },
+  "preprocessing": {
+    "scaler": "StandardScaler",
+    "scaler_artefact": "mlp_scaler.joblib"
+  },
+  "feature_count": 34,
+  "feature_names": [
+    "TP2",
+    "TP3",
+    "H1",
+    "DV_pressure",
+    "Reservoirs",
+    "Motor_current",
+    "Oil_temperature",
+    "COMP",
+    "DV_eletric",
+    "Towers",
+    "MPG",
+    "Oil_level",
+    "TP2_delta",
+    "TP2_std_5",
+    "TP3_std_5",
+    "H1_std_5",
+    "DV_pressure_std_5",
+    "Reservoirs_std_5",
+    "Oil_temperature_std_5",
+    "Motor_current_std_5",
+    "TP2_ma_5",
+    "TP2_ma_15",
+    "TP3_ma_5",
+    "TP3_ma_15",
+    "H1_ma_5",
+    "H1_ma_15",
+    "DV_pressure_ma_5",
+    "DV_pressure_ma_15",
+    "Reservoirs_ma_5",
+    "Reservoirs_ma_15",
+    "Oil_temperature_ma_5",
+    "Oil_temperature_ma_15",
+    "Motor_current_ma_5",
+    "Motor_current_ma_15"
+  ],
+  "metrics": {
+    "f1_class1_test": 0.8645,
+    "roc_auc_test": 0.9998,
+    "latency_single_row_ms": {
+      "p50_ms": 0.017,
+      "p95_ms": 0.024
+    },
+    "classification_report": {
+      "0": {
+        "precision": 0.9999052725950234,
+        "recall": 0.9938063006264312,
+        "f1-score": 0.9968464579145474,
+        "support": 297399.0
+      },
+      "1": {
+        "precision": 0.7639974375400385,
+        "recall": 0.9953263228175597,
+        "f1-score": 0.8644534647723978,
+        "support": 5991.0
+      },
+      "accuracy": 0.9938363162925608,
+      "macro avg": {
+        "precision": 0.8819513550675309,
+        "recall": 0.9945663117219954,
+        "f1-score": 0.9306499613434727,
+        "support": 303390.0
+      },
+      "weighted avg": {
+        "precision": 0.9952468334908525,
+        "recall": 0.9938363162925608,
+        "f1-score": 0.9942321119508879,
+        "support": 303390.0
+      }
+    }
+  }
+}

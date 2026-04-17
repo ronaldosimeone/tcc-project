@@ -267,7 +267,7 @@ class TestMovingAverages:
         """
         n = 40
         df = _make_df(n_rows=n)
-        df.loc[20:, "TP2"] = df["TP2"].mean() + 100.0  # large step
+        df.loc[20:, "TP2"] = np.float32(df["TP2"].mean() + 100.0)  # large step
         result = MetroPTPreprocessor().transform(df)
         new_level = float(df["TP2"].iloc[25])
         residual_ma5 = abs(result["TP2_ma_5"].iloc[25] - new_level)

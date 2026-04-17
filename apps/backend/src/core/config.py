@@ -16,6 +16,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 _ML_MODELS: Path = Path(__file__).resolve().parents[3] / "ml" / "models"
 _DEFAULT_MODEL_PATH: Path = _ML_MODELS / "random_forest_final.joblib"
 _DEFAULT_XGBOOST_PATH: Path = _ML_MODELS / "xgboost_v1.joblib"
+_DEFAULT_MLP_ONNX_PATH: Path = _ML_MODELS / "mlp_v1.onnx"
+_DEFAULT_MLP_SCALER_PATH: Path = _ML_MODELS / "mlp_scaler.joblib"
 
 
 class Settings(BaseSettings):
@@ -73,6 +75,20 @@ class Settings(BaseSettings):
         default=_DEFAULT_XGBOOST_PATH,
         alias="XGBOOST_MODEL_PATH",
         description="Absolute path to the trained XGBoost .joblib artefact.",
+    )
+
+    # RNF-24 — MLP via ONNX Runtime.
+    # Set ACTIVE_MODEL=mlp to use the neural network inference engine.
+    mlp_onnx_path: Path = Field(
+        default=_DEFAULT_MLP_ONNX_PATH,
+        alias="MLP_ONNX_PATH",
+        description="Absolute path to the trained MLP .onnx artefact.",
+    )
+
+    mlp_scaler_path: Path = Field(
+        default=_DEFAULT_MLP_SCALER_PATH,
+        alias="MLP_SCALER_PATH",
+        description="Absolute path to the StandardScaler .joblib artefact for the MLP.",
     )
 
 
