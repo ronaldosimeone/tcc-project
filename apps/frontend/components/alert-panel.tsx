@@ -135,7 +135,9 @@ export function AlertPanel({ latest, riskLevel }: AlertPanelProps) {
   return (
     <aside
       className={cn(
-        "flex h-full w-72 shrink-0 flex-col border-l transition-colors duration-700",
+        // RNF-22: 256px em 1024px (lg) libera espaço para o conteúdo principal;
+        // 288px volta no breakpoint xl (1280px+) para o layout full-HD.
+        "flex h-full w-64 shrink-0 flex-col border-l transition-colors duration-700 xl:w-72",
         isCritical
           ? "border-red-500/30 bg-red-500/0.02"
           : isAlert

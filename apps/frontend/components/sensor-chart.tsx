@@ -317,9 +317,11 @@ export const SensorChart = memo(function SensorChart({
 
       <CardContent className="flex flex-col gap-6 px-5 pb-5">
         {isEmpty ? (
+          /* RNF-21: EmptyState — aguardando pontos suficientes para renderizar o gráfico */
           <div
             className="flex h-[160px] items-center justify-center text-sm text-muted-foreground"
             role="status"
+            data-testid="chart-empty-state"
           >
             Coletando dados…
           </div>

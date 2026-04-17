@@ -102,11 +102,25 @@ describe("usePredictionHistory", () => {
     vi.useRealTimers();
   });
 
-  // 3. Helper universal para avançar o tempo do setTimeout do nosso Hook
+  // 3. Helpers para avançar os setTimeouts do hook.
+  //
+  // O hook usa dois setTimeout(0) em cascata:
+  //   - Efeito 1: setTimeout → setIsMounted(true)          [montagem]
+  //   - Efeito 2: setTimeout → setHistory(...)             [quando isMounted muda + latest ≠ null]
+  //
+  // flushEffects() avança um nível de setTimeout(0).
+  // flushAllEffects() avança dois níveis, necessário para testes de adição de entradas.
   async function flushEffects() {
     await act(async () => {
       await vi.advanceTimersByTimeAsync(0);
     });
+  }
+
+  async function flushAllEffects() {
+    // Primeiro flush: dispara setIsMounted(true) + quaisquer states pendentes
+    await flushEffects();
+    // Segundo flush: dispara o setHistory() do Effect 2 (agendado após isMounted=true)
+    await flushEffects();
   }
 
   // ── Estado inicial ──────────────────────────────────────────────────────
@@ -193,7 +207,7 @@ describe("usePredictionHistory", () => {
   it("adiciona entrada ao histórico quando latest é fornecido", async () => {
     const latest = makeResponse({ failure_probability: 0.1 });
     const { result } = renderHook(() => usePredictionHistory(latest));
-    await flushEffects();
+    await flushAllEffects(); // Effect1 (isMounted) + Effect2 (entry add)
 
     expect(result.current.history).toHaveLength(1);
   });
@@ -268,7 +282,7 @@ describe("usePredictionHistory", () => {
     });
 
     renderHook(() => usePredictionHistory(latest));
-    await flushEffects();
+    await flushAllEffects();
 
     const stored = localStorage.getItem(PREDICTION_HISTORY_STORAGE_KEY);
     expect(stored).not.toBeNull();
@@ -282,7 +296,7 @@ describe("usePredictionHistory", () => {
   it("clearHistory esvazia o histórico em memória", async () => {
     const latest = makeResponse({ failure_probability: 0.5 });
     const { result } = renderHook(() => usePredictionHistory(latest));
-    await flushEffects();
+    await flushAllEffects();
 
     expect(result.current.history.length).toBeGreaterThan(0);
 
@@ -313,7 +327,7 @@ describe("usePredictionHistory", () => {
       timestamp: "2024-01-01T10:00:00.000Z",
     });
     const { result } = renderHook(() => usePredictionHistory(latest));
-    await flushEffects();
+    await flushAllEffects();
 
     expect(result.current.history[0]?.riskLevel).toBe("CRÍTICO");
   });
@@ -324,7 +338,7 @@ describe("usePredictionHistory", () => {
       timestamp: "2024-01-01T10:00:00.000Z",
     });
     const { result } = renderHook(() => usePredictionHistory(latest));
-    await flushEffects();
+    await flushAllEffects();
 
     expect(result.current.history[0]?.riskLevel).toBe("ALERTA");
   });
@@ -335,7 +349,7 @@ describe("usePredictionHistory", () => {
       timestamp: "2024-01-01T10:00:00.000Z",
     });
     const { result } = renderHook(() => usePredictionHistory(latest));
-    await flushEffects();
+    await flushAllEffects();
 
     expect(result.current.history[0]?.riskLevel).toBe("NORMAL");
   });
@@ -389,7 +403,7 @@ describe("usePredictionHistory", () => {
     } as PredictResponse;
 
     const { result } = renderHook(() => usePredictionHistory(latest));
-    await flushEffects();
+    await flushAllEffects();
 
     expect(result.current.history).toHaveLength(1);
     expect(result.current.history[0]?.failure_probability).toBe(0);
@@ -404,7 +418,7 @@ describe("usePredictionHistory", () => {
     } as PredictResponse;
 
     const { result } = renderHook(() => usePredictionHistory(latest));
-    await flushEffects();
+    await flushAllEffects();
 
     expect(result.current.history).toHaveLength(1);
     expect(result.current.history[0]?.failure_probability).toBe(1);
