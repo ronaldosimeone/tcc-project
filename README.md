@@ -20,7 +20,6 @@
 ## Arquitetura do Monorepo
 
 ```
-
 projeto-tcc/
 ├── apps/
 │   ├── backend/                  # API FastAPI — Clean Architecture
@@ -62,7 +61,6 @@ projeto-tcc/
 ├── docker-compose.yml            # Orquestração dos serviços (nginx, backend, frontend, ml, db)
 ├── CLAUDE.md                     # Diretrizes de código do projeto
 └── README.md
-
 ```
 
 ---
