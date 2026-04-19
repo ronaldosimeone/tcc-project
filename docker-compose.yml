@@ -1,49 +1,81 @@
 services:
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    
+    volumes:
+      - ./infra/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./infra/nginx/conf.d:/etc/nginx/conf.d:ro
+
+    depends_on:
+      - api
+      - frontend
+    networks:
+      - app-network
+
   api:
     build: ./apps/backend
-    ports:
-      - "8000:8000"
+    container_name: api
     volumes:
       - ./apps/backend:/app
     env_file:
       - .env
     environment:
       - PYTHONPATH=/app
+    expose:
+      - "8000"
     depends_on:
       db:
         condition: service_healthy
-    command: uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
+    command: uvicorn src.main:app --host 0.0.0.0 --port 8000
+    networks:
+      - app-network
 
   frontend:
     build: ./apps/frontend
-    ports:
-      - "3000:3000"
+    container_name: frontend
     volumes:
       - ./apps/frontend:/app
       - /app/node_modules
     env_file:
       - .env
+    expose:
+      - "3000"
     command: pnpm dev
+    networks:
+      - app-network
 
   ml:
     build: ./apps/ml
-    ports:
-      - "8888:8888"
+    container_name: ml
     volumes:
       - ./apps/ml:/app
     env_file:
       - .env
-    # Adicionado --NotebookApp.token='admin' para facilitar seu acesso
-    command: jupyter notebook --ip=0.0.0.0 --allow-root --no-browser --NotebookApp.token='admin'
+    expose:
+      - "8888"
+    command: jupyter notebook --ip=0.0.0.0 --allow-root --no-browser
+    networks:
+      - app-network
 
   db:
     image: postgres:15
+    container_name: db
     env_file:
       - .env
-    ports:
-      - "5432:5432"
+    expose:
+      - "5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U user -d tcc_db"]
       interval: 5s
       timeout: 5s
       retries: 5
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
