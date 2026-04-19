@@ -20,6 +20,7 @@
 ## Arquitetura do Monorepo
 
 ```
+
 projeto-tcc/
 ├── apps/
 │   ├── backend/                  # API FastAPI — Clean Architecture
@@ -27,9 +28,9 @@ projeto-tcc/
 │   │   │   └── versions/
 │   │   │       └── 0001_create_predictions_table.py
 │   │   ├── src/
-│   │   │   ├── core/             # config, database, exceptions
+│   │   │   ├── core/             # config, database, exceptions, logging, rate limit
 │   │   │   ├── models/           # ORM SQLAlchemy (Prediction)
-│   │   │   ├── routers/          # I/O e injeção de dependência
+│   │   │   ├── routers/          # I/O, REST, SSE, WebSocket, injeção de dependência
 │   │   │   ├── schemas/          # DTOs Pydantic v2
 │   │   │   └── services/         # Regras de negócio
 │   │   ├── tests/
@@ -51,9 +52,17 @@ projeto-tcc/
 │       ├── src/                  # ingest_metropt, preprocessing, balancing, train
 │       └── tests/
 │
-├── docker-compose.yml
+├── infra/
+│   └── nginx/
+│       └── nginx.conf            # Nginx reverse proxy (S6): entrada única, SSE/WS, timeout 3600s
+│
+├── docs/
+│   └── model_comparison.*        # Comparação e validação dos modelos de Machine Learning
+│
+├── docker-compose.yml            # Orquestração dos serviços (nginx, backend, frontend, ml, db)
 ├── CLAUDE.md                     # Diretrizes de código do projeto
 └── README.md
+
 ```
 
 ---
