@@ -34,6 +34,7 @@ from src.routers import models as models_router
 from src.routers import predict as predict_router
 from src.routers import predictions as predictions_router
 from src.routers import stream as stream_router
+from src.routers import alerts_ws
 from src.services.model_registry import ModelRegistry
 
 # ── Bootstrap structured logging immediately ──────────────────────────────
@@ -132,6 +133,7 @@ def create_app() -> FastAPI:
     app.include_router(predictions_router.router)
     app.include_router(models_router.router)
     app.include_router(stream_router.router)
+    app.include_router(alerts_ws.router)
 
     return app
 
