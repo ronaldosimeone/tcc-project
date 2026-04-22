@@ -12,6 +12,7 @@
 | **Backend** | FastAPI, SQLAlchemy 2 (async), Pydantic v2, Alembic | API REST, persistência, injeção de dependência, Model Registry |
 | **Banco de dados** | PostgreSQL 15 (Docker) | Histórico de predições |
 | **Machine Learning** | Scikit-learn, XGBoost, Optuna, PyTorch Lightning, ONNX Runtime, MLflow | RF, XGBoost e MLP com hot-swap atômico via `ACTIVE_MODEL` |
+| **MLOps** | MLflow 2.x (Docker), PostgreSQL backend store, promoção automatizada | Rastreamento de experimentos, registro de artefatos e promoção do melhor modelo |
 | **Infraestrutura** | Docker Desktop, Docker Compose | Orquestração dos serviços |
 | **IA Generativa** | Ollama (Llama 3.2 3B), ChromaDB, MCP | Assistente RAG de sugestões de reparo *(próxima fase)* |
 
@@ -506,9 +507,106 @@ docker compose up --build
 | **Frontend** | `http://localhost:3000` | Dashboard Next.js |
 | **Backend** | `http://localhost:8000` | API FastAPI |
 | **Jupyter** | `http://localhost:8888` (token: `admin`) | Notebooks de ML |
+| **MLflow** | `http://localhost:5000` | UI de experimentos e artefatos |
 | **PostgreSQL** | `localhost:5432` | Banco de dados |
 
 > **Lembre-se:** Com Docker, as migrations **não são executadas automaticamente**. Após `docker compose up`, aplique as migrations com o venv do backend ativo e o arquivo `apps/backend/.env` configurado com `localhost:5432`.
+
+---
+
+## MLOps — MLflow + Promoção de Modelos
+
+### Arquitetura MLflow no Docker (RNF-27)
+
+O serviço `mlflow` roda como contêiner dedicado na mesma rede Docker que os demais serviços. O PostgreSQL atua como **backend store** (experimentos, runs, métricas), enquanto os artefatos binários (`.onnx`, `.joblib`, model cards) ficam em um **volume Docker nomeado** (`mlflow_artifacts`), separado do banco de dados para facilitar backups independentes.
+
+```
+train_mlp.py  ──log_params/metrics/artefacts──►  MLflow Server (porta 5000)
+                                                       │
+                                              ┌────────┴────────┐
+                                      PostgreSQL (tcc_db)   Volume Docker
+                                      (runs, métricas)       (onnx, joblib,
+                                                              model_card.json)
+```
+
+Para acessar a UI de experimentos, suba os serviços e abra `http://localhost:5000`.
+
+```bash
+docker compose up mlflow db -d
+```
+
+> **Nota:** O serviço instala `psycopg2-binary` no startup (~15 s na primeira vez). Aguarde o log `[INFO] Starting gunicorn` antes de tentar conexões.
+
+---
+
+### Promovendo um modelo para produção (RNF-26)
+
+Após um ou mais treinos com `train_mlp.py`, use o script `promote_model.py` para promover o melhor run para a pasta `models/` que o backend lê.
+
+#### Pré-requisitos
+
+```bash
+# MLflow e o banco de dados devem estar rodando
+docker compose up mlflow db -d
+
+# Ambiente virtual do ML deve estar ativo
+cd apps/ml
+.\.venv\Scripts\Activate.ps1     # Windows PowerShell
+```
+
+#### Uso básico (padrões)
+
+```bash
+# Conecta em http://localhost:5000, experimento 'mlp_metropt3',
+# maximiza 'test_f1_class1, salva em apps/ml/models/
+python src/promote_model.py
+```
+
+#### Opções disponíveis
+
+```bash
+python src/promote_model.py \
+    --tracking-uri http://localhost:5000 \
+    --experiment   mlp_metropt3 \
+    --metric       test_f1_class1 \
+    --artifact-path model \
+    --dest-dir     models/ \
+    --card-filename mlp_v1_card.json
+```
+
+| Flag | Padrão | Descrição |
+|---|---|---|
+| `--tracking-uri` | `http://localhost:5000` | URI do servidor MLflow |
+| `--experiment` | `mlp_metropt3` | Nome do experimento |
+| `--metric` | `test_f1_class1` | Métrica para maximizar |
+| `--artifact-path` | `model` | Sub-path dos artefatos no run |
+| `--dest-dir` | `apps/ml/models/` | Destino dos artefatos promovidos |
+| `--card-filename` | `mlp_v1_card.json` | Nome do model card no artefato |
+
+#### O que o script faz
+
+1. Conecta ao servidor MLflow e busca o experimento pelo nome.
+2. Encontra o run com a maior `test_f1_class1` (via `ORDER BY metrics DESC`).
+3. Faz o download de todos os artefatos do run (`mlp_v1.onnx`, `mlp_scaler.joblib`, `mlp_v1_card.json`) para um diretório temporário.
+4. Lê o `mlp_v1_card.json` baixado e injeta os campos `promoted_run_id` e `promoted_at` (**RNF-26**).
+5. Copia os artefatos para `dest-dir`, sobrescrevendo a versão anterior usada pelo backend.
+
+Após a promoção, use o hot-swap para carregar o novo modelo sem reiniciar:
+
+```bash
+curl -X PUT http://localhost:8000/models/active \
+  -H "X-Admin-Token: $ADMIN_API_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"model_name": "mlp"}'
+```
+
+#### Rodando os testes de promoção
+
+```bash
+# Com o venv do ML ativo, na pasta apps/ml
+# Não requer MLflow rodando — usa unittest.mock
+pytest tests/test_promote_model.py -v
+```
 
 ---
 

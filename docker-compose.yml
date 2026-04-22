@@ -76,6 +76,30 @@ services:
     networks:
       - app-network
 
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:latest
+    container_name: mlflow
+    env_file:
+      - .env
+    ports:
+      - "5000:5000"
+    volumes:
+      - mlflow_artifacts:/mlflow/artifacts
+    depends_on:
+      db:
+        condition: service_healthy
+    command: >
+      bash -c "pip install psycopg2-binary -q &&
+      mlflow server
+      --backend-store-uri postgresql://$${POSTGRES_USER}:$${POSTGRES_PASSWORD}@db:5432/postgres
+      --default-artifact-root /mlflow/artifacts
+      --host 0.0.0.0 --port 5000"
+    networks:
+      - app-network
+
 networks:
   app-network:
     driver: bridge
+
+volumes:
+  mlflow_artifacts:

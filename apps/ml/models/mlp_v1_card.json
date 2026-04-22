@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "trained_at": "2026-04-17T16:30:34.958610+00:00",
+  "trained_at": "2026-04-22T16:13:20.814949+00:00",
   "model_type": "MlpClassifier",
   "framework": "PyTorch Lightning",
   "export_format": "ONNX",
@@ -32,7 +32,7 @@
     "weight_decay": 0.0001,
     "scheduler": "CosineAnnealingLR",
     "batch_size": 1024,
-    "max_epochs": 10,
+    "max_epochs": 2,
     "early_stopping_patience": 10,
     "monitor_metric": "val_f1",
     "pos_weight": 49.643
@@ -79,38 +79,40 @@
     "Motor_current_ma_15"
   ],
   "metrics": {
-    "f1_class1_test": 0.8645,
-    "roc_auc_test": 0.9998,
+    "f1_class1_test": 0.8489,
+    "roc_auc_test": 0.9996,
     "latency_single_row_ms": {
-      "p50_ms": 0.017,
-      "p95_ms": 0.024
+      "p50_ms": 0.016,
+      "p95_ms": 0.02
     },
     "classification_report": {
       "0": {
-        "precision": 0.9999052725950234,
-        "recall": 0.9938063006264312,
-        "f1-score": 0.9968464579145474,
+        "precision": 0.9998950362294304,
+        "recall": 0.9929724040766781,
+        "f1-score": 0.9964216965645926,
         "support": 297399.0
       },
       "1": {
-        "precision": 0.7639974375400385,
-        "recall": 0.9953263228175597,
-        "f1-score": 0.8644534647723978,
+        "precision": 0.7403726708074534,
+        "recall": 0.9948255716908696,
+        "f1-score": 0.8489423830211523,
         "support": 5991.0
       },
-      "accuracy": 0.9938363162925608,
+      "accuracy": 0.9930089983189954,
       "macro avg": {
-        "precision": 0.8819513550675309,
-        "recall": 0.9945663117219954,
-        "f1-score": 0.9306499613434727,
+        "precision": 0.870133853518442,
+        "recall": 0.9938989878837738,
+        "f1-score": 0.9226820397928724,
         "support": 303390.0
       },
       "weighted avg": {
-        "precision": 0.9952468334908525,
-        "recall": 0.9938363162925608,
-        "f1-score": 0.9942321119508879,
+        "precision": 0.9947702842888819,
+        "recall": 0.9930089983189954,
+        "f1-score": 0.9935094431368633,
         "support": 303390.0
       }
     }
-  }
+  },
+  "promoted_run_id": "dda99d02f54c45ebaae96d4a50c6b3bd",
+  "promoted_at": "2026-04-22T16:15:50.504287+00:00"
 }

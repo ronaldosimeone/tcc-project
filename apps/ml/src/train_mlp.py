@@ -60,12 +60,13 @@ from sklearn.preprocessing import StandardScaler
 from torch.utils.data import DataLoader, TensorDataset
 from torchmetrics.classification import BinaryAUROC, BinaryF1Score
 
+mlflow.set_tracking_uri("http://localhost:5000")
+
 # ── resolve paths from this file's location ───────────────────────────────────
 _HERE: Path = Path(__file__).resolve().parent  # apps/ml/src/
 _ML_ROOT: Path = _HERE.parent  # apps/ml/
 _DATA_PATH: Path = _ML_ROOT / "data" / "processed" / "metropt3.parquet"
 _MODELS_DIR: Path = _ML_ROOT / "models"
-_MLRUNS_DIR: Path = _ML_ROOT / "mlruns"
 
 sys.path.insert(0, str(_HERE))
 from preprocessing import MetroPTPreprocessor  # noqa: E402
@@ -360,11 +361,11 @@ def train(max_epochs: int = 50, batch_size: int = 1024) -> None:
     log.info("pos_weight = %.2f  (neg=%d, pos=%d)", pos_weight, n_neg, n_pos)
 
     # 6. MLflow logger
-    _MLRUNS_DIR.mkdir(parents=True, exist_ok=True)
+    experiment_name = "mlp_metropt3"
     mlflow_logger = MLFlowLogger(
-        experiment_name="mlp_metropt3",
-        tracking_uri=f"file:///{_MLRUNS_DIR}",
-        log_model=False,
+        experiment_name=experiment_name,
+        tracking_uri="http://localhost:5000",  # Alterado de file para http
+        log_model=True,
     )
 
     # 7. Callbacks
@@ -525,6 +526,11 @@ def train(max_epochs: int = 50, batch_size: int = 1024) -> None:
     card_path = _MODELS_DIR / "mlp_v1_card.json"
     card_path.write_text(json.dumps(card, indent=2))
     log.info("Model card saved → %s", card_path)
+
+    # Log card to MLflow so promote_model.py can download it (RNF-26)
+    with mlflow.start_run(run_id=mlflow_logger.run_id):
+        mlflow.log_artifact(str(card_path), artifact_path="model")
+
     log.info("Done.")
 
 
