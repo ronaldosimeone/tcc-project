@@ -17,7 +17,11 @@ from typing import Any
 
 import structlog
 
-from src.core.ws_manager import ALERT_PROBABILITY_THRESHOLD, ConnectionManager
+from src.core.ws_manager import (
+    ALERT_PROBABILITY_THRESHOLD,
+    ConnectionManager,
+    manager as _ws_manager,
+)
 
 log = structlog.get_logger(__name__)
 
@@ -75,3 +79,8 @@ class AlertService:
             )
 
         return alert_payload
+
+
+def get_alert_service() -> AlertService:
+    """FastAPI Depends factory — wires the module-level ConnectionManager singleton."""
+    return AlertService(_ws_manager)

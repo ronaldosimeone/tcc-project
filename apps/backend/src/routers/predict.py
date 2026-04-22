@@ -40,6 +40,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.core.database import get_db
 from src.core.rate_limit import PREDICT_RATE_LIMIT, limiter
 from src.schemas.predict import PredictRequest, PredictResponse
+from src.services.alert_service import AlertService, get_alert_service
 from src.services.model_service import ModelService, get_model_service
 from src.services.prediction_service import save_prediction
 
@@ -70,8 +71,16 @@ async def predict(
     payload: PredictRequest,
     service: ModelService = Depends(get_model_service),
     db: AsyncSession = Depends(get_db),
+    alert_service: AlertService = Depends(get_alert_service),
 ) -> PredictResponse:
-    """Run fault detection and persist the result (RF-09)."""
+    """Run fault detection, persist the result (RF-09) and push WS alert (RF-14)."""
     result: PredictResponse = service.predict(payload)
     await save_prediction(db, payload, result)
+    await alert_service.process_prediction(
+        {
+            "probability": result.failure_probability,
+            "predicted_class": result.predicted_class,
+            "timestamp": result.timestamp,
+        }
+    )
     return result
