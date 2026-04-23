@@ -21,6 +21,7 @@ services:
     container_name: api
     volumes:
       - ./apps/backend:/app
+      - ./apps/ml/models:/ml/models:ro
     env_file:
       - .env
     environment:
@@ -30,7 +31,13 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    command: uvicorn src.main:app --host 0.0.0.0 --port 8000
+    command: sh -c "alembic upgrade head && uvicorn src.main:app --host 0.0.0.0 --port 8000"
+    deploy:
+      resources:
+        limits:
+          memory: 3g
+        reservations:
+          memory: 256m
     networks:
       - app-network
 
@@ -39,12 +46,22 @@ services:
     container_name: frontend
     volumes:
       - ./apps/frontend:/app
-      - /app/node_modules
+      - frontend_node_modules:/app/node_modules
+      - frontend_next:/app/.next
     env_file:
       - .env
+    environment:
+      - NODE_OPTIONS=--max-old-space-size=3584
+      - NEXT_TURBO_MAX_THREADS=2
+      - WATCHPACK_POLLING=true
     expose:
       - "3000"
-    command: pnpm dev
+    command: sh -c "CI=true pnpm install && pnpm exec next dev --turbopack"
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4g
     networks:
       - app-network
 
@@ -68,6 +85,8 @@ services:
       - .env
     ports:
       - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U user -d tcc_db"]
       interval: 5s
@@ -103,3 +122,6 @@ networks:
 
 volumes:
   mlflow_artifacts:
+  frontend_node_modules:
+  frontend_next:
+  postgres_data:
