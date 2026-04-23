@@ -24,7 +24,7 @@ require_admin_token (unit)
   • PUT  /models/active — 401 without token.
   • PUT  /models/active — 401 with wrong token.
   • PUT  /models/active — 422 for an invalid model name (Pydantic validation).
-  • PUT  /models/active — 200 with valid token; swaps model, returns payload.
+  • PUT  /models/active — 202 with valid token; enqueues swap, returns payload.
   • PUT  /models/active — 404 when the artefact is missing on disk.
 """
 
@@ -291,19 +291,20 @@ async def test_put_models_active_swaps_model_successfully() -> None:
                 headers=_ADMIN_HEADER,
             )
 
-    assert resp.status_code == 200
+    assert resp.status_code == 202
     body = SwapModelResponse(**resp.json())
     assert body.previous_model == "random_forest"
     assert body.active_model == "xgboost"
 
 
 async def test_put_models_active_returns_404_when_artefact_missing() -> None:
+    # The router guards with artefact_path.exists() *before* enqueuing the
+    # background task, so we mock Path.exists to simulate a missing file on
+    # disk.  The 404 must be raised synchronously — load_model_by_name is
+    # never called.
     registry = ModelRegistry()
     _, client = _build_client(registry)
-    with patch(
-        "src.services.model_service.load_model_by_name",
-        side_effect=FileNotFoundError("artefact not found"),
-    ):
+    with patch("pathlib.Path.exists", return_value=False):
         async with client:
             resp = await client.put(
                 "/models/active",

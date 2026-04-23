@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 
 from src.core.auth import require_admin_token
 from src.core.config import settings
@@ -66,12 +66,13 @@ async def list_models(
 @router.put(
     "/active",
     response_model=SwapModelResponse,
-    status_code=status.HTTP_200_OK,
+    status_code=status.HTTP_202_ACCEPTED,
     summary="Hot-swap the active model",
     description=(
-        "Loads the specified model artefact in a background thread and "
-        "atomically replaces the active `ModelService` (RNF-25).  "
-        "In-flight prediction requests are never interrupted.  "
+        "Validates the artefact path and enqueues the model load as a "
+        "background task (RNF-25).  Returns 202 immediately — the swap "
+        "completes asynchronously so the HTTP connection is never held open "
+        "during the potentially multi-second joblib.load().  "
         "Requires `X-Admin-Token` header."
     ),
     responses={
@@ -83,21 +84,26 @@ async def list_models(
 )
 async def swap_active_model(
     payload: SwapModelRequest,
+    background_tasks: BackgroundTasks,
     registry: ModelRegistry = Depends(get_model_registry),
 ) -> SwapModelResponse:
-    try:
-        previous = await registry.swap(payload.model_name)
-    except FileNotFoundError as exc:
+    # Validate artefact presence before accepting — avoids a silent failure
+    # in the background task where the client would never learn about the error.
+    artefact_path = _ARTEFACT_PATHS.get(payload.model_name)
+    if artefact_path is not None and not artefact_path.exists():
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Model artefact not found: {exc}",
-        ) from exc
+            detail=f"Model artefact not found for '{payload.model_name}': {artefact_path}",
+        )
+
+    previous = registry.active_name
+    background_tasks.add_task(registry.swap, payload.model_name)
 
     return SwapModelResponse(
         previous_model=previous,
         active_model=payload.model_name,
         message=(
-            f"Active model swapped from '{previous}' to '{payload.model_name}' "
-            "successfully."
+            f"Model swap from '{previous}' to '{payload.model_name}' accepted. "
+            "Loading in background — use GET /models to track the active model."
         ),
     )

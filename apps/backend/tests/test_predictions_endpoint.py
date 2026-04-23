@@ -7,7 +7,7 @@ POST /predict
     - Persists a record in the database after a successful inference.
     - DB record has correct sensor values and ML outputs.
 
-GET /api/v1/predictions
+GET /v1/predictions
     - Returns HTTP 200 with the correct Page envelope schema.
     - Returns an empty list when the database has no records.
     - Returns paginated results (total, page, size, pages).
@@ -265,14 +265,14 @@ async def test_post_predict_persists_timestamp(
 
 
 # ---------------------------------------------------------------------------
-# GET /api/v1/predictions — empty database
+# GET /v1/predictions — empty database
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
 async def test_get_predictions_empty_database(client: AsyncClient) -> None:
     """Empty DB must return items=[], total=0, pages=0 (not 404)."""
-    response = await client.get("/api/v1/predictions")
+    response = await client.get("/v1/predictions")
     assert response.status_code == 200
     body = response.json()
 
@@ -282,7 +282,7 @@ async def test_get_predictions_empty_database(client: AsyncClient) -> None:
 
 
 # ---------------------------------------------------------------------------
-# GET /api/v1/predictions — schema validation
+# GET /v1/predictions — schema validation
 # ---------------------------------------------------------------------------
 
 
@@ -293,7 +293,7 @@ async def test_get_predictions_envelope_schema(
 ) -> None:
     """Response must contain all Page envelope fields with correct types."""
     await _seed_predictions(session_factory, count=3)
-    response = await client.get("/api/v1/predictions")
+    response = await client.get("/v1/predictions")
     assert response.status_code == 200
     body = response.json()
 
@@ -314,7 +314,7 @@ async def test_get_predictions_item_schema(
 ) -> None:
     """Each item in the response must contain id, timestamp, sensors and ML outputs."""
     await _seed_predictions(session_factory, count=1)
-    response = await client.get("/api/v1/predictions")
+    response = await client.get("/v1/predictions")
     body = response.json()
 
     item = body["items"][0]
@@ -342,7 +342,7 @@ async def test_get_predictions_item_schema(
 
 
 # ---------------------------------------------------------------------------
-# GET /api/v1/predictions — total and pagination metadata (RNF-15)
+# GET /v1/predictions — total and pagination metadata (RNF-15)
 # ---------------------------------------------------------------------------
 
 
@@ -353,7 +353,7 @@ async def test_get_predictions_total_matches_db(
 ) -> None:
     """RNF-15: `total` must equal the number of rows in the database."""
     await _seed_predictions(session_factory, count=7)
-    body = (await client.get("/api/v1/predictions")).json()
+    body = (await client.get("/v1/predictions")).json()
     assert body["total"] == 7
 
 
@@ -364,7 +364,7 @@ async def test_get_predictions_default_page_and_size(
 ) -> None:
     """Default page=1, size=20 — must return all items when count <= 20."""
     await _seed_predictions(session_factory, count=5)
-    body = (await client.get("/api/v1/predictions")).json()
+    body = (await client.get("/v1/predictions")).json()
 
     assert body["page"] == 1
     assert body["size"] == 20
@@ -378,7 +378,7 @@ async def test_get_predictions_custom_size(
 ) -> None:
     """RNF-15: `size` query param controls items per page."""
     await _seed_predictions(session_factory, count=10)
-    body = (await client.get("/api/v1/predictions?size=3")).json()
+    body = (await client.get("/v1/predictions?size=3")).json()
 
     assert len(body["items"]) == 3
     assert body["size"] == 3
@@ -391,7 +391,7 @@ async def test_get_predictions_pages_computed_correctly(
 ) -> None:
     """RNF-15: `pages` must equal ceil(total / size)."""
     await _seed_predictions(session_factory, count=7)
-    body = (await client.get("/api/v1/predictions?size=3")).json()
+    body = (await client.get("/v1/predictions?size=3")).json()
 
     # ceil(7 / 3) = 3
     assert body["total"] == 7
@@ -406,8 +406,8 @@ async def test_get_predictions_second_page(
     """RNF-15: page=2 must return the next slice of records."""
     await _seed_predictions(session_factory, count=5)
 
-    page1 = (await client.get("/api/v1/predictions?size=3&page=1")).json()
-    page2 = (await client.get("/api/v1/predictions?size=3&page=2")).json()
+    page1 = (await client.get("/v1/predictions?size=3&page=1")).json()
+    page2 = (await client.get("/v1/predictions?size=3&page=2")).json()
 
     ids_page1 = {item["id"] for item in page1["items"]}
     ids_page2 = {item["id"] for item in page2["items"]}
@@ -425,14 +425,14 @@ async def test_get_predictions_page_beyond_total(
 ) -> None:
     """RNF-15: Requesting a page beyond total pages must return empty items (not 404)."""
     await _seed_predictions(session_factory, count=3)
-    body = (await client.get("/api/v1/predictions?size=3&page=99")).json()
+    body = (await client.get("/v1/predictions?size=3&page=99")).json()
 
     assert body["items"] == []
     assert body["total"] == 3  # total is still reported correctly
 
 
 # ---------------------------------------------------------------------------
-# GET /api/v1/predictions — ordering (newest first)
+# GET /v1/predictions — ordering (newest first)
 # ---------------------------------------------------------------------------
 
 
@@ -445,7 +445,7 @@ async def test_get_predictions_ordered_newest_first(
     base = datetime(2024, 6, 1, 12, 0, 0, tzinfo=timezone.utc)
     await _seed_predictions(session_factory, count=5, base_dt=base)
 
-    body = (await client.get("/api/v1/predictions?size=5")).json()
+    body = (await client.get("/v1/predictions?size=5")).json()
     timestamps = [item["timestamp"] for item in body["items"]]
 
     # Each successive timestamp must be <= the previous one
@@ -456,28 +456,28 @@ async def test_get_predictions_ordered_newest_first(
 
 
 # ---------------------------------------------------------------------------
-# GET /api/v1/predictions — input validation (RNF-15)
+# GET /v1/predictions — input validation (RNF-15)
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
 async def test_get_predictions_page_zero_returns_422(client: AsyncClient) -> None:
     """page=0 must be rejected with HTTP 422 (ge=1 constraint)."""
-    response = await client.get("/api/v1/predictions?page=0")
+    response = await client.get("/v1/predictions?page=0")
     assert response.status_code == 422
 
 
 @pytest.mark.asyncio
 async def test_get_predictions_size_zero_returns_422(client: AsyncClient) -> None:
     """size=0 must be rejected with HTTP 422 (ge=1 constraint)."""
-    response = await client.get("/api/v1/predictions?size=0")
+    response = await client.get("/v1/predictions?size=0")
     assert response.status_code == 422
 
 
 @pytest.mark.asyncio
 async def test_get_predictions_size_over_max_returns_422(client: AsyncClient) -> None:
     """size=101 must be rejected with HTTP 422 (le=100 constraint)."""
-    response = await client.get("/api/v1/predictions?size=101")
+    response = await client.get("/v1/predictions?size=101")
     assert response.status_code == 422
 
 
@@ -488,6 +488,6 @@ async def test_get_predictions_size_at_max_returns_200(
 ) -> None:
     """size=100 is the allowed maximum and must return HTTP 200."""
     await _seed_predictions(session_factory, count=2)
-    response = await client.get("/api/v1/predictions?size=100")
+    response = await client.get("/v1/predictions?size=100")
     assert response.status_code == 200
     assert response.json()["size"] == 100

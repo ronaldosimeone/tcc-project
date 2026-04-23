@@ -15,7 +15,7 @@ from src.core.database import get_db
 from src.schemas.prediction import Page, PredictionResponse
 from src.services.prediction_service import list_predictions
 
-router: APIRouter = APIRouter(prefix="/api/v1", tags=["Predictions History"])
+router: APIRouter = APIRouter(prefix="/v1", tags=["Predictions History"])
 
 
 @router.get(
