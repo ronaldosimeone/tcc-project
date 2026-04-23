@@ -695,6 +695,76 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 
 ---
 
+## Simulador de Sensores (RF-13 / RNF-29)
+
+O backend inclui um simulador configurável que gera dados realistas com base nas distribuições estatísticas do dataset **MetroPT-3**. Útil para demonstrações, testes de carga e validação do dashboard sem necessidade de hardware real.
+
+### Modos disponíveis
+
+| Modo | Comportamento | Caso de uso |
+|---|---|---|
+| `NORMAL` | Gaussianas estáveis em torno dos valores nominais (baixo ruído) | Operação saudável do compressor |
+| `DEGRADATION` | Deriva progressiva ao longo de ~300 ciclos: pressão cai, temperatura e corrente sobem, sensores digitais começam a oscilar | Simula envelhecimento / desgaste gradual |
+| `FAILURE` | Picos e quedas bruscas com alta variância — sem retorno ao nominal | Simula quebra ativa do compressor |
+
+### Endpoints
+
+| Método | URL | Corpo | Descrição |
+|---|---|---|---|
+| `GET` | `/api/simulator/mode` | — | Consulta o modo ativo |
+| `PUT` | `/api/simulator/mode` | `{"mode": "DEGRADATION"}` | Altera o modo em tempo real (≤ 1 s de latência) |
+
+### Exemplos de uso
+
+**Consultar modo atual**
+
+```bash
+curl http://localhost/api/simulator/mode
+```
+
+```json
+{ "mode": "NORMAL", "message": "Current simulator mode: NORMAL." }
+```
+
+**Ativar modo de degradação**
+
+```bash
+curl -X PUT http://localhost/api/simulator/mode \
+  -H "Content-Type: application/json" \
+  -d '{"mode": "DEGRADATION"}'
+```
+
+```json
+{ "mode": "DEGRADATION", "message": "Simulator mode set to DEGRADATION." }
+```
+
+**Simular falha para demonstração**
+
+```bash
+curl -X PUT http://localhost/api/simulator/mode \
+  -H "Content-Type: application/json" \
+  -d '{"mode": "FAILURE"}'
+```
+
+**Retornar à operação normal**
+
+```bash
+curl -X PUT http://localhost/api/simulator/mode \
+  -H "Content-Type: application/json" \
+  -d '{"mode": "NORMAL"}'
+```
+
+### Fluxo de demonstração sugerido
+
+1. Inicie com `NORMAL` — o dashboard exibe leituras estáveis.
+2. Troque para `DEGRADATION` — observe Motor Current e Oil Temperature subindo gradualmente no gráfico ao vivo.
+3. Troque para `FAILURE` — alertas WebSocket são disparados (probabilidade > 0.70) e o assistente LLM sugere o plano de reparo.
+4. Retorne a `NORMAL` para encerrar a demonstração.
+
+> **Nota:** a mudança de modo é atômica e não interrompe conexões SSE existentes. O próximo ciclo de broadcast (máx. 1 s) já usa a nova distribuição.
+
+---
+
 ## Autores
 
 | Nome |
