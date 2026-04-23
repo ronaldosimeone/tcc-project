@@ -50,7 +50,7 @@ function resolveBaseUrl(): string {
     throw new Error(
       "[api-client] NEXT_PUBLIC_API_URL não está definida.\n" +
         "Crie o arquivo .env.local com:\n" +
-        "  NEXT_PUBLIC_API_URL=http://127.0.0.1:8000",
+        "  NEXT_PUBLIC_API_URL=http://localhost/api",
     );
   }
   return url.replace(/\/$/, ""); // remove trailing slash

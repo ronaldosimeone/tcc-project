@@ -1,21 +1,17 @@
 /**
  * Testes unitários para useSensorData — RF-06 / RF-07.
  *
+ * Estratégia após refatoração para polling passivo:
+ *  - `predict` não é mais chamado; o hook usa `fetch` global.
+ *  - `fetch` é mockado via vi.stubGlobal para cada suite.
+ *  - A deduplicação por timestamp exige respostas com timestamps distintos
+ *    nos testes que avançam múltiplos ticks.
+ *
  * Por que advanceTimersByTimeAsync e não run*TimersAsync:
- *
- *   O hook usa setInterval. Com vi.runAllTimersAsync() o intervalo
- *   fica re-disparando até bater no limite de 10 000 timers (loop
- *   infinito). Com vi.runOnlyPendingTimersAsync() o loop também pode
- *   ocorrer se o timer recém agendado for considerado "pending".
- *
- *   vi.advanceTimersByTimeAsync(ms) é a API correta: avança o relógio
- *   exatamente `ms` milissegundos, dispara apenas os callbacks que
- *   deveriam ocorrer nesse intervalo, e aguarda todas as Promises
+ *   O hook usa setInterval. vi.runAllTimersAsync() re-dispara o intervalo
+ *   até o limite de 10 000 timers. vi.advanceTimersByTimeAsync(ms) avança
+ *   exatamente `ms` ms, dispara só os callbacks devidos e aguarda Promises
  *   geradas — sem risco de loop infinito.
- *
- *   Para o tick inicial (void tick() direto no useEffect, não via timer),
- *   usamos advanceTimersByTimeAsync(0): não dispara nenhum timer, mas
- *   aguarda as Promises pendentes na fila de microtasks.
  */
 
 import { renderHook, act } from "@testing-library/react";
@@ -27,21 +23,45 @@ import {
   useSensorData,
 } from "@/hooks/use-sensor-data";
 
-// ── Mocks ─────────────────────────────────────────────────────────────────
+// ── Fixtures ──────────────────────────────────────────────────────────────
 
-const SUCCESS_RESPONSE: PredictResponse = {
-  predicted_class: 0,
+const BASE_ITEM = {
+  id: 1,
   failure_probability: 0.06,
-  timestamp: new Date("2024-06-01T12:00:00Z").toISOString(),
+  predicted_class: 0,
+  timestamp: "2024-06-01T12:00:00.000Z",
+  TP2: 5.5,
+  TP3: 9.2,
+  H1: 8.8,
+  DV_pressure: 2.1,
+  Reservoirs: 8.7,
+  Motor_current: 4.2,
+  Oil_temperature: 68.5,
+  COMP: 1.0,
+  DV_eletric: 0.0,
+  Towers: 1.0,
+  MPG: 1.0,
+  Oil_level: 1.0,
 };
 
-vi.mock("@/lib/api-client", () => ({
-  predict: vi.fn(),
-}));
+const SUCCESS_RESPONSE: PredictResponse = {
+  predicted_class: BASE_ITEM.predicted_class,
+  failure_probability: BASE_ITEM.failure_probability,
+  timestamp: BASE_ITEM.timestamp,
+};
 
-async function getMockPredict() {
-  const mod = await import("@/lib/api-client");
-  return vi.mocked(mod.predict);
+function makePageResponse(item: typeof BASE_ITEM) {
+  return {
+    ok: true,
+    json: () =>
+      Promise.resolve({
+        items: [item],
+        total: 1,
+        page: 1,
+        size: 1,
+        pages: 1,
+      }),
+  } as unknown as Response;
 }
 
 // ── getRiskLevel (função pura — sem timers) ───────────────────────────────
@@ -69,18 +89,27 @@ describe("getRiskLevel", () => {
 // ── useSensorData ─────────────────────────────────────────────────────────
 
 describe("useSensorData", () => {
-  beforeEach(async () => {
+  // fetchMock retorna timestamps únicos por chamada para evitar deduplicação
+  let callCount: number;
+  let fetchMock: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
     vi.useFakeTimers();
-    process.env.NEXT_PUBLIC_API_URL = "http://127.0.0.1:8000";
-    // Configura o mock padrão para todos os testes do bloco
-    const mockPredict = await getMockPredict();
-    mockPredict.mockResolvedValue(SUCCESS_RESPONSE);
+    callCount = 0;
+
+    fetchMock = vi.fn().mockImplementation(() => {
+      callCount++;
+      const ts = new Date(Date.UTC(2024, 5, 1, 12, 0, callCount)).toISOString();
+      return Promise.resolve(makePageResponse({ ...BASE_ITEM, timestamp: ts }));
+    });
+
+    vi.stubGlobal("fetch", fetchMock);
   });
 
   afterEach(() => {
-    vi.clearAllTimers(); // cancela o setInterval antes de restaurar os timers
+    vi.clearAllTimers();
     vi.useRealTimers();
-    vi.clearAllMocks();
+    vi.unstubAllGlobals();
   });
 
   // ── Estado inicial ──────────────────────────────────────────────────────
@@ -101,13 +130,11 @@ describe("useSensorData", () => {
     expect(result.current.riskLevel).toBe("NORMAL");
   });
 
-  // ── Após o primeiro tick (direto — não via timer) ───────────────────────
+  // ── Após o primeiro tick (seed — size=30) ──────────────────────────────
 
   it("isLoading passa para false após o primeiro tick", async () => {
     const { result } = renderHook(() => useSensorData());
 
-    // avança 0 ms: nenhum timer dispara, mas as Promises pendentes (tick inicial)
-    // são aguardadas e os setState subsequentes são processados pelo act()
     await act(async () => {
       await vi.advanceTimersByTimeAsync(0);
     });
@@ -115,7 +142,7 @@ describe("useSensorData", () => {
     expect(result.current.isLoading).toBe(false);
   });
 
-  it("adiciona 1 ponto ao histórico após o primeiro tick", async () => {
+  it("adiciona 1 ponto ao histórico após o primeiro tick (seed)", async () => {
     const { result } = renderHook(() => useSensorData());
 
     await act(async () => {
@@ -141,7 +168,12 @@ describe("useSensorData", () => {
     expect(typeof point!.failure_probability).toBe("number");
   });
 
-  it("latest reflete a resposta do backend após o primeiro tick", async () => {
+  it("latest reflete a resposta do banco após o primeiro tick", async () => {
+    // Override: primeiro tick usa timestamp do BASE_ITEM para comparar
+    fetchMock.mockImplementationOnce(() =>
+      Promise.resolve(makePageResponse(BASE_ITEM)),
+    );
+
     const { result } = renderHook(() => useSensorData());
 
     await act(async () => {
@@ -151,50 +183,69 @@ describe("useSensorData", () => {
     expect(result.current.latest).toEqual(SUCCESS_RESPONSE);
   });
 
-  // ── Polling (RF-06 — 5 s) ──────────────────────────────────────────────
+  // ── Polling passivo (RF-06 — 5 s) ─────────────────────────────────────
 
-  it("chama predict novamente após POLL_INTERVAL_MS", async () => {
-    const mockPredict = await getMockPredict();
+  it("chama fetch novamente após POLL_INTERVAL_MS", async () => {
     renderHook(() => useSensorData());
 
-    // resolve o tick inicial
     await act(async () => {
       await vi.advanceTimersByTimeAsync(0);
     });
-    const callsAfterFirst = mockPredict.mock.calls.length;
+    const callsAfterFirst = fetchMock.mock.calls.length;
 
-    // dispara exatamente 1 tick do setInterval
     await act(async () => {
       await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS);
     });
 
-    expect(mockPredict.mock.calls.length).toBeGreaterThan(callsAfterFirst);
+    expect(fetchMock.mock.calls.length).toBeGreaterThan(callsAfterFirst);
   });
 
   it("acumula pontos no histórico a cada tick (RF-06)", async () => {
     const { result } = renderHook(() => useSensorData());
 
-    // tick inicial
+    // tick inicial (seed)
     await act(async () => {
       await vi.advanceTimersByTimeAsync(0);
     });
 
-    // 3 ticks via setInterval
+    // 3 ticks via setInterval — cada um com timestamp único (dedup não bloqueia)
     for (let i = 0; i < 3; i++) {
       await act(async () => {
         await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS);
       });
     }
 
-    // 1 inicial + 3 via timer = 4 pontos
+    // 1 seed + 3 incrementais = 4 pontos
     expect(result.current.history.length).toBe(4);
+  });
+
+  it("não acumula duplicatas quando o timestamp não muda", async () => {
+    // Todos os ticks retornam o mesmo timestamp
+    const fixedTs = "2024-06-01T12:00:00.000Z";
+    fetchMock.mockImplementation(() =>
+      Promise.resolve(makePageResponse({ ...BASE_ITEM, timestamp: fixedTs })),
+    );
+
+    const { result } = renderHook(() => useSensorData());
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS);
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS);
+    });
+
+    // Apenas o seed (isFirst=true ignora dedup) adiciona 1 ponto
+    expect(result.current.history.length).toBe(1);
   });
 
   // ── Estado de erro ──────────────────────────────────────────────────────
 
-  it("define error quando predict() lança exceção", async () => {
-    const mockPredict = await getMockPredict();
-    mockPredict.mockRejectedValueOnce(new Error("Network Error"));
+  it("define error quando fetch() lança exceção", async () => {
+    fetchMock.mockRejectedValueOnce(new Error("Network Error"));
 
     const { result } = renderHook(() => useSensorData());
 
@@ -206,9 +257,8 @@ describe("useSensorData", () => {
     expect(result.current.error?.message).toBe("Network Error");
   });
 
-  it("isLoading passa para false mesmo quando predict() falha", async () => {
-    const mockPredict = await getMockPredict();
-    mockPredict.mockRejectedValueOnce(new Error("Timeout"));
+  it("isLoading passa para false mesmo quando fetch() falha", async () => {
+    fetchMock.mockRejectedValueOnce(new Error("Timeout"));
 
     const { result } = renderHook(() => useSensorData());
 
@@ -219,9 +269,23 @@ describe("useSensorData", () => {
     expect(result.current.isLoading).toBe(false);
   });
 
+  it("define error quando fetch() retorna status não-ok", async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: false,
+      status: 503,
+    } as unknown as Response);
+
+    const { result } = renderHook(() => useSensorData());
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+
+    expect(result.current.error).toBeInstanceOf(Error);
+  });
+
   it("limpa o error em um tick bem-sucedido após falha", async () => {
-    const mockPredict = await getMockPredict();
-    mockPredict.mockRejectedValueOnce(new Error("Temporário"));
+    fetchMock.mockRejectedValueOnce(new Error("Temporário"));
 
     const { result } = renderHook(() => useSensorData());
 
@@ -231,7 +295,7 @@ describe("useSensorData", () => {
     });
     expect(result.current.error).not.toBeNull();
 
-    // próximo tick — sucesso (mockResolvedValue já está configurado no beforeEach)
+    // próximo tick — sucesso (fetchMock tem timestamp único para não deduplicar)
     await act(async () => {
       await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS);
     });
@@ -242,12 +306,15 @@ describe("useSensorData", () => {
   // ── Anomalia (RF-07) ────────────────────────────────────────────────────
 
   it("isAnomaly=true quando failure_probability >= 0.3", async () => {
-    const mockPredict = await getMockPredict();
-    mockPredict.mockResolvedValueOnce({
-      ...SUCCESS_RESPONSE,
-      failure_probability: 0.5,
-      predicted_class: 1,
-    });
+    fetchMock.mockImplementationOnce(() =>
+      Promise.resolve(
+        makePageResponse({
+          ...BASE_ITEM,
+          failure_probability: 0.5,
+          predicted_class: 1,
+        }),
+      ),
+    );
 
     const { result } = renderHook(() => useSensorData());
 
@@ -260,12 +327,15 @@ describe("useSensorData", () => {
   });
 
   it("riskLevel=CRÍTICO quando failure_probability >= 0.65", async () => {
-    const mockPredict = await getMockPredict();
-    mockPredict.mockResolvedValueOnce({
-      ...SUCCESS_RESPONSE,
-      failure_probability: 0.8,
-      predicted_class: 1,
-    });
+    fetchMock.mockImplementationOnce(() =>
+      Promise.resolve(
+        makePageResponse({
+          ...BASE_ITEM,
+          failure_probability: 0.8,
+          predicted_class: 1,
+        }),
+      ),
+    );
 
     const { result } = renderHook(() => useSensorData());
 
@@ -276,26 +346,42 @@ describe("useSensorData", () => {
     expect(result.current.riskLevel).toBe("CRÍTICO");
   });
 
-  // ── Cleanup ─────────────────────────────────────────────────────────────
+  // ── failure_probability como float (formato esperado pelo backend) ──────
 
-  it("para o polling quando o componente é desmontado", async () => {
-    const mockPredict = await getMockPredict();
+  it("failure_probability no ponto do histórico é um float válido", async () => {
+    fetchMock.mockImplementationOnce(() =>
+      Promise.resolve(
+        makePageResponse({ ...BASE_ITEM, failure_probability: 0.123456789 }),
+      ),
+    );
 
-    const { unmount } = renderHook(() => useSensorData());
+    const { result } = renderHook(() => useSensorData());
 
-    // tick inicial
     await act(async () => {
       await vi.advanceTimersByTimeAsync(0);
     });
 
-    const callsAtUnmount = mockPredict.mock.calls.length;
+    const prob = result.current.history[0]?.failure_probability;
+    expect(typeof prob).toBe("number");
+    expect(Number.isFinite(prob)).toBe(true);
+    // itemToPoint usa toFixed(4) → máximo 4 casas decimais
+    expect(prob).toBe(parseFloat((0.123456789).toFixed(4)));
+  });
 
-    // unmount() chama o cleanup do useEffect → clearInterval
+  // ── Cleanup ─────────────────────────────────────────────────────────────
+
+  it("para o polling quando o componente é desmontado", async () => {
+    const { unmount } = renderHook(() => useSensorData());
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+
+    const callsAtUnmount = fetchMock.mock.calls.length;
     unmount();
 
-    // avança 3 intervalos — o polling deve estar cancelado
     vi.advanceTimersByTime(POLL_INTERVAL_MS * 3);
 
-    expect(mockPredict.mock.calls.length).toBe(callsAtUnmount);
+    expect(fetchMock.mock.calls.length).toBe(callsAtUnmount);
   });
 });

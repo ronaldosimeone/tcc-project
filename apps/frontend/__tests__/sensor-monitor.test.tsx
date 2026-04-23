@@ -3,25 +3,34 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import SensorMonitor from "@/components/sensor-monitor";
 import { POLL_INTERVAL_MS } from "@/hooks/use-sensor-data";
 
-// ── Mocks ─────────────────────────────────────────────────────────────────
+// ── Dados de teste ─────────────────────────────────────────────────────────
 //
-// vi.mock() é hoistado pelo Vitest ANTES de todas as declarações de variável.
-// Por isso MOCK_RESPONSE deve ser criado com vi.hoisted() — garante que o
-// valor esteja disponível quando o factory do mock for executado.
+// O hook usa GET /api/v1/predictions (polling passivo), não mais predict().
+// O mock retorna uma HistoryPage com um único HistoryItem.
 
-const { MOCK_RESPONSE } = vi.hoisted(() => ({
-  MOCK_RESPONSE: {
-    predicted_class: 0 as const,
-    failure_probability: 0.08,
-    timestamp: new Date("2024-06-01T12:00:00Z").toISOString(),
-  },
-}));
+const MOCK_ITEM = {
+  failure_probability: 0.08,
+  predicted_class: 0,
+  timestamp: "2024-06-01T12:00:00.000Z",
+  TP2: 5.5,
+  TP3: 9.2,
+  H1: 7.1,
+  DV_pressure: 0.1,
+  Reservoirs: 8.8,
+  Motor_current: 4.2,
+  Oil_temperature: 68.5,
+  COMP: 1,
+  DV_eletric: 0,
+  Towers: 1,
+  MPG: 0,
+  Oil_level: 1,
+};
 
-vi.mock("@/lib/api-client", () => ({
-  predict: vi.fn().mockResolvedValue(MOCK_RESPONSE),
-}));
+const MOCK_PAGE = { items: [MOCK_ITEM], total: 1, page: 1, size: 1, pages: 1 };
 
-// Recharts usa ResizeObserver internamente — polyfill necessário em jsdom
+// ── Polyfills de ambiente jsdom ────────────────────────────────────────────
+
+// Recharts usa ResizeObserver internamente
 class MockResizeObserver {
   observe() {}
   unobserve() {}
@@ -29,17 +38,35 @@ class MockResizeObserver {
 }
 globalThis.ResizeObserver = MockResizeObserver;
 
+// O hook abre WebSocket no useEffect; o mock evita conexões reais e warnings de act()
+class MockWebSocket {
+  onmessage: ((event: MessageEvent) => void) | null = null;
+  onerror: ((event: Event) => void) | null = null;
+  onclose: ((event: CloseEvent) => void) | null = null;
+  send = vi.fn();
+  close = vi.fn();
+}
+globalThis.WebSocket = MockWebSocket as unknown as typeof WebSocket;
+
 // ── Suite ──────────────────────────────────────────────────────────────────
 
 describe("SensorMonitor", () => {
+  let mockFetch: ReturnType<typeof vi.fn>;
+
   beforeEach(() => {
     vi.useFakeTimers();
     process.env.NEXT_PUBLIC_API_URL = "http://127.0.0.1:8000";
+    mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => MOCK_PAGE,
+    });
+    vi.stubGlobal("fetch", mockFetch);
   });
 
   afterEach(() => {
-    vi.clearAllTimers(); // cancela setInterval antes de restaurar os timers
+    vi.clearAllTimers();
     vi.useRealTimers();
+    vi.unstubAllGlobals();
     vi.clearAllMocks();
   });
 
@@ -70,7 +97,7 @@ describe("SensorMonitor", () => {
   it("exibe o status NORMAL após a primeira chamada à API ser resolvida", async () => {
     render(<SensorMonitor />);
 
-    // advanceTimersByTimeAsync(0) avança 0ms mas aguarda todas as Promises
+    // advanceTimersByTimeAsync(0) avança 0 ms mas aguarda todas as Promises
     // pendentes — resolve o void tick() inicial sem disparar o setInterval
     await act(async () => {
       await vi.advanceTimersByTimeAsync(0);
@@ -79,16 +106,15 @@ describe("SensorMonitor", () => {
     expect(screen.getAllByText("NORMAL")[0]).toBeInTheDocument();
   });
 
-  it("chama predict() a cada intervalo de polling", async () => {
-    const { predict: mockPredict } = await import("@/lib/api-client");
+  it("chama fetch GET /predictions a cada intervalo de polling", async () => {
     render(<SensorMonitor />);
 
-    // resolve o tick inicial
+    // Resolve o tick inicial (size=30)
     await act(async () => {
       await vi.advanceTimersByTimeAsync(0);
     });
 
-    // avança 3 intervalos usando o POLL_INTERVAL_MS real do hook (5 s)
+    // Avança 3 intervalos usando o POLL_INTERVAL_MS real do hook (5 s)
     for (let i = 0; i < 3; i++) {
       await act(async () => {
         await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS);
@@ -96,12 +122,15 @@ describe("SensorMonitor", () => {
     }
 
     // 1 chamada inicial + 3 por intervalo
-    expect(mockPredict).toHaveBeenCalledTimes(4);
+    expect(mockFetch).toHaveBeenCalledTimes(4);
+    expect(mockFetch).toHaveBeenCalledWith(
+      expect.stringContaining("/api/v1/predictions"),
+      expect.objectContaining({ cache: "no-store" }),
+    );
   });
 
-  it("exibe badge 'Backend offline' quando predict() lança erro", async () => {
-    const { predict: mockPredict } = await import("@/lib/api-client");
-    vi.mocked(mockPredict).mockRejectedValueOnce(new Error("Network Error"));
+  it("exibe badge 'Backend offline' quando fetch lança erro", async () => {
+    mockFetch.mockRejectedValueOnce(new Error("Network Error"));
 
     render(<SensorMonitor />);
 

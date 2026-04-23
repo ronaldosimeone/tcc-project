@@ -8,9 +8,9 @@
  *   Empty    — EmptyState no SensorChart (< 2 pontos) e no AlertPanel (sem eventos).
  *
  * Mocking:
- *   @/lib/api-client é interceptado via vi.mock() para controlar resolve/reject
- *   sem depender de rede real.
- *   ResizeObserver é polyfilled para o jsdom (Recharts).
+ *   fetch global é interceptado via vi.stubGlobal para controlar resolve/reject
+ *   sem depender de rede real (o hook usa GET /api/v1/predictions, não predict()).
+ *   ResizeObserver e WebSocket são polyfilled para o jsdom.
  */
 
 import { render, screen, act } from "@testing-library/react";
@@ -19,19 +19,29 @@ import SensorMonitor from "@/components/sensor-monitor";
 import { SensorChart } from "@/components/sensor-chart";
 import { POLL_INTERVAL_MS } from "@/hooks/use-sensor-data";
 
-// ── Mocks ─────────────────────────────────────────────────────────────────
+// ── Dados de teste ─────────────────────────────────────────────────────────
 
-const { MOCK_RESPONSE } = vi.hoisted(() => ({
-  MOCK_RESPONSE: {
-    predicted_class: 0 as const,
-    failure_probability: 0.05,
-    timestamp: new Date("2024-06-01T12:00:00Z").toISOString(),
-  },
-}));
+const MOCK_ITEM = {
+  failure_probability: 0.05,
+  predicted_class: 0,
+  timestamp: "2024-06-01T12:00:00.000Z",
+  TP2: 5.5,
+  TP3: 9.2,
+  H1: 7.1,
+  DV_pressure: 0.1,
+  Reservoirs: 8.8,
+  Motor_current: 4.2,
+  Oil_temperature: 68.5,
+  COMP: 1,
+  DV_eletric: 0,
+  Towers: 1,
+  MPG: 0,
+  Oil_level: 1,
+};
 
-vi.mock("@/lib/api-client", () => ({
-  predict: vi.fn().mockResolvedValue(MOCK_RESPONSE),
-}));
+const MOCK_PAGE = { items: [MOCK_ITEM], total: 1, page: 1, size: 1, pages: 1 };
+
+// ── Polyfills de ambiente jsdom ────────────────────────────────────────────
 
 class MockResizeObserver {
   observe() {}
@@ -40,17 +50,35 @@ class MockResizeObserver {
 }
 globalThis.ResizeObserver = MockResizeObserver;
 
+// O hook abre WebSocket no useEffect; o mock evita conexões reais e warnings de act()
+class MockWebSocket {
+  onmessage: ((event: MessageEvent) => void) | null = null;
+  onerror: ((event: Event) => void) | null = null;
+  onclose: ((event: CloseEvent) => void) | null = null;
+  send = vi.fn();
+  close = vi.fn();
+}
+globalThis.WebSocket = MockWebSocket as unknown as typeof WebSocket;
+
 // ── Suite: Loading state (Skeleton) ───────────────────────────────────────
 
 describe("Loading state — RNF-21", () => {
+  let mockFetch: ReturnType<typeof vi.fn>;
+
   beforeEach(() => {
     vi.useFakeTimers();
     process.env.NEXT_PUBLIC_API_URL = "http://127.0.0.1:8000";
+    mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => MOCK_PAGE,
+    });
+    vi.stubGlobal("fetch", mockFetch);
   });
 
   afterEach(() => {
     vi.clearAllTimers();
     vi.useRealTimers();
+    vi.unstubAllGlobals();
     vi.clearAllMocks();
   });
 
@@ -119,20 +147,27 @@ describe("Loading state — RNF-21", () => {
 // ── Suite: Error state — RNF-21 ────────────────────────────────────────────
 
 describe("Error state — RNF-21", () => {
+  let mockFetch: ReturnType<typeof vi.fn>;
+
   beforeEach(() => {
     vi.useFakeTimers();
     process.env.NEXT_PUBLIC_API_URL = "http://127.0.0.1:8000";
+    mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => MOCK_PAGE,
+    });
+    vi.stubGlobal("fetch", mockFetch);
   });
 
   afterEach(() => {
     vi.clearAllTimers();
     vi.useRealTimers();
+    vi.unstubAllGlobals();
     vi.clearAllMocks();
   });
 
   it("exibe error-state quando backend offline e sem histórico local", async () => {
-    const { predict: mockPredict } = await import("@/lib/api-client");
-    vi.mocked(mockPredict).mockRejectedValueOnce(
+    mockFetch.mockRejectedValueOnce(
       new Error("Network Error — connection refused"),
     );
 
@@ -146,8 +181,7 @@ describe("Error state — RNF-21", () => {
   });
 
   it("error-state tem role='alert' para leitores de tela", async () => {
-    const { predict: mockPredict } = await import("@/lib/api-client");
-    vi.mocked(mockPredict).mockRejectedValueOnce(new Error("Network Error"));
+    mockFetch.mockRejectedValueOnce(new Error("Network Error"));
 
     render(<SensorMonitor />);
 
@@ -159,8 +193,7 @@ describe("Error state — RNF-21", () => {
   });
 
   it("error-state contém mensagem descritiva de conexão", async () => {
-    const { predict: mockPredict } = await import("@/lib/api-client");
-    vi.mocked(mockPredict).mockRejectedValueOnce(new Error("Network Error"));
+    mockFetch.mockRejectedValueOnce(new Error("Network Error"));
 
     render(<SensorMonitor />);
 
@@ -173,8 +206,7 @@ describe("Error state — RNF-21", () => {
   });
 
   it("error-state contém botão 'Tentar novamente'", async () => {
-    const { predict: mockPredict } = await import("@/lib/api-client");
-    vi.mocked(mockPredict).mockRejectedValueOnce(new Error("Network Error"));
+    mockFetch.mockRejectedValueOnce(new Error("Network Error"));
 
     render(<SensorMonitor />);
 
@@ -198,8 +230,7 @@ describe("Error state — RNF-21", () => {
   });
 
   it("exibe badge 'Backend offline' junto com o error-state (complementar)", async () => {
-    const { predict: mockPredict } = await import("@/lib/api-client");
-    vi.mocked(mockPredict).mockRejectedValueOnce(new Error("Network Error"));
+    mockFetch.mockRejectedValueOnce(new Error("Network Error"));
 
     render(<SensorMonitor />);
 
