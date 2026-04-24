@@ -3,7 +3,7 @@
 /**
  * SensorChart — RF-06 / RF-07.
  *
- * RF-06: Plota 4 séries de sensores com dados em tempo real (polling 5 s).
+ * RF-06: Plota 4 séries de sensores com dados em tempo real via SSE (1Hz).
  *   • Chart A — Pressão:   TP2 (bar) + TP3 (bar)
  *   • Chart B — Elétrico:  Corrente (A, eixo esquerdo) + Temperatura (°C, eixo direito)
  *
@@ -11,6 +11,9 @@
  *   • Borda e fundo do card mudam suavemente para âmbar (ALERTA) ou vermelho (CRÍTICO).
  *   • Ícone de alerta pulsante aparece no header.
  *   • Largura das linhas aumenta levemente no estado de anomalia.
+ *
+ * RNF-33: React.memo em todos os sub-componentes + isAnimationActive={false}
+ * eliminam re-renders desnecessários durante atualizações a 1 Hz.
  */
 
 import { memo } from "react";
@@ -34,11 +37,11 @@ interface SensorChartProps {
   history: SensorDataPoint[];
   isAnomaly: boolean;
   riskLevel: RiskLevel;
+  isLive?: boolean;
   className?: string;
 }
 
 // ── Paleta de cores das séries ────────────────────────────────────────────
-// Cores fixas para legibilidade — o destaque de anomalia vem do card, não das linhas.
 
 const LINE_COLORS = {
   TP2: "#60a5fa", // blue-400
@@ -47,7 +50,7 @@ const LINE_COLORS = {
   Oil_temperature: "#fb923c", // orange-400
 } as const;
 
-// ── Tooltip customizado ───────────────────────────────────────────────────
+// ── Tooltip customizado (memoizado para estabilidade de referência) ────────
 
 interface TooltipPayloadEntry {
   name: string;
@@ -61,11 +64,15 @@ interface CustomTooltipProps {
   payload?: TooltipPayloadEntry[];
 }
 
-function ChartTooltip({ active, label, payload }: CustomTooltipProps) {
+const ChartTooltip = memo(function ChartTooltip({
+  active,
+  label,
+  payload,
+}: CustomTooltipProps) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="rounded-lg border border-border bg-card px-3 py-2 shadow-xl">
-      <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+    <div className="rounded-lg border border-zinc-200/60 bg-white/60 px-3 py-2 shadow-md backdrop-blur-md">
+      <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
         {label}
       </p>
       {payload.map((entry) => (
@@ -74,24 +81,43 @@ function ChartTooltip({ active, label, payload }: CustomTooltipProps) {
             className="inline-block h-2 w-2 rounded-full"
             style={{ background: entry.color }}
           />
-          <span className="text-muted-foreground">{entry.name}</span>
-          <span className="ml-auto font-bold tabular-nums text-foreground">
+          <span className="text-zinc-600">{entry.name}</span>
+          <span className="ml-auto font-bold tabular-nums text-zinc-900">
             {entry.value}
           </span>
         </div>
       ))}
     </div>
   );
-}
+});
 
-// ── Estilos compartilhados dos eixos ──────────────────────────────────────
+// ── Estilos compartilhados dos eixos (constantes de módulo — refs estáveis) ─
 
 const AXIS_TICK_STYLE = {
   fontSize: 10,
   fill: "hsl(215 15% 45%)",
-};
+} as const;
 
 const GRID_STROKE = "hsl(217 18% 16%)";
+
+// Instâncias únicas do tooltip para evitar recriação a cada render
+const TOOLTIP_CONTENT = <ChartTooltip />;
+
+// ── Indicador "Live" ──────────────────────────────────────────────────────
+
+function LiveIndicator() {
+  return (
+    <span className="flex items-center gap-1.5">
+      <span className="relative flex h-2 w-2">
+        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75" />
+        <span className="relative inline-flex h-2 w-2 rounded-full bg-green-500" />
+      </span>
+      <span className="text-[10px] font-semibold uppercase tracking-wider text-green-400">
+        Live
+      </span>
+    </span>
+  );
+}
 
 // ── Sub-chart de Pressão (TP2 + TP3) ─────────────────────────────────────
 
@@ -133,7 +159,7 @@ const PressureChart = memo(function PressureChart({
             axisLine={false}
             width={28}
           />
-          <Tooltip content={<ChartTooltip />} />
+          <Tooltip content={TOOLTIP_CONTENT} />
           <Line
             type="monotone"
             dataKey="TP2"
@@ -188,7 +214,6 @@ const ThermalChart = memo(function ThermalChart({
             axisLine={false}
             interval="preserveStartEnd"
           />
-          {/* Eixo esquerdo: Corrente (A) */}
           <YAxis
             yAxisId="current"
             domain={[0, 10]}
@@ -197,7 +222,6 @@ const ThermalChart = memo(function ThermalChart({
             axisLine={false}
             width={28}
           />
-          {/* Eixo direito: Temperatura (°C) */}
           <YAxis
             yAxisId="temp"
             orientation="right"
@@ -207,7 +231,7 @@ const ThermalChart = memo(function ThermalChart({
             axisLine={false}
             width={36}
           />
-          <Tooltip content={<ChartTooltip />} />
+          <Tooltip content={TOOLTIP_CONTENT} />
           <Line
             yAxisId="current"
             type="monotone"
@@ -245,7 +269,7 @@ const LEGEND_ITEMS: Array<{ key: keyof typeof LINE_COLORS; label: string }> = [
   { key: "Oil_temperature", label: "Temperatura (°C)" },
 ];
 
-function ChartLegend() {
+const ChartLegend = memo(function ChartLegend() {
   return (
     <div className="flex flex-wrap gap-x-4 gap-y-1">
       {LEGEND_ITEMS.map(({ key, label }) => (
@@ -259,17 +283,17 @@ function ChartLegend() {
       ))}
     </div>
   );
-}
+});
 
-// ── Componente principal (RF-06 + RF-07) ──────────────────────────────────
+// ── Componente principal (RF-06 + RF-07 + RNF-33) ────────────────────────
 
 export const SensorChart = memo(function SensorChart({
   history,
   isAnomaly,
   riskLevel,
+  isLive = false,
   className,
 }: SensorChartProps) {
-  // RF-07 — estilo dinâmico do card conforme o nível de risco
   const cardStyle = cn(
     "border transition-all duration-700",
     riskLevel === "NORMAL" && "border-border bg-card",
@@ -280,9 +304,7 @@ export const SensorChart = memo(function SensorChart({
     className,
   );
 
-  // Linhas levemente mais grossas em anomalia para realçar a variação
   const strokeWidth = isAnomaly ? 2.5 : 1.8;
-
   const isEmpty = history.length < 2;
 
   return (
@@ -292,6 +314,7 @@ export const SensorChart = memo(function SensorChart({
           <CardTitle className="flex items-center gap-2 text-sm font-semibold text-foreground/90">
             <TrendingUp className="h-4 w-4 text-primary" />
             Telemetria de Sensores
+            {isLive && <LiveIndicator />}
           </CardTitle>
 
           {/* RF-07 — ícone de alerta pulsante */}
@@ -317,7 +340,6 @@ export const SensorChart = memo(function SensorChart({
 
       <CardContent className="flex flex-col gap-6 px-5 pb-5">
         {isEmpty ? (
-          /* RNF-21: EmptyState — aguardando pontos suficientes para renderizar o gráfico */
           <div
             className="flex h-[160px] items-center justify-center text-sm text-muted-foreground"
             role="status"

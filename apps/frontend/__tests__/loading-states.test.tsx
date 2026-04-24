@@ -60,6 +60,16 @@ class MockWebSocket {
 }
 globalThis.WebSocket = MockWebSocket as unknown as typeof WebSocket;
 
+// O hook abre EventSource (SSE); o mock evita ReferenceError no jsdom e
+// mantém a conexão em estado "connecting" (sem emitir eventos).
+class MockEventSource {
+  onerror: ((e: Event) => void) | null = null;
+  addEventListener() {}
+  removeEventListener() {}
+  close() {}
+}
+globalThis.EventSource = MockEventSource as unknown as typeof EventSource;
+
 // ── Suite: Loading state (Skeleton) ───────────────────────────────────────
 
 describe("Loading state — RNF-21", () => {

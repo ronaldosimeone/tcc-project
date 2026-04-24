@@ -36,7 +36,10 @@ from src.routers import predictions as predictions_router
 from src.routers import stream as stream_router
 from src.routers import alerts_ws
 from src.routers import simulator as simulator_router
+from src.services.alert_service import get_alert_service
+from src.services.inference_pipeline import InferencePipelineService
 from src.services.model_registry import ModelRegistry
+from src.services.sensor_stream_service import get_sensor_stream_service
 
 # ── Bootstrap structured logging immediately ──────────────────────────────
 # Must happen before any log.* call so processors are fully configured.
@@ -78,9 +81,23 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             consequence="POST /predict will return HTTP 503 until a model is loaded via PUT /models/active",
         )
 
+    # Inicia o pipeline de inferência contínua: SSE stream → ML → DB → alertas.
+    # O pipeline subscreve ao mesmo SensorStreamService que o frontend SSE usa,
+    # garantindo que mudanças de modo (PUT /simulator/mode) sejam refletidas
+    # imediatamente nas predições e nos alertas WebSocket.
+    pipeline = InferencePipelineService(
+        stream_service=get_sensor_stream_service(),
+        registry=registry,
+        alert_service=get_alert_service(),
+    )
+    pipeline.start()
+    app.state.inference_pipeline = pipeline
+    log.info("inference_pipeline_ready")
+
     yield
 
     # ── Shutdown ─────────────────────────────────────────────────────────
+    await pipeline.stop()
     await engine.dispose()
     log.info("db_pool_disposed")
 

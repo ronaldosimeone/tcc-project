@@ -6,15 +6,15 @@
 
 ## Visão Geral das Tecnologias
 
-| Camada | Tecnologia | Responsabilidade |
-|---|---|---|
-| **Frontend** | Next.js 16, TypeScript strict, Tailwind CSS v4, shadcn/ui, Recharts | Dashboard em tempo real, polling 5 s, alertas visuais |
-| **Backend** | FastAPI, SQLAlchemy 2 (async), Pydantic v2, Alembic | API REST, persistência, injeção de dependência, Model Registry |
-| **Banco de dados** | PostgreSQL 15 (Docker) | Histórico de predições |
-| **Machine Learning** | Scikit-learn, XGBoost, Optuna, PyTorch Lightning, ONNX Runtime, MLflow | RF, XGBoost e MLP com hot-swap atômico via `ACTIVE_MODEL` |
-| **MLOps** | MLflow 2.x (Docker), PostgreSQL backend store, promoção automatizada | Rastreamento de experimentos, registro de artefatos e promoção do melhor modelo |
-| **Infraestrutura** | Docker Desktop, Docker Compose | Orquestração dos serviços |
-| **IA Generativa** | Ollama (Llama 3.2 3B), ChromaDB, MCP | Assistente RAG de sugestões de reparo *(próxima fase)* |
+| Camada               | Tecnologia                                                             | Responsabilidade                                                                |
+| -------------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| **Frontend**         | Next.js 16, TypeScript strict, Tailwind CSS v4, shadcn/ui, Recharts    | Dashboard em tempo real, SSE 1 Hz, alertas via WebSocket                        |
+| **Backend**          | FastAPI, SQLAlchemy 2 (async), Pydantic v2, Alembic                    | API REST, persistência, injeção de dependência, Model Registry                  |
+| **Banco de dados**   | PostgreSQL 15 (Docker)                                                 | Histórico de predições                                                          |
+| **Machine Learning** | Scikit-learn, XGBoost, Optuna, PyTorch Lightning, ONNX Runtime, MLflow | RF, XGBoost e MLP com hot-swap atômico via `ACTIVE_MODEL`                       |
+| **MLOps**            | MLflow 2.x (Docker), PostgreSQL backend store, promoção automatizada   | Rastreamento de experimentos, registro de artefatos e promoção do melhor modelo |
+| **Infraestrutura**   | Docker Desktop, Docker Compose                                         | Orquestração unificada de todos os serviços                                     |
+| **IA Generativa**    | Ollama (Llama 3.2 3B), ChromaDB, MCP                                   | Assistente RAG de sugestões de reparo _(próxima fase)_                          |
 
 ---
 
@@ -39,28 +39,27 @@ projeto-tcc/
 │   │
 │   ├── frontend/                 # Dashboard Next.js
 │   │   ├── app/                  # App Router (layout, page, globals.css)
-│   │   ├── components/           # header, sidebar, sensor-monitor, alert-panel
-│   │   ├── hooks/                # use-sensor-data, use-prediction-history
+│   │   ├── components/           # header, sidebar, sensor-monitor, alert-panel, connection-status
+│   │   ├── hooks/                # use-sensor-data, use-alert-websocket, use-sse
 │   │   ├── lib/                  # api-client, utils
 │   │   └── __tests__/
 │   │
 │   └── ml/                       # Pipelines de Machine Learning
 │       ├── data/raw/             # Dataset CSV (ignorado pelo git)
 │       ├── data/processed/       # Parquet pré-processado (ignorado pelo git)
-│       ├── models/               # Artefatos treinados (.joblib, model_card.json)
+│       ├── models/               # Artefatos treinados (.joblib, .onnx, model_card.json)
 │       ├── notebooks/            # EDA e validação visual
 │       ├── src/                  # ingest_metropt, preprocessing, balancing, train
 │       └── tests/
 │
 ├── infra/
 │   └── nginx/
-│       └── nginx.conf            # Nginx reverse proxy (S6): entrada única, SSE/WS, timeout 3600s
+│       └── nginx.conf            # Nginx reverse proxy: entrada única, SSE/WS, timeout 3600s
 │
 ├── docs/
 │   └── model_comparison.*        # Comparação e validação dos modelos de Machine Learning
 │
-├── docker-compose.yml            # Orquestração dos serviços (nginx, backend, frontend, ml, db)
-├── CLAUDE.md                     # Diretrizes de código do projeto
+├── docker-compose.yml            # Orquestração de todos os serviços
 └── README.md
 ```
 
@@ -70,47 +69,33 @@ projeto-tcc/
 
 Antes de começar, certifique-se de ter instalado em seu sistema:
 
-| Ferramenta | Versão mínima | Como instalar |
-|---|---|---|
-| **Python** | 3.12+ | [python.org](https://www.python.org/downloads/) |
-| **Node.js** | 20 LTS | [nodejs.org](https://nodejs.org/) |
-| **pnpm** | 9+ | `npm install -g pnpm` |
-| **Docker Desktop** | 4.x | [docker.com](https://www.docker.com/products/docker-desktop/) |
+| Ferramenta         | Versão mínima | Como instalar                                                 |
+| ------------------ | ------------- | ------------------------------------------------------------- |
+| **Docker Desktop** | 4.x           | [docker.com](https://www.docker.com/products/docker-desktop/) |
+| **Python**         | 3.12+         | Necessário apenas para rodar Alembic localmente               |
 
 Verificação rápida:
 
 ```bash
-python --version    # Python 3.12.x ou superior
-node --version      # v20.x.x
-pnpm --version      # 9.x.x
-docker --version    # Docker version 24.x.x ou superior
+docker --version   # Docker version 24.x.x ou superior
+docker compose version  # v2.x.x
 ```
 
 ---
 
 ## Configuração de Variáveis de Ambiente
 
-O projeto usa **dois arquivos `.env` distintos**, cada um com um contexto de execução diferente.
-
-### Por que dois arquivos?
-
-Dentro do Docker, os serviços se comunicam usando o nome do serviço como hostname (ex: `db`). Quando você roda o Alembic ou o FastAPI **diretamente no Windows** (fora do contêiner), o acesso ao banco precisa ser via `localhost`. Os dois arquivos resolvem essa diferença de contexto de rede.
-
----
-
-### Arquivo 1 — `.env` na raiz do projeto
-
-Lido pelo **Docker Compose** para configurar o contêiner PostgreSQL e os demais serviços.
-
-Crie `projeto-tcc/.env`:
+Crie o arquivo `.env` na **raiz do projeto** antes de subir os serviços:
 
 ```dotenv
-# ── PostgreSQL — cria o banco ao subir o contêiner ────────────────────────
+# projeto-tcc/.env
+
+# ── PostgreSQL ────────────────────────────────────────────────────────────
 POSTGRES_USER=user
 POSTGRES_PASSWORD=password
 POSTGRES_DB=tcc_db
 
-# ── Backend dentro do Docker (hostname 'db' = nome do serviço na rede) ────
+# ── Backend (dentro do Docker — hostname "db" = nome do serviço na rede) ─
 DATABASE_URL=postgresql+asyncpg://user:password@db:5432/tcc_db
 
 # ── Ollama (LLM local) ────────────────────────────────────────────────────
@@ -122,59 +107,30 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
 
 ---
 
-### Arquivo 2 — `apps/backend/.env`
+## Subindo o Sistema Completo
 
-Lido pelo **Alembic e pelo FastAPI quando executados diretamente no Windows** (fora do Docker). A diferença crítica está no hostname: use `localhost`, não `db`.
-
-Crie `projeto-tcc/apps/backend/.env`:
-
-```dotenv
-# ── IMPORTANTE: use 'localhost', NÃO '@db' ────────────────────────────────
-#
-# Usar '@db:5432' fora de um contêiner Docker causa "InvalidPasswordError"
-# ou falha de DNS, pois o hostname 'db' só é resolvível dentro da rede
-# interna do Docker Compose.
-#
-DATABASE_URL=postgresql+asyncpg://user:password@localhost:5432/tcc_db
-
-# ── RF-10: Selecção do modelo ativo (sem redeploy) ────────────────────────
-# Valores: random_forest (padrão) | xgboost
-ACTIVE_MODEL=random_forest
-
-# ── Caminhos alternativos para os artefatos ───────────────────────────────
-# MODEL_PATH=../../ml/models/random_forest_final.joblib
-# XGBOOST_MODEL_PATH=../../ml/models/xgboost_v1.joblib
-
-# ── Habilita logs SQL do SQLAlchemy (desenvolvimento) ────────────────────
-DEBUG=false
-```
-
----
-
-## Subindo o Banco de Dados
-
-O PostgreSQL 15 é provisionado via Docker. Você não precisa instalar o PostgreSQL localmente.
-
-### 1. Inicie o serviço de banco de dados
+O projeto é orquestrado **exclusivamente via Docker Compose**. Um único comando sobe todos os serviços (nginx, backend, frontend, banco de dados, MLflow):
 
 ```bash
-# Na raiz do projeto
-docker compose up db -d
+# Na raiz do projeto — o arquivo .env deve existir
+docker compose up --build
 ```
 
-### 2. Aguarde o banco ficar saudável
+Para rodar em background:
 
 ```bash
-docker compose ps
-
-# Saída esperada:
-# NAME   IMAGE         STATUS
-# db     postgres:15   Up (healthy)
+docker compose up --build -d
 ```
 
-O serviço está pronto quando o status for `(healthy)`. O `healthcheck` executa `pg_isready -U user -d tcc_db` a cada 5 segundos.
+| Serviço           | URL                          | Descrição                      |
+| ----------------- | ---------------------------- | ------------------------------ |
+| **Frontend**      | `http://localhost:3000`      | Dashboard Next.js              |
+| **Backend / API** | `http://localhost:8000`      | API FastAPI (via Nginx)        |
+| **Swagger UI**    | `http://localhost:8000/docs` | Documentação interativa da API |
+| **MLflow**        | `http://localhost:5000`      | UI de experimentos e artefatos |
+| **PostgreSQL**    | `localhost:5432`             | Banco de dados (interno)       |
 
-### Parar o banco
+### Parar os serviços
 
 ```bash
 # Para e remove os contêineres (dados persistidos no volume Docker)
@@ -188,45 +144,16 @@ docker compose down -v
 
 ## Rodando as Migrations (Alembic)
 
-As migrations criam e versionam o schema do PostgreSQL. A tabela `predictions` (RF-09) é criada pela migration `0001`.
+As migrations criam e versionam o schema do PostgreSQL. A tabela `predictions` é criada pela migration `0001`.
 
-### 1. Entre na pasta do backend e ative o ambiente virtual
+> **Importante:** As migrations **não são executadas automaticamente** ao subir os serviços. Execute-as manualmente após o `docker compose up`.
 
-```bash
-cd apps/backend
+### Opção 1 — Via docker exec (recomendada)
 
-# Crie o venv (apenas na primeira vez)
-python -m venv .venv
-```
-
-Ativação:
+Com os serviços rodando, execute as migrations diretamente no contêiner do backend:
 
 ```bash
-# Windows — PowerShell
-.\.venv\Scripts\Activate.ps1
-
-# Windows — Prompt de Comando (CMD)
-.\.venv\Scripts\activate.bat
-
-# macOS / Linux
-source .venv/bin/activate
-```
-
-O prompt deve exibir `(.venv)` na frente, confirmando a ativação.
-
-### 2. Instale as dependências
-
-```bash
-pip install -r requirements.txt
-```
-
-### 3. Aplique as migrations
-
-```bash
-# O arquivo apps/backend/.env deve existir com localhost:5432
-# O contêiner do banco deve estar rodando (docker compose up db -d)
-
-alembic upgrade head
+docker compose exec api alembic upgrade head
 ```
 
 Saída esperada:
@@ -236,10 +163,47 @@ INFO  [alembic.runtime.migration] Context impl PostgreSQLImpl.
 INFO  [alembic.runtime.migration] Running upgrade  -> 0001, create predictions table — RF-09
 ```
 
+### Opção 2 — Localmente (requer Python 3.12+)
+
+Útil quando os serviços ainda não estão rodando ou para desenvolvimento local.
+
+**Pré-requisito:** O contêiner do banco deve estar rodando:
+
+```bash
+docker compose up db -d
+```
+
+**Configure o ambiente local:**
+
+Crie `apps/backend/.env` com `localhost` (não `db`):
+
+```dotenv
+# apps/backend/.env — usado apenas pelo Alembic e FastAPI rodando LOCALMENTE
+#
+# IMPORTANTE: use 'localhost', NÃO '@db:5432'. O hostname 'db' só é
+# resolvível dentro da rede interna do Docker Compose.
+DATABASE_URL=postgresql+asyncpg://user:password@localhost:5432/tcc_db
+ACTIVE_MODEL=random_forest
+```
+
+**Instale e execute:**
+
+```bash
+cd apps/backend
+
+# Crie e ative o venv (apenas na primeira vez)
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1      # Windows PowerShell
+# source .venv/bin/activate        # macOS / Linux
+
+pip install -r requirements.txt
+alembic upgrade head
+```
+
 ### Referência de comandos Alembic
 
 ```bash
-# Estado atual da migration no banco
+# Estado atual das migrations no banco
 alembic current
 
 # Histórico completo de migrations
@@ -254,342 +218,144 @@ alembic revision --autogenerate -m "descricao da mudanca"
 
 ---
 
-## Rodando a API (Backend)
+## Endpoints da API
 
-### 1. Ative o venv (se não estiver ativo)
-
-```bash
-cd apps/backend
-.\.venv\Scripts\Activate.ps1      # Windows PowerShell
-```
-
-### 2. Inicie o servidor
-
-```bash
-uvicorn src.main:app --reload --port 8000
-```
-
-O servidor inicia em **`http://localhost:8000`**.
-
-| Endpoint | Método | Auth | Descrição |
-|---|---|---|---|
-| `/health` | `GET` | — | Probe de liveness e conectividade com o banco |
-| `/predict/` | `POST` | — | Inferência + persiste o resultado — 100 req/min por IP (RNF-19) |
-| `/api/v1/predictions` | `GET` | — | Histórico paginado (`?page=1&size=20`) |
-| `/models` | `GET` | `X-Admin-Token` | Lista modelos registrados e disponibilidade dos artefatos (RF-11) |
-| `/models/active` | `PUT` | `X-Admin-Token` | Hot-swap atômico do modelo ativo em tempo de execução (RNF-25) |
-| `/docs` | `GET` | — | Swagger UI interativo |
+| Endpoint              | Método      | Auth            | Descrição                                              |
+| --------------------- | ----------- | --------------- | ------------------------------------------------------ |
+| `/health`             | `GET`       | —               | Probe de liveness e conectividade com o banco          |
+| `/predict/`           | `POST`      | —               | Inferência + persiste o resultado — 100 req/min por IP |
+| `/api/v1/predictions` | `GET`       | —               | Histórico paginado (`?page=1&size=20`)                 |
+| `/api/stream/sensors` | `GET`       | —               | Stream SSE de leituras a 1 Hz                          |
+| `/ws/alerts`          | `WebSocket` | —               | Canal push de alertas críticos (probability > 0.70)    |
+| `/api/simulator/mode` | `GET/PUT`   | —               | Consulta/altera o modo do simulador                    |
+| `/models`             | `GET`       | `X-Admin-Token` | Lista modelos registrados                              |
+| `/models/active`      | `PUT`       | `X-Admin-Token` | Hot-swap do modelo ativo (RF ↔ XGBoost ↔ MLP)          |
+| `/docs`               | `GET`       | —               | Swagger UI interativo                                  |
 
 **Destaques de infraestrutura:**
-- **RNF-25 — Model Registry com Atomic Hot-Swap:** troque o modelo ativo (RF ↔ XGBoost ↔ MLP) sem reiniciar o servidor via `PUT /models/active`. O carregamento ocorre em background thread; apenas o ponteiro é trocado sob `asyncio.Lock`.
-- **RNF-24 — Deep Learning com ONNX Runtime:** o MLP é exportado em ONNX e serve via `OnnxMlpAdapter`, mantendo a mesma interface que RF e XGBoost — latência p95 < 500 ms.
-- **RNF-18** — Handler global: qualquer erro não tratado retorna HTTP 500 com JSON seguro (sem stack trace).
-- **RNF-19** — Rate limiting via `slowapi`: 100 req/min por IP em `POST /predict/`.
-- **Logging estruturado** via `structlog` (JSON em produção, legível em desenvolvimento).
 
-### Exemplo — predição
+- **Model Registry com Atomic Hot-Swap:** troque o modelo ativo sem reiniciar o servidor via `PUT /models/active`.
+- **ONNX Runtime:** o MLP é servido via `OnnxMlpAdapter`, mantendo a mesma interface que RF e XGBoost.
+- **Rate limiting** via `slowapi`: 100 req/min por IP em `POST /predict/`.
+- **Logging estruturado** via `structlog` (JSON em produção).
 
-```bash
-curl -X POST http://localhost:8000/predict/ \
-  -H "Content-Type: application/json" \
-  -d '{
-    "TP2": 5.02, "TP3": 9.21, "H1": 8.97,
-    "DV_pressure": 2.10, "Reservoirs": 8.85,
-    "Motor_current": 4.5, "Oil_temperature": 72.3,
-    "COMP": 1.0, "DV_eletric": 0.0, "Towers": 1.0,
-    "MPG": 1.0, "Oil_level": 1.0
-  }'
-```
+---
 
-Resposta:
+## Rodando os Testes
 
-```json
-{
-  "predicted_class": 0,
-  "failure_probability": 0.042371,
-  "timestamp": "2024-06-01T12:00:00.000000+00:00"
-}
-```
-
-### Exemplo — histórico paginado
+### Backend
 
 ```bash
-curl "http://localhost:8000/api/v1/predictions?page=1&size=10"
-```
+# Com o sistema rodando via Docker
+docker compose exec api pytest tests/ -v
 
-```json
-{
-  "items": [ { "id": 42, "timestamp": "...", "TP2": 5.02, "failure_probability": 0.04 } ],
-  "total": 42,
-  "page": 1,
-  "size": 10,
-  "pages": 5
-}
-```
-
-### Rodando os testes do backend
-
-```bash
-# Com o venv ativo, na pasta apps/backend
+# OU localmente (com venv ativo, na pasta apps/backend)
 # Não requer PostgreSQL — usa SQLite em memória
 pytest tests/ -v
-# Inclui testes de integração do ModelRegistry, autenticação e endpoints /models.
+```
+
+### Frontend
+
+```bash
+# Com o sistema rodando
+docker compose exec frontend pnpm test
+
+# OU localmente (na pasta apps/frontend)
+# Não requer backend rodando
+pnpm test
 ```
 
 ---
 
 ## Ambiente de Machine Learning
 
-O diretório `apps/ml/` possui seu **próprio ambiente virtual isolado**, separado do backend, para evitar que dependências pesadas de ciência de dados (Pandas, Scikit-learn, imbalanced-learn) contaminem o servidor de produção.
+O diretório `apps/ml/` possui seu **próprio ambiente virtual isolado**. Rode os scripts de treinamento localmente (fora do Docker) ou dentro do contêiner `jupyter`.
 
-### 1. Configure o ambiente virtual do ML
+### Configurando o ambiente local
 
 ```bash
 cd apps/ml
 
-# Crie o venv (apenas na primeira vez)
 python -m venv .venv
-```
+.\.venv\Scripts\Activate.ps1    # Windows PowerShell
+# source .venv/bin/activate       # macOS / Linux
 
-Ativação:
-
-```bash
-# Windows — PowerShell
-.\.venv\Scripts\Activate.ps1
-
-# Windows — CMD
-.\.venv\Scripts\activate.bat
-
-# macOS / Linux
-source .venv/bin/activate
-```
-
-### 2. Instale as dependências
-
-```bash
 pip install -r requirements.txt
 ```
 
-### 3. Baixe e posicione o dataset
+### Baixando o dataset
 
-Faça o download do **MetroPT-3 Air Compressor Dataset** na [UCI Machine Learning Repository](https://archive.ics.uci.edu/dataset/791/metropt-3+dataset) e salve o arquivo CSV em:
+Faça o download do **MetroPT-3 Air Compressor Dataset** na [UCI Machine Learning Repository](https://archive.ics.uci.edu/dataset/791/metropt-3+dataset) e salve em:
 
 ```
 apps/ml/data/raw/MetroPT3(AirCompressor).csv
 ```
 
-### 4. Execute o pipeline na ordem correta
+### Pipeline de treinamento
 
-Todos os comandos devem ser executados a partir de `apps/ml/` com o venv ativo:
+Execute a partir de `apps/ml/` com o venv ativo:
 
 ```bash
 # Passo 1 — Ingestão
-# Lê o CSV, mapeia os 4 intervalos de falha real para a coluna 'anomaly'
-# e salva o resultado como Parquet em data/processed/
 python -m src.ingest_metropt
-```
 
-```bash
 # Passo 2a — Random Forest (modelo padrão)
-# Pré-processa (rolling features), divide (80/20 estratificado),
-# executa GridSearchCV com SMOTE anti-leakage dentro de cada fold,
-# faz refit com best_params_ e salva os artefatos em models/
 python -m src.train_random_forest
-```
 
-```bash
-# Passo 2b — XGBoost com Optuna (RF-10, RNF-23)
-# 100 trials de hiperparâmetros (retomável — SQLite persiste o estudo).
-# Use --n-trials 5 para um smoke run rápido (~2 min).
+# Passo 2b — XGBoost com Optuna
 python src/train_xgboost.py --n-trials 100
-```
+# Use --n-trials 5 para smoke run rápido (~2 min)
 
-Após o treinamento, os seguintes artefatos são gerados:
-
-```bash
-# Passo 2c — MLP com PyTorch Lightning (RNF-24)
-# Treina uma rede [256→128→64], exporta ONNX e rastreia no MLflow local.
-# Use --max-epochs 10 para um smoke run rápido (~5 min).
+# Passo 2c — MLP com PyTorch Lightning
 python src/train_mlp.py --max-epochs 50
+# Use --max-epochs 10 para smoke run rápido (~5 min)
 ```
 
-Após o treinamento, os seguintes artefatos são gerados:
+Artefatos gerados em `apps/ml/models/`:
 
 ```
-apps/ml/models/
-├── random_forest_final.joblib   ← padrão (ACTIVE_MODEL=random_forest)
-├── model_card.json              ← métricas RF
-├── xgboost_v1.joblib            ← ativado com ACTIVE_MODEL=xgboost
-├── xgboost_v1_card.json         ← métricas XGBoost + melhores hiperparâmetros
-├── mlp_v1.onnx                  ← ativado com ACTIVE_MODEL=mlp (ONNX Runtime)
-├── mlp_scaler.joblib            ← StandardScaler ajustado no X_train
-└── mlp_v1_card.json             ← métricas MLP + arquitetura
-
-apps/ml/data/optuna/
-└── xgboost_study.db             ← estudo Optuna persistido (RNF-23)
-
-apps/ml/mlruns/                  ← experimentos MLflow (RNF-24)
-└── mlp_metropt3/                   abra com: mlflow ui --backend-store-uri apps/ml/mlruns
+random_forest_final.joblib   ← padrão (ACTIVE_MODEL=random_forest)
+xgboost_v1.joblib            ← ACTIVE_MODEL=xgboost
+mlp_v1.onnx                  ← ACTIVE_MODEL=mlp (ONNX Runtime)
+mlp_scaler.joblib            ← StandardScaler do MLP
+*_card.json                  ← métricas e metadados de cada modelo
 ```
-
-> Veja `docs/model_comparison.md` para a tabela completa de métricas (F1, AUC, latência p50/p95).
-
-### Detalhes do pipeline
-
-| Etapa | Módulo | Descrição |
-|---|---|---|
-| **Ingestão** | `ingest_metropt.py` | Lê CSV, cria coluna `anomaly` com 4 intervalos de falha real, salva Parquet |
-| **Pré-processamento** | `preprocessing.py` | `MetroPTPreprocessor`: delta, std_5, ma_5, ma_15 nos 7 sensores analógicos |
-| **Balanceamento** | `balancing.py` | `MetroPTBalancer`: SMOTE aplicado **somente** dentro de cada fold (anti-leakage) |
-| **Treinamento RF** | `train_random_forest.py` | `GridSearchCV` sobre `imblearn.Pipeline([SMOTE → RF])` com `cv=3, scoring='f1'` |
-| **Treinamento XGBoost** | `train_xgboost.py` | Optuna (100 trials, SQLite) + `scale_pos_weight` (sem SMOTE), `tree_method=hist` |
-| **Treinamento MLP** | `train_mlp.py` | PyTorch Lightning `[256→128→64]`, AdamW, EarlyStopping; exporta ONNX + StandardScaler; rastreado no MLflow (RNF-24) |
 
 ### Rodando os testes do ML
 
 ```bash
 # Com o venv do ML ativo, na pasta apps/ml
 pytest tests/ -v
-# 137 testes: preprocessing, balancing, ingestão, RF, XGBoost, MLP (ONNX)
-# Os testes MLP são ignorados automaticamente se os artefatos ainda não existirem.
 ```
-
----
-
-## Rodando o Dashboard (Frontend)
-
-### 1. Crie o arquivo de configuração
-
-Crie `apps/frontend/.env.local`:
-
-```dotenv
-# URL da API — deve apontar para o backend em execução
-NEXT_PUBLIC_API_URL=http://localhost:8000
-```
-
-### 2. Instale as dependências
-
-```bash
-cd apps/frontend
-pnpm install
-```
-
-### 3. Inicie o servidor de desenvolvimento
-
-```bash
-pnpm dev
-```
-
-O dashboard estará disponível em **`http://localhost:3000`**.
-
-> **Pré-condição:** O backend precisa estar rodando em `localhost:8000` antes de abrir o dashboard. Sem ele, o painel exibe o badge "Backend offline" e o polling de sensores não funciona.
-
-### Rodando os testes do frontend
-
-```bash
-# Na pasta apps/frontend (não requer backend rodando)
-pnpm test
-```
-
----
-
-## Subindo Tudo via Docker
-
-Para orquestrar todos os serviços de uma vez:
-
-```bash
-# Na raiz do projeto — o arquivo .env deve existir
-docker compose up --build
-```
-
-| Serviço | URL | Descrição |
-|---|---|---|
-| **Frontend** | `http://localhost:3000` | Dashboard Next.js |
-| **Backend** | `http://localhost:8000` | API FastAPI |
-| **Jupyter** | `http://localhost:8888` (token: `admin`) | Notebooks de ML |
-| **MLflow** | `http://localhost:5000` | UI de experimentos e artefatos |
-| **PostgreSQL** | `localhost:5432` | Banco de dados |
-
-> **Lembre-se:** Com Docker, as migrations **não são executadas automaticamente**. Após `docker compose up`, aplique as migrations com o venv do backend ativo e o arquivo `apps/backend/.env` configurado com `localhost:5432`.
 
 ---
 
 ## MLOps — MLflow + Promoção de Modelos
 
-### Arquitetura MLflow no Docker (RNF-27)
-
-O serviço `mlflow` roda como contêiner dedicado na mesma rede Docker que os demais serviços. O PostgreSQL atua como **backend store** (experimentos, runs, métricas), enquanto os artefatos binários (`.onnx`, `.joblib`, model cards) ficam em um **volume Docker nomeado** (`mlflow_artifacts`), separado do banco de dados para facilitar backups independentes.
-
-```
-train_mlp.py  ──log_params/metrics/artefacts──►  MLflow Server (porta 5000)
-                                                       │
-                                              ┌────────┴────────┐
-                                      PostgreSQL (tcc_db)   Volume Docker
-                                      (runs, métricas)       (onnx, joblib,
-                                                              model_card.json)
-```
-
-Para acessar a UI de experimentos, suba os serviços e abra `http://localhost:5000`.
+O serviço `mlflow` roda como contêiner dedicado. O PostgreSQL atua como backend store; os artefatos ficam em volume Docker nomeado (`mlflow_artifacts`).
 
 ```bash
+# Acessar a UI de experimentos
+# Com os serviços rodando: http://localhost:5000
 docker compose up mlflow db -d
 ```
 
-> **Nota:** O serviço instala `psycopg2-binary` no startup (~15 s na primeira vez). Aguarde o log `[INFO] Starting gunicorn` antes de tentar conexões.
-
----
-
-### Promovendo um modelo para produção (RNF-26)
-
-Após um ou mais treinos com `train_mlp.py`, use o script `promote_model.py` para promover o melhor run para a pasta `models/` que o backend lê.
-
-#### Pré-requisitos
+### Promovendo um modelo para produção
 
 ```bash
-# MLflow e o banco de dados devem estar rodando
-docker compose up mlflow db -d
-
-# Ambiente virtual do ML deve estar ativo
-cd apps/ml
-.\.venv\Scripts\Activate.ps1     # Windows PowerShell
-```
-
-#### Uso básico (padrões)
-
-```bash
-# Conecta em http://localhost:5000, experimento 'mlp_metropt3',
-# maximiza 'test_f1_class1, salva em apps/ml/models/
+# Com o venv do ML ativo, na pasta apps/ml
 python src/promote_model.py
 ```
 
-#### Opções disponíveis
+Opções disponíveis:
 
 ```bash
 python src/promote_model.py \
     --tracking-uri http://localhost:5000 \
     --experiment   mlp_metropt3 \
     --metric       test_f1_class1 \
-    --artifact-path model \
-    --dest-dir     models/ \
-    --card-filename mlp_v1_card.json
+    --dest-dir     models/
 ```
-
-| Flag | Padrão | Descrição |
-|---|---|---|
-| `--tracking-uri` | `http://localhost:5000` | URI do servidor MLflow |
-| `--experiment` | `mlp_metropt3` | Nome do experimento |
-| `--metric` | `test_f1_class1` | Métrica para maximizar |
-| `--artifact-path` | `model` | Sub-path dos artefatos no run |
-| `--dest-dir` | `apps/ml/models/` | Destino dos artefatos promovidos |
-| `--card-filename` | `mlp_v1_card.json` | Nome do model card no artefato |
-
-#### O que o script faz
-
-1. Conecta ao servidor MLflow e busca o experimento pelo nome.
-2. Encontra o run com a maior `test_f1_class1` (via `ORDER BY metrics DESC`).
-3. Faz o download de todos os artefatos do run (`mlp_v1.onnx`, `mlp_scaler.joblib`, `mlp_v1_card.json`) para um diretório temporário.
-4. Lê o `mlp_v1_card.json` baixado e injeta os campos `promoted_run_id` e `promoted_at` (**RNF-26**).
-5. Copia os artefatos para `dest-dir`, sobrescrevendo a versão anterior usada pelo backend.
 
 Após a promoção, use o hot-swap para carregar o novo modelo sem reiniciar:
 
@@ -600,23 +366,53 @@ curl -X PUT http://localhost:8000/models/active \
   -d '{"model_name": "mlp"}'
 ```
 
-#### Rodando os testes de promoção
+---
+
+## Simulador de Sensores
+
+O backend inclui um simulador configurável com distribuições estatísticas baseadas no MetroPT-3. Útil para demonstrações sem hardware real.
+
+### Modos disponíveis
+
+| Modo          | Comportamento                                      |
+| ------------- | -------------------------------------------------- |
+| `NORMAL`      | Gaussianas estáveis em torno dos valores nominais  |
+| `DEGRADATION` | Deriva progressiva ao longo de ~300 ciclos         |
+| `FAILURE`     | Picos e quedas bruscas — dispara alertas WebSocket |
+
+### Endpoints
 
 ```bash
-# Com o venv do ML ativo, na pasta apps/ml
-# Não requer MLflow rodando — usa unittest.mock
-pytest tests/test_promote_model.py -v
+# Consultar modo atual
+curl http://localhost/api/simulator/mode
+
+# Ativar modo de falha
+curl -X PUT http://localhost/api/simulator/mode \
+  -H "Content-Type: application/json" \
+  -d '{"mode": "FAILURE"}'
+
+# Retornar ao normal
+curl -X PUT http://localhost/api/simulator/mode \
+  -H "Content-Type: application/json" \
+  -d '{"mode": "NORMAL"}'
 ```
+
+### Fluxo de demonstração sugerido
+
+1. Inicie com `NORMAL` — dashboard exibe leituras estáveis.
+2. Troque para `DEGRADATION` — observe Motor Current e Oil Temperature subindo gradualmente.
+3. Troque para `FAILURE` — alertas WebSocket são disparados (probability > 0.70) e toasts aparecem no dashboard.
+4. Retorne a `NORMAL` para encerrar a demonstração.
 
 ---
 
 ## Troubleshooting
 
-### `InvalidPasswordError` ou falha de conexão no `alembic upgrade head`
+### `alembic upgrade head` falha com `InvalidPasswordError`
 
-**Causa:** O `DATABASE_URL` usa `@db:5432`. O hostname `db` só existe dentro da rede Docker.
+**Causa:** `DATABASE_URL` usa `@db:5432`. O hostname `db` só resolve dentro do Docker.
 
-**Solução:** Verifique `apps/backend/.env` e confirme que está usando `localhost`:
+**Solução:** Verifique `apps/backend/.env` e confirme que usa `localhost`:
 
 ```dotenv
 DATABASE_URL=postgresql+asyncpg://user:password@localhost:5432/tcc_db
@@ -626,68 +422,36 @@ DATABASE_URL=postgresql+asyncpg://user:password@localhost:5432/tcc_db
 
 ### `POST /predict/` retorna HTTP 503
 
-**Causa:** O artefato do modelo ativo não foi encontrado no caminho esperado.
+**Causa:** Artefato do modelo ativo não encontrado.
 
-**Solução:** Confirme qual modelo está ativo e execute o treinamento correspondente:
-
-```bash
-# Verificar qual modelo está configurado
-echo $ACTIVE_MODEL  # default: random_forest
-
-# Treinar o Random Forest (se necessário)
-cd apps/ml && python -m src.train_random_forest
-
-# Treinar o XGBoost (se ACTIVE_MODEL=xgboost)
-cd apps/ml && python src/train_xgboost.py --n-trials 5
-
-# Treinar o MLP (se ACTIVE_MODEL=mlp)
-cd apps/ml && python src/train_mlp.py --max-epochs 10
-```
-
-Alternativamente, com o servidor rodando, use o hot-swap para carregar um modelo disponível sem reiniciar:
+**Solução:** Execute o treinamento correspondente ou use hot-swap para um modelo disponível:
 
 ```bash
-curl -X PUT http://localhost:8000/models/active \
+# Via docker exec
+docker compose exec api curl -X PUT http://localhost:8000/models/active \
   -H "X-Admin-Token: $ADMIN_API_TOKEN" \
-  -H "Content-Type: application/json" \
   -d '{"model_name": "random_forest"}'
 ```
 
 ---
 
-### `ACTIVE_MODEL=xgboost` mas a API continua usando o Random Forest
+### `ACTIVE_MODEL=xgboost` mas a API usa Random Forest
 
-**Causa:** A variável de ambiente não está sendo lida pelo processo FastAPI.
+**Causa:** Variável de ambiente não lida pelo processo.
 
-**Solução:** Adicione ao `apps/backend/.env`:
-
-```dotenv
-ACTIVE_MODEL=xgboost
-```
-
-E reinicie o servidor (`uvicorn src.main:app --reload`). O log de startup exibirá `model_loaded model=xgboost`.
-
-> **Alternativa sem reiniciar:** use `PUT /models/active` para trocar o modelo em tempo de execução (RNF-25).
-
----
-
-### `pnpm dev` exibe erro `NEXT_PUBLIC_API_URL não está definida`
-
-**Causa:** O arquivo `apps/frontend/.env.local` não foi criado.
-
-**Solução:**
+**Solução:** Adicione ao `.env` da raiz e recrie o contêiner:
 
 ```bash
-echo "NEXT_PUBLIC_API_URL=http://localhost:8000" > apps/frontend/.env.local
+docker compose up --build api -d
 ```
 
 ---
 
-### PowerShell bloqueia a ativação do venv
+### PowerShell bloqueia ativação do venv
 
-**Causa:** A política de execução do Windows impede scripts `.ps1`.
+**Causa:** Política de execução do Windows impede scripts `.ps1`.
 
-**Solução:** Execute o PowerShell como Administrador e rode:
+**Solução:** Execute como Administrador:
 
 ```powershell
 Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
@@ -695,88 +459,16 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 
 ---
 
-## Simulador de Sensores (RF-13 / RNF-29)
-
-O backend inclui um simulador configurável que gera dados realistas com base nas distribuições estatísticas do dataset **MetroPT-3**. Útil para demonstrações, testes de carga e validação do dashboard sem necessidade de hardware real.
-
-### Modos disponíveis
-
-| Modo | Comportamento | Caso de uso |
-|---|---|---|
-| `NORMAL` | Gaussianas estáveis em torno dos valores nominais (baixo ruído) | Operação saudável do compressor |
-| `DEGRADATION` | Deriva progressiva ao longo de ~300 ciclos: pressão cai, temperatura e corrente sobem, sensores digitais começam a oscilar | Simula envelhecimento / desgaste gradual |
-| `FAILURE` | Picos e quedas bruscas com alta variância — sem retorno ao nominal | Simula quebra ativa do compressor |
-
-### Endpoints
-
-| Método | URL | Corpo | Descrição |
-|---|---|---|---|
-| `GET` | `/api/simulator/mode` | — | Consulta o modo ativo |
-| `PUT` | `/api/simulator/mode` | `{"mode": "DEGRADATION"}` | Altera o modo em tempo real (≤ 1 s de latência) |
-
-### Exemplos de uso
-
-**Consultar modo atual**
-
-```bash
-curl http://localhost/api/simulator/mode
-```
-
-```json
-{ "mode": "NORMAL", "message": "Current simulator mode: NORMAL." }
-```
-
-**Ativar modo de degradação**
-
-```bash
-curl -X PUT http://localhost/api/simulator/mode \
-  -H "Content-Type: application/json" \
-  -d '{"mode": "DEGRADATION"}'
-```
-
-```json
-{ "mode": "DEGRADATION", "message": "Simulator mode set to DEGRADATION." }
-```
-
-**Simular falha para demonstração**
-
-```bash
-curl -X PUT http://localhost/api/simulator/mode \
-  -H "Content-Type: application/json" \
-  -d '{"mode": "FAILURE"}'
-```
-
-**Retornar à operação normal**
-
-```bash
-curl -X PUT http://localhost/api/simulator/mode \
-  -H "Content-Type: application/json" \
-  -d '{"mode": "NORMAL"}'
-```
-
-### Fluxo de demonstração sugerido
-
-1. Inicie com `NORMAL` — o dashboard exibe leituras estáveis.
-2. Troque para `DEGRADATION` — observe Motor Current e Oil Temperature subindo gradualmente no gráfico ao vivo.
-3. Troque para `FAILURE` — alertas WebSocket são disparados (probabilidade > 0.70) e o assistente LLM sugere o plano de reparo.
-4. Retorne a `NORMAL` para encerrar a demonstração.
-
-> **Nota:** a mudança de modo é atômica e não interrompe conexões SSE existentes. O próximo ciclo de broadcast (máx. 1 s) já usa a nova distribuição.
-
----
-
 ## Autores
 
-| Nome |
-|---|
-| Lucas de Moraes Silveira |
+| Nome                          |
+| ----------------------------- |
+| Lucas de Moraes Silveira      |
 | Raphael Nobuyuki Haga Okuyama |
-| Ronaldo Simeone Antonio |
+| Ronaldo Simeone Antonio       |
 
 ---
 
 ## Licença
 
 Este projeto é desenvolvido exclusivamente para fins acadêmicos.
-
----

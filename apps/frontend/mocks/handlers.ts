@@ -38,6 +38,54 @@ declare global {
 
 export const handlers = [
   /**
+   * GET /api/stream/sensors — SSE em tempo real (RF-12).
+   *
+   * Retorna um único evento sensor_reading e mantém o stream aberto.
+   * MSW v2 intercepta EventSource via service worker da mesma forma que fetch.
+   */
+  http.get(`${API_BASE}/api/stream/sensors`, () => {
+    const isCritical =
+      typeof window !== "undefined" && window.__E2E_SCENARIO__ === "critical";
+
+    const reading = JSON.stringify({
+      timestamp: new Date().toISOString(),
+      TP2: isCritical ? 2.1 : 8.4,
+      TP3: isCritical ? 1.2 : 9.1,
+      H1: 8.5,
+      DV_pressure: 2.1,
+      Reservoirs: 8.7,
+      Motor_current: isCritical ? 9.8 : 4.2,
+      Oil_temperature: isCritical ? 88.5 : 68.5,
+      COMP: 1.0,
+      DV_eletric: 0.0,
+      Towers: 1.0,
+      MPG: 1.0,
+      Oil_level: 1.0,
+    });
+
+    const encoder = new TextEncoder();
+    const stream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(
+          encoder.encode(
+            `event: sensor_reading\ndata: ${reading}\nid: 1\nretry: 3000\n\n`,
+          ),
+        );
+        // Mantém o stream aberto (não fecha) para simular SSE contínuo
+      },
+    });
+
+    return new HttpResponse(stream, {
+      status: 200,
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        Connection: "keep-alive",
+      },
+    });
+  }),
+
+  /**
    * POST /predict/
    * Returns a fault prediction based on the active E2E scenario.
    */

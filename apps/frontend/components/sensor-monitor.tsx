@@ -3,9 +3,13 @@
 /**
  * SensorMonitor — componente de composição do dashboard.
  *
- * Toda lógica de estado (polling, histórico, isAnomaly) foi extraída para
- * `useSensorData` (RF-06 / RF-07).  Este componente é responsável apenas
- * por layout e apresentação.
+ * Orquestra os dois hooks de tempo real:
+ *   • useSensorData   — SSE de sensores, polling de predições, WS de alertas do gráfico
+ *   • useAlertWebSocket — WS de alertas para toasts (singleton, evita dupla conexão)
+ *
+ * O resultado de useAlertWebSocket é propagado como props para:
+ *   • AlertToastQueue — toasts de alerta (RF-16 / RNF-34)
+ *   • ConnectionStatus — indicadores de saúde SSE + WS (RF-17)
  */
 
 import {
@@ -26,10 +30,17 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { SensorChart } from "@/components/sensor-chart";
 import { AlertPanel } from "@/components/alert-panel";
 import {
+  AlertToastQueue,
+  ConnectionBanner,
+} from "@/components/alert-toast-queue";
+import { ConnectionStatus } from "@/components/connection-status";
+import {
   useSensorData,
+  getRiskLevel,
   type RiskLevel,
-  POLL_INTERVAL_MS,
 } from "@/hooks/use-sensor-data";
+import { useAlertWebSocket } from "@/hooks/use-alert-websocket";
+import { cn } from "@/lib/utils";
 
 // ── Sub-componentes de apresentação ───────────────────────────────────────
 
@@ -38,13 +49,12 @@ interface GaugeProps {
   riskLevel: RiskLevel;
 }
 
-// Lógica que garante as cores corretas para cada estado
 function riskColor(level: RiskLevel): string {
   return level === "NORMAL"
-    ? "hsl(142 71% 45%)" // Verde
+    ? "hsl(142 71% 45%)"
     : level === "ALERTA"
-    ? "hsl(38 92% 50%)" // Amarelo/Âmbar
-    : "hsl(0 72% 51%)"; // Vermelho
+    ? "hsl(38 92% 50%)"
+    : "hsl(0 72% 51%)";
 }
 
 function FailureGauge({ probability, riskLevel }: GaugeProps) {
@@ -53,32 +63,25 @@ function FailureGauge({ probability, riskLevel }: GaugeProps) {
   const r = 88;
   const strokeW = 14;
   const color = riskColor(riskLevel);
-  // Garante que o valor fique sempre entre 0 e 1 (0% a 100%)
   const pct = Math.min(1, Math.max(0, probability));
 
-  // Função auxiliar para encontrar as coordenadas X e Y exatas no arco
   function getPoint(angleDeg: number) {
     const rad = (angleDeg * Math.PI) / 180;
     return {
       x: cx + r * Math.cos(rad),
-      y: cy - r * Math.sin(rad), // Subtrai porque o Y inverte no SVG
+      y: cy - r * Math.sin(rad),
     };
   }
 
-  // O velocímetro vai da esquerda (180°) para a direita (0°)
   const startAngle = 180;
   const endAngle = 180 - pct * 180;
 
-  const p1 = getPoint(startAngle); // Início da barra
-  const p2 = getPoint(endAngle); // Onde o valor (cor) termina e o fundo cinza começa
-  const p3 = getPoint(0); // Fim da barra (lado direito)
+  const p1 = getPoint(startAngle);
+  const p2 = getPoint(endAngle);
+  const p3 = getPoint(0);
 
-  // Caminho do Valor (Colorido) - Vai da esquerda até o valor atual
-  // large-arc é sempre 0 porque o ângulo nunca passa de 180°
   const valuePath =
     pct > 0 ? `M ${p1.x} ${p1.y} A ${r} ${r} 0 0 1 ${p2.x} ${p2.y}` : "";
-
-  // Caminho do Fundo (Cinza) - Começa exatamente onde o valor parou e vai até o final
   const bgPath =
     pct < 1 ? `M ${p2.x} ${p2.y} A ${r} ${r} 0 0 1 ${p3.x} ${p3.y}` : "";
 
@@ -90,7 +93,6 @@ function FailureGauge({ probability, riskLevel }: GaugeProps) {
       className="w-full max-w-[260px]"
       aria-label={`Probabilidade de quebra: ${percentText}%`}
     >
-      {/* Desenha a trilha cinza contígua (apenas a parte vazia) */}
       {bgPath && (
         <path
           d={bgPath}
@@ -100,8 +102,6 @@ function FailureGauge({ probability, riskLevel }: GaugeProps) {
           strokeLinecap="round"
         />
       )}
-
-      {/* Desenha a trilha de cor (apenas a parte cheia) */}
       {valuePath && (
         <path
           d={valuePath}
@@ -114,7 +114,6 @@ function FailureGauge({ probability, riskLevel }: GaugeProps) {
           }}
         />
       )}
-
       <text
         x={cx}
         y={cy - 10}
@@ -154,8 +153,6 @@ function KpiCard({ title, value, unit, icon: Icon, isLoading }: KpiCardProps) {
       <CardContent className="p-3 lg:p-4">
         <div className="flex items-start gap-2">
           <div className="min-w-0 flex-1">
-            {/* Sem truncate: com 2 colunas no lg, o título tem espaço
-                 para quebrar linha naturalmente sem corte abrupto. */}
             <p className="text-[10px] font-medium uppercase leading-tight tracking-wider text-muted-foreground lg:text-xs">
               {title}
             </p>
@@ -170,7 +167,6 @@ function KpiCard({ title, value, unit, icon: Icon, isLoading }: KpiCardProps) {
               </p>
             )}
           </div>
-          {/* shrink-0 impede o ícone de comprimir quando o título quebra linha */}
           <div className="shrink-0 rounded-lg bg-primary/10 p-2">
             <Icon className="h-4 w-4 text-primary" />
           </div>
@@ -237,24 +233,68 @@ function SensorChip({ label, value, unit, isLoading }: SensorChipProps) {
   );
 }
 
+// ── Banner de modo degradado (RNF-35) ─────────────────────────────────────
+
+interface DegradedBannerProps {
+  reconnectAttempt: number;
+}
+
+function DegradedModeBanner({ reconnectAttempt }: DegradedBannerProps) {
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      data-testid="degraded-mode-banner"
+      className={cn(
+        "flex items-center gap-3 rounded-xl border border-amber-500/30",
+        "bg-amber-500/5 px-4 py-3 text-amber-400",
+      )}
+    >
+      <WifiOff className="h-4 w-4 shrink-0" />
+      <div className="min-w-0 flex-1">
+        <p className="text-base font-bold text-amber-500">Modo Degradado</p>
+        <p className="text-xs text-amber-400">
+          Exibindo últimos dados conhecidos · Reconexão {reconnectAttempt} em
+          curso…
+        </p>
+      </div>
+      <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-amber-400" />
+    </div>
+  );
+}
+
 // ── Componente principal ───────────────────────────────────────────────────
 
 export default function SensorMonitor() {
-  // Toda lógica de dados vem do hook (RF-06 polling 5s, RF-07 isAnomaly)
   const {
     history,
     latest,
     currentPayload,
     isLoading,
-    isAnomaly,
-    riskLevel,
     error,
+    sseStatus,
+    sseReconnectAttempt,
   } = useSensorData();
 
+  // Singleton do WebSocket de alertas — passado como props para evitar
+  // múltiplas conexões ao mesmo endpoint.
+  const { alerts, status: wsStatus, acknowledge } = useAlertWebSocket();
+
   const probability = latest?.failure_probability ?? 0;
+
+  // Unifica a fonte de risco: toma o max entre a predição ML e os alertas WS
+  // não reconhecidos. Sem isso, o poll de 5s redefine o riskLevel para NORMAL
+  // mesmo com toasts CRÍTICO ativos.
+  const alertProb = alerts.reduce((max, a) => Math.max(max, a.probability), 0);
+  const effectiveProb = Math.max(probability, alertProb);
+  const effectiveRiskLevel = getRiskLevel(effectiveProb);
+  const effectiveIsAnomaly = effectiveRiskLevel !== "NORMAL";
+
   const isOffline = error !== null && !isLoading;
-  // ErrorState: backend nunca respondeu com sucesso (sem dados históricos)
   const isHardOffline = isOffline && history.length === 0;
+
+  // RNF-35: modo degradado — SSE caiu após dados serem carregados
+  const isDegradedMode = sseStatus === "reconnecting" && history.length > 0;
 
   return (
     <div className="flex h-full overflow-hidden">
@@ -268,12 +308,19 @@ export default function SensorMonitor() {
                 Monitoramento em Tempo Real
               </h1>
               <p className="text-sm text-muted-foreground">
-                Compressor de ar · MetroPT-3 · Polling a cada{" "}
-                {POLL_INTERVAL_MS / 1000}s
+                Compressor de ar · MetroPT-3 ·{" "}
+                {sseStatus === "connected"
+                  ? "Streaming em tempo real"
+                  : sseStatus === "reconnecting"
+                  ? "Reconectando…"
+                  : "Conectando…"}
               </p>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
+              {/* RF-17: Indicadores de status de conexão */}
+              <ConnectionStatus sseStatus={sseStatus} wsStatus={wsStatus} />
+
               {isOffline && (
                 <Badge
                   variant="outline"
@@ -283,14 +330,17 @@ export default function SensorMonitor() {
                   Backend offline
                 </Badge>
               )}
-              {!isLoading && <StatusBadge level={riskLevel} />}
+              {!isLoading && <StatusBadge level={effectiveRiskLevel} />}
             </div>
           </div>
 
-          {/* Bug 2 fix: renderização condicional exclusiva — ErrorState OU conteúdo,
-               nunca ambos ao mesmo tempo. isHardOffline = offline E sem histórico. */}
+          {/* RNF-35: Banner persistente de modo degradado */}
+          {isDegradedMode && (
+            <DegradedModeBanner reconnectAttempt={sseReconnectAttempt} />
+          )}
+
           {isHardOffline ? (
-            /* ── RNF-21: ErrorState — substitui TODO o conteúdo abaixo do header ── */
+            /* ── RNF-21: ErrorState — sem histórico e sem conexão ── */
             <div
               role="alert"
               data-testid="error-state"
@@ -319,9 +369,6 @@ export default function SensorMonitor() {
           ) : (
             <>
               {/* ── KPI Cards ── */}
-              {/* RNF-22: 2 colunas em lg (1024px) dá ~240px por card — espaço
-                   suficiente para o título cair para a 2ª linha com elegância.
-                   4 colunas apenas em xl (1280px+) onde cada card tem ~280px. */}
               <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
                 <KpiCard
                   title="Pressão TP2"
@@ -353,17 +400,25 @@ export default function SensorMonitor() {
                 />
               </div>
 
-              {/* ── Gráficos (RF-06 / RF-07) + Gauge ── */}
+              {/* ── Gráficos + Gauge ── */}
               <div className="grid gap-4 lg:grid-cols-5">
-                <SensorChart
-                  history={history}
-                  isAnomaly={isAnomaly}
-                  riskLevel={riskLevel}
-                  className="lg:col-span-3"
-                />
+                <div
+                  className={cn(
+                    "lg:col-span-3 rounded-xl transition-colors duration-500",
+                    effectiveRiskLevel === "ALERTA" && "bg-yellow-400/10",
+                    effectiveRiskLevel === "CRÍTICO" && "bg-red-500/15",
+                  )}
+                >
+                  <SensorChart
+                    history={history}
+                    isAnomaly={effectiveIsAnomaly}
+                    riskLevel={effectiveRiskLevel}
+                    isLive={sseStatus === "connected"}
+                  />
+                </div>
 
                 <Card className="border-border bg-card lg:col-span-2">
-                  <div className="flex flex-col items-center gap-4 p-5">
+                  <div className="flex h-full flex-col items-center gap-4 p-5">
                     <p className="self-start text-sm font-semibold text-foreground/90">
                       Risco de Falha
                     </p>
@@ -371,18 +426,11 @@ export default function SensorMonitor() {
                       Predição do modelo RandomForest
                     </p>
 
-                    {/* RNF-21: Skeleton no gauge — Bug 1 fix: rounded-lg e bg-muted explícito */}
                     {isLoading ? (
                       <div
                         className="flex w-full flex-col items-center gap-3"
                         aria-label="Carregando predição"
                       >
-                        {/*
-                         * Meio-círculo perfeito: largura fixa W, altura = W/2.
-                         * rounded-t-full aplica border-radius de 50% apenas nos
-                         * cantos superiores, formando o arco do velocímetro.
-                         * A base fica reta, espelhando a geometria do gauge real.
-                         */}
                         <Skeleton
                           className="h-[110px] w-[220px] rounded-t-full"
                           data-testid="gauge-skeleton"
@@ -392,10 +440,10 @@ export default function SensorMonitor() {
                     ) : (
                       <>
                         <FailureGauge
-                          probability={probability}
-                          riskLevel={riskLevel}
+                          probability={effectiveProb}
+                          riskLevel={effectiveRiskLevel}
                         />
-                        <StatusBadge level={riskLevel} />
+                        <StatusBadge level={effectiveRiskLevel} />
                         {latest && (
                           <p className="text-[10px] text-muted-foreground">
                             Classe {latest.predicted_class} ·{" "}
@@ -403,6 +451,11 @@ export default function SensorMonitor() {
                               "pt-BR",
                             )}
                           </p>
+                        )}
+                        {wsStatus !== "open" && (
+                          <div className="mt-auto self-end">
+                            <ConnectionBanner status={wsStatus} />
+                          </div>
                         )}
                       </>
                     )}
@@ -416,8 +469,6 @@ export default function SensorMonitor() {
                   <p className="mb-3 text-sm font-semibold text-foreground/90">
                     Painel de Sensores
                   </p>
-                  {/* RNF-22: lg:grid-cols-4 evita chips de 64px em 1024px;
-                       xl:grid-cols-8 restaura layout completo em 1280px+ */}
                   <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-4 xl:grid-cols-8">
                     <SensorChip
                       label="TP3"
@@ -473,12 +524,17 @@ export default function SensorMonitor() {
             </>
           )}
         </div>
-        {/* fim .flex-col.gap-6.p-6 */}
       </div>
-      {/* fim .flex-1.overflow-y-auto */}
 
       {/* ── Painel lateral de auditoria (RF-08 / RNF-14) ── */}
-      <AlertPanel latest={latest} riskLevel={riskLevel} />
+      <AlertPanel latest={latest} riskLevel={effectiveRiskLevel} />
+
+      {/* ── Fila de toasts (RF-16 / RNF-34) — dados do hook singleton ── */}
+      <AlertToastQueue
+        alerts={alerts}
+        status={wsStatus}
+        onAcknowledge={acknowledge}
+      />
     </div>
   );
 }

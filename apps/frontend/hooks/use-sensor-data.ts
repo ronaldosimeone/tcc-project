@@ -1,23 +1,29 @@
 "use client";
 
 /**
- * Hook de telemetria — RF-06 / RF-07.
+ * useSensorData — RF-06 / RF-07 / RF-14 / RF-15.
  *
- * Estratégia de dados:
- *  - Polling PASSIVO a cada 5 s: GET /api/v1/predictions?size=1 (RF-06).
- *    Lê o último registro do banco — nunca envia dados sintéticos.
- *  - Primeira chamada busca os últimos 30 registros para seed do gráfico.
- *  - Deduplicação por timestamp: ticks sem novos dados não alteram o estado.
- *  - WebSocket push (RF-14): atualiza imediatamente quando prob > 0.70.
+ * Arquitetura de dados:
+ *  1. Seed (mount): GET /api/v1/predictions?size=30 — popula histórico inicial.
+ *  2. SSE (contínuo): /api/stream/sensors @1Hz — atualiza currentPayload e
+ *     janela deslizante de até 60 pontos (sensor data pura, sem predição).
+ *  3. Prediction poll (5s): GET /api/v1/predictions?size=1 — atualiza
+ *     failure_probability e predicted_class usados no gauge e no riskLevel.
+ *  4. WebSocket (RF-14): push imediato quando probabilidade > 0.70.
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { PredictPayload, PredictResponse } from "@/lib/api-client";
+import { useSSE } from "@/hooks/use-sse";
+import type { SSEStatus } from "@/hooks/use-sse";
 
-// ── Constantes ────────────────────────────────────────────────────────────
-
+// ── Constantes exportadas ─────────────────────────────────────────────────
+// POLL_INTERVAL_MS representa o intervalo do prediction poll (5 s).
+// Mantido como export para compatibilidade com testes existentes.
 export const POLL_INTERVAL_MS = 5_000;
-const HISTORY_MAX = 30;
+
+const HISTORY_MAX = 60; // janela deslizante: 60 s @ 1 Hz
+const SSE_URL = "/api/stream/sensors";
 
 // ── Tipos públicos ────────────────────────────────────────────────────────
 
@@ -41,6 +47,8 @@ export interface SensorDataState {
   isAnomaly: boolean;
   riskLevel: RiskLevel;
   error: Error | null;
+  sseStatus: SSEStatus;
+  sseReconnectAttempt: number;
 }
 
 // ── Utilitários exportados para testes ───────────────────────────────────
@@ -51,11 +59,9 @@ export function getRiskLevel(prob: number): RiskLevel {
   return "CRÍTICO";
 }
 
-// ── Tipos internos (histórico + WS) ──────────────────────────────────────
+// ── Tipos internos ────────────────────────────────────────────────────────
 
-interface HistoryItem {
-  failure_probability: number;
-  predicted_class: number;
+interface SensorReading {
   timestamp: string;
   TP2: number;
   TP3: number;
@@ -69,6 +75,11 @@ interface HistoryItem {
   Towers: number;
   MPG: number;
   Oil_level: number;
+}
+
+interface HistoryItem extends SensorReading {
+  failure_probability: number;
+  predicted_class: number;
 }
 
 interface HistoryPage {
@@ -93,23 +104,36 @@ interface WsPingFrame {
 
 type WsFrame = WsAlertFrame | WsPingFrame;
 
-// ── Helpers internos ──────────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────────
 
-function toTimeLabel(): string {
-  return new Date().toLocaleTimeString("pt-BR", {
+function toTimeLabel(ts?: string): string {
+  const d = ts ? new Date(ts) : new Date();
+  return d.toLocaleTimeString("pt-BR", {
     hour: "2-digit",
     minute: "2-digit",
     second: "2-digit",
   });
 }
 
-function itemToPoint(item: HistoryItem): SensorDataPoint {
+function sseReadingToPoint(
+  r: SensorReading,
+  prob: number,
+  cls: number,
+): SensorDataPoint {
   return {
-    time: new Date(item.timestamp).toLocaleTimeString("pt-BR", {
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-    }),
+    time: toTimeLabel(r.timestamp),
+    TP2: parseFloat(r.TP2.toFixed(3)),
+    TP3: parseFloat(r.TP3.toFixed(3)),
+    Motor_current: parseFloat(r.Motor_current.toFixed(3)),
+    Oil_temperature: parseFloat(r.Oil_temperature.toFixed(2)),
+    failure_probability: prob,
+    predicted_class: cls,
+  };
+}
+
+function historyItemToPoint(item: HistoryItem): SensorDataPoint {
+  return {
+    time: toTimeLabel(item.timestamp),
     TP2: parseFloat(item.TP2.toFixed(3)),
     TP3: parseFloat(item.TP3.toFixed(3)),
     Motor_current: parseFloat(item.Motor_current.toFixed(3)),
@@ -119,20 +143,20 @@ function itemToPoint(item: HistoryItem): SensorDataPoint {
   };
 }
 
-function itemToPayload(item: HistoryItem): PredictPayload {
+function readingToPayload(r: SensorReading): PredictPayload {
   return {
-    TP2: item.TP2,
-    TP3: item.TP3,
-    H1: item.H1,
-    DV_pressure: item.DV_pressure,
-    Reservoirs: item.Reservoirs,
-    Motor_current: item.Motor_current,
-    Oil_temperature: item.Oil_temperature,
-    COMP: item.COMP,
-    DV_eletric: item.DV_eletric,
-    Towers: item.Towers,
-    MPG: item.MPG,
-    Oil_level: item.Oil_level,
+    TP2: r.TP2,
+    TP3: r.TP3,
+    H1: r.H1,
+    DV_pressure: r.DV_pressure,
+    Reservoirs: r.Reservoirs,
+    Motor_current: r.Motor_current,
+    Oil_temperature: r.Oil_temperature,
+    COMP: r.COMP,
+    DV_eletric: r.DV_eletric,
+    Towers: r.Towers,
+    MPG: r.MPG,
+    Oil_level: r.Oil_level,
   };
 }
 
@@ -161,77 +185,122 @@ export function useSensorData(): SensorDataState {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
-  // Refs de controle — não causam re-render
-  const isFirstTickRef = useRef(true);
+  // Refs de predição — atualizados pelo prediction poll e WS sem re-render
+  const latestProbRef = useRef(0);
+  const latestClassRef = useRef(0);
+
+  // Refs de deduplicação e contexto para WS
   const lastTimestampRef = useRef<string | null>(null);
-  const lastSensorRef = useRef<HistoryItem | null>(null);
+  const lastSensorRef = useRef<SensorReading | null>(null);
 
-  // ── Polling passivo ──────────────────────────────────────────────────────
-  // Primeira chamada busca os últimos 30 para seed do gráfico.
-  // Chamadas seguintes buscam apenas 1 e ignoram se o timestamp não mudou.
-  const tick = useCallback(async (): Promise<void> => {
-    const isFirst = isFirstTickRef.current;
-    isFirstTickRef.current = false;
-    const size = isFirst ? 30 : 1;
+  // ── SSE: leituras em tempo real (1 Hz) ──────────────────────────────────
+  const handleSensorReading = useCallback((reading: SensorReading): void => {
+    // Deduplicação por timestamp — descarta eventos repetidos
+    if (reading.timestamp === lastTimestampRef.current) return;
+    lastTimestampRef.current = reading.timestamp;
+    lastSensorRef.current = reading;
 
-    try {
-      const res = await fetch(`/api/v1/predictions?page=1&size=${size}`, {
-        cache: "no-store",
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const point = sseReadingToPoint(
+      reading,
+      latestProbRef.current,
+      latestClassRef.current,
+    );
 
-      const page = (await res.json()) as HistoryPage;
-      if (page.items.length === 0) {
-        setIsLoading(false);
-        return;
-      }
-
-      const newest = page.items[0]; // API retorna newest-first
-
-      // Deduplicação: ignora se não há nova predição desde o último tick
-      if (!isFirst && newest.timestamp === lastTimestampRef.current) {
-        setIsLoading(false);
-        return;
-      }
-
-      lastTimestampRef.current = newest.timestamp;
-      lastSensorRef.current = newest;
-
-      setLatest({
-        failure_probability: newest.failure_probability,
-        predicted_class: newest.predicted_class,
-        timestamp: newest.timestamp,
-      });
-      setCurrentPayload(itemToPayload(newest));
-      setError(null);
-
-      if (isFirst) {
-        // Seed: popula com até 30 itens em ordem cronológica
-        const points = [...page.items].reverse().map(itemToPoint);
-        setHistory(points.slice(-HISTORY_MAX));
-      } else {
-        // Incremental: adiciona apenas o novo ponto
-        const point = itemToPoint(newest);
-        setHistory((prev) => {
-          const next = [...prev, point];
-          return next.length > HISTORY_MAX ? next.slice(-HISTORY_MAX) : next;
-        });
-      }
-    } catch (e) {
-      setError(e instanceof Error ? e : new Error(String(e)));
-    } finally {
-      setIsLoading(false);
-    }
+    setCurrentPayload(readingToPayload(reading));
+    setHistory((prev) => {
+      const next = [...prev, point];
+      return next.length > HISTORY_MAX ? next.slice(-HISTORY_MAX) : next;
+    });
+    // Limpa error quando SSE começa a entregar dados (recuperação silenciosa)
+    setError(null);
+    setIsLoading(false);
   }, []);
 
+  const { status: sseStatus, reconnectAttempt: sseReconnectAttempt } =
+    useSSE<SensorReading>({
+      url: SSE_URL,
+      eventName: "sensor_reading",
+      onMessage: handleSensorReading,
+    });
+
+  // ── Seed: histórico inicial ao montar ─────────────────────────────────────
   useEffect(() => {
-    void tick();
-    const id = setInterval(() => void tick(), POLL_INTERVAL_MS);
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        const res = await fetch("/api/v1/predictions?page=1&size=30", {
+          cache: "no-store",
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+        const page = (await res.json()) as HistoryPage;
+        if (cancelled) return;
+
+        if (page.items.length === 0) {
+          setIsLoading(false);
+          return;
+        }
+
+        const newest = page.items[0];
+        latestProbRef.current = newest.failure_probability;
+        latestClassRef.current = newest.predicted_class;
+
+        setLatest({
+          failure_probability: newest.failure_probability,
+          predicted_class: newest.predicted_class,
+          timestamp: newest.timestamp,
+        });
+
+        const points = [...page.items].reverse().map(historyItemToPoint);
+        setHistory(points.slice(-HISTORY_MAX));
+        setError(null);
+        setIsLoading(false);
+      } catch (e) {
+        if (!cancelled) {
+          setError(e instanceof Error ? e : new Error(String(e)));
+          setIsLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // ── Prediction poll: atualiza failure_probability a cada 5 s ─────────────
+  useEffect(() => {
+    const poll = async (): Promise<void> => {
+      try {
+        const res = await fetch("/api/v1/predictions?page=1&size=1", {
+          cache: "no-store",
+        });
+        if (!res.ok) return;
+
+        const page = (await res.json()) as HistoryPage;
+        if (page.items.length === 0) return;
+
+        const newest = page.items[0];
+        latestProbRef.current = newest.failure_probability;
+        latestClassRef.current = newest.predicted_class;
+
+        setLatest({
+          failure_probability: newest.failure_probability,
+          predicted_class: newest.predicted_class,
+          timestamp: newest.timestamp,
+        });
+        setError(null);
+      } catch {
+        // erros no poll são silenciosos — o SSE fornece o sinal de conectividade
+      }
+    };
+
+    const id = setInterval(() => void poll(), POLL_INTERVAL_MS);
     return () => clearInterval(id);
-  }, [tick]);
+  }, []);
 
   // ── WebSocket: alertas push do backend quando probability > 0.70 (RF-14) ─
-  // A URL deriva de window.location.host para funcionar em qualquer ambiente.
   useEffect(() => {
     if (typeof window === "undefined") return;
 
@@ -254,12 +323,14 @@ export function useSensorData(): SensorDataState {
       if (frame.type === "alert") {
         ws.send(JSON.stringify({ type: "ack", message_id: frame.message_id }));
 
+        latestProbRef.current = frame.probability;
+        latestClassRef.current = frame.predicted_class;
+
         setLatest({
           failure_probability: frame.probability,
           predicted_class: frame.predicted_class,
           timestamp: frame.timestamp,
         });
-        setError(null);
         setIsLoading(false);
 
         // Usa os últimos valores de sensor reais para o ponto do gráfico
@@ -284,7 +355,7 @@ export function useSensorData(): SensorDataState {
     };
 
     return () => ws.close();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   const prob = latest?.failure_probability ?? 0;
   const riskLevel = getRiskLevel(prob);
@@ -297,5 +368,7 @@ export function useSensorData(): SensorDataState {
     isAnomaly: riskLevel !== "NORMAL",
     riskLevel,
     error,
+    sseStatus,
+    sseReconnectAttempt,
   };
 }
