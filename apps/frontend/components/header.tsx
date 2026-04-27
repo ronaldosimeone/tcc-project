@@ -1,11 +1,15 @@
 import { Activity, Cpu } from "lucide-react";
+import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 
 export default function Header() {
   return (
     <header className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-card px-6">
       {/* Marca */}
-      <div className="flex items-center gap-3">
+      <Link
+        href="/"
+        className="flex items-center gap-3 transition-opacity hover:opacity-80"
+      >
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 ring-1 ring-primary/30">
           <Cpu className="h-4 w-4 text-primary" />
         </div>
@@ -17,7 +21,7 @@ export default function Header() {
             Manutenção Preditiva
           </span>
         </div>
-      </div>
+      </Link>
 
       {/* Status do sistema */}
       <div className="flex items-center gap-4">
