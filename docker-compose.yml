@@ -20,10 +20,12 @@ services:
     volumes:
       - ./apps/backend:/app
       - ./apps/ml/models:/ml/models:ro
+      - ./apps/ml/data:/ml/data:ro
     env_file:
       - .env
     environment:
       - PYTHONPATH=/app
+      - SIMULATOR_PARQUET_PATH=/ml/data/processed/metropt3.parquet
     expose:
       - "8000"
     depends_on:
