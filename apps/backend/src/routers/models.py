@@ -45,6 +45,7 @@ _ARTEFACT_PATHS: dict[str, Path] = {
     "tcn": settings.tcn_onnx_path,
     "bilstm": settings.bilstm_onnx_path,
     "patchtst": settings.patchtst_onnx_path,
+    "autoencoder": settings.autoencoder_onnx_path,
 }
 
 
