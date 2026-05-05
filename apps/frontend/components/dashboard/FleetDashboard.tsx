@@ -1,14 +1,32 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useSensorData, getRiskLevel } from "@/hooks/use-sensor-data";
 import { useAlertWebSocket } from "@/hooks/use-alert-websocket";
 import FleetKPIs from "@/components/dashboard/FleetKPIs";
 import AssetTable, { MOCK_ASSETS } from "@/components/dashboard/AssetTable";
 import AssetRadarChart from "@/components/dashboard/AssetRadarChart";
 import AssetEfficiencyChart from "@/components/dashboard/AssetEfficiencyChart";
+import type { PredictPayload } from "@/lib/api-client";
 
+// The only asset with a live SSE + prediction feed.
 const LIVE_ASSET_ID = "APU-Trem-042";
+
+// Sensible static defaults for fields that MockAsset does not carry.
+// Used when a non-live asset is selected — the radar shows a static profile.
+const STATIC_DEFAULTS: Omit<
+  PredictPayload,
+  "TP2" | "TP3" | "Motor_current" | "Oil_temperature"
+> = {
+  H1: 8.5,
+  DV_pressure: 0.05,
+  Reservoirs: 7.0,
+  COMP: 1,
+  DV_eletric: 0,
+  Towers: 0,
+  MPG: 1,
+  Oil_level: 1,
+};
 
 export default function FleetDashboard() {
   const { latest, currentPayload, isLoading, sseStatus } = useSensorData();
@@ -17,18 +35,29 @@ export default function FleetDashboard() {
   const [selectedAssetId, setSelectedAssetId] = useState<string>(LIVE_ASSET_ID);
 
   const probability = latest?.failure_probability ?? 0;
-  const alertProb   = alerts.reduce((max, a) => Math.max(max, a.probability), 0);
-  const effectiveProb      = Math.max(probability, alertProb);
+  const alertProb = alerts.reduce((max, a) => Math.max(max, a.probability), 0);
+  const effectiveProb = Math.max(probability, alertProb);
   const effectiveRiskLevel = getRiskLevel(effectiveProb);
 
-  // Derive chart data from selected asset
   const selectedMock = MOCK_ASSETS.find((a) => a.id === selectedAssetId);
   const isLiveSelected = selectedAssetId === LIVE_ASSET_ID;
 
-  const chartTp2          = isLiveSelected ? currentPayload.TP2            : (selectedMock?.tp2          ?? 8.0);
-  const chartTp3          = isLiveSelected ? currentPayload.TP3            : (selectedMock?.tp3          ?? 8.0);
-  const chartMotorCurrent = isLiveSelected ? currentPayload.Motor_current  : (selectedMock?.motorCurrent ?? 5.0);
-  const chartOilTemp      = isLiveSelected ? currentPayload.Oil_temperature: (selectedMock?.oilTemp      ?? 70.0);
+  // Resolve the sensor snapshot shown in the radar chart.
+  // Live asset → real-time currentPayload (updates at 1 Hz via SSE).
+  // Other assets → static mock payload derived from MOCK_ASSETS fields.
+  const radarSensorData: PredictPayload = useMemo(
+    () =>
+      isLiveSelected
+        ? currentPayload
+        : {
+            ...STATIC_DEFAULTS,
+            TP2: selectedMock?.tp2 ?? 8.0,
+            TP3: selectedMock?.tp3 ?? 8.0,
+            Motor_current: selectedMock?.motorCurrent ?? 5.0,
+            Oil_temperature: selectedMock?.oilTemp ?? 70.0,
+          },
+    [isLiveSelected, currentPayload, selectedMock],
+  );
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -82,14 +111,17 @@ export default function FleetDashboard() {
           />
         </div>
 
-        {/* Coluna lateral de gráficos — reativos ao ativo selecionado */}
+        {/* Coluna lateral — radar e eficiência reativos ao ativo selecionado */}
         <div className="flex flex-col gap-4 lg:col-span-2">
           <AssetRadarChart
-            tp2={chartTp2}
-            tp3={chartTp3}
-            motorCurrent={chartMotorCurrent}
-            oilTemp={chartOilTemp}
+            sensorData={radarSensorData}
+            isLive={isLiveSelected}
             assetId={selectedAssetId}
+            anomalyScore={
+              isLiveSelected
+                ? latest?.failure_probability ?? 0
+                : selectedMock?.prob ?? 0
+            }
             isLoading={isLoading && isLiveSelected}
           />
           <AssetEfficiencyChart assetId={selectedAssetId} />
