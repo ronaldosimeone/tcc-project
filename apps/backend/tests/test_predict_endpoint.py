@@ -313,19 +313,21 @@ class TestModelServiceUnit:
         assert result.failure_probability == pytest.approx(0.912346, abs=1e-5)
 
     def test_feature_matrix_has_correct_shape(self) -> None:
-        """_build_feature_row must produce a (1, 34) DataFrame.
+        """_build_feature_row must produce a (1, 38) DataFrame (V2).
 
         Feature count breakdown:
           12  raw sensor inputs
            1  TP2_delta
           21  rolling features (std_5, ma_5, ma_15) × 7 analogue sensors
+           4  V2 cross-sensor (TP2_TP3_diff, TP2_TP3_ratio, work_per_pressure,
+              reservoir_drop)
           ─────────────────
-          34  total
+          38  total
         """
         service = self._make_service(0, 0.1)
         req = PredictRequest(**_VALID_PAYLOAD)
         df = service._build_feature_row(req)
-        assert df.shape == (1, 34), f"Expected (1, 34), got {df.shape}"
+        assert df.shape == (1, 38), f"Expected (1, 38), got {df.shape}"
 
     def test_feature_matrix_has_no_nulls(self) -> None:
         service = self._make_service(0, 0.1)

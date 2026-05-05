@@ -18,52 +18,28 @@ interface AssetTableProps {
   tp2: number;
   oilTemp: number;
   isLoading: boolean;
+  selectedId: string;
+  onSelect: (id: string) => void;
 }
 
 // ── Mock data ─────────────────────────────────────────────────────────────
 
-interface MockAsset {
+export interface MockAsset {
   id: string;
   riskLevel: RiskLevel;
   prob: number;
   tp2: number;
+  tp3: number;
+  motorCurrent: number;
   oilTemp: number;
   lastSeen: string;
 }
 
-const MOCK_ASSETS: MockAsset[] = [
-  {
-    id: "APU-Trem-015",
-    riskLevel: "NORMAL",
-    prob: 0.123,
-    tp2: 8.2,
-    oilTemp: 72.0,
-    lastSeen: "2 min",
-  },
-  {
-    id: "APU-Trem-023",
-    riskLevel: "ALERTA",
-    prob: 0.456,
-    tp2: 7.8,
-    oilTemp: 81.3,
-    lastSeen: "1 min",
-  },
-  {
-    id: "APU-Trem-031",
-    riskLevel: "NORMAL",
-    prob: 0.089,
-    tp2: 8.4,
-    oilTemp: 68.5,
-    lastSeen: "3 min",
-  },
-  {
-    id: "APU-Trem-055",
-    riskLevel: "NORMAL",
-    prob: 0.221,
-    tp2: 8.1,
-    oilTemp: 74.1,
-    lastSeen: "4 min",
-  },
+export const MOCK_ASSETS: MockAsset[] = [
+  { id: "APU-Trem-015", riskLevel: "NORMAL", prob: 0.123, tp2: 8.2, tp3: 7.9, motorCurrent: 5.1, oilTemp: 72.0, lastSeen: "2 min" },
+  { id: "APU-Trem-023", riskLevel: "ALERTA", prob: 0.456, tp2: 7.8, tp3: 7.2, motorCurrent: 7.8, oilTemp: 81.3, lastSeen: "1 min" },
+  { id: "APU-Trem-031", riskLevel: "NORMAL", prob: 0.089, tp2: 8.4, tp3: 8.1, motorCurrent: 4.2, oilTemp: 68.5, lastSeen: "3 min" },
+  { id: "APU-Trem-055", riskLevel: "NORMAL", prob: 0.221, tp2: 8.1, tp3: 7.8, motorCurrent: 6.3, oilTemp: 74.1, lastSeen: "4 min" },
 ];
 
 // ── Helpers ───────────────────────────────────────────────────────────────
@@ -96,42 +72,39 @@ const RISK_CONFIG: Record<
 function RiskBadge({ level }: { level: RiskLevel }) {
   const { icon: Icon, badgeClass } = RISK_CONFIG[level];
   return (
-    <Badge
-      variant="outline"
-      className={cn("gap-1 text-[11px] font-semibold", badgeClass)}
-    >
+    <Badge variant="outline" className={cn("gap-1 text-[11px] font-semibold", badgeClass)}>
       <Icon className="h-3 w-3" />
       {level}
     </Badge>
   );
 }
 
-function ProbabilityCell({
-  prob,
-  riskLevel,
-}: {
-  prob: number;
-  riskLevel: RiskLevel;
-}) {
+function ProbabilityCell({ prob, riskLevel }: { prob: number; riskLevel: RiskLevel }) {
   const { barClass } = RISK_CONFIG[riskLevel];
   return (
     <div className="flex flex-col items-end gap-1">
       <span className="font-mono text-xs tabular-nums text-foreground">
         {(prob * 100).toFixed(1)}%
       </span>
-      <div
-        className="h-1 w-16 overflow-hidden rounded-full bg-muted"
-        aria-hidden="true"
-      >
+      <div className="h-1 w-16 overflow-hidden rounded-full bg-muted" aria-hidden="true">
         <div
-          className={cn(
-            "h-full rounded-full transition-[width] duration-500",
-            barClass,
-          )}
+          className={cn("h-full rounded-full transition-[width] duration-500", barClass)}
           style={{ width: `${Math.min(100, prob * 100)}%` }}
         />
       </div>
     </div>
+  );
+}
+
+function SelectionBar({ active }: { active: boolean }) {
+  return (
+    <span
+      className={cn(
+        "h-5 w-[3px] shrink-0 rounded-full transition-all duration-200",
+        active ? "bg-primary" : "bg-transparent",
+      )}
+      aria-hidden="true"
+    />
   );
 }
 
@@ -162,9 +135,13 @@ export default function AssetTable({
   tp2,
   oilTemp,
   isLoading,
+  selectedId,
+  onSelect,
 }: AssetTableProps) {
   const COL_HEAD =
     "pb-2.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground";
+
+  const isLiveSelected = selectedId === "APU-Trem-042";
 
   return (
     <Card className="border-border bg-card">
@@ -192,21 +169,25 @@ export default function AssetTable({
                   <th className={cn(COL_HEAD, "text-right")}>Prob. Falha</th>
                   <th className={cn(COL_HEAD, "text-right")}>TP2</th>
                   <th className={cn(COL_HEAD, "text-right")}>Temp. Óleo</th>
-                  <th className={cn(COL_HEAD, "text-right")}>Ação</th>
+                  <th className={cn(COL_HEAD, "pr-3 text-right")}>Ação</th>
                 </tr>
               </thead>
 
               <tbody>
                 {/* ── Linha real: APU-Trem-042 ── */}
                 <tr
+                  onClick={() => onSelect("APU-Trem-042")}
                   className={cn(
-                    "group/row border-b border-border/50",
-                    "transition-colors duration-150 hover:bg-muted/20",
+                    "group/row border-b border-border/50 cursor-pointer",
+                    "transition-colors duration-150",
+                    isLiveSelected
+                      ? "bg-accent/40 border-l-4 border-primary"
+                      : "hover:bg-muted/50",
                   )}
                 >
                   <td className="py-3 pr-4">
-                    <div className="flex items-center gap-2.5">
-                      {/* Pulsing live dot */}
+                    <div className="flex items-center gap-2">
+                      <SelectionBar active={isLiveSelected} />
                       <span className="relative flex h-2 w-2 shrink-0">
                         <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-400 opacity-75" />
                         <span className="relative inline-flex h-2 w-2 rounded-full bg-blue-500" />
@@ -228,23 +209,18 @@ export default function AssetTable({
                   </td>
 
                   <td className="py-3 pr-4 text-right">
-                    <ProbabilityCell
-                      prob={effectiveProb}
-                      riskLevel={effectiveRiskLevel}
-                    />
+                    <ProbabilityCell prob={effectiveProb} riskLevel={effectiveRiskLevel} />
                   </td>
 
                   <td className="py-3 pr-4 text-right font-mono text-xs tabular-nums text-foreground">
-                    {tp2.toFixed(2)}{" "}
-                    <span className="text-muted-foreground">bar</span>
+                    {tp2.toFixed(2)} <span className="text-muted-foreground">bar</span>
                   </td>
 
                   <td className="py-3 pr-4 text-right font-mono text-xs tabular-nums text-foreground">
-                    {oilTemp.toFixed(1)}{" "}
-                    <span className="text-muted-foreground">°C</span>
+                    {oilTemp.toFixed(1)} <span className="text-muted-foreground">°C</span>
                   </td>
 
-                  <td className="py-3 text-right">
+                  <td className="py-3 pr-3 text-right" onClick={(e) => e.stopPropagation()}>
                     <Button
                       asChild
                       size="sm"
@@ -252,8 +228,7 @@ export default function AssetTable({
                       className={cn(
                         "h-7 gap-1.5 px-2.5 text-[11px] font-semibold",
                         "border-primary/30 bg-primary/5 text-primary",
-                        "transition-colors duration-150",
-                        "hover:bg-primary/10 hover:text-primary",
+                        "transition-colors duration-150 hover:bg-primary/10 hover:text-primary",
                       )}
                     >
                       <Link href="/sensors/APU-Trem-042">
@@ -265,54 +240,57 @@ export default function AssetTable({
                 </tr>
 
                 {/* ── Linhas mockadas ── */}
-                {MOCK_ASSETS.map((asset) => (
-                  <tr
-                    key={asset.id}
-                    className={cn(
-                      "border-b border-border/50 last:border-0",
-                      "transition-colors duration-150 hover:bg-muted/10",
-                    )}
-                  >
-                    <td className="py-3 pr-4">
-                      <div className="flex items-center gap-2.5">
-                        <span
-                          className="h-1.5 w-1.5 shrink-0 rounded-full bg-muted-foreground/30"
-                          aria-hidden="true"
-                        />
-                        <span className="font-mono text-xs text-muted-foreground">
-                          {asset.id}
+                {MOCK_ASSETS.map((asset) => {
+                  const isMockSelected = selectedId === asset.id;
+                  return (
+                    <tr
+                      key={asset.id}
+                      onClick={() => onSelect(asset.id)}
+                      className={cn(
+                        "border-b border-border/50 cursor-pointer",
+                        "transition-colors duration-150",
+                        isMockSelected
+                          ? "bg-accent/40 border-l-4 border-primary"
+                          : "hover:bg-muted/50",
+                      )}
+                    >
+                      <td className="py-3 pr-4">
+                        <div className="flex items-center gap-2">
+                          <SelectionBar active={isMockSelected} />
+                          <span
+                            className="h-1.5 w-1.5 shrink-0 rounded-full bg-muted-foreground/30"
+                            aria-hidden="true"
+                          />
+                          <span className="font-mono text-xs text-muted-foreground">
+                            {asset.id}
+                          </span>
+                        </div>
+                      </td>
+
+                      <td className="py-3 pr-4">
+                        <RiskBadge level={asset.riskLevel} />
+                      </td>
+
+                      <td className="py-3 pr-4 text-right">
+                        <ProbabilityCell prob={asset.prob} riskLevel={asset.riskLevel} />
+                      </td>
+
+                      <td className="py-3 pr-4 text-right font-mono text-xs tabular-nums text-muted-foreground">
+                        {asset.tp2.toFixed(2)} <span className="text-muted-foreground/50">bar</span>
+                      </td>
+
+                      <td className="py-3 pr-4 text-right font-mono text-xs tabular-nums text-muted-foreground">
+                        {asset.oilTemp.toFixed(1)} <span className="text-muted-foreground/50">°C</span>
+                      </td>
+
+                      <td className="py-3 pr-3 text-right">
+                        <span className="font-mono text-[10px] italic text-muted-foreground/40">
+                          {asset.lastSeen} atrás
                         </span>
-                      </div>
-                    </td>
-
-                    <td className="py-3 pr-4">
-                      <RiskBadge level={asset.riskLevel} />
-                    </td>
-
-                    <td className="py-3 pr-4 text-right">
-                      <ProbabilityCell
-                        prob={asset.prob}
-                        riskLevel={asset.riskLevel}
-                      />
-                    </td>
-
-                    <td className="py-3 pr-4 text-right font-mono text-xs tabular-nums text-muted-foreground">
-                      {asset.tp2.toFixed(2)}{" "}
-                      <span className="text-muted-foreground/50">bar</span>
-                    </td>
-
-                    <td className="py-3 pr-4 text-right font-mono text-xs tabular-nums text-muted-foreground">
-                      {asset.oilTemp.toFixed(1)}{" "}
-                      <span className="text-muted-foreground/50">°C</span>
-                    </td>
-
-                    <td className="py-3 text-right">
-                      <span className="font-mono text-[10px] italic text-muted-foreground/40">
-                        {asset.lastSeen} atrás
-                      </span>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

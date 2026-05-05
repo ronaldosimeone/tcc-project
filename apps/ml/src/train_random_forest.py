@@ -38,9 +38,10 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import (
     classification_report,
     confusion_matrix,
+    precision_recall_curve,
     roc_auc_score,
 )
-from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import GridSearchCV, train_test_split
 
 _ML_ROOT: Path = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(_ML_ROOT))
@@ -83,6 +84,13 @@ MODEL_CARD_PATH: Path = MODELS_DIR / "model_card.json"
 RANDOM_STATE: int = 42
 TEST_SIZE: float = 0.2
 CV_FOLDS: int = 3
+
+# Memory-aware hyperparameter search:
+# 1.2 M rows × 80 features × SMOTE (×2) × 3 folds × N param combos estourou a RAM
+# do container. A busca passa a usar uma amostra estratificada do treino — o
+# refit final continua usando 100% do dataset.
+GRID_SEARCH_SAMPLE_FRAC: float = 0.2
+GRID_SEARCH_N_JOBS: int = 2  # Cap workers paralelos do GridSearchCV (memória)
 
 # Hyperparameter search space — applied to the 'rf' step inside the pipeline.
 PARAM_GRID: dict[str, list[Any]] = {
@@ -187,17 +195,55 @@ def run_grid_search(
     The pipeline applies SMOTE inside each CV fold, so synthetic minority
     samples are never present in validation folds — zero data leakage.
 
-    X_train is passed raw (not pre-balanced); the pipeline controls resampling.
+    Memory note: the search runs on a stratified ``GRID_SEARCH_SAMPLE_FRAC``
+    subsample of the training set. With 1.2 M rows × 80 features, SMOTE +
+    parallel folds estouravam a RAM do container. A amostragem preserva a
+    proporção de falhas (stratify=y_train) e o refit final em
+    ``build_final_model`` usa 100 % do treino.
+
+    Worker caps:
+      - GridSearchCV n_jobs = ``GRID_SEARCH_N_JOBS`` (default 2).
+      - RF *interna* ao pipeline n_jobs = 1 — evita oversubscription
+        (2 workers × N_cores árvores explodiriam a memória de novo).
+      - O ``final_rf`` em ``build_final_model`` continua com n_jobs=-1.
 
     Returns
     -------
     GridSearchCV
         Fitted searcher with best_estimator_ (Pipeline) and best_params_.
     """
+    # Stratified subsample for hyperparameter search only.
+    X_search, _, y_search, _ = train_test_split(
+        X_train,
+        y_train,
+        train_size=GRID_SEARCH_SAMPLE_FRAC,
+        stratify=y_train,
+        random_state=RANDOM_STATE,
+    )
+    logger.info(
+        "Amostragem para GridSearch: %d linhas (%.0f%% do treino) | "
+        "proporção de falhas: %.4f%% (treino completo: %.4f%%)",
+        len(X_search),
+        GRID_SEARCH_SAMPLE_FRAC * 100,
+        y_search.mean() * 100,
+        y_train.mean() * 100,
+    )
+
     pipeline: ImbPipeline = ImbPipeline(
         steps=[
             ("smote", SMOTE(random_state=RANDOM_STATE)),
-            ("rf", RandomForestClassifier(random_state=RANDOM_STATE, n_jobs=-1)),
+            (
+                "rf",
+                # V2 — class_weight="balanced_subsample" re-pondera a perda
+                # por bootstrap, complementando o SMOTE para imbalanced classes.
+                # n_jobs=1 aqui: o paralelismo vive no GridSearchCV (n_jobs=2);
+                # deixar -1 também causaria oversubscription e OOM.
+                RandomForestClassifier(
+                    random_state=RANDOM_STATE,
+                    n_jobs=1,
+                    class_weight="balanced_subsample",
+                ),
+            ),
         ]
     )
 
@@ -206,10 +252,11 @@ def run_grid_search(
         n_combinations *= len(values)
 
     logger.info(
-        "GridSearchCV: %d combinações × %d folds = %d fits",
+        "GridSearchCV: %d combinações × %d folds = %d fits (n_jobs=%d)",
         n_combinations,
         CV_FOLDS,
         n_combinations * CV_FOLDS,
+        GRID_SEARCH_N_JOBS,
     )
 
     grid_search: GridSearchCV = GridSearchCV(
@@ -217,11 +264,11 @@ def run_grid_search(
         param_grid=PARAM_GRID,
         scoring="f1",
         cv=CV_FOLDS,
-        n_jobs=-1,
+        n_jobs=GRID_SEARCH_N_JOBS,
         verbose=2,
         refit=True,
     )
-    grid_search.fit(X_train, y_train)
+    grid_search.fit(X_search, y_search)
 
     logger.info("Melhores hiperparâmetros: %s", grid_search.best_params_)
     logger.info("Melhor CV F1 (class 1): %.4f", grid_search.best_score_)
@@ -277,11 +324,49 @@ def build_final_model(
     final_rf: RandomForestClassifier = RandomForestClassifier(
         random_state=RANDOM_STATE,
         n_jobs=-1,
+        class_weight="balanced_subsample",  # V2 — paridade com o GridSearch
         **rf_kwargs,
     )
     final_rf.fit(X_bal, y_bal)
     logger.info("Modelo final treinado.")
     return final_rf, len(X_bal)
+
+
+def find_optimal_threshold(
+    y_true: pd.Series,
+    y_proba: np.ndarray,
+    beta: float = 2.0,
+) -> dict[str, float]:
+    """
+    Pick the probability cut-off that maximises the F-beta score.
+
+    Industrial fault detection: a missed fault (FN) costs orders of magnitude
+    more than a false alarm (FP).  ``beta=2`` weights recall 4× as heavily as
+    precision in the harmonic mean — appropriate for the MetroPT-3 imbalance
+    (~2 % fault prevalence) and the user-facing alert pipeline that operators
+    can dismiss at low cost.
+
+    Returns
+    -------
+    dict
+        ``threshold`` — selected cut-off in [0, 1].
+        ``precision`` / ``recall`` / ``fbeta`` at that cut-off.
+    """
+    precision, recall, thresholds = precision_recall_curve(y_true, y_proba)
+    # ``thresholds`` is shorter than precision/recall by 1 — slice to align.
+    p, r = precision[:-1], recall[:-1]
+    fbeta_num = (1 + beta**2) * p * r
+    fbeta_den = (beta**2) * p + r + 1e-9
+    fbeta = fbeta_num / fbeta_den
+
+    best_idx = int(np.argmax(fbeta))
+    return {
+        "threshold": float(thresholds[best_idx]),
+        "precision": float(p[best_idx]),
+        "recall": float(r[best_idx]),
+        "fbeta": float(fbeta[best_idx]),
+        "beta": beta,
+    }
 
 
 def evaluate(
@@ -296,7 +381,7 @@ def evaluate(
 
     Returns
     -------
-    dict with keys: f1_class1, roc_auc, report_dict.
+    dict with keys: f1_class1, roc_auc, report_dict, threshold_info.
     """
     y_pred: np.ndarray = model.predict(X_test)
     y_proba: np.ndarray = model.predict_proba(X_test)[:, 1]
@@ -309,17 +394,35 @@ def evaluate(
     roc_auc: float = roc_auc_score(y_test, y_proba)
     f1_class1: float = report_dict["1"]["f1-score"]
 
+    # V2 — Threshold tuning via F2-score on PR curve
+    threshold_info = find_optimal_threshold(y_test, y_proba, beta=2.0)
+    y_pred_tuned = (y_proba >= threshold_info["threshold"]).astype(int)
+    tuned_report: dict[str, Any] = classification_report(
+        y_test, y_pred_tuned, output_dict=True
+    )
+
     separator = "=" * 62
     print(f"\n{separator}")
-    print("CLASSIFICATION REPORT")
+    print("CLASSIFICATION REPORT (threshold=0.5)")
     print(separator)
     print(report_str)
     print(separator)
-    print("CONFUSION MATRIX")
+    print("CONFUSION MATRIX (threshold=0.5)")
     print(separator)
     print(cm)
     print(f"\nROC-AUC:              {roc_auc:.4f}")
     print(f"F1-Score (class 1):   {f1_class1:.4f}")
+    print(separator)
+    print(
+        f"\n[V2] Optimal threshold (F{threshold_info['beta']:.0f}-score):"
+        f" {threshold_info['threshold']:.4f}"
+    )
+    print(
+        f"     precision={threshold_info['precision']:.4f}  "
+        f"recall={threshold_info['recall']:.4f}  "
+        f"F2={threshold_info['fbeta']:.4f}"
+    )
+    print(f"     F1 (class 1) tuned: {tuned_report['1']['f1-score']:.4f}")
     print(separator)
 
     if f1_class1 >= 0.75:
@@ -331,7 +434,45 @@ def evaluate(
         "f1_class1": f1_class1,
         "roc_auc": roc_auc,
         "report_dict": report_dict,
+        "threshold_info": threshold_info,
+        "tuned_report": tuned_report,
     }
+
+
+def export_to_onnx(
+    model: RandomForestClassifier,
+    feature_names: list[str],
+    onnx_path: Path,
+) -> None:
+    """
+    Convert the fitted RandomForest to ONNX (V2 — paridade com MLP/XGBoost).
+
+    Required deps: ``skl2onnx>=1.17``.  Disables the ZipMap output so that
+    ONNX Runtime returns a plain ndarray of probabilities.
+    """
+    try:
+        from skl2onnx import convert_sklearn
+        from skl2onnx.common.data_types import FloatTensorType
+    except ImportError:
+        logger.warning(
+            "skl2onnx não instalado — pulando export ONNX. "
+            "Instale com: pip install skl2onnx>=1.17"
+        )
+        return
+
+    initial_type = [("features", FloatTensorType([None, len(feature_names)]))]
+    onnx_model = convert_sklearn(
+        model,
+        initial_types=initial_type,
+        target_opset=17,
+        options={id(model): {"zipmap": False}},
+    )
+    onnx_path.write_bytes(onnx_model.SerializeToString())
+    logger.info(
+        "[V2] ONNX salvo: %s (%.1f MB)",
+        onnx_path,
+        onnx_path.stat().st_size / 1e6,
+    )
 
 
 def save_artefacts(
@@ -353,8 +494,11 @@ def save_artefacts(
     joblib.dump(model, MODEL_PATH)
     logger.info("Modelo salvo: %s", MODEL_PATH)
 
+    threshold_info = metrics.get("threshold_info", {})
+    tuned_report = metrics.get("tuned_report", {})
+
     model_card: dict[str, Any] = {
-        "schema_version": "1.0",
+        "schema_version": "2.0",
         "trained_at": datetime.now(timezone.utc).isoformat(),
         "model_type": type(model).__name__,
         "dataset": "MetroPT-3",
@@ -371,12 +515,25 @@ def save_artefacts(
         "param_grid_used": PARAM_GRID,
         "best_hyperparameters": best_params,
         "best_cv_f1": round(best_cv_score, 4),
+        "class_balancing": "SMOTE + class_weight='balanced_subsample'",
+        # V2 — threshold tuning consumed by ModelService at load time
+        "decision_threshold": round(
+            threshold_info.get("threshold", 0.5), 4
+        ),
+        "threshold_strategy": "F2-score (recall-favouring)",
+        "threshold_metrics": {
+            "precision": round(threshold_info.get("precision", 0.0), 4),
+            "recall": round(threshold_info.get("recall", 0.0), 4),
+            "fbeta": round(threshold_info.get("fbeta", 0.0), 4),
+            "beta": threshold_info.get("beta", 2.0),
+        },
         "feature_count": len(feature_names),
         "feature_names": feature_names,
         "metrics": {
             "f1_class1_test": round(metrics["f1_class1"], 4),
             "roc_auc_test": round(metrics["roc_auc"], 4),
             "classification_report": metrics["report_dict"],
+            "tuned_classification_report": tuned_report,
         },
     }
 
@@ -415,6 +572,13 @@ def train() -> None:
         n_train_balanced=n_train_balanced,
         n_test=len(X_test),
         feature_names=list(X.columns),
+    )
+
+    # V2 — Export ONNX para paridade com MLP/XGBoost
+    export_to_onnx(
+        final_model,
+        feature_names=list(X.columns),
+        onnx_path=MODELS_DIR / "random_forest_v2.onnx",
     )
 
 

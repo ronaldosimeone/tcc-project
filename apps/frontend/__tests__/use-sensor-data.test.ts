@@ -166,6 +166,10 @@ describe("useSensorData", () => {
   // ── Estado inicial ──────────────────────────────────────────────────────
 
   it("começa com isLoading=true, history vazio e error null", () => {
+    // Seed fetch fica pendente → estado inicial preservado e sem setState
+    // posterior que dispararia warning de act() após o assert.
+    fetchMock.mockImplementationOnce(() => new Promise(() => {}));
+
     const { result } = renderHook(() => useSensorData());
 
     expect(result.current.isLoading).toBe(true);
@@ -175,6 +179,8 @@ describe("useSensorData", () => {
   });
 
   it("começa com isAnomaly=false e riskLevel NORMAL", () => {
+    fetchMock.mockImplementationOnce(() => new Promise(() => {}));
+
     const { result } = renderHook(() => useSensorData());
 
     expect(result.current.isAnomaly).toBe(false);

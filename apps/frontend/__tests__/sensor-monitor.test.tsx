@@ -80,23 +80,33 @@ describe("SensorMonitor", () => {
     vi.clearAllMocks();
   });
 
-  it("renderiza o título principal do painel", () => {
+  it("renderiza o título principal do painel", async () => {
     render(<SensorMonitor />);
+    // Drena microtasks pendentes do seed fetch para evitar update fora de act().
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
     expect(
       screen.getByRole("heading", { name: /monitoramento em tempo real/i }),
     ).toBeInTheDocument();
   });
 
-  it("exibe os quatro KPI cards com labels corretos", () => {
+  it("exibe os quatro KPI cards com labels corretos", async () => {
     render(<SensorMonitor />);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
     expect(screen.getByText(/pressão tp2/i)).toBeInTheDocument();
     expect(screen.getByText(/temperatura óleo/i)).toBeInTheDocument();
     expect(screen.getByText(/corrente motor/i)).toBeInTheDocument();
     expect(screen.getByText(/reservatório/i)).toBeInTheDocument();
   });
 
-  it("exibe a seção do Painel de Sensores com os labels corretos", () => {
+  it("exibe a seção do Painel de Sensores com os labels corretos", async () => {
     render(<SensorMonitor />);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
     // Usa os labels exatos que sensor-monitor.tsx renderiza nos SensorChips
     const sensorLabels = ["TP3", "H1", "DV Press.", "COMP", "Towers"];
     for (const label of sensorLabels) {

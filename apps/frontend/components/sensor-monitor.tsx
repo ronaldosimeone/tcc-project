@@ -97,7 +97,7 @@ function FailureGauge({ probability, riskLevel }: GaugeProps) {
         <path
           d={bgPath}
           fill="none"
-          stroke="hsl(217 18% 18%)"
+          stroke="hsl(var(--muted))"
           strokeWidth={strokeW}
           strokeLinecap="round"
         />
@@ -129,7 +129,7 @@ function FailureGauge({ probability, riskLevel }: GaugeProps) {
         x={cx}
         y={cy + 14}
         textAnchor="middle"
-        fill="hsl(215 15% 50%)"
+        fill="hsl(var(--muted-foreground))"
         fontSize="11"
         fontFamily="var(--font-geist-sans, sans-serif)"
       >

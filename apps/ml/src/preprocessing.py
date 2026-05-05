@@ -1,7 +1,7 @@
 """
 Feature Engineering pipeline for the MetroPT-3 Air Compressor dataset.
 
-This module exposes a single public class, `MetroPTPreprocessor`, which is a
+This module exposes a single public class, ``MetroPTPreprocessor``, which is a
 fully scikit-learn-compatible transformer (inherits BaseEstimator +
 TransformerMixin).  It can be dropped into any sklearn Pipeline without
 modification.
@@ -19,6 +19,23 @@ anomaly/fault detection because:
 
 The features computed here are the minimum viable set required before any
 classical or deep learning classifier can be trained (RF-02).
+
+V2 features (added 2026-04-28)
+------------------------------
+* **Cross-sensor** — TP2/TP3 differential, work-per-pressure ratio,
+  reservoir-drop.  Captures the discriminating signature of an Air Leak
+  (pressure falls *while* motor current rises) which the per-sensor
+  rolling features cannot represent on their own.
+* **Lag features** — explicit ``*_lag_5`` and ``*_lag_15`` snapshots so
+  classifiers can see the absolute trajectory, not just smoothed averages.
+* **Rate-of-change** — ``*_roc_15`` = (now − 15s ago) / 15.  More robust to
+  high-frequency noise than the single-sample ``TP2_delta``.
+* **Rolling min/max/range** — ``*_min_15`` / ``*_max_15`` / ``*_range_15``.
+  Detects peak excursions inside a window, which are invisible to the mean.
+
+All V2 features are toggled by the ``enable_v2_features`` flag (default True)
+so legacy training scripts that pin ``feature_count == 34`` keep working
+during the migration.
 """
 
 from __future__ import annotations
@@ -43,6 +60,9 @@ _DEFAULT_SENSOR_COLS: list[str] = [
 # Column used to compute the pressure delta feature.
 _PRESSURE_COL: str = "TP2"
 
+# Numerical safety floor for ratio features to avoid div-by-zero.
+_RATIO_EPS: float = 1e-6
+
 
 class MetroPTPreprocessor(BaseEstimator, TransformerMixin):
     """
@@ -65,6 +85,16 @@ class MetroPTPreprocessor(BaseEstimator, TransformerMixin):
         Window size for the short moving average. Default: 5.
     window_ma_long : int
         Window size for the long moving average. Default: 15.
+    enable_v2_features : bool
+        Toggle for the V2 feature additions (cross-sensor, lags, rolling
+        min/max).  Default ``True``.  Set to ``False`` to reproduce the V1
+        feature contract exactly (34 features).
+    lag_short : int
+        Short lag window in samples (V2). Default: 5.
+    lag_long : int
+        Long lag window in samples (V2). Default: 15.
+    window_minmax : int
+        Rolling window for min/max/range (V2). Default: 15.
 
     Notes
     -----
@@ -80,18 +110,28 @@ class MetroPTPreprocessor(BaseEstimator, TransformerMixin):
         window_std: int = 5,
         window_ma_short: int = 5,
         window_ma_long: int = 15,
+        enable_v2_features: bool = True,
+        lag_short: int = 5,
+        lag_long: int = 15,
+        window_minmax: int = 15,
     ) -> None:
         self.sensor_cols = sensor_cols
         self.pressure_col = pressure_col
         self.window_std = window_std
         self.window_ma_short = window_ma_short
         self.window_ma_long = window_ma_long
+        self.enable_v2_features = enable_v2_features
+        self.lag_short = lag_short
+        self.lag_long = lag_long
+        self.window_minmax = window_minmax
 
     # ------------------------------------------------------------------
     # sklearn API
     # ------------------------------------------------------------------
 
-    def fit(self, X: pd.DataFrame, y: pd.Series | None = None) -> "MetroPTPreprocessor":
+    def fit(
+        self, X: pd.DataFrame, y: pd.Series | None = None
+    ) -> "MetroPTPreprocessor":
         """No-op fit kept for sklearn Pipeline compatibility."""
         return self
 
@@ -106,6 +146,9 @@ class MetroPTPreprocessor(BaseEstimator, TransformerMixin):
             4. Pressure delta.
             5. Rolling std (window_std samples).
             6. Rolling moving averages (window_ma_short, window_ma_long samples).
+            7. (V2) Cross-sensor ratios and differentials.
+            8. (V2) Explicit lag features and rate-of-change.
+            9. (V2) Rolling min / max / range.
 
         Parameters
         ----------
@@ -136,10 +179,15 @@ class MetroPTPreprocessor(BaseEstimator, TransformerMixin):
         df = self._add_rolling_std(df)
         df = self._add_moving_averages(df)
 
+        if self.enable_v2_features:
+            df = self._add_cross_sensor_features(df)
+            df = self._add_lags(df)
+            df = self._add_rolling_minmax(df)
+
         return df
 
     # ------------------------------------------------------------------
-    # Private helpers
+    # V1 — Private helpers
     # ------------------------------------------------------------------
 
     def _impute_nulls(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -192,7 +240,10 @@ class MetroPTPreprocessor(BaseEstimator, TransformerMixin):
         cols: list[str] = self._resolve_sensor_cols(df)
         for col in cols:
             df[f"{col}_std_{self.window_std}"] = (
-                df[col].rolling(window=self.window_std, min_periods=1).std().fillna(0.0)
+                df[col]
+                .rolling(window=self.window_std, min_periods=1)
+                .std()
+                .fillna(0.0)
             )
         return df
 
@@ -215,4 +266,77 @@ class MetroPTPreprocessor(BaseEstimator, TransformerMixin):
             df[f"{col}_ma_{self.window_ma_long}"] = (
                 df[col].rolling(window=self.window_ma_long, min_periods=1).mean()
             )
+        return df
+
+    # ------------------------------------------------------------------
+    # V2 — Private helpers
+    # ------------------------------------------------------------------
+
+    def _add_cross_sensor_features(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Cross-sensor features that capture the joint behaviour of correlated
+        sensors — specifically the discriminating signature of an Air Leak.
+
+        * ``TP2_TP3_diff``      Direct pressure gap between the compressor head
+          and the pneumatic panel.  A widening gap during normal compressor
+          state indicates leakage between the two stages.
+        * ``TP2_TP3_ratio``     Same idea expressed as a ratio.  Normalises
+          out absolute pressure level and is more robust under load changes.
+        * ``work_per_pressure`` Motor current divided by delivery pressure —
+          rises sharply when the motor is doing more work to maintain a
+          falling pressure (classic leak symptom).
+        * ``reservoir_drop``    Reservoir minus pneumatic panel pressure.
+          Goes negative just before reservoir collapse.
+        """
+        if {"TP2", "TP3"}.issubset(df.columns):
+            df["TP2_TP3_diff"] = df["TP2"] - df["TP3"]
+            df["TP2_TP3_ratio"] = df["TP2"] / (df["TP3"] + _RATIO_EPS)
+        if {"Motor_current", "TP2"}.issubset(df.columns):
+            df["work_per_pressure"] = df["Motor_current"] / (df["TP2"] + _RATIO_EPS)
+        if {"Reservoirs", "TP3"}.issubset(df.columns):
+            df["reservoir_drop"] = df["Reservoirs"] - df["TP3"]
+        return df
+
+    def _add_lags(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Explicit lag snapshots and rate-of-change.
+
+        x_lag_k(t) = x(t − k)
+        x_roc_k(t) = ( x(t) − x(t − k) ) / k
+
+        Lags let the classifier see the *absolute trajectory* rather than just
+        the smoothed mean.  ROC is a denoised first derivative — more robust
+        than the single-sample ``delta`` for anomalies that develop over
+        seconds rather than instantaneously.
+
+        ``shift().bfill()`` propagates the first valid value backwards so the
+        leading rows do not produce NaNs.
+        """
+        cols: list[str] = self._resolve_sensor_cols(df)
+        for col in cols:
+            lag_short_col = f"{col}_lag_{self.lag_short}"
+            lag_long_col = f"{col}_lag_{self.lag_long}"
+            df[lag_short_col] = df[col].shift(self.lag_short).bfill()
+            df[lag_long_col] = df[col].shift(self.lag_long).bfill()
+            df[f"{col}_roc_{self.lag_long}"] = (
+                (df[col] - df[lag_long_col]) / float(self.lag_long)
+            ).fillna(0.0)
+        return df
+
+    def _add_rolling_minmax(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Rolling minimum, maximum, and range over a configurable window.
+
+        Captures peak excursions that the rolling mean smooths out — a brief
+        pressure spike inside an otherwise stable window is an early
+        indicator of valve flutter.
+        """
+        cols: list[str] = self._resolve_sensor_cols(df)
+        w = self.window_minmax
+        for col in cols:
+            min_col = f"{col}_min_{w}"
+            max_col = f"{col}_max_{w}"
+            df[min_col] = df[col].rolling(window=w, min_periods=1).min()
+            df[max_col] = df[col].rolling(window=w, min_periods=1).max()
+            df[f"{col}_range_{w}"] = df[max_col] - df[min_col]
         return df

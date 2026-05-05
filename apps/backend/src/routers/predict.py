@@ -12,27 +12,17 @@ Flow: POST /predict/
   3. save_prediction(db, payload, result) → Prediction ORM record (RF-09)
   4. Return PredictResponse to client
 
-Note on concurrency
--------------------
-Model inference is CPU-bound.  For high-throughput production deployments,
-wrap the service call with `asyncio.to_thread(service.predict, payload)` and
-consider deploying multiple Uvicorn workers.  For the current workload this
-direct call is acceptable.
-
-Note on `request: Request` + `Body(...)`
------------------------------------------
-slowapi's @limiter.limit() requires `request: Request` as the first argument.
-FastAPI follows __wrapped__ via inspect.signature() to recover the original
-parameter list, but when `request: Request` precedes a Pydantic model,
-FastAPI's source-inference heuristic can misclassify the model as a Query
-parameter instead of a Body — producing HTTP 422 on valid JSON POSTs.
-
-Using `Body(...)` as the default value is the canonical FastAPI fix: it makes
-the body source explicit and unambiguous regardless of what any decorator
-does to the function wrapper.  PredictRequest and PredictResponse must be
-imported directly (never under `if TYPE_CHECKING`) so Pydantic v2's
-TypeAdapter can resolve them at class-definition time.
+Concurrency model
+-----------------
+Inference is CPU-bound (RandomForest / XGBoost / ONNX MLP) and would block
+the asyncio event loop if executed inline.  We dispatch it to the default
+threadpool via ``asyncio.to_thread`` so other coroutines (SSE broadcast,
+WebSocket alerts, health checks) keep running while a single prediction is
+in flight.  Combined with multiple Uvicorn workers in production this gives
+near-linear horizontal scaling under concurrent load.
 """
+
+import asyncio
 
 from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -74,7 +64,9 @@ async def predict(
     alert_service: AlertService = Depends(get_alert_service),
 ) -> PredictResponse:
     """Run fault detection, persist the result (RF-09) and push WS alert (RF-14)."""
-    result: PredictResponse = service.predict(payload)
+    # CPU-bound inference is dispatched to the default threadpool so the
+    # event loop remains responsive for other I/O-bound coroutines.
+    result: PredictResponse = await asyncio.to_thread(service.predict, payload)
     await save_prediction(db, payload, result)
     await alert_service.process_prediction(
         {

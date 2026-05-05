@@ -93,18 +93,25 @@ describe("Loading state — RNF-21", () => {
   });
 
   it("exibe gauge-skeleton enquanto a primeira predição está pendente", () => {
+    // Seed fetch nunca resolve → isLoading=true persiste e não há setState
+    // pendente que causaria warning de act() após o assert.
+    mockFetch.mockImplementationOnce(() => new Promise(() => {}));
+
     render(<SensorMonitor />);
-    // Não avança timers — isLoading ainda é true
     expect(screen.getByTestId("gauge-skeleton")).toBeInTheDocument();
   });
 
   it("exibe 4 kpi-skeleton enquanto isLoading=true", () => {
+    mockFetch.mockImplementationOnce(() => new Promise(() => {}));
+
     render(<SensorMonitor />);
     const skeletons = screen.getAllByTestId("kpi-skeleton");
     expect(skeletons).toHaveLength(4);
   });
 
   it("exibe chip-skeleton para cada um dos 8 sensores enquanto isLoading=true", () => {
+    mockFetch.mockImplementationOnce(() => new Promise(() => {}));
+
     render(<SensorMonitor />);
     const chips = screen.getAllByTestId("chip-skeleton");
     expect(chips).toHaveLength(8);

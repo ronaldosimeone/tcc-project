@@ -25,7 +25,6 @@ import structlog
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
 
 from src.core.ws_manager import ConnectionManager, manager
-from src.services.alert_service import AlertService
 
 log = structlog.get_logger(__name__)
 
@@ -40,12 +39,6 @@ router = APIRouter(tags=["websocket"])
 def get_ws_manager() -> ConnectionManager:
     """Return the module-level singleton ConnectionManager."""
     return manager
-
-
-def get_alert_service(
-    ws_manager: ConnectionManager = Depends(get_ws_manager),
-) -> AlertService:
-    return AlertService(ws_manager)
 
 
 # ---------------------------------------------------------------------------

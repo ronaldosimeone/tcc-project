@@ -329,3 +329,114 @@ class TestSklearnCompat:
         pre = MetroPTPreprocessor()
         pre.set_params(window_std=12)
         assert pre.window_std == 12
+
+
+# ---------------------------------------------------------------------------
+# V2 — Cross-sensor features
+# ---------------------------------------------------------------------------
+
+
+class TestV2CrossSensorFeatures:
+    def test_v2_features_present_by_default(self) -> None:
+        """V2 features are enabled by default."""
+        result = MetroPTPreprocessor().transform(_make_df())
+        for col in (
+            "TP2_TP3_diff",
+            "TP2_TP3_ratio",
+            "work_per_pressure",
+            "reservoir_drop",
+        ):
+            assert col in result.columns, f"Missing V2 column {col}"
+
+    def test_v2_disabled_drops_new_features(self) -> None:
+        """enable_v2_features=False reproduces the V1 contract exactly."""
+        result = MetroPTPreprocessor(enable_v2_features=False).transform(_make_df())
+        assert "TP2_TP3_diff" not in result.columns
+        assert "TP2_TP3_ratio" not in result.columns
+        assert "work_per_pressure" not in result.columns
+
+    def test_tp2_tp3_diff_correctness(self) -> None:
+        """TP2_TP3_diff must equal TP2 - TP3 row-wise."""
+        df = _make_df()
+        result = MetroPTPreprocessor().transform(df)
+        expected = df["TP2"] - df["TP3"]
+        np.testing.assert_allclose(
+            result["TP2_TP3_diff"].to_numpy(),
+            expected.to_numpy(),
+            atol=1e-5,
+        )
+
+    def test_tp2_tp3_ratio_avoids_division_by_zero(self) -> None:
+        """The eps in the denominator must keep the ratio finite even if TP3 = 0."""
+        df = _make_df()
+        df["TP3"] = 0.0
+        result = MetroPTPreprocessor().transform(df)
+        assert np.isfinite(result["TP2_TP3_ratio"]).all()
+
+
+# ---------------------------------------------------------------------------
+# V2 — Lag and rate-of-change features
+# ---------------------------------------------------------------------------
+
+
+class TestV2LagFeatures:
+    def test_lag_columns_exist_for_all_sensors(self) -> None:
+        df = _make_df(n_rows=30)
+        result = MetroPTPreprocessor().transform(df)
+        for col in _DEFAULT_SENSOR_COLS:
+            assert f"{col}_lag_5" in result.columns
+            assert f"{col}_lag_15" in result.columns
+            assert f"{col}_roc_15" in result.columns
+
+    def test_lag_no_nans_after_bfill(self) -> None:
+        """Leading rows where shift() would produce NaN are filled by bfill."""
+        result = MetroPTPreprocessor().transform(_make_df(n_rows=30))
+        lag_cols = [c for c in result.columns if "_lag_" in c or "_roc_" in c]
+        assert result[lag_cols].isna().sum().sum() == 0
+
+    def test_lag_value_matches_shifted_origin(self) -> None:
+        """At row 20, *_lag_5 must equal the original column at row 15."""
+        df = _make_df(n_rows=30)
+        result = MetroPTPreprocessor().transform(df)
+        np.testing.assert_allclose(
+            result["TP2_lag_5"].iloc[20],
+            df["TP2"].iloc[15],
+            atol=1e-5,
+        )
+
+    def test_roc_has_correct_units(self) -> None:
+        """roc_15 must equal (x[t] - x[t-15]) / 15."""
+        df = _make_df(n_rows=30)
+        result = MetroPTPreprocessor().transform(df)
+        expected = (df["TP2"].iloc[20] - df["TP2"].iloc[5]) / 15.0
+        np.testing.assert_allclose(
+            result["TP2_roc_15"].iloc[20], expected, atol=1e-5
+        )
+
+
+# ---------------------------------------------------------------------------
+# V2 — Rolling min / max / range
+# ---------------------------------------------------------------------------
+
+
+class TestV2RollingMinMax:
+    def test_minmax_columns_exist(self) -> None:
+        result = MetroPTPreprocessor().transform(_make_df())
+        for col in _DEFAULT_SENSOR_COLS:
+            assert f"{col}_min_15" in result.columns
+            assert f"{col}_max_15" in result.columns
+            assert f"{col}_range_15" in result.columns
+
+    def test_max_geq_min(self) -> None:
+        """max must always be >= min row-wise."""
+        result = MetroPTPreprocessor().transform(_make_df(n_rows=30))
+        for col in _DEFAULT_SENSOR_COLS:
+            assert (result[f"{col}_max_15"] >= result[f"{col}_min_15"]).all()
+
+    def test_range_equals_max_minus_min(self) -> None:
+        result = MetroPTPreprocessor().transform(_make_df(n_rows=30))
+        np.testing.assert_allclose(
+            result["TP2_range_15"].to_numpy(),
+            (result["TP2_max_15"] - result["TP2_min_15"]).to_numpy(),
+            atol=1e-5,
+        )

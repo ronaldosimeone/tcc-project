@@ -8,9 +8,15 @@ from typing import Literal
 
 from pydantic import BaseModel
 
-# Exhaustive list of selectable models.  Adding a new model here is sufficient
-# to make it a valid value in SwapModelRequest — no other code change needed.
-ModelName = Literal["random_forest", "xgboost", "mlp"]
+# Exhaustive list of selectable models.  Must stay in sync with
+# services.model_registry.KNOWN_MODELS and services.model_service.load_model_by_name.
+ModelName = Literal[
+    "random_forest",
+    "xgboost",
+    "mlp",
+    "random_forest_v2",
+    "xgboost_v2",
+]
 
 
 class ModelSummary(BaseModel):

@@ -14,8 +14,8 @@ import { TrendingUp } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { DayAlertCount } from "@/lib/history-mock";
 
-const AXIS_TICK = { fontSize: 10, fill: "hsl(215 15% 45%)" } as const;
-const GRID_STROKE = "hsl(217 18% 16%)";
+const AXIS_TICK = { fontSize: 10, fill: "hsl(var(--muted-foreground))" } as const;
+const GRID_STROKE = "hsl(var(--border))";
 
 interface TooltipEntry {
   dataKey: string;
@@ -40,36 +40,36 @@ const CustomTooltip = memo(function CustomTooltip({
   const total = critico + alerta;
 
   return (
-    <div className="rounded-lg border border-white/10 bg-zinc-900/95 px-3 py-2 shadow-xl backdrop-blur-sm">
-      <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+    <div className="rounded-lg border border-border/80 bg-popover/95 px-3 py-2 shadow-xl backdrop-blur-sm">
+      <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
         {label}
       </p>
       {total === 0 ? (
-        <p className="text-xs text-zinc-500">Sem ocorrências</p>
+        <p className="text-xs text-muted-foreground">Sem ocorrências</p>
       ) : (
         <>
           {critico > 0 && (
             <div className="flex items-center gap-2 text-xs">
               <span className="inline-block h-2 w-2 rounded-full bg-red-500" />
-              <span className="text-zinc-400">Crítico</span>
-              <span className="ml-auto font-bold tabular-nums text-red-400">
+              <span className="text-muted-foreground">Crítico</span>
+              <span className="ml-auto font-bold tabular-nums text-red-500">
                 {critico}
               </span>
             </div>
           )}
           {alerta > 0 && (
             <div className="flex items-center gap-2 text-xs">
-              <span className="inline-block h-2 w-2 rounded-full bg-amber-400" />
-              <span className="text-zinc-400">Alerta</span>
-              <span className="ml-auto font-bold tabular-nums text-amber-400">
+              <span className="inline-block h-2 w-2 rounded-full bg-amber-500" />
+              <span className="text-muted-foreground">Alerta</span>
+              <span className="ml-auto font-bold tabular-nums text-amber-500">
                 {alerta}
               </span>
             </div>
           )}
-          <div className="mt-1.5 border-t border-white/10 pt-1.5">
+          <div className="mt-1.5 border-t border-border/60 pt-1.5">
             <div className="flex items-center justify-between text-xs">
-              <span className="text-zinc-500">Total</span>
-              <span className="font-bold tabular-nums text-zinc-200">
+              <span className="text-muted-foreground">Total</span>
+              <span className="font-bold tabular-nums text-foreground">
                 {total}
               </span>
             </div>
@@ -119,7 +119,7 @@ export default function AlertFrequencyChart({
               </p>
             </div>
             <div>
-              <p className="font-mono text-2xl font-bold tabular-nums text-amber-400">
+              <p className="font-mono text-2xl font-bold tabular-nums tracking-tight text-amber-600 dark:text-amber-400">
                 {peakDay}
               </p>
               <p className="text-[10px] text-muted-foreground">pico diário</p>
@@ -155,7 +155,7 @@ export default function AlertFrequencyChart({
             />
             <Tooltip
               content={TOOLTIP_CONTENT}
-              cursor={{ fill: "rgba(255,255,255,0.03)" }}
+              cursor={{ fill: "hsl(var(--muted))", fillOpacity: 0.4 }}
             />
             <Bar
               dataKey="critico"

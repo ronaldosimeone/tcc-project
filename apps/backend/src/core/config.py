@@ -18,6 +18,22 @@ _DEFAULT_MODEL_PATH: Path = _ML_MODELS / "random_forest_final.joblib"
 _DEFAULT_XGBOOST_PATH: Path = _ML_MODELS / "xgboost_v1.joblib"
 _DEFAULT_MLP_ONNX_PATH: Path = _ML_MODELS / "mlp_v1.onnx"
 _DEFAULT_MLP_SCALER_PATH: Path = _ML_MODELS / "mlp_scaler.joblib"
+_DEFAULT_RF_V2_ONNX_PATH: Path = _ML_MODELS / "random_forest_v2.onnx"
+_DEFAULT_XGB_V2_ONNX_PATH: Path = _ML_MODELS / "xgboost_v2.onnx"
+
+# Sequential DL artefact paths — RNF-24 extension (TCN, BiLSTM, PatchTST).
+# Override via TCN_ONNX_PATH / BILSTM_ONNX_PATH / PATCHTST_ONNX_PATH env-vars.
+_DEFAULT_TCN_ONNX_PATH: Path = _ML_MODELS / "tcn_v1.onnx"
+_DEFAULT_TCN_SCALER_PATH: Path = _ML_MODELS / "tcn_scaler.joblib"
+_DEFAULT_BILSTM_ONNX_PATH: Path = _ML_MODELS / "bilstm_v1.onnx"
+_DEFAULT_BILSTM_SCALER_PATH: Path = _ML_MODELS / "bilstm_scaler.joblib"
+_DEFAULT_PATCHTST_ONNX_PATH: Path = _ML_MODELS / "patchtst_v1.onnx"
+_DEFAULT_PATCHTST_SCALER_PATH: Path = _ML_MODELS / "patchtst_scaler.joblib"
+
+# Unsupervised autoencoder artefact paths (Conv1D reconstruction-error model).
+# Override via AUTOENCODER_ONNX_PATH / AUTOENCODER_SCALER_PATH env-vars.
+_DEFAULT_AUTOENCODER_ONNX_PATH: Path = _ML_MODELS / "autoencoder_v1.onnx"
+_DEFAULT_AUTOENCODER_SCALER_PATH: Path = _ML_MODELS / "autoencoder_scaler.joblib"
 
 
 class Settings(BaseSettings):
@@ -68,7 +84,11 @@ class Settings(BaseSettings):
     active_model: str = Field(
         default="random_forest",
         alias="ACTIVE_MODEL",
-        description="Active inference model: 'random_forest', 'xgboost', or 'mlp'.",
+        description=(
+            "Active inference model: 'random_forest', 'xgboost', 'mlp', "
+            "'random_forest_v2', 'xgboost_v2', 'tcn', 'bilstm', 'patchtst', "
+            "or 'autoencoder'."
+        ),
     )
 
     # RF-11 — admin token for /models management endpoints.
@@ -97,6 +117,73 @@ class Settings(BaseSettings):
         default=_DEFAULT_MLP_SCALER_PATH,
         alias="MLP_SCALER_PATH",
         description="Absolute path to the StandardScaler .joblib artefact for the MLP.",
+    )
+
+    # RF-10 V2 — tree-based ONNX artefacts (skl2onnx / onnxmltools exports).
+    # Loaded by OnnxTreeAdapter; no scaler needed (tree ensembles).
+    rf_v2_onnx_path: Path = Field(
+        default=_DEFAULT_RF_V2_ONNX_PATH,
+        alias="RF_V2_ONNX_PATH",
+        description="Absolute path to the Random Forest V2 .onnx artefact.",
+    )
+
+    xgboost_v2_onnx_path: Path = Field(
+        default=_DEFAULT_XGB_V2_ONNX_PATH,
+        alias="XGBOOST_V2_ONNX_PATH",
+        description="Absolute path to the XGBoost V2 .onnx artefact.",
+    )
+
+    # ── Sequential DL models (TCN / BiLSTM / PatchTST) ───────────────────
+    tcn_onnx_path: Path = Field(
+        default=_DEFAULT_TCN_ONNX_PATH,
+        alias="TCN_ONNX_PATH",
+        description="Absolute path to the TCN .onnx artefact.",
+    )
+    tcn_scaler_path: Path = Field(
+        default=_DEFAULT_TCN_SCALER_PATH,
+        alias="TCN_SCALER_PATH",
+        description="Absolute path to the TCN per-channel StandardScaler.",
+    )
+    bilstm_onnx_path: Path = Field(
+        default=_DEFAULT_BILSTM_ONNX_PATH,
+        alias="BILSTM_ONNX_PATH",
+        description="Absolute path to the BiLSTM .onnx artefact.",
+    )
+    bilstm_scaler_path: Path = Field(
+        default=_DEFAULT_BILSTM_SCALER_PATH,
+        alias="BILSTM_SCALER_PATH",
+        description="Absolute path to the BiLSTM per-channel StandardScaler.",
+    )
+    patchtst_onnx_path: Path = Field(
+        default=_DEFAULT_PATCHTST_ONNX_PATH,
+        alias="PATCHTST_ONNX_PATH",
+        description="Absolute path to the PatchTST .onnx artefact.",
+    )
+    patchtst_scaler_path: Path = Field(
+        default=_DEFAULT_PATCHTST_SCALER_PATH,
+        alias="PATCHTST_SCALER_PATH",
+        description="Absolute path to the PatchTST per-channel StandardScaler.",
+    )
+
+    # ── Simulator data source ─────────────────────────────────────────────
+    # Points to the processed MetroPT-3 parquet streamed by SensorSimulator.
+    # Override via SIMULATOR_PARQUET_PATH env-var (e.g., in Docker Compose).
+    simulator_parquet_path: Path = Field(
+        default=Path(__file__).resolve().parents[3] / "ml" / "data" / "processed" / "metropt3.parquet",
+        alias="SIMULATOR_PARQUET_PATH",
+        description="Absolute path to the processed MetroPT-3 parquet file.",
+    )
+
+    # ── Unsupervised Conv1D Autoencoder ───────────────────────────────────
+    autoencoder_onnx_path: Path = Field(
+        default=_DEFAULT_AUTOENCODER_ONNX_PATH,
+        alias="AUTOENCODER_ONNX_PATH",
+        description="Absolute path to the Conv1D Autoencoder .onnx artefact.",
+    )
+    autoencoder_scaler_path: Path = Field(
+        default=_DEFAULT_AUTOENCODER_SCALER_PATH,
+        alias="AUTOENCODER_SCALER_PATH",
+        description="Absolute path to the Autoencoder per-channel StandardScaler.",
     )
 
 

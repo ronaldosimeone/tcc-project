@@ -74,6 +74,7 @@ function formatTimestamp(iso: string): string {
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
+    timeZone: "UTC",
   })
     .format(new Date(iso))
     .replace(".", "");
@@ -356,18 +357,20 @@ export default function EventLogTable({ events }: EventLogTableProps) {
                         …
                       </span>
                     ) : (
-                      <button
+                      <Button
                         key={p}
+                        variant={
+                          Number(safePage) === Number(p) ? "outline" : "ghost"
+                        }
+                        className={
+                          Number(safePage) === Number(p)
+                            ? "h-8 w-8 rounded-full border-2 border-primary font-bold text-primary"
+                            : "h-8 w-8 rounded-full text-muted-foreground"
+                        }
                         onClick={() => setPage(p as number)}
-                        className={cn(
-                          "flex h-7 w-7 items-center justify-center rounded-md text-xs font-medium transition-colors",
-                          safePage === p
-                            ? "bg-primary/10 text-primary ring-1 ring-inset ring-primary/20"
-                            : "text-muted-foreground hover:bg-accent hover:text-foreground",
-                        )}
                       >
                         {p}
-                      </button>
+                      </Button>
                     ),
                   )}
                 </div>

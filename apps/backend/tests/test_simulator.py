@@ -5,15 +5,24 @@ Coverage matrix
 ---------------
 SimulatorMode      Enum has exactly the 3 required values.
 SensorSimulator    Default mode, mode setter, step counter reset, return type,
-                   all 12 sensor fields present, statistical profile per mode,
+                   all 12 sensor fields present, real-data range sanity,
+                   relative statistical separation between NORMAL and FAILURE,
                    drift mechanics in DEGRADATION.
 Endpoint PUT       200 response, mode persisted, mode change reflected in GET,
                    invalid mode → 422 Unprocessable Entity.
 Endpoint GET       200 response, returns current mode.
 Integration        Mode change propagates to SensorStreamService readings.
+
+Data-dependency note
+--------------------
+Tests that require real sensor readings are skipped when the MetroPT-3
+parquet is absent (CI environments without the full dataset).  Structural
+and schema tests run unconditionally.
 """
 
 from __future__ import annotations
+
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -32,11 +41,28 @@ from src.services.simulator import (
 # Fixtures
 # ---------------------------------------------------------------------------
 
+_PARQUET = (
+    Path(__file__).resolve().parents[3]
+    / "ml" / "data" / "processed" / "metropt3.parquet"
+)
+
+
+@pytest.fixture(scope="session")
+def parquet_path() -> Path:
+    if not _PARQUET.exists():
+        pytest.skip("metropt3.parquet not found — skipping data-dependent tests")
+    return _PARQUET
+
 
 @pytest.fixture()
-def sim() -> SensorSimulator:
-    """Fresh, isolated SensorSimulator for every test."""
-    return SensorSimulator()
+def sim(parquet_path: Path) -> SensorSimulator:
+    """Fresh, isolated SensorSimulator backed by real MetroPT-3 data."""
+    return SensorSimulator(parquet_path=parquet_path)
+
+
+@pytest.fixture()
+def sim_failure(parquet_path: Path) -> SensorSimulator:
+    return SensorSimulator(mode=SimulatorMode.FAILURE, parquet_path=parquet_path)
 
 
 @pytest.fixture()
@@ -54,7 +80,7 @@ def client(app: FastAPI) -> TestClient:
 
 
 # ===========================================================================
-# SimulatorMode enum
+# SimulatorMode enum — no parquet needed
 # ===========================================================================
 
 
@@ -85,12 +111,21 @@ class TestSensorSimulator:
     def test_default_mode_is_normal(self, sim: SensorSimulator) -> None:
         assert sim.mode == SimulatorMode.NORMAL
 
-    def test_custom_initial_mode(self) -> None:
-        s = SensorSimulator(mode=SimulatorMode.FAILURE)
+    def test_custom_initial_mode(self, parquet_path: Path) -> None:
+        s = SensorSimulator(mode=SimulatorMode.FAILURE, parquet_path=parquet_path)
         assert s.mode == SimulatorMode.FAILURE
 
     def test_initial_step_is_zero(self, sim: SensorSimulator) -> None:
         assert sim._step == 0
+
+    def test_data_partitions_non_empty(self, sim: SensorSimulator) -> None:
+        """Both normal and failure arrays must have at least one row."""
+        assert len(sim._normal) > 0
+        assert len(sim._failure) > 0
+
+    def test_normal_larger_than_failure(self, sim: SensorSimulator) -> None:
+        """The MetroPT-3 dataset is predominantly healthy — normal rows > failure rows."""
+        assert len(sim._normal) > len(sim._failure)
 
     # ── Mode setter ───────────────────────────────────────────────────────
 
@@ -121,18 +156,9 @@ class TestSensorSimulator:
     def test_all_12_sensor_fields_present(self, sim: SensorSimulator) -> None:
         reading = sim.generate_reading()
         expected = {
-            "TP2",
-            "TP3",
-            "H1",
-            "DV_pressure",
-            "Reservoirs",
-            "Motor_current",
-            "Oil_temperature",
-            "COMP",
-            "DV_eletric",
-            "Towers",
-            "MPG",
-            "Oil_level",
+            "TP2", "TP3", "H1", "DV_pressure", "Reservoirs",
+            "Motor_current", "Oil_temperature",
+            "COMP", "DV_eletric", "Towers", "MPG", "Oil_level",
         }
         assert expected.issubset(reading.model_dump().keys())
 
@@ -143,110 +169,156 @@ class TestSensorSimulator:
         assert all(isinstance(v, float) for v in data.values())
 
     def test_binary_sensors_are_0_or_1_in_normal(self, sim: SensorSimulator) -> None:
+        """Real MetroPT-3 binary sensors are stored as 0.0 / 1.0 — must be preserved."""
         binary = {"COMP", "DV_eletric", "Towers", "MPG", "Oil_level"}
         for _ in range(30):
             r = sim.generate_reading()
             for f in binary:
                 assert getattr(r, f) in (0.0, 1.0)
 
-    # ── NORMAL mode statistical profile ──────────────────────────────────
+    # ── NORMAL mode — physical range checks (real data) ───────────────────
 
-    def test_normal_motor_current_around_nominal(self, sim: SensorSimulator) -> None:
-        """100-sample mean must be within ±0.5 A of nominal (2.80 A)."""
-        readings = [sim.generate_reading().Motor_current for _ in range(100)]
-        assert abs(np.mean(readings) - 2.80) < 0.5
+    def test_normal_tp2_positive(self, sim: SensorSimulator) -> None:
+        """Downstream pressure must be non-negative in healthy operation."""
+        readings = [sim.generate_reading().TP2 for _ in range(50)]
+        assert all(v >= 0.0 for v in readings)
 
-    def test_normal_oil_temperature_around_nominal(self, sim: SensorSimulator) -> None:
-        readings = [sim.generate_reading().Oil_temperature for _ in range(100)]
-        assert abs(np.mean(readings) - 57.0) < 3.0
+    def test_normal_oil_temperature_plausible(self, sim: SensorSimulator) -> None:
+        """Oil temperature in healthy operation stays within 20–120 °C."""
+        readings = [sim.generate_reading().Oil_temperature for _ in range(50)]
+        assert all(20.0 <= v <= 120.0 for v in readings)
 
-    def test_normal_tp2_around_nominal(self, sim: SensorSimulator) -> None:
-        readings = [sim.generate_reading().TP2 for _ in range(100)]
-        assert abs(np.mean(readings) - 5.90) < 0.5
+    def test_normal_motor_current_positive(self, sim: SensorSimulator) -> None:
+        readings = [sim.generate_reading().Motor_current for _ in range(50)]
+        assert all(v >= 0.0 for v in readings)
 
-    # ── FAILURE mode statistical profile ─────────────────────────────────
+    # ── FAILURE vs NORMAL statistical separation ──────────────────────────
 
-    def test_failure_motor_current_far_above_normal(self) -> None:
-        """FAILURE motor current mean (≈6.8 A) must exceed NORMAL mean (≈2.8 A) by > 2 A."""
-        fail = SensorSimulator(mode=SimulatorMode.FAILURE)
-        readings = [fail.generate_reading().Motor_current for _ in range(100)]
-        assert np.mean(readings) > 5.0
+    def test_failure_motor_current_differs_from_normal(
+        self, sim: SensorSimulator, sim_failure: SensorSimulator
+    ) -> None:
+        """
+        Air-leak periods show anomalous motor current.
+        The means must differ by at least 0.5 A (conservative — avoids fragility
+        from dataset-specific absolute values).
+        """
+        normal_mean = np.mean([sim.generate_reading().Motor_current for _ in range(200)])
+        fail_mean = np.mean([sim_failure.generate_reading().Motor_current for _ in range(200)])
+        assert abs(fail_mean - normal_mean) > 0.5
 
-    def test_failure_oil_temperature_critical(self) -> None:
-        fail = SensorSimulator(mode=SimulatorMode.FAILURE)
-        readings = [fail.generate_reading().Oil_temperature for _ in range(100)]
-        assert np.mean(readings) > 70.0
-
-    def test_failure_tp2_pressure_low(self) -> None:
-        fail = SensorSimulator(mode=SimulatorMode.FAILURE)
-        readings = [fail.generate_reading().TP2 for _ in range(100)]
-        assert np.mean(readings) < 5.0
+    def test_failure_tp2_differs_from_normal(
+        self, sim: SensorSimulator, sim_failure: SensorSimulator
+    ) -> None:
+        normal_mean = np.mean([sim.generate_reading().TP2 for _ in range(200)])
+        fail_mean = np.mean([sim_failure.generate_reading().TP2 for _ in range(200)])
+        # Air leaks typically drop downstream pressure — means must differ.
+        assert abs(fail_mean - normal_mean) > 0.2
 
     # ── DEGRADATION mode drift mechanics ─────────────────────────────────
 
-    def test_degradation_motor_current_higher_than_normal_at_full_drift(self) -> None:
-        """At drift = 1.0 (step 300) motor current mean must exceed normal mean by > 2 A."""
-        normal_sim = SensorSimulator(mode=SimulatorMode.NORMAL)
-        deg_sim = SensorSimulator(mode=SimulatorMode.DEGRADATION)
+    def test_degradation_step_increases_each_call(self, sim: SensorSimulator) -> None:
+        sim.mode = SimulatorMode.DEGRADATION
+        for i in range(1, 6):
+            sim.generate_reading()
+            assert sim._step == i
+
+    def test_degradation_at_drift_zero_close_to_normal(
+        self, sim: SensorSimulator, parquet_path: Path
+    ) -> None:
+        """
+        At drift=0 (step=0), the degradation reading is identical to the
+        corresponding normal row — no failure signal injected yet.
+        """
+        normal_clone = SensorSimulator(parquet_path=parquet_path)
+        deg = SensorSimulator(mode=SimulatorMode.DEGRADATION, parquet_path=parquet_path)
+
+        # Both start at index 0; drift = 1/300 ≈ 0 on the first tick.
+        normal_val = normal_clone.generate_reading().Motor_current
+        deg_val = deg.generate_reading().Motor_current
+
+        # With drift ≈ 0.003, the blended value must be very close to normal.
+        assert abs(deg_val - normal_val) < abs(normal_val) * 0.05  # within 5 %
+
+    def test_degradation_at_full_drift_close_to_failure(
+        self, parquet_path: Path
+    ) -> None:
+        """
+        At drift=1.0 (step=300), the reading equals the failure-partition row.
+        """
+        fail_sim = SensorSimulator(mode=SimulatorMode.FAILURE, parquet_path=parquet_path)
+        deg_sim = SensorSimulator(mode=SimulatorMode.DEGRADATION, parquet_path=parquet_path)
         deg_sim._step = 299  # next generate_reading → step=300, drift=1.0
 
-        normal_mean = np.mean(
-            [normal_sim.generate_reading().Motor_current for _ in range(100)]
-        )
-        deg_mean = np.mean(
-            [deg_sim.generate_reading().Motor_current for _ in range(100)]
-        )
-        assert deg_mean - normal_mean > 2.0
+        # Both pointers start at 0 → first row must match exactly at drift=1.
+        fail_val = fail_sim.generate_reading().Motor_current
+        deg_val = deg_sim.generate_reading().Motor_current
+        assert abs(deg_val - fail_val) < 1e-4
 
-    def test_degradation_oil_temp_rises_with_drift(self) -> None:
-        s = SensorSimulator(mode=SimulatorMode.DEGRADATION)
+    def test_degradation_blend_is_monotonic_over_time(
+        self, parquet_path: Path
+    ) -> None:
+        """
+        Summing 50 early (low-drift) and 50 late (high-drift) Motor_current
+        readings: the late mean must be closer to the failure mean than the
+        early mean (demonstrates the drift is working in the right direction).
+        """
+        deg_sim = SensorSimulator(mode=SimulatorMode.DEGRADATION, parquet_path=parquet_path)
+        fail_sim = SensorSimulator(mode=SimulatorMode.FAILURE, parquet_path=parquet_path)
 
-        s._step = 0
-        early = np.mean([s.generate_reading().Oil_temperature for _ in range(50)])
+        fail_mean = np.mean([fail_sim.generate_reading().Motor_current for _ in range(50)])
 
-        s._step = 250
-        late = np.mean([s.generate_reading().Oil_temperature for _ in range(50)])
+        # Early drift (step 1→50)
+        early_mean = np.mean([deg_sim.generate_reading().Motor_current for _ in range(50)])
 
-        assert late > early + 5.0
+        # Late drift (step 250→299 → drift≈0.83–1.0)
+        deg_sim._step = 249
+        late_mean = np.mean([deg_sim.generate_reading().Motor_current for _ in range(50)])
 
-    def test_degradation_pressure_drops_with_drift(self) -> None:
-        s = SensorSimulator(mode=SimulatorMode.DEGRADATION)
-
-        s._step = 0
-        early = np.mean([s.generate_reading().TP2 for _ in range(50)])
-
-        s._step = 250
-        late = np.mean([s.generate_reading().TP2 for _ in range(50)])
-
-        assert late < early - 0.5
-
-    def test_degradation_step_increases_each_call(self) -> None:
-        s = SensorSimulator(mode=SimulatorMode.DEGRADATION)
-        for i in range(1, 6):
-            s.generate_reading()
-            assert s._step == i
+        # Distance from failure: late readings must be closer to failure than early ones.
+        assert abs(late_mean - fail_mean) < abs(early_mean - fail_mean)
 
     # ── Mode transitions ──────────────────────────────────────────────────
 
-    def test_transition_normal_to_failure_then_back(self) -> None:
-        s = SensorSimulator()
-        s.mode = SimulatorMode.FAILURE
-        assert s.mode == SimulatorMode.FAILURE
-        assert s._step == 0
+    def test_transition_normal_to_failure_then_back(
+        self, sim: SensorSimulator
+    ) -> None:
+        sim.mode = SimulatorMode.FAILURE
+        assert sim.mode == SimulatorMode.FAILURE
+        assert sim._step == 0
 
-        s.mode = SimulatorMode.NORMAL
-        assert s.mode == SimulatorMode.NORMAL
-        assert s._step == 0
+        sim.mode = SimulatorMode.NORMAL
+        assert sim.mode == SimulatorMode.NORMAL
+        assert sim._step == 0
 
-    def test_reading_changes_statistical_profile_after_mode_switch(self) -> None:
-        """Motor_current should be higher in FAILURE than NORMAL (100-sample t-test proxy)."""
-        s = SensorSimulator(mode=SimulatorMode.NORMAL)
-        normal_mean = np.mean([s.generate_reading().Motor_current for _ in range(100)])
+    def test_index_not_reset_on_mode_change(self, sim: SensorSimulator) -> None:
+        """Pointer continuity: switching modes does not rewind the data stream."""
+        for _ in range(10):
+            sim.generate_reading()
+        idx_before = sim._idx_normal
 
-        s.mode = SimulatorMode.FAILURE
-        failure_mean = np.mean([s.generate_reading().Motor_current for _ in range(100)])
+        sim.mode = SimulatorMode.FAILURE
+        sim.mode = SimulatorMode.NORMAL
+        assert sim._idx_normal == idx_before
 
-        assert failure_mean > normal_mean + 2.0
+    def test_normal_loops_without_index_error(self, sim: SensorSimulator) -> None:
+        """Streaming more rows than the partition size must wrap silently."""
+        n_rows = len(sim._normal) + 5
+        for _ in range(n_rows):
+            sim.generate_reading()   # must not raise
+
+    def test_failure_loops_without_index_error(self, sim_failure: SensorSimulator) -> None:
+        n_rows = len(sim_failure._failure) + 5
+        for _ in range(n_rows):
+            sim_failure.generate_reading()
+
+    def test_reading_changes_statistical_profile_after_mode_switch(
+        self, sim: SensorSimulator
+    ) -> None:
+        """Motor_current distributions must differ between NORMAL and FAILURE."""
+        normal_readings = [sim.generate_reading().Motor_current for _ in range(200)]
+        sim.mode = SimulatorMode.FAILURE
+        failure_readings = [sim.generate_reading().Motor_current for _ in range(200)]
+        assert abs(np.mean(failure_readings) - np.mean(normal_readings)) > 0.5
 
 
 # ===========================================================================
@@ -332,23 +404,24 @@ class TestGetSimulatorMode:
 
 class TestModeIntegration:
 
-    def test_stream_service_uses_simulator_mode(self) -> None:
+    def test_stream_service_uses_simulator_mode(
+        self, sim: SensorSimulator
+    ) -> None:
         """
-        FAILURE-mode readings (Motor_current ≈ 6.8 A) must differ from
-        NORMAL-mode readings (Motor_current ≈ 2.8 A) by > 2 A on average.
+        Switching the simulator to FAILURE must produce readings that are
+        statistically different from NORMAL (200-sample means differ by > 0.5 A).
         """
         from src.services.sensor_stream_service import SensorStreamService
 
-        sim = SensorSimulator(mode=SimulatorMode.NORMAL)
         service = SensorStreamService(simulator=sim)
 
         normal_readings = [
-            service._generate_reading().Motor_current for _ in range(100)
+            service._generate_reading().Motor_current for _ in range(200)
         ]
 
         sim.mode = SimulatorMode.FAILURE
         failure_readings = [
-            service._generate_reading().Motor_current for _ in range(100)
+            service._generate_reading().Motor_current for _ in range(200)
         ]
 
-        assert np.mean(failure_readings) - np.mean(normal_readings) > 2.0
+        assert abs(np.mean(failure_readings) - np.mean(normal_readings)) > 0.5

@@ -21,6 +21,7 @@ interface AssetRadarChartProps {
   tp3: number;
   motorCurrent: number;
   oilTemp: number;
+  assetId: string;
   isLoading?: boolean;
 }
 
@@ -33,18 +34,17 @@ function normalize(value: number, min: number, max: number): number {
 }
 
 // ── Valores de referência "ótimo" ─────────────────────────────────────────
-// Baseline calibrada pelo manual MetroPT-3 em operação normal.
 const OPTIMAL = {
-  TP2: normalize(8.0, 0, 12), // 66.7
-  TP3: normalize(8.0, 0, 12), // 66.7
-  Corrente: normalize(4.5, 0, 10), // 45.0
-  "Temp. Óleo": normalize(68, 50, 90), // 45.0
+  TP2: normalize(10.1, 0, 12),
+  TP3: normalize(10.1, 0, 12),
+  Corrente: normalize(3.8, 0, 10),
+  "Temp. Óleo": normalize(64.0, 50, 90),
 };
 
 // ── Estilos compartilhados ────────────────────────────────────────────────
 
-const GRID_STROKE = "hsl(217 18% 16%)";
-const ANGLE_TICK = { fontSize: 11, fill: "hsl(215 15% 45%)" };
+const GRID_STROKE = "hsl(var(--border))";
+const ANGLE_TICK = { fontSize: 11, fill: "hsl(var(--muted-foreground))" };
 
 // ── Tooltip ───────────────────────────────────────────────────────────────
 
@@ -60,27 +60,20 @@ interface TooltipProps {
   payload?: TooltipEntry[];
 }
 
-const ChartTooltip = memo(function ChartTooltip({
-  active,
-  label,
-  payload,
-}: TooltipProps) {
+const ChartTooltip = memo(function ChartTooltip({ active, label, payload }: TooltipProps) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="rounded-lg border border-zinc-200/60 bg-white/60 px-3 py-2 shadow-md backdrop-blur-md">
-      <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+    <div className="rounded-lg border border-border/80 bg-popover/90 px-3 py-2 shadow-md backdrop-blur-md">
+      <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
         {label}
       </p>
       {payload.map((entry) => (
         <div key={entry.name} className="flex items-center gap-2 text-xs">
-          <span
-            className="inline-block h-2 w-2 rounded-full"
-            style={{ background: entry.color }}
-          />
-          <span className="text-zinc-600">{entry.name}</span>
-          <span className="ml-auto font-bold tabular-nums text-zinc-900">
+          <span className="inline-block h-2 w-2 rounded-full" style={{ background: entry.color }} />
+          <span className="text-muted-foreground">{entry.name}</span>
+          <span className="ml-auto font-bold tabular-nums text-foreground">
             {entry.value.toFixed(0)}
-            <span className="font-normal text-zinc-500">/100</span>
+            <span className="font-normal text-muted-foreground">/100</span>
           </span>
         </div>
       ))}
@@ -97,29 +90,14 @@ const AssetRadarChart = memo(function AssetRadarChart({
   tp3,
   motorCurrent,
   oilTemp,
+  assetId,
   isLoading,
 }: AssetRadarChartProps) {
   const data = [
-    {
-      subject: "TP2",
-      ótimo: OPTIMAL.TP2,
-      atual: normalize(tp2, 0, 12),
-    },
-    {
-      subject: "TP3",
-      ótimo: OPTIMAL.TP3,
-      atual: normalize(tp3, 0, 12),
-    },
-    {
-      subject: "Corrente",
-      ótimo: OPTIMAL.Corrente,
-      atual: normalize(motorCurrent, 0, 10),
-    },
-    {
-      subject: "Temp. Óleo",
-      ótimo: OPTIMAL["Temp. Óleo"],
-      atual: normalize(oilTemp, 50, 90),
-    },
+    { subject: "TP2",       ótimo: OPTIMAL.TP2,           atual: normalize(tp2,         0,  12) },
+    { subject: "TP3",       ótimo: OPTIMAL.TP3,           atual: normalize(tp3,         0,  12) },
+    { subject: "Corrente",  ótimo: OPTIMAL.Corrente,      atual: normalize(motorCurrent, 0, 10) },
+    { subject: "Temp. Óleo",ótimo: OPTIMAL["Temp. Óleo"], atual: normalize(oilTemp,    50,  90) },
   ];
 
   return (
@@ -130,20 +108,21 @@ const AssetRadarChart = memo(function AssetRadarChart({
           Perfil Operacional
         </CardTitle>
         <p className="text-[11px] text-muted-foreground">
-          APU-Trem-042 · Ótimo vs Atual (normalizado 0–100)
+          {assetId} · Ótimo vs Atual (normalizado 0–100)
         </p>
       </CardHeader>
 
-      <CardContent className="px-5 pb-5">
+      <CardContent className="px-5 pb-4">
         {isLoading ? (
-          <div className="flex items-center justify-center">
-            <Skeleton className="h-[210px] w-[210px] rounded-full" />
+          <div className="flex items-center justify-center py-4">
+            <Skeleton className="h-[200px] w-[200px] rounded-full" />
           </div>
         ) : (
-          <ResponsiveContainer width="100%" height={210}>
+          <ResponsiveContainer width="100%" height={220}>
             <RadarChart
               data={data}
-              margin={{ top: 8, right: 20, bottom: 8, left: 20 }}
+              outerRadius={70}
+              margin={{ top: 8, right: 28, bottom: 4, left: 28 }}
             >
               <PolarGrid stroke={GRID_STROKE} radialLines={true} />
               <PolarAngleAxis dataKey="subject" tick={ANGLE_TICK} />
@@ -168,10 +147,11 @@ const AssetRadarChart = memo(function AssetRadarChart({
               <Legend
                 iconSize={8}
                 iconType="circle"
+                verticalAlign="bottom"
                 wrapperStyle={{
                   fontSize: 11,
-                  color: "hsl(215 15% 50%)",
-                  paddingTop: 8,
+                  color: "hsl(var(--muted-foreground))",
+                  paddingTop: 20,
                 }}
               />
             </RadarChart>

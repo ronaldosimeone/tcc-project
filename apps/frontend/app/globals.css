@@ -189,3 +189,24 @@ body {
     @apply font-sans;
   }
 }
+
+@media print {
+  /* Esconde navegação — deixa apenas o conteúdo principal para o PDF */
+  aside,
+  header,
+  .no-print {
+    display: none !important;
+  }
+
+  html,
+  body {
+    height: auto !important;
+    background: white !important;
+    color: black !important;
+  }
+
+  main {
+    overflow: visible !important;
+    flex: none !important;
+  }
+}

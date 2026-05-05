@@ -1,20 +1,34 @@
 "use client";
 
+import { useState } from "react";
 import { useSensorData, getRiskLevel } from "@/hooks/use-sensor-data";
 import { useAlertWebSocket } from "@/hooks/use-alert-websocket";
 import FleetKPIs from "@/components/dashboard/FleetKPIs";
-import AssetTable from "@/components/dashboard/AssetTable";
+import AssetTable, { MOCK_ASSETS } from "@/components/dashboard/AssetTable";
 import AssetRadarChart from "@/components/dashboard/AssetRadarChart";
 import AssetEfficiencyChart from "@/components/dashboard/AssetEfficiencyChart";
+
+const LIVE_ASSET_ID = "APU-Trem-042";
 
 export default function FleetDashboard() {
   const { latest, currentPayload, isLoading, sseStatus } = useSensorData();
   const { alerts } = useAlertWebSocket();
 
+  const [selectedAssetId, setSelectedAssetId] = useState<string>(LIVE_ASSET_ID);
+
   const probability = latest?.failure_probability ?? 0;
-  const alertProb = alerts.reduce((max, a) => Math.max(max, a.probability), 0);
-  const effectiveProb = Math.max(probability, alertProb);
+  const alertProb   = alerts.reduce((max, a) => Math.max(max, a.probability), 0);
+  const effectiveProb      = Math.max(probability, alertProb);
   const effectiveRiskLevel = getRiskLevel(effectiveProb);
+
+  // Derive chart data from selected asset
+  const selectedMock = MOCK_ASSETS.find((a) => a.id === selectedAssetId);
+  const isLiveSelected = selectedAssetId === LIVE_ASSET_ID;
+
+  const chartTp2          = isLiveSelected ? currentPayload.TP2            : (selectedMock?.tp2          ?? 8.0);
+  const chartTp3          = isLiveSelected ? currentPayload.TP3            : (selectedMock?.tp3          ?? 8.0);
+  const chartMotorCurrent = isLiveSelected ? currentPayload.Motor_current  : (selectedMock?.motorCurrent ?? 5.0);
+  const chartOilTemp      = isLiveSelected ? currentPayload.Oil_temperature: (selectedMock?.oilTemp      ?? 70.0);
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -63,19 +77,22 @@ export default function FleetDashboard() {
             tp2={currentPayload.TP2}
             oilTemp={currentPayload.Oil_temperature}
             isLoading={isLoading}
+            selectedId={selectedAssetId}
+            onSelect={setSelectedAssetId}
           />
         </div>
 
-        {/* Coluna lateral de gráficos */}
+        {/* Coluna lateral de gráficos — reativos ao ativo selecionado */}
         <div className="flex flex-col gap-4 lg:col-span-2">
           <AssetRadarChart
-            tp2={currentPayload.TP2}
-            tp3={currentPayload.TP3}
-            motorCurrent={currentPayload.Motor_current}
-            oilTemp={currentPayload.Oil_temperature}
-            isLoading={isLoading}
+            tp2={chartTp2}
+            tp3={chartTp3}
+            motorCurrent={chartMotorCurrent}
+            oilTemp={chartOilTemp}
+            assetId={selectedAssetId}
+            isLoading={isLoading && isLiveSelected}
           />
-          <AssetEfficiencyChart />
+          <AssetEfficiencyChart assetId={selectedAssetId} />
         </div>
       </div>
     </div>

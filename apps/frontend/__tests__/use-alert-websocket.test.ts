@@ -414,7 +414,10 @@ describe("useAlertWebSocket", () => {
   it("transiciona para 'reconnecting' quando WebSocket fecha inesperadamente", async () => {
     const { result } = renderHook(() => useAlertWebSocket());
     const ws = MockWebSocket.instances[0]!;
-    ws.simulateOpen();
+
+    await act(async () => {
+      ws.simulateOpen();
+    });
 
     await act(async () => {
       ws.simulateClose();

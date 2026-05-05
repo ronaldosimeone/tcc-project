@@ -144,13 +144,19 @@ describe("RF-17 / RNF-35: Resiliência de Conexão e Modo Degradado", () => {
 
   // ── ConnectionStatus — RF-17 ──────────────────────────────────────────────
 
-  it("RF-17: renderiza o painel de status de conexão", () => {
+  it("RF-17: renderiza o painel de status de conexão", async () => {
     render(<SensorMonitor />);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
     expect(screen.getByTestId("connection-status")).toBeInTheDocument();
   });
 
-  it("RF-17: exibe os canais SSE e WS no painel de status", () => {
+  it("RF-17: exibe os canais SSE e WS no painel de status", async () => {
     render(<SensorMonitor />);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
     const statusEl = screen.getByTestId("connection-status");
     expect(statusEl.textContent).toMatch(/sensores/i);
     expect(statusEl.textContent).toMatch(/alertas/i);
@@ -159,6 +165,10 @@ describe("RF-17 / RNF-35: Resiliência de Conexão e Modo Degradado", () => {
   // ── RNF-35: Modo Degradado ────────────────────────────────────────────────
 
   it("RNF-35: NÃO exibe banner degradado quando SSE está conectando (initial load)", async () => {
+    // Seed fetch nunca resolve → sem histórico → banner não pode aparecer
+    // (banner exige status="reconnecting"|"error" + history.length > 0)
+    mockFetch.mockImplementationOnce(() => new Promise(() => {}));
+
     render(<SensorMonitor />);
     // SSE em "connecting" → sem histórico ainda → sem banner
     expect(

@@ -32,10 +32,13 @@ router: APIRouter = APIRouter(
 # Maps each known model name to the Path that signals it is ready on disk.
 # mlp requires *both* the ONNX file and the scaler; we check the ONNX file
 # as the canonical signal (the scaler is always produced alongside it).
+# V2 entries point at the .onnx files served by OnnxTreeAdapter.
 _ARTEFACT_PATHS: dict[str, Path] = {
     "random_forest": settings.model_path,
     "xgboost": settings.xgboost_model_path,
     "mlp": settings.mlp_onnx_path,
+    "random_forest_v2": settings.rf_v2_onnx_path,
+    "xgboost_v2": settings.xgboost_v2_onnx_path,
 }
 
 

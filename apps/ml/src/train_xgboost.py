@@ -54,6 +54,7 @@ import pandas as pd
 from sklearn.metrics import (
     classification_report,
     f1_score,
+    precision_recall_curve,
     roc_auc_score,
 )
 from sklearn.model_selection import StratifiedKFold, cross_val_score, train_test_split
@@ -203,11 +204,58 @@ def _build_objective(
 # ---------------------------------------------------------------------------
 
 
+def _find_optimal_threshold(
+    y_true: pd.Series,
+    y_proba: np.ndarray,
+    beta: float = 2.0,
+) -> dict[str, float]:
+    """F-beta optimal cut-off — see ``train_random_forest.find_optimal_threshold``."""
+    precision, recall, thresholds = precision_recall_curve(y_true, y_proba)
+    p, r = precision[:-1], recall[:-1]
+    fbeta_num = (1 + beta**2) * p * r
+    fbeta_den = (beta**2) * p + r + 1e-9
+    fbeta = fbeta_num / fbeta_den
+    best_idx = int(np.argmax(fbeta))
+    return {
+        "threshold": float(thresholds[best_idx]),
+        "precision": float(p[best_idx]),
+        "recall": float(r[best_idx]),
+        "fbeta": float(fbeta[best_idx]),
+        "beta": beta,
+    }
+
+
+def _export_to_onnx(
+    model: XGBClassifier, feature_names: list[str], onnx_path: Path
+) -> None:
+    """Convert the fitted XGBoost to ONNX (V2). Requires ``onnxmltools``."""
+    try:
+        from onnxmltools.convert import convert_xgboost
+        from onnxmltools.convert.common.data_types import FloatTensorType
+    except ImportError:
+        log.warning(
+            "onnxmltools não instalado — pulando export ONNX. "
+            "Instale com: pip install onnxmltools>=1.12"
+        )
+        return
+
+    initial_type = [("features", FloatTensorType([None, len(feature_names)]))]
+    onnx_model = convert_xgboost(
+        model, initial_types=initial_type, target_opset=15
+    )
+    onnx_path.write_bytes(onnx_model.SerializeToString())
+    log.info(
+        "[V2] ONNX salvo: %s (%.1f MB)",
+        onnx_path,
+        onnx_path.stat().st_size / 1e6,
+    )
+
+
 def _measure_latency(
     model: XGBClassifier, X_test: pd.DataFrame, n_reps: int = 200
 ) -> dict:
     """Measure single-row inference latency (p50 / p95) in milliseconds."""
-    row = X_test.iloc[:1]
+    row = X_test.iloc[:1].to_numpy()
     times: list[float] = []
     for _ in range(n_reps):
         t0 = time.perf_counter()
@@ -266,8 +314,16 @@ def train(n_trials: int = 100) -> None:
     log.info("Best params: %s", best_params)
     log.info("Best CV F1:  %.4f", study.best_value)
 
-    # 4. Final model — retrain on FULL training set
-    log.info("Retraining final model on full training set …")
+    # 4. Final model — retrain on FULL training set with early stopping (V2)
+    log.info("Retraining final model on full training set (V2 — early stopping) …")
+    # 90/10 split intra-train para early stopping monitorar val_loss real
+    X_tr, X_val, y_tr, y_val = train_test_split(
+        X_train,
+        y_train,
+        test_size=0.1,
+        random_state=_RANDOM_STATE,
+        stratify=y_train,
+    )
     final_params = {
         **best_params,
         "scale_pos_weight": scale_pos_weight,
@@ -276,18 +332,48 @@ def train(n_trials: int = 100) -> None:
         "random_state": _RANDOM_STATE,
         "n_jobs": -1,
         "verbosity": 0,
+        # V2 — early stopping evita overfit nas ~600 árvores que o Optuna pode escolher
+        "early_stopping_rounds": 20,
     }
     final_model = XGBClassifier(**final_params)
-    final_model.fit(X_train, y_train)
+    # Treina em ndarray puro: o conversor ONNX (onnxmltools) exige que o
+    # XGBoost não carregue feature_names do Pandas — caso contrário falha
+    # com "Unable to interpret 'DV_pressure', feature names should follow
+    # pattern 'f%d'". A ordem das colunas é preservada via _FEATURE_NAMES.
+    final_model.fit(
+        X_tr.to_numpy(),
+        y_tr.to_numpy(),
+        eval_set=[(X_val.to_numpy(), y_val.to_numpy())],
+        verbose=False,
+    )
+    log.info(
+        "[V2] Early stopping — best_iteration=%d / n_estimators_max=%d",
+        getattr(final_model, "best_iteration", -1),
+        best_params.get("n_estimators", -1),
+    )
 
-    # 5. Evaluate on test set
-    y_pred = final_model.predict(X_test)
-    y_proba = final_model.predict_proba(X_test)[:, 1]
+    # 5. Evaluate on test set — modelo foi treinado com ndarray, então
+    # predict/predict_proba também precisam de ndarray (sem feature_names).
+    X_test_arr = X_test.to_numpy()
+    y_pred = final_model.predict(X_test_arr)
+    y_proba = final_model.predict_proba(X_test_arr)[:, 1]
 
     f1 = float(f1_score(y_test, y_pred))
     auc = float(roc_auc_score(y_test, y_proba))
     report = classification_report(y_test, y_pred, output_dict=True)
     latency = _measure_latency(final_model, X_test)
+
+    # V2 — Threshold tuning via F2-score
+    threshold_info = _find_optimal_threshold(y_test, y_proba, beta=2.0)
+    y_pred_tuned = (y_proba >= threshold_info["threshold"]).astype(int)
+    tuned_report = classification_report(y_test, y_pred_tuned, output_dict=True)
+    log.info(
+        "[V2] Optimal threshold (F2): %.4f | precision=%.4f | recall=%.4f | F2=%.4f",
+        threshold_info["threshold"],
+        threshold_info["precision"],
+        threshold_info["recall"],
+        threshold_info["fbeta"],
+    )
 
     log.info("Test F1 (class 1): %.4f", f1)
     log.info("Test AUC-ROC:      %.4f", auc)
@@ -301,9 +387,9 @@ def train(n_trials: int = 100) -> None:
     joblib.dump(final_model, model_path)
     log.info("Model saved → %s", model_path)
 
-    # 7. Save model card
+    # 7. Save model card (V2)
     card = {
-        "schema_version": "1.0",
+        "schema_version": "2.0",
         "trained_at": datetime.now(timezone.utc).isoformat(),
         "model_type": "XGBClassifier",
         "dataset": "MetroPT-3",
@@ -322,6 +408,17 @@ def train(n_trials: int = 100) -> None:
         "best_cv_f1": round(study.best_value, 4),
         "best_hyperparameters": best_params,
         "scale_pos_weight": round(scale_pos_weight, 2),
+        "early_stopping_rounds": 20,
+        "best_iteration": int(getattr(final_model, "best_iteration", -1)),
+        # V2 — Threshold tuning consumed by ModelService at load time
+        "decision_threshold": round(threshold_info["threshold"], 4),
+        "threshold_strategy": "F2-score (recall-favouring)",
+        "threshold_metrics": {
+            "precision": round(threshold_info["precision"], 4),
+            "recall": round(threshold_info["recall"], 4),
+            "fbeta": round(threshold_info["fbeta"], 4),
+            "beta": threshold_info["beta"],
+        },
         "feature_count": len(_FEATURE_NAMES),
         "feature_names": _FEATURE_NAMES,
         "metrics": {
@@ -329,11 +426,20 @@ def train(n_trials: int = 100) -> None:
             "roc_auc_test": round(auc, 4),
             "latency_single_row_ms": latency,
             "classification_report": report,
+            "tuned_classification_report": tuned_report,
         },
     }
     card_path = _MODELS_DIR / "xgboost_v1_card.json"
     card_path.write_text(json.dumps(card, indent=2))
     log.info("Model card saved → %s", card_path)
+
+    # V2 — Export ONNX para paridade com MLP/RandomForest
+    _export_to_onnx(
+        final_model,
+        feature_names=_FEATURE_NAMES,
+        onnx_path=_MODELS_DIR / "xgboost_v2.onnx",
+    )
+
     log.info("Done.")
 
 

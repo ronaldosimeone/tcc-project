@@ -42,9 +42,20 @@ if TYPE_CHECKING:
 
 logger: logging.Logger = logging.getLogger(__name__)
 
-# Single source of truth — mirrors the keys in model_service._MODEL_REGISTRY
-# plus the special "mlp" case.
-KNOWN_MODELS: frozenset[str] = frozenset({"random_forest", "xgboost", "mlp"})
+# Single source of truth — must stay in sync with the branches in
+# model_service.load_model_by_name and the Literal in schemas.models.ModelName.
+# Adding a new model name here also requires:
+#   1. A branch (or registry entry) in model_service.load_model_by_name.
+#   2. The same name in schemas/models.py::ModelName.
+KNOWN_MODELS: frozenset[str] = frozenset(
+    {
+        "random_forest",
+        "xgboost",
+        "mlp",
+        "random_forest_v2",
+        "xgboost_v2",
+    }
+)
 
 
 class ModelRegistry:

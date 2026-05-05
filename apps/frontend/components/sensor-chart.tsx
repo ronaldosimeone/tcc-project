@@ -71,8 +71,8 @@ const ChartTooltip = memo(function ChartTooltip({
 }: CustomTooltipProps) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="rounded-lg border border-zinc-200/60 bg-white/60 px-3 py-2 shadow-md backdrop-blur-md">
-      <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+    <div className="rounded-lg border border-border/80 bg-popover/90 px-3 py-2 shadow-md backdrop-blur-md">
+      <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
         {label}
       </p>
       {payload.map((entry) => (
@@ -81,8 +81,8 @@ const ChartTooltip = memo(function ChartTooltip({
             className="inline-block h-2 w-2 rounded-full"
             style={{ background: entry.color }}
           />
-          <span className="text-zinc-600">{entry.name}</span>
-          <span className="ml-auto font-bold tabular-nums text-zinc-900">
+          <span className="text-muted-foreground">{entry.name}</span>
+          <span className="ml-auto font-bold tabular-nums text-foreground">
             {entry.value}
           </span>
         </div>
@@ -95,10 +95,10 @@ const ChartTooltip = memo(function ChartTooltip({
 
 const AXIS_TICK_STYLE = {
   fontSize: 10,
-  fill: "hsl(215 15% 45%)",
+  fill: "hsl(var(--muted-foreground))",
 } as const;
 
-const GRID_STROKE = "hsl(217 18% 16%)";
+const GRID_STROKE = "hsl(var(--border))";
 
 // Instâncias únicas do tooltip para evitar recriação a cada render
 const TOOLTIP_CONTENT = <ChartTooltip />;

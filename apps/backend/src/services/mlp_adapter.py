@@ -98,8 +98,18 @@ class OnnxMlpAdapter:
                 "Run `python src/train_mlp.py` first."
             )
 
+        # V2 — ORT graph optimisation (constant folding, layer fusion).
+        # Single-row inference: 1 intra-op thread is enough; sequential mode
+        # avoids thread-pool churn and gives the lowest p95 latency.
+        sess_opts = ort.SessionOptions()
+        sess_opts.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
+        sess_opts.execution_mode = ort.ExecutionMode.ORT_SEQUENTIAL
+        sess_opts.intra_op_num_threads = 1
+        sess_opts.inter_op_num_threads = 1
+
         self._session = ort.InferenceSession(
             str(onnx_path),
+            sess_options=sess_opts,
             providers=["CPUExecutionProvider"],
         )
         self._input_name: str = self._session.get_inputs()[0].name

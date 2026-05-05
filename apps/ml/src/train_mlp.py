@@ -37,6 +37,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import os
 import sys
 import time
 from datetime import datetime, timezone
@@ -54,13 +55,24 @@ import torch.nn as nn
 import torch.nn.functional as F
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 from pytorch_lightning.loggers import MLFlowLogger
-from sklearn.metrics import classification_report, f1_score, roc_auc_score
+from sklearn.metrics import (
+    classification_report,
+    f1_score,
+    precision_recall_curve,
+    roc_auc_score,
+)
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from torch.utils.data import DataLoader, TensorDataset
 from torchmetrics.classification import BinaryAUROC, BinaryF1Score
 
-mlflow.set_tracking_uri("http://localhost:5000")
+# Resolve MLflow tracking URI por env-var.
+# Default: 'mlflow:5000' (DNS interno da rede Docker app-network).
+# Para rodar fora do Docker, basta exportar MLFLOW_TRACKING_URI=http://localhost:5000.
+_MLFLOW_TRACKING_URI: str = os.environ.get(
+    "MLFLOW_TRACKING_URI", "http://mlflow:5000"
+)
+mlflow.set_tracking_uri(_MLFLOW_TRACKING_URI)
 
 # ── resolve paths from this file's location ───────────────────────────────────
 _HERE: Path = Path(__file__).resolve().parent  # apps/ml/src/
@@ -360,13 +372,29 @@ def train(max_epochs: int = 50, batch_size: int = 1024) -> None:
     pos_weight = round(n_neg / n_pos, 4)
     log.info("pos_weight = %.2f  (neg=%d, pos=%d)", pos_weight, n_neg, n_pos)
 
-    # 6. MLflow logger
+    # 6. MLflow logger — opcional. Falha graciosamente se o servidor estiver
+    #    inalcançável (rede Docker, host validation, MLflow desligado).
     experiment_name = "mlp_metropt3"
-    mlflow_logger = MLFlowLogger(
-        experiment_name=experiment_name,
-        tracking_uri="http://localhost:5000",  # Alterado de file para http
-        log_model=True,
-    )
+    mlflow_logger: MLFlowLogger | None
+    try:
+        candidate = MLFlowLogger(
+            experiment_name=experiment_name,
+            tracking_uri=_MLFLOW_TRACKING_URI,
+            log_model=True,
+        )
+        # Sondagem precoce: o `experiment` property dispara o GET na API.
+        # Se falhar aqui, evitamos crash dentro do trainer.fit().
+        _ = candidate.experiment
+        mlflow_logger = candidate
+        log.info("MLflow tracking habilitado em %s", _MLFLOW_TRACKING_URI)
+    except Exception as exc:
+        log.warning(
+            "MLflow indisponível em %s — treino prosseguirá SEM experiment tracking. "
+            "Motivo: %s",
+            _MLFLOW_TRACKING_URI,
+            exc,
+        )
+        mlflow_logger = None
 
     # 7. Callbacks
     # dirpath is set explicitly to a local absolute path to avoid the
@@ -399,10 +427,11 @@ def train(max_epochs: int = 50, batch_size: int = 1024) -> None:
         max_epochs=max_epochs,
     )
 
-    # 9. Trainer
+    # 9. Trainer — `logger=False` desabilita logging quando MLflow não está
+    #    disponível (Lightning aceita None mas avisa; False é mais explícito).
     trainer = pl.Trainer(
         max_epochs=max_epochs,
-        logger=mlflow_logger,
+        logger=mlflow_logger if mlflow_logger is not None else False,
         callbacks=[checkpoint_cb, early_stop_cb],
         enable_progress_bar=True,
         log_every_n_steps=10,
@@ -449,34 +478,47 @@ def train(max_epochs: int = 50, batch_size: int = 1024) -> None:
         "Latency p50/p95:   %.2f ms / %.2f ms", latency["p50_ms"], latency["p95_ms"]
     )
 
-    # 13. Log artefacts to MLflow (same run the logger opened)
-    with mlflow.start_run(run_id=mlflow_logger.run_id):
-        mlflow.log_params(
-            {
-                "hidden_dims": "[256, 128, 64]",
-                "dropout": 0.3,
-                "learning_rate": 1e-3,
-                "batch_size": batch_size,
-                "max_epochs": max_epochs,
-                "pos_weight": pos_weight,
-                "optimizer": "AdamW",
-                "scheduler": "CosineAnnealingLR",
-            }
-        )
-        mlflow.log_metrics(
-            {
-                "test_f1_class1": round(f1, 4),
-                "test_roc_auc": round(auc, 4),
-                "latency_p50_ms": latency["p50_ms"],
-                "latency_p95_ms": latency["p95_ms"],
-            }
-        )
-        mlflow.log_artifact(str(onnx_path), artifact_path="model")
-        mlflow.log_artifact(str(scaler_path), artifact_path="model")
+    # V2 — Threshold tuning via F2-score
+    threshold_info = _find_optimal_threshold(y_test_arr, y_proba, beta=2.0)
+    y_pred_tuned = (y_proba >= threshold_info["threshold"]).astype(int)
+    tuned_report = classification_report(y_test_arr, y_pred_tuned, output_dict=True)
+    log.info(
+        "[V2] Optimal threshold (F2): %.4f | precision=%.4f | recall=%.4f | F2=%.4f",
+        threshold_info["threshold"],
+        threshold_info["precision"],
+        threshold_info["recall"],
+        threshold_info["fbeta"],
+    )
 
-    # 14. Model card
+    # 13. Log artefacts to MLflow (same run the logger opened) — só se disponível
+    if mlflow_logger is not None:
+        with mlflow.start_run(run_id=mlflow_logger.run_id):
+            mlflow.log_params(
+                {
+                    "hidden_dims": "[256, 128, 64]",
+                    "dropout": 0.3,
+                    "learning_rate": 1e-3,
+                    "batch_size": batch_size,
+                    "max_epochs": max_epochs,
+                    "pos_weight": pos_weight,
+                    "optimizer": "AdamW",
+                    "scheduler": "CosineAnnealingLR",
+                }
+            )
+            mlflow.log_metrics(
+                {
+                    "test_f1_class1": round(f1, 4),
+                    "test_roc_auc": round(auc, 4),
+                    "latency_p50_ms": latency["p50_ms"],
+                    "latency_p95_ms": latency["p95_ms"],
+                }
+            )
+            mlflow.log_artifact(str(onnx_path), artifact_path="model")
+            mlflow.log_artifact(str(scaler_path), artifact_path="model")
+
+    # 14. Model card (V2)
     card: dict[str, Any] = {
-        "schema_version": "1.0",
+        "schema_version": "2.0",
         "trained_at": datetime.now(timezone.utc).isoformat(),
         "model_type": "MlpClassifier",
         "framework": "PyTorch Lightning",
@@ -516,11 +558,21 @@ def train(max_epochs: int = 50, batch_size: int = 1024) -> None:
         },
         "feature_count": len(_FEATURE_NAMES),
         "feature_names": _FEATURE_NAMES,
+        # V2 — threshold tuning consumed by ModelService at load time
+        "decision_threshold": round(threshold_info["threshold"], 4),
+        "threshold_strategy": "F2-score (recall-favouring)",
+        "threshold_metrics": {
+            "precision": round(threshold_info["precision"], 4),
+            "recall": round(threshold_info["recall"], 4),
+            "fbeta": round(threshold_info["fbeta"], 4),
+            "beta": threshold_info["beta"],
+        },
         "metrics": {
             "f1_class1_test": round(f1, 4),
             "roc_auc_test": round(auc, 4),
             "latency_single_row_ms": latency,
             "classification_report": report,
+            "tuned_classification_report": tuned_report,
         },
     }
     card_path = _MODELS_DIR / "mlp_v1_card.json"
@@ -528,8 +580,9 @@ def train(max_epochs: int = 50, batch_size: int = 1024) -> None:
     log.info("Model card saved → %s", card_path)
 
     # Log card to MLflow so promote_model.py can download it (RNF-26)
-    with mlflow.start_run(run_id=mlflow_logger.run_id):
-        mlflow.log_artifact(str(card_path), artifact_path="model")
+    if mlflow_logger is not None:
+        with mlflow.start_run(run_id=mlflow_logger.run_id):
+            mlflow.log_artifact(str(card_path), artifact_path="model")
 
     log.info("Done.")
 
@@ -544,6 +597,27 @@ def _softmax(logits: np.ndarray) -> np.ndarray:
     shifted = logits - logits.max(axis=1, keepdims=True)
     exp = np.exp(shifted)
     return exp / exp.sum(axis=1, keepdims=True)
+
+
+def _find_optimal_threshold(
+    y_true: np.ndarray,
+    y_proba: np.ndarray,
+    beta: float = 2.0,
+) -> dict[str, float]:
+    """F-beta optimal cut-off — see ``train_random_forest.find_optimal_threshold``."""
+    precision, recall, thresholds = precision_recall_curve(y_true, y_proba)
+    p, r = precision[:-1], recall[:-1]
+    fbeta_num = (1 + beta**2) * p * r
+    fbeta_den = (beta**2) * p + r + 1e-9
+    fbeta = fbeta_num / fbeta_den
+    best_idx = int(np.argmax(fbeta))
+    return {
+        "threshold": float(thresholds[best_idx]),
+        "precision": float(p[best_idx]),
+        "recall": float(r[best_idx]),
+        "fbeta": float(fbeta[best_idx]),
+        "beta": beta,
+    }
 
 
 # ---------------------------------------------------------------------------
