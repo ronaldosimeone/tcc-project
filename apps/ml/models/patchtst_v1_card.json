@@ -1,0 +1,146 @@
+{
+  "schema_version": "2.0",
+  "trained_at": "2026-05-04T15:02:26.546308+00:00",
+  "model_type": "PatchTSTClassifier",
+  "framework": "PyTorch Lightning",
+  "export_format": "ONNX",
+  "dataset": "MetroPT-3",
+  "target_column": "anomaly",
+  "requirements": {
+    "RNF-24": "MLflow experiment tracking (local mlruns/)",
+    "RF-10": "Selectable via ACTIVE_MODEL=patchtst env-var",
+    "RF-04": "F1-Score (classe 1) >= 0.75"
+  },
+  "train_size": 121351,
+  "test_size": 30338,
+  "test_size_ratio": 0.2,
+  "random_state": 42,
+  "architecture": {
+    "n_channels": 12,
+    "window_size": 60,
+    "patch_len": 12,
+    "stride": 6,
+    "d_model": 64,
+    "n_heads": 4,
+    "n_layers": 3,
+    "dropout": 0.2,
+    "learning_rate": 0.001,
+    "pos_weight": 49.2697,
+    "max_epochs": 10
+  },
+  "training": {
+    "optimizer": "AdamW",
+    "lr": 0.001,
+    "weight_decay": 0.0001,
+    "scheduler": "CosineAnnealingLR",
+    "batch_size": 256,
+    "max_epochs": 10,
+    "early_stopping_patience": 10,
+    "monitor_metric": "val_f1",
+    "pos_weight": 49.2697
+  },
+  "preprocessing": {
+    "scaler": "StandardScaler (per-channel, fit on train windows only)",
+    "scaler_artefact": "patchtst_scaler.joblib",
+    "feature_set": "raw",
+    "window_size": 60,
+    "stride": 10,
+    "apply_smote": false
+  },
+  "feature_count": 12,
+  "feature_names": [
+    "TP2",
+    "TP3",
+    "H1",
+    "DV_pressure",
+    "Reservoirs",
+    "Motor_current",
+    "Oil_temperature",
+    "COMP",
+    "DV_eletric",
+    "Towers",
+    "MPG",
+    "Oil_level"
+  ],
+  "inference": {
+    "buffer_strategy": "sliding_window",
+    "window_size": 60,
+    "expects_shape": [
+      1,
+      60,
+      12
+    ],
+    "fixed_batch_size": 1
+  },
+  "decision_threshold": 0.9171,
+  "threshold_strategy": "F2-score (recall-favouring)",
+  "threshold_metrics": {
+    "precision": 0.8923,
+    "recall": 0.9735,
+    "fbeta": 0.9561,
+    "beta": 2.0
+  },
+  "metrics": {
+    "f1_class1_test": 0.8156,
+    "roc_auc_test": 0.9994,
+    "latency_single_row_ms": {
+      "p50_ms": 0.18,
+      "p95_ms": 0.202
+    },
+    "onnx_max_abs_diff": 0.0,
+    "classification_report": {
+      "0": {
+        "precision": 0.9997625347716942,
+        "recall": 0.9911549068406538,
+        "f1-score": 0.9954401134905086,
+        "support": 29734.0
+      },
+      "1": {
+        "precision": 0.6941860465116279,
+        "recall": 0.9884105960264901,
+        "f1-score": 0.8155737704918032,
+        "support": 604.0
+      },
+      "accuracy": 0.9911002702880876,
+      "macro avg": {
+        "precision": 0.8469742906416611,
+        "recall": 0.989782751433572,
+        "f1-score": 0.9055069419911559,
+        "support": 30338.0
+      },
+      "weighted avg": {
+        "precision": 0.993678804832045,
+        "recall": 0.9911002702880876,
+        "f1-score": 0.9918591499737568,
+        "support": 30338.0
+      }
+    },
+    "tuned_classification_report": {
+      "0": {
+        "precision": 0.9994608982782439,
+        "recall": 0.9976121611623058,
+        "f1-score": 0.9985356740107384,
+        "support": 29734.0
+      },
+      "1": {
+        "precision": 0.8922610015174507,
+        "recall": 0.9735099337748344,
+        "f1-score": 0.9311163895486936,
+        "support": 604.0
+      },
+      "accuracy": 0.9971323093150505,
+      "macro avg": {
+        "precision": 0.9458609498978473,
+        "recall": 0.9855610474685701,
+        "f1-score": 0.9648260317797159,
+        "support": 30338.0
+      },
+      "weighted avg": {
+        "precision": 0.9973266528552259,
+        "recall": 0.9971323093150505,
+        "f1-score": 0.9971934217919014,
+        "support": 30338.0
+      }
+    }
+  }
+}

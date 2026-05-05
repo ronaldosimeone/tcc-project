@@ -79,6 +79,12 @@ _MODEL_CARDS: dict[str, str] = {
     # model_card.json and train_xgboost.py writes xgboost_v1_card.json.
     "random_forest_v2": "model_card.json",
     "xgboost_v2": "xgboost_v1_card.json",
+    # Sequential DL models — RNF-24 extension
+    "tcn": "tcn_v1_card.json",
+    "bilstm": "bilstm_v1_card.json",
+    "patchtst": "patchtst_v1_card.json",
+    # Unsupervised Conv1D Autoencoder
+    "autoencoder": "autoencoder_v1_card.json",
 }
 
 
@@ -155,7 +161,9 @@ def _resolve_feature_names(model_name: str) -> list[str]:
 # ---------------------------------------------------------------------------
 
 
-def load_model(path: Path, decision_threshold: float = _DEFAULT_THRESHOLD) -> "ModelService":
+def load_model(
+    path: Path, decision_threshold: float = _DEFAULT_THRESHOLD
+) -> "ModelService":
     """Carrega o modelo do disco. Se não achar, tenta o nome alternativo."""
     if not path.exists():
         # Tentativa amigável caso o config ainda aponte para o nome antigo
@@ -225,15 +233,122 @@ def load_model_by_name(model_name: str) -> "ModelService":
             onnx_path,
             len(feature_names),
         )
-        adapter = OnnxTreeAdapter(
-            onnx_path=onnx_path,
-            feature_names=feature_names,
+        return ModelService(
+            OnnxTreeAdapter(onnx_path=onnx_path, feature_names=feature_names),
+            decision_threshold=threshold,
         )
-        return ModelService(adapter, decision_threshold=threshold)
+
+    if model_name in {"tcn", "bilstm", "patchtst"}:
+        return _load_sequential_model(model_name, threshold)
+
+    if model_name == "autoencoder":
+        return _load_autoencoder_model(threshold)
 
     path = _MODEL_REGISTRY.get(model_name, settings.model_path)
     logger.info("[RF-10] Loading model '%s' | path = %s", model_name, path)
     return load_model(path, decision_threshold=threshold)
+
+
+def _load_sequential_model(model_name: str, threshold: float) -> "ModelService":
+    """
+    Load a sequential ONNX model (TCN, BiLSTM or PatchTST) via OnnxSequenceAdapter.
+
+    Reads ``window_size`` and ``feature_names`` from the model card so the
+    adapter is self-configured without hard-coded constants here.
+    """
+    from src.services.onnx_sequence_adapter import OnnxSequenceAdapter
+
+    onnx_path_map: dict[str, Path] = {
+        "tcn": settings.tcn_onnx_path,
+        "bilstm": settings.bilstm_onnx_path,
+        "patchtst": settings.patchtst_onnx_path,
+    }
+    scaler_path_map: dict[str, Path] = {
+        "tcn": settings.tcn_scaler_path,
+        "bilstm": settings.bilstm_scaler_path,
+        "patchtst": settings.patchtst_scaler_path,
+    }
+
+    onnx_path: Path = onnx_path_map[model_name]
+    scaler_path: Path = scaler_path_map[model_name]
+
+    # Read window_size and channel_names from the card — avoids hard-coding.
+    card: dict[str, Any] | None = _read_model_card(model_name)
+    window_size: int = 60  # safe default matching train_sequential.py
+    channel_names: list[str] | None = None
+    if card is not None:
+        # ``card.get("inference") or {}`` handles both the missing-key case
+        # (returns {}) and the explicit-null case (returns {}); the bare
+        # ``card.get("inference", {})`` would let an explicit JSON null
+        # propagate and crash on the next ``.get(...)``.
+        inference_cfg: dict[str, Any] = card.get("inference") or {}
+        window_size = int(inference_cfg.get("window_size", window_size))
+        raw_names = card.get("feature_names")
+        if isinstance(raw_names, list) and raw_names:
+            channel_names = [str(n) for n in raw_names]
+
+    logger.info(
+        "[RF-10] Loading model '%s' | onnx=%s | T=%d | C=%s",
+        model_name,
+        onnx_path,
+        window_size,
+        len(channel_names) if channel_names else "default",
+    )
+
+    adapter: OnnxSequenceAdapter = OnnxSequenceAdapter(
+        onnx_path=onnx_path,
+        scaler_path=scaler_path,
+        window_size=window_size,
+        channel_names=channel_names,
+    )
+    return ModelService(adapter, decision_threshold=threshold)
+
+
+def _load_autoencoder_model(threshold: float) -> "ModelService":
+    """
+    Load the Conv1D Autoencoder via OnnxAutoencoderAdapter.
+
+    Reads ``mse_threshold`` and ``feature_names`` from the model card so the
+    adapter is fully self-configured without hard-coded constants here.
+    """
+    from src.services.onnx_autoencoder_adapter import OnnxAutoencoderAdapter
+
+    card: dict[str, Any] | None = _read_model_card("autoencoder")
+    if card is None:
+        raise FileNotFoundError(
+            "autoencoder_v1_card.json not found — run `python src/train_autoencoder.py` first."
+        )
+
+    mse_threshold = card.get("mse_threshold")
+    if mse_threshold is None:
+        raise ValueError(
+            "autoencoder_v1_card.json is missing 'mse_threshold'. "
+            "Re-run `python src/train_autoencoder.py` to regenerate the card."
+        )
+
+    window_size: int = 60
+    channel_names: list[str] | None = None
+    inference_cfg: dict[str, Any] = card.get("inference") or {}
+    window_size = int(inference_cfg.get("window_size", window_size))
+    raw_names = card.get("feature_names")
+    if isinstance(raw_names, list) and raw_names:
+        channel_names = [str(n) for n in raw_names]
+
+    logger.info(
+        "[RF-10] Loading model 'autoencoder' | onnx=%s | T=%d | mse_threshold=%.6f",
+        settings.autoencoder_onnx_path,
+        window_size,
+        float(mse_threshold),
+    )
+
+    adapter = OnnxAutoencoderAdapter(
+        onnx_path=settings.autoencoder_onnx_path,
+        scaler_path=settings.autoencoder_scaler_path,
+        mse_threshold=float(mse_threshold),
+        window_size=window_size,
+        channel_names=channel_names,
+    )
+    return ModelService(adapter, decision_threshold=threshold)
 
 
 def load_active_model() -> "ModelService":

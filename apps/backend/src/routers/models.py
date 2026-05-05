@@ -39,6 +39,12 @@ _ARTEFACT_PATHS: dict[str, Path] = {
     "mlp": settings.mlp_onnx_path,
     "random_forest_v2": settings.rf_v2_onnx_path,
     "xgboost_v2": settings.xgboost_v2_onnx_path,
+    # Sequential DL models — RNF-24 extension.  The ONNX file is the
+    # canonical readiness signal; the per-channel scaler is always produced
+    # alongside it by train_sequential.py and tracked via _MODEL_CARDS.
+    "tcn": settings.tcn_onnx_path,
+    "bilstm": settings.bilstm_onnx_path,
+    "patchtst": settings.patchtst_onnx_path,
 }
 
 

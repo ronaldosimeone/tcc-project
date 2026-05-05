@@ -30,6 +30,7 @@ torchmetrics>=1.4.0
 mlflow>=2.14.0
 onnx>=1.16.1
 onnxruntime>=1.18.1
+onnxscript>=0.1.0
 
 # V2 — Conversão ONNX para RandomForest e XGBoost
 skl2onnx>=1.17.0

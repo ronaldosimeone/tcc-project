@@ -51,7 +51,7 @@ from src.core.exceptions import ModelNotAvailableError
 from src.schemas.predict import PredictRequest, PredictResponse
 from src.schemas.stream import SensorReading
 from src.services.alert_service import AlertService
-from src.services.feature_buffer import SensorBuffer
+from src.services.feature_buffer import SensorBuffer, get_sensor_buffer
 from src.services.model_registry import ModelRegistry
 from src.services.model_service import ModelService
 from src.services.prediction_service import save_prediction
@@ -160,9 +160,7 @@ class InferencePipelineService:
         self._registry = registry
         self._alert = alert_service
         self._buffer: SensorBuffer = sensor_buffer or get_sensor_buffer()
-        self._preprocessor: MetroPTPreprocessor = (
-            preprocessor or MetroPTPreprocessor()
-        )
+        self._preprocessor: MetroPTPreprocessor = preprocessor or MetroPTPreprocessor()
         self._task: asyncio.Task[None] | None = None
         # Loga só uma vez quando o buffer aquece — evita spam por leitura.
         self._warm_logged: bool = False
@@ -251,9 +249,7 @@ class InferencePipelineService:
                 # Fallback durante o warmup — features rolling zeradas, mas
                 # mantém o pipeline funcional desde o primeiro tick.
                 predict_request = _reading_to_request(reading)
-                result = await asyncio.to_thread(
-                    model_service.predict, predict_request
-                )
+                result = await asyncio.to_thread(model_service.predict, predict_request)
         except Exception as exc:
             log.warning("inference_error", error=str(exc), warm=warm)
             return

@@ -37,8 +37,6 @@ from __future__ import annotations
 
 from collections import deque
 from threading import Lock
-from typing import Any
-
 import pandas as pd
 
 

@@ -1,0 +1,112 @@
+{
+  "schema_version": "2.0",
+  "trained_at": "2026-05-05T14:59:11.242173+00:00",
+  "model_type": "Conv1DAutoencoder",
+  "framework": "PyTorch Lightning",
+  "export_format": "ONNX",
+  "dataset": "MetroPT-3",
+  "target_column": "anomaly",
+  "anomaly_detection_strategy": "reconstruction_error",
+  "requirements": {
+    "RF-10": "Selectable via ACTIVE_MODEL=autoencoder env-var"
+  },
+  "train_size": 118937,
+  "val_size": 30338,
+  "val_healthy": 29734,
+  "val_anomaly": 604,
+  "test_size_ratio": 0.2,
+  "random_state": 42,
+  "architecture": {
+    "type": "Conv1D Autoencoder",
+    "input_shape": [
+      1,
+      60,
+      12
+    ],
+    "latent_shape": [
+      1,
+      128,
+      8
+    ],
+    "encoder_channels": [
+      12,
+      32,
+      64,
+      128
+    ],
+    "decoder_channels": [
+      128,
+      64,
+      32,
+      12
+    ],
+    "kernel_size": 5,
+    "stride": 2,
+    "activation": "GELU",
+    "bottleneck_size": 1024
+  },
+  "training": {
+    "loss": "MSE (healthy windows only)",
+    "optimizer": "AdamW",
+    "lr": 0.001,
+    "weight_decay": 0.0001,
+    "scheduler": "CosineAnnealingLR",
+    "batch_size": 256,
+    "max_epochs": 10,
+    "early_stopping_patience": 10,
+    "monitor_metric": "val_loss",
+    "training_data": "healthy_only (label=0)",
+    "actual_epochs": 10
+  },
+  "preprocessing": {
+    "scaler": "StandardScaler (per-channel, fitted on healthy train windows)",
+    "scaler_artefact": "autoencoder_scaler.joblib",
+    "window_size": 60,
+    "stride": 10
+  },
+  "feature_count": 12,
+  "feature_names": [
+    "TP2",
+    "TP3",
+    "H1",
+    "DV_pressure",
+    "Reservoirs",
+    "Motor_current",
+    "Oil_temperature",
+    "COMP",
+    "DV_eletric",
+    "Towers",
+    "MPG",
+    "Oil_level"
+  ],
+  "mse_threshold": 0.06288089260458939,
+  "mse_threshold_percentile": 99.0,
+  "mse_threshold_source": "percentile_99_healthy_val_windows",
+  "mse_calibration_stats": {
+    "healthy_mse_mean": 0.005924026974619876,
+    "healthy_mse_std": 0.013905427450891223,
+    "healthy_mse_p99": 0.06288089260458939,
+    "anomaly_mse_mean": 0.01345152166650464,
+    "anomaly_mse_std": 0.016840572447159852,
+    "separation_sigma": 0.5413346195306006
+  },
+  "decision_threshold": 0.5,
+  "threshold_strategy": "sigmoid((mse - mse_threshold) / (mse_threshold / 3)) \u2265 0.5 \u2194 mse \u2265 mse_threshold",
+  "inference": {
+    "buffer_strategy": "sliding_window",
+    "expects_shape": [
+      1,
+      60,
+      12
+    ],
+    "window_size": 60,
+    "adapter": "OnnxAutoencoderAdapter"
+  },
+  "metrics": {
+    "onnx_max_abs_diff": 2.384185791015625e-06,
+    "latency_single_window_ms": {
+      "p50_ms": 0.060065001889597625,
+      "p95_ms": 0.08695350552443415
+    }
+  }
+}

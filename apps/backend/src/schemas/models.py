@@ -16,6 +16,12 @@ ModelName = Literal[
     "mlp",
     "random_forest_v2",
     "xgboost_v2",
+    # Sequential DL models — RNF-24 extension
+    "tcn",
+    "bilstm",
+    "patchtst",
+    # Unsupervised anomaly detection via reconstruction error
+    "autoencoder",
 ]
 
 
