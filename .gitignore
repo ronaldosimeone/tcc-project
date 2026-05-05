@@ -1,7 +1,6 @@
 node_modules/
 .env
 __pycache__/
-.claude
 apps/frontend/.pnpm-store/
 
 # ML data – never commit datasets
