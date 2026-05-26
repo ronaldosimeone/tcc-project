@@ -1,20 +1,44 @@
 "use client";
 
-import { BarChart3, Gauge, LayoutDashboard, Settings } from "lucide-react";
-import Link from "next/link";
+import { useState } from "react";
 import { usePathname } from "next/navigation";
+import Link from "next/link";
+import {
+  Activity,
+  BarChart3,
+  Cpu,
+  FlaskConical,
+  Gauge,
+  LayoutDashboard,
+  PanelLeftClose,
+  PanelLeftOpen,
+} from "lucide-react";
+
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { SimulationPanel } from "@/components/simulation-panel";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
+
+type NavAction = "simulation";
 
 interface NavItem {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   href?: string;
+  action?: NavAction;
 }
 
 const NAV_ITEMS: NavItem[] = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/" },
   { icon: Gauge, label: "Sensores", href: "/sensors/APU-Trem-042" },
   { icon: BarChart3, label: "Histórico", href: "/history" },
-  { icon: Settings, label: "Configurações" },
+  { icon: FlaskConical, label: "Simulação", action: "simulation" },
 ];
 
 function isActive(href: string | undefined, pathname: string): boolean {
@@ -23,50 +47,167 @@ function isActive(href: string | undefined, pathname: string): boolean {
   return pathname.startsWith(href);
 }
 
+interface NavLinkProps {
+  item: NavItem;
+  active: boolean;
+  isOpen: boolean;
+  onAction?: (action: NavAction) => void;
+}
+
+function NavLink({ item, active, isOpen, onAction }: NavLinkProps) {
+  const Icon = item.icon;
+
+  const cls = cn(
+    "flex h-10 w-full items-center rounded-md text-sm font-medium transition-colors",
+    isOpen ? "gap-3 px-3" : "justify-center px-0",
+    active
+      ? "bg-primary/10 text-primary ring-1 ring-inset ring-primary/20"
+      : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+  );
+
+  const inner = (
+    <>
+      <Icon className="h-4 w-4 shrink-0" />
+      <span
+        className={cn(
+          "overflow-hidden truncate transition-[opacity,width] duration-200",
+          isOpen ? "w-auto opacity-100" : "w-0 opacity-0",
+        )}
+      >
+        {item.label}
+      </span>
+    </>
+  );
+
+  const element = item.href ? (
+    <Link href={item.href} className={cls}>
+      {inner}
+    </Link>
+  ) : (
+    <button
+      type="button"
+      className={cls}
+      onClick={item.action ? () => onAction?.(item.action!) : undefined}
+    >
+      {inner}
+    </button>
+  );
+
+  if (!isOpen) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>{element}</TooltipTrigger>
+        <TooltipContent side="right">{item.label}</TooltipContent>
+      </Tooltip>
+    );
+  }
+
+  return element;
+}
+
 export default function Sidebar() {
+  const [isOpen, setIsOpen] = useState(true);
+  const [simulationOpen, setSimulationOpen] = useState(false);
   const pathname = usePathname();
 
+  const handleAction = (action: NavAction) => {
+    if (action === "simulation") setSimulationOpen(true);
+  };
+
   return (
-    <aside className="flex w-16 flex-col items-center gap-1 border-r border-border bg-card py-4 lg:w-56 lg:items-start lg:px-3">
-      <nav className="flex w-full flex-col gap-1">
-        {NAV_ITEMS.map(({ icon: Icon, label, href }) => {
-          const active = isActive(href, pathname);
-          const className = [
-            "flex h-10 w-full items-center gap-3 rounded-md px-3 text-sm font-medium transition-colors",
-            active
-              ? "bg-primary/10 text-primary ring-1 ring-inset ring-primary/20"
-              : "text-muted-foreground hover:bg-accent hover:text-foreground",
-          ].join(" ");
-
-          if (href) {
-            return (
-              <Link key={label} href={href} className={className}>
-                <Icon className="h-4 w-4 shrink-0" />
-                <span className="hidden lg:inline">{label}</span>
+    <TooltipProvider delayDuration={0}>
+      <SimulationPanel open={simulationOpen} onOpenChange={setSimulationOpen} />
+      <aside
+        className={cn(
+          "flex shrink-0 flex-col border-r border-slate-300 bg-sidebar",
+          "overflow-hidden transition-[width] duration-300 ease-in-out",
+          isOpen ? "w-64" : "w-16",
+        )}
+      >
+        {/* ── TOPO ──────────────────────────────────────────────── */}
+        <div className="flex h-14 shrink-0 items-center border-b border-slate-300 px-3">
+          {isOpen ? (
+            <div className="flex w-full items-center justify-between gap-2">
+              <Link
+                href="/"
+                className="flex min-w-0 items-center gap-2 transition-opacity hover:opacity-80"
+              >
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 ring-1 ring-primary/30">
+                  <Cpu className="h-4 w-4 text-primary" />
+                </div>
+                <div className="flex min-w-0 flex-col leading-none">
+                  <span className="truncate text-sm font-semibold tracking-tight text-sidebar-foreground">
+                    PredictIQ
+                  </span>
+                  <span className="truncate text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
+                    Manutenção Preditiva
+                  </span>
+                </div>
               </Link>
-            );
-          }
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 shrink-0 text-muted-foreground hover:text-sidebar-foreground"
+                onClick={() => setIsOpen(false)}
+                aria-label="Fechar barra lateral"
+              >
+                <PanelLeftClose className="h-4 w-4" />
+              </Button>
+            </div>
+          ) : (
+            <div className="group relative flex w-full items-center justify-center">
+              {/* Ícone da logo — desaparece no hover */}
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 ring-1 ring-primary/30 transition-opacity duration-150 group-hover:opacity-0">
+                <Cpu className="h-4 w-4 text-primary" />
+              </div>
+              {/* Botão de abrir — aparece no hover */}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute inset-0 m-auto h-8 w-8 text-muted-foreground opacity-0 transition-opacity duration-150 group-hover:opacity-100 hover:text-sidebar-foreground"
+                onClick={() => setIsOpen(true)}
+                aria-label="Abrir barra lateral"
+              >
+                <PanelLeftOpen className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
+        </div>
 
-          return (
-            <button key={label} className={className}>
-              <Icon className="h-4 w-4 shrink-0" />
-              <span className="hidden lg:inline">{label}</span>
-            </button>
-          );
-        })}
-      </nav>
+        {/* ── NAVEGAÇÃO ──────────────────────────────────────────── */}
+        <nav className="flex flex-1 flex-col gap-1 p-2 py-4">
+          {NAV_ITEMS.map((item) => (
+            <NavLink
+              key={item.label}
+              item={item}
+              active={isActive(item.href, pathname)}
+              isOpen={isOpen}
+              onAction={handleAction}
+            />
+          ))}
+        </nav>
 
-      <div className="mt-auto hidden w-full rounded-md border border-border bg-muted/30 p-3 lg:block">
-        <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-          Modelo
-        </p>
-        <p className="mt-0.5 truncate text-xs text-foreground/80">
-          Random Forest · v1.0
-        </p>
-        <p className="mt-0.5 text-[10px] text-muted-foreground">
-          12 sensores · anomaly
-        </p>
-      </div>
-    </aside>
+        {/* ── RODAPÉ — Tags de status ────────────────────────────── */}
+        <div
+          className={cn(
+            "overflow-hidden transition-[max-height,opacity] duration-300",
+            isOpen ? "max-h-24 opacity-100" : "max-h-0 opacity-0",
+          )}
+        >
+          <div className="border-t border-slate-300 p-3">
+            <p className="truncate text-xs text-muted-foreground">
+              MetroPT-3 · Compressor Industrial
+            </p>
+            <Badge
+              variant="outline"
+              className="mt-2 gap-1.5 border-primary/40 bg-primary/10 text-primary"
+            >
+              <Activity className="h-3 w-3 animate-pulse" />
+              AO VIVO
+            </Badge>
+          </div>
+        </div>
+      </aside>
+    </TooltipProvider>
   );
 }

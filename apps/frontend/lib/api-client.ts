@@ -42,6 +42,39 @@ export interface PredictResponse {
   timestamp: string;
 }
 
+// ── Domínio: MLOps & Simulator ───────────────────────────────────────────────
+
+/** Status de um único modelo registado (RF-11). */
+export interface ModelSummary {
+  /** Nome bruto enviado pelo backend (ex.: `random_forest_v2`). */
+  name: string;
+  /** `true` se for o modelo activo na inferência. */
+  active: boolean;
+  /** `true` se o artefato `.onnx` existe em disco. */
+  artefact_ready: boolean;
+}
+
+/** Resposta de `GET /models`. */
+export interface ModelsListResponse {
+  active_model: string;
+  models: ModelSummary[];
+}
+
+/** Resposta de `PUT /models/active`. */
+export interface SwapModelResponse {
+  previous_model: string;
+  active_model: string;
+  message: string;
+}
+
+/** Os 3 cenários do simulador de dados (RNF-29). */
+export type SimulatorMode = "NORMAL" | "DEGRADATION" | "FAILURE";
+
+export interface SimulatorModeResponse {
+  mode: SimulatorMode;
+  message: string;
+}
+
 // ── Helpers internos ─────────────────────────────────────────────────────────
 
 function resolveBaseUrl(): string {
@@ -82,4 +115,98 @@ export async function predict(
   }
 
   return response.json() as Promise<PredictResponse>;
+}
+
+// ── MLOps: gestão dos modelos (RF-11) ────────────────────────────────────────
+
+function resolveAdminHeader(): HeadersInit {
+  const token = process.env.NEXT_PUBLIC_ADMIN_TOKEN;
+  if (!token) return {};
+  return { "X-Admin-Token": token };
+}
+
+/** GET /models — devolve o modelo activo + status de todos os modelos. */
+export async function listModels(): Promise<ModelsListResponse> {
+  const baseUrl = resolveBaseUrl();
+
+  const response = await fetch(`${baseUrl}/models`, {
+    method: "GET",
+    headers: resolveAdminHeader(),
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error(
+      `[api-client] listModels() falhou — HTTP ${response.status} ${response.statusText}`,
+    );
+  }
+
+  return response.json() as Promise<ModelsListResponse>;
+}
+
+/** PUT /models/active — troca atomicamente o modelo de inferência. */
+export async function swapActiveModel(
+  modelName: string,
+): Promise<SwapModelResponse> {
+  const baseUrl = resolveBaseUrl();
+
+  const response = await fetch(`${baseUrl}/models/active`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      ...resolveAdminHeader(),
+    },
+    body: JSON.stringify({ model_name: modelName }),
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error(
+      `[api-client] swapActiveModel() falhou — HTTP ${response.status} ${response.statusText}`,
+    );
+  }
+
+  return response.json() as Promise<SwapModelResponse>;
+}
+
+// ── Simulator: controlo dos cenários (RNF-29) ────────────────────────────────
+
+/** GET /simulator/mode — devolve o cenário activo. */
+export async function getSimulatorMode(): Promise<SimulatorModeResponse> {
+  const baseUrl = resolveBaseUrl();
+
+  const response = await fetch(`${baseUrl}/simulator/mode`, {
+    method: "GET",
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error(
+      `[api-client] getSimulatorMode() falhou — HTTP ${response.status} ${response.statusText}`,
+    );
+  }
+
+  return response.json() as Promise<SimulatorModeResponse>;
+}
+
+/** PUT /simulator/mode — troca o cenário de simulação em tempo real. */
+export async function setSimulatorMode(
+  mode: SimulatorMode,
+): Promise<SimulatorModeResponse> {
+  const baseUrl = resolveBaseUrl();
+
+  const response = await fetch(`${baseUrl}/simulator/mode`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ mode }),
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error(
+      `[api-client] setSimulatorMode() falhou — HTTP ${response.status} ${response.statusText}`,
+    );
+  }
+
+  return response.json() as Promise<SimulatorModeResponse>;
 }
