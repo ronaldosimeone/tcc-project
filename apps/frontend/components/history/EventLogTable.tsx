@@ -147,9 +147,14 @@ function EmptyState() {
 
 interface EventLogTableProps {
   events: HistoryEvent[];
+  /** Disparado ao clicar numa linha — opcional; abre o RootCauseDrawer. */
+  onSelectEvent?: (event: HistoryEvent) => void;
 }
 
-export default function EventLogTable({ events }: EventLogTableProps) {
+export default function EventLogTable({
+  events,
+  onSelectEvent,
+}: EventLogTableProps) {
   const [sort, setSort] = useState<SortState>({
     column: "timestamp",
     direction: "desc",
@@ -271,7 +276,13 @@ export default function EventLogTable({ events }: EventLogTableProps) {
                     return (
                       <tr
                         key={event.id}
-                        className="group/row border-b border-border/40 last:border-0 transition-colors duration-150 hover:bg-muted/20"
+                        onClick={() => onSelectEvent?.(event)}
+                        className={cn(
+                          "group/row border-b border-slate-100 transition-colors duration-150 last:border-0",
+                          onSelectEvent
+                            ? "cursor-pointer hover:bg-slate-50"
+                            : "hover:bg-muted/20",
+                        )}
                       >
                         {/* Timestamp */}
                         <td className="py-3 pr-5">

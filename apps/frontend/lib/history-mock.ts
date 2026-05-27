@@ -519,6 +519,31 @@ export const HISTORY_EVENTS: HistoryEvent[] = [
   },
 ];
 
+/**
+ * Converte uma string de duração no formato dos logs ("1h 12min", "47min",
+ * "< 1min") em minutos numéricos. "< 1min" é tratado como 0.5 para evitar
+ * "engolir" eventos instantâneos quando se calcula MTTR.
+ */
+export function parseDurationMinutes(duration: string): number {
+  const trimmed = duration.trim();
+  if (trimmed.startsWith("<")) return 0.5;
+  const match = trimmed.match(/^(?:(\d+)h\s*)?(\d+)min$/);
+  if (!match) return 0;
+  const hours = match[1] ? parseInt(match[1], 10) : 0;
+  const mins = parseInt(match[2], 10);
+  return hours * 60 + mins;
+}
+
+/** Formata minutos numéricos como "Xh Ymin" ou "Ymin" para exibição. */
+export function formatMinutes(totalMin: number): string {
+  if (totalMin <= 0) return "—";
+  const h = Math.floor(totalMin / 60);
+  const m = Math.round(totalMin - h * 60);
+  if (h === 0) return `${m}min`;
+  if (m === 0) return `${h}h`;
+  return `${h}h ${m}min`;
+}
+
 export function generateDailyAlertCounts(
   events: HistoryEvent[],
   days: number,
