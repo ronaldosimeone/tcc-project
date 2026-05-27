@@ -14,6 +14,7 @@ the `finally` block runs and the queue is unregistered — no memory leak.
 from __future__ import annotations
 
 import asyncio
+import json
 from collections.abc import AsyncGenerator
 
 import structlog
@@ -77,9 +78,26 @@ async def stream_sensors(
                     continue
 
                 epoch_ms = int(reading.timestamp.timestamp() * 1000)
+
+                # Anexa telemetria MLOps publicada pelo InferencePipelineService.
+                # Lê o atributo cross-task (single-writer) — sem lock necessário
+                # no event loop. `None` se ainda não houve uma inferência
+                # completa (warmup do buffer ou primeiro tick).
+                pipeline = getattr(request.app.state, "inference_pipeline", None)
+                latency_ms = (
+                    getattr(pipeline, "last_inference_latency_ms", None)
+                    if pipeline is not None
+                    else None
+                )
+
+                payload = reading.model_dump(mode="json")
+                payload["inference_latency_ms"] = (
+                    round(latency_ms, 2) if latency_ms is not None else None
+                )
+
                 yield (
                     f"event: sensor_reading\n"
-                    f"data: {reading.model_dump_json()}\n"
+                    f"data: {json.dumps(payload, default=str)}\n"
                     f"id: {epoch_ms}\n"
                     f"retry: 3000\n\n"
                 )

@@ -42,6 +42,7 @@ Fluxo (roda concorrentemente com o broadcast SSE):
 from __future__ import annotations
 
 import asyncio
+import time
 
 import pandas as pd
 import structlog
@@ -164,6 +165,11 @@ class InferencePipelineService:
         self._task: asyncio.Task[None] | None = None
         # Loga só uma vez quando o buffer aquece — evita spam por leitura.
         self._warm_logged: bool = False
+        # Telemetria pública lida pela rota SSE: latência da última inferência
+        # bem-sucedida em ms. `None` antes do primeiro `_process` completo.
+        # Atributo é apenas escrito por este loop (single writer), então não
+        # precisamos de lock para a leitura cross-task no event loop.
+        self.last_inference_latency_ms: float | None = None
 
     # ── Lifecycle ─────────────────────────────────────────────────────────
 
@@ -235,6 +241,10 @@ class InferencePipelineService:
 
         # 3. Inferência — CPU-bound; despachada para a threadpool para não
         # bloquear o event loop (SSE broadcast, WebSocket, health checks).
+        # Mede latência ponta-a-ponta da chamada (preprocess + ONNX run +
+        # post-processing). Reportada ao frontend via campo
+        # `inference_latency_ms` no alerta WebSocket — alimenta o KPI 4.
+        start_ns = time.perf_counter_ns()
         try:
             if warm:
                 # Snapshot do buffer fora do thread (lock de leitura curto).
@@ -253,6 +263,9 @@ class InferencePipelineService:
         except Exception as exc:
             log.warning("inference_error", error=str(exc), warm=warm)
             return
+        inference_latency_ms: float = (time.perf_counter_ns() - start_ns) / 1_000_000
+        # Publica a leitura para os consumidores em-processo (SSE stream).
+        self.last_inference_latency_ms = inference_latency_ms
 
         # 4. Persiste no banco — sessão própria por leitura (RF-09)
         predict_request = _reading_to_request(reading)
@@ -270,6 +283,7 @@ class InferencePipelineService:
                 "probability": result.failure_probability,
                 "predicted_class": result.predicted_class,
                 "timestamp": result.timestamp,
+                "inference_latency_ms": inference_latency_ms,
             }
         )
 
@@ -277,5 +291,6 @@ class InferencePipelineService:
             "inference_completed",
             prob=result.failure_probability,
             cls=result.predicted_class,
+            latency_ms=round(inference_latency_ms, 2),
             warm=warm,
         )

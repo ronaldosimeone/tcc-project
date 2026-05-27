@@ -53,6 +53,13 @@ class AlertService:
             Enriched alert payload (also persisted by the caller).
         """
         probability: float = float(prediction.get("probability", 0.0))
+        # Latência medida no pipeline upstream; arredondada a 2 casas para
+        # manter o JSON leve. Opcional — payloads antigos sem latência ainda
+        # funcionam (frontend usa fallback).
+        raw_latency = prediction.get("inference_latency_ms")
+        inference_latency_ms: float | None = (
+            round(float(raw_latency), 2) if raw_latency is not None else None
+        )
         alert_payload: dict[str, Any] = {
             "type": "alert",
             "message_id": str(uuid.uuid4()),
@@ -61,6 +68,7 @@ class AlertService:
             "label": prediction.get("label", "unknown"),
             "sensor_id": prediction.get("sensor_id"),
             "triggered": probability > ALERT_PROBABILITY_THRESHOLD,
+            "inference_latency_ms": inference_latency_ms,
         }
 
         if alert_payload["triggered"]:
