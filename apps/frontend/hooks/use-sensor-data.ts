@@ -27,7 +27,12 @@ const SSE_URL = "/api/stream/sensors";
 
 // ── Tipos públicos ────────────────────────────────────────────────────────
 
-export type RiskLevel = "NORMAL" | "ALERTA" | "CRÍTICO";
+// Re-exporta RiskLevel/getRiskLevel da fonte única (lib/risk-thresholds) para
+// manter a API histórica dos consumidores que importam `from "@/hooks/use-sensor-data"`.
+import { getRiskLevel } from "@/lib/risk-thresholds";
+import type { RiskLevel } from "@/lib/risk-thresholds";
+export { getRiskLevel };
+export type { RiskLevel };
 
 export interface SensorDataPoint {
   time: string;
@@ -43,20 +48,14 @@ export interface SensorDataState {
   history: SensorDataPoint[];
   latest: PredictResponse | null;
   currentPayload: PredictPayload;
+  /** Última latência reportada pela stream SSE — `null` enquanto o pipeline aquece. */
+  currentLatency: LatencyTick | null;
   isLoading: boolean;
   isAnomaly: boolean;
   riskLevel: RiskLevel;
   error: Error | null;
   sseStatus: SSEStatus;
   sseReconnectAttempt: number;
-}
-
-// ── Utilitários exportados para testes ───────────────────────────────────
-
-export function getRiskLevel(prob: number): RiskLevel {
-  if (prob < 0.3) return "NORMAL";
-  if (prob < 0.65) return "ALERTA";
-  return "CRÍTICO";
 }
 
 // ── Tipos internos ────────────────────────────────────────────────────────
@@ -75,6 +74,19 @@ interface SensorReading {
   Towers: number;
   MPG: number;
   Oil_level: number;
+  /** Latência da última inferência publicada pelo pipeline. `null` no warmup. */
+  inference_latency_ms?: number | null;
+}
+
+/**
+ * Telemetria de latência por tick SSE. Cada frame leva um `key` único
+ * (timestamp do reading) para que o `useEffect` em FleetKPIs dispare
+ * mesmo quando dois ticks consecutivos têm a mesma latência numérica
+ * — caso contrário o React deduplicaria via Object.is.
+ */
+export interface LatencyTick {
+  key: string;
+  latencyMs: number;
 }
 
 interface HistoryItem extends SensorReading {
@@ -182,6 +194,9 @@ export function useSensorData(): SensorDataState {
   const [latest, setLatest] = useState<PredictResponse | null>(null);
   const [currentPayload, setCurrentPayload] =
     useState<PredictPayload>(EMPTY_PAYLOAD);
+  const [currentLatency, setCurrentLatency] = useState<LatencyTick | null>(
+    null,
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
@@ -207,6 +222,16 @@ export function useSensorData(): SensorDataState {
     );
 
     setCurrentPayload(readingToPayload(reading));
+
+    // Latência publicada pelo backend a cada tick. `key = timestamp` força
+    // o useEffect downstream a disparar mesmo quando dois ticks consecutivos
+    // têm a mesma latência (porque o React deduplicaria via Object.is em
+    // primitivos). `null` durante o warmup do pipeline.
+    const lat = reading.inference_latency_ms;
+    if (lat !== undefined && lat !== null && Number.isFinite(lat)) {
+      setCurrentLatency({ key: reading.timestamp, latencyMs: lat });
+    }
+
     setHistory((prev) => {
       const next = [...prev, point];
       return next.length > HISTORY_MAX ? next.slice(-HISTORY_MAX) : next;
@@ -364,6 +389,7 @@ export function useSensorData(): SensorDataState {
     history,
     latest,
     currentPayload,
+    currentLatency,
     isLoading,
     isAnomaly: riskLevel !== "NORMAL",
     riskLevel,
