@@ -17,6 +17,7 @@
 import { AlertTriangle, WifiOff, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { isCriticalProb } from "@/lib/risk-thresholds";
 import { cn } from "@/lib/utils";
 import type { WsAlert, WsStatus } from "@/hooks/use-alert-websocket";
 
@@ -62,7 +63,7 @@ interface AlertToastProps {
 
 function AlertToast({ alert, onAcknowledge }: AlertToastProps) {
   const pct = (alert.probability * 100).toFixed(1);
-  const isCritical = alert.probability >= 0.65;
+  const isCritical = isCriticalProb(alert.probability);
 
   const time = new Date(alert.timestamp).toLocaleTimeString("pt-BR", {
     hour: "2-digit",
@@ -181,9 +182,10 @@ export function AlertToastQueue({
       aria-label="Fila de notificações de alerta"
       data-testid="alert-toast-queue"
     >
-      {alerts.map((alert) => (
+      {alerts.map((alert, index) => (
         <AlertToast
-          key={alert.message_id}
+          // Compor com index protege contra colisões de message_id em rajadas.
+          key={`${alert.message_id}-${index}`}
           alert={alert}
           onAcknowledge={onAcknowledge}
         />

@@ -15,6 +15,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { RISK_THRESHOLDS } from "@/lib/risk-thresholds";
+
 // ── Tipos do protocolo ─────────────────────────────────────────────────────
 
 interface WsAlertFrame {
@@ -23,6 +25,8 @@ interface WsAlertFrame {
   probability: number;
   predicted_class: number;
   timestamp: string;
+  /** Latência da inferência ponta-a-ponta em ms (RNF: telemetria MLOps). */
+  inference_latency_ms?: number;
 }
 
 interface WsPingFrame {
@@ -39,6 +43,8 @@ export interface WsAlert {
   predicted_class: number;
   timestamp: string;
   receivedAt: number;
+  /** Latência da inferência ponta-a-ponta em ms — opcional para retro-compat. */
+  inference_latency_ms?: number;
 }
 
 export type WsStatus =
@@ -60,6 +66,19 @@ export interface UseAlertWebSocketReturn {
 const QUEUE_MAX = 5;
 const BACKOFF_BASE_MS = 1_000;
 const BACKOFF_MAX_MS = 30_000;
+
+/**
+ * Janela de dedupe — alertas da MESMA severidade chegando dentro deste
+ * intervalo substituem o topo da fila em vez de empilhar. Equivale ao
+ * "toast com id fixo" do sonner: o card continua na tela mas é actualizado
+ * com a leitura mais recente, evitando a sensação de spam quando o backend
+ * dispara dezenas de frames por segundo em modo FAILURE.
+ */
+const DEDUPE_WINDOW_MS = 5_000;
+
+function isCritical(p: number): boolean {
+  return p >= RISK_THRESHOLDS.CRITICAL;
+}
 
 // ── Helpers internos ───────────────────────────────────────────────────────
 
@@ -150,16 +169,31 @@ export function useAlertWebSocket(): UseAlertWebSocketReturn {
             JSON.stringify({ type: "ack", message_id: frame.message_id }),
           );
           setAlerts((prev) => {
-            const next: WsAlert[] = [
-              {
-                message_id: frame.message_id,
-                probability: frame.probability,
-                predicted_class: frame.predicted_class,
-                timestamp: frame.timestamp,
-                receivedAt: Date.now(),
-              },
-              ...prev,
-            ];
+            const incoming: WsAlert = {
+              message_id: frame.message_id,
+              probability: frame.probability,
+              predicted_class: frame.predicted_class,
+              timestamp: frame.timestamp,
+              receivedAt: Date.now(),
+              inference_latency_ms: frame.inference_latency_ms,
+            };
+
+            // Dedupe equivalente a `toast({ id: 'critical-anomaly' })`:
+            // se o topo da fila é da mesma severidade e foi recebido dentro
+            // da janela de dedupe, ATUALIZA aquele card em vez de empilhar.
+            // Isso evita o flicker quando o simulador despeja dezenas de
+            // frames/s em modo FAILURE.
+            const head = prev[0];
+            const shouldMerge =
+              head !== undefined &&
+              isCritical(head.probability) ===
+                isCritical(incoming.probability) &&
+              incoming.receivedAt - head.receivedAt < DEDUPE_WINDOW_MS;
+
+            const next: WsAlert[] = shouldMerge
+              ? [incoming, ...prev.slice(1)]
+              : [incoming, ...prev];
+
             // FIFO: mantém os QUEUE_MAX mais recentes; descarta o(s) mais antigo(s)
             return next.slice(0, QUEUE_MAX);
           });
