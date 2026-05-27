@@ -82,8 +82,9 @@ function resolveBaseUrl(): string {
   if (!url) {
     throw new Error(
       "[api-client] NEXT_PUBLIC_API_URL não está definida.\n" +
-        "Crie o arquivo .env.local com:\n" +
-        "  NEXT_PUBLIC_API_URL=http://localhost/api",
+        "Crie o arquivo apps/frontend/.env.local com uma das opções:\n" +
+        "  NEXT_PUBLIC_API_URL=/api                   # docker compose (nginx proxy)\n" +
+        "  NEXT_PUBLIC_API_URL=http://localhost:8000  # FastAPI standalone",
     );
   }
   return url.replace(/\/$/, ""); // remove trailing slash
@@ -119,19 +120,12 @@ export async function predict(
 
 // ── MLOps: gestão dos modelos (RF-11) ────────────────────────────────────────
 
-function resolveAdminHeader(): HeadersInit {
-  const token = process.env.NEXT_PUBLIC_ADMIN_TOKEN;
-  if (!token) return {};
-  return { "X-Admin-Token": token };
-}
-
 /** GET /models — devolve o modelo activo + status de todos os modelos. */
 export async function listModels(): Promise<ModelsListResponse> {
   const baseUrl = resolveBaseUrl();
 
   const response = await fetch(`${baseUrl}/models`, {
     method: "GET",
-    headers: resolveAdminHeader(),
     cache: "no-store",
   });
 
@@ -152,10 +146,7 @@ export async function swapActiveModel(
 
   const response = await fetch(`${baseUrl}/models/active`, {
     method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-      ...resolveAdminHeader(),
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ model_name: modelName }),
     cache: "no-store",
   });

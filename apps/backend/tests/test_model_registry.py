@@ -49,9 +49,18 @@ from src.services.model_service import ModelService
 # Helpers
 # ---------------------------------------------------------------------------
 
-_VALID_TOKEN = settings.admin_api_token
+# Force a non-default admin token so the dev-bypass branch in
+# `require_admin_token` (which short-circuits when the placeholder default is
+# in effect) does not mask the auth assertions below.
+_VALID_TOKEN = "test-admin-token-not-the-default"
 _WRONG_TOKEN = "definitely-wrong-token"
 _ADMIN_HEADER = {"X-Admin-Token": _VALID_TOKEN}
+
+
+@pytest.fixture(autouse=True)
+def _enforce_admin_auth(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Configure a real admin token so the dev bypass stays disabled."""
+    monkeypatch.setattr(settings, "admin_api_token", _VALID_TOKEN)
 
 
 def _mock_service() -> MagicMock:
