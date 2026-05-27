@@ -20,9 +20,8 @@ function SheetOverlay({
     <Dialog.Overlay
       data-slot="sheet-overlay"
       className={cn(
-        "fixed inset-0 z-50 bg-slate-950/50 backdrop-blur-sm",
+        "fixed inset-0 z-50 bg-transparent backdrop-blur-none",
         "data-[state=open]:animate-in data-[state=closed]:animate-out",
-        "data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0",
         className,
       )}
       {...props}
@@ -64,7 +63,11 @@ function SheetContent({
       <SheetOverlay />
       <Dialog.Content
         data-slot="sheet-content"
-        className={cn(sheetVariants({ side }), className)}
+        className={cn(
+          sheetVariants({ side }),
+          "bg-white border-l border-slate-200",
+          className,
+        )}
         {...props}
       >
         {children}

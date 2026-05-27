@@ -93,11 +93,10 @@ const SCENARIOS: readonly ScenarioOption[] = [
   },
 ];
 
-const TONE_RING: Record<ScenarioOption["tone"], string> = {
-  ok: "data-[state=checked]:ring-emerald-500/40 has-data-[state=checked]:border-emerald-500/40",
-  warn: "data-[state=checked]:ring-amber-500/40 has-data-[state=checked]:border-amber-500/40",
-  danger:
-    "data-[state=checked]:ring-rose-500/40 has-data-[state=checked]:border-rose-500/40",
+const TONE_ICON: Record<ScenarioOption["tone"], string> = {
+  ok: "text-emerald-600",
+  warn: "text-amber-600",
+  danger: "text-rose-600",
 };
 
 export function SimulationPanel({ open, onOpenChange }: SimulationPanelProps) {
@@ -131,6 +130,10 @@ function ModelSection() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState<string | null>(null);
+  // Selecção controlada localmente — atualiza ANTES do fetch para que o
+  // Select reflicta a escolha do utilizador instantaneamente (optimistic UI).
+  // Sincronizada com `data.active_model` sempre que o backend confirma.
+  const [selected, setSelected] = useState<string>("");
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -138,6 +141,7 @@ function ModelSection() {
     try {
       const fresh = await listModels();
       setData(fresh);
+      setSelected(fresh.active_model);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Falha ao carregar modelos",
@@ -163,14 +167,18 @@ function ModelSection() {
 
   const handleChange = useCallback(
     async (rawName: string) => {
-      if (!data || rawName === data.active_model) return;
+      if (!data || rawName === selected) return;
+      const previous = selected;
+      // Optimistic update — UI move já; backend confirma depois.
+      setSelected(rawName);
       setPending(rawName);
       setError(null);
       try {
         await swapActiveModel(rawName);
-        // Optimistic — refresh para confirmar o backend.
         await refresh();
       } catch (err) {
+        // Reverte para o estado anterior se o swap falhar.
+        setSelected(previous);
         setError(
           err instanceof Error ? err.message : "Falha ao trocar de modelo",
         );
@@ -178,7 +186,7 @@ function ModelSection() {
         setPending(null);
       }
     },
-    [data, refresh],
+    [data, refresh, selected],
   );
 
   return (
@@ -195,7 +203,7 @@ function ModelSection() {
       </div>
 
       <Select
-        value={data?.active_model ?? ""}
+        value={selected}
         onValueChange={handleChange}
         disabled={loading || pending !== null || displayModels.length === 0}
       >
@@ -204,7 +212,7 @@ function ModelSection() {
             placeholder={loading ? "Carregando..." : "Selecione um modelo"}
           />
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent position="popper" sideOffset={4} className="z-[100]">
           {displayModels.map(({ value, label }) => (
             <SelectItem key={value} value={value}>
               {label}
@@ -292,7 +300,7 @@ function ScenarioSection() {
         value={mode ?? ""}
         onValueChange={handleChange}
         disabled={loading || pending !== null}
-        className="gap-2"
+        className="gap-1.5"
         aria-label="Cenário de simulação"
       >
         {SCENARIOS.map((scenario) => {
@@ -303,25 +311,29 @@ function ScenarioSection() {
             <Label
               key={scenario.value}
               htmlFor={id}
+              data-state={checked ? "checked" : "unchecked"}
               className={cn(
-                "flex cursor-pointer items-start gap-3 rounded-lg border border-border bg-background px-3 py-3 transition-colors",
-                "hover:bg-muted/40",
-                checked &&
-                  "border-primary/40 bg-primary/5 ring-1 ring-primary/20",
-                TONE_RING[scenario.tone],
+                "group flex cursor-pointer items-center gap-3 rounded-md border border-slate-200 bg-white px-3 py-2.5 transition-all",
+                "hover:border-slate-300 hover:bg-slate-50",
+                "data-[state=checked]:border-slate-900 data-[state=checked]:bg-white data-[state=checked]:shadow-[0_0_0_1px_rgb(15_23_42)]",
               )}
             >
               <RadioGroupItem
                 id={id}
                 value={scenario.value}
-                className="mt-0.5"
+                className="border-slate-300 data-[state=checked]:border-slate-900"
               />
-              <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                <span className="flex items-center gap-2 text-sm font-medium text-foreground">
-                  <Icon className="h-3.5 w-3.5" />
+              <Icon
+                className={cn(
+                  "h-3.5 w-3.5 shrink-0 text-slate-400 transition-colors",
+                  checked && TONE_ICON[scenario.tone],
+                )}
+              />
+              <div className="flex min-w-0 flex-1 flex-col">
+                <span className="text-sm font-medium text-slate-900">
                   {scenario.label}
                 </span>
-                <span className="text-xs text-muted-foreground">
+                <span className="truncate text-xs text-slate-500">
                   {scenario.description}
                 </span>
               </div>
