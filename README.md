@@ -496,9 +496,9 @@ Config real: [`infra/nginx/nginx.conf`](infra/nginx/nginx.conf). Único ponto de
 flowchart LR
     C["Browser / Client"] --> N["Nginx"]
     N --> API["FastAPI (api:8000)"]
-    N -.->|"ainda não roteado<br/>(fora do escopo desta task)"| MCP
+    N -.->|"ainda não roteado<br/>(sem endpoint MCP público)"| MCP
 
-    API -.->|"MCP_SERVER_URL<br/>(configurada, NÃO consumida ainda)"| MCP["MCP Server<br/>apps/mcp-server (container próprio)"]
+    API -->|"MCP_SERVER_URL<br/>(consumida desde RF-22, ver §4.8)"| MCP["MCP Server<br/>apps/mcp-server (container próprio)"]
     MCP --> TOOL["search_maintenance_manual<br/>(busca semântica real — RF-21)"]
     TOOL --> SVC["SemanticSearchService"]
     SVC --> CHROMA[("ChromaDB<br/>maintenance_manuals — RF-20")]
@@ -517,7 +517,7 @@ flowchart LR
 | Endpoint | `POST http://mcp-server:8100/mcp` (JSON-RPC 2.0, protocolo MCP) |
 | Host/porta | `0.0.0.0` / `MCP_SERVER_PORT` (default `8100`) |
 | Container | `mcp-server` (`docker-compose.yml`) — `build: ./apps/mcp-server`, rede `app-network`, `expose` (só interno, sem `ports:`) |
-| `MCP_SERVER_URL` | `http://mcp-server:8100` — ver `.env.example`. Declarada em `Settings.mcp_server_url` (`apps/backend/src/core/config.py`), mesmo padrão de `OLLAMA_BASE_URL`: reservada para a integração futura, **não consumida por nenhum código ainda** |
+| `MCP_SERVER_URL` | `http://mcp-server:8100` — ver `.env.example`. Declarada em `Settings.mcp_server_url` (`apps/backend/src/core/config.py`). Consumida desde a RF-22 por `MCPSearchClient` (`apps/backend/src/services/mcp_client.py`) — ver §4.8 |
 
 #### Ferramenta
 
@@ -722,6 +722,114 @@ docker compose exec mcp-server pytest tests/test_index_manuals.py -v
 
 Todos os testes mockam o `SentenceTransformer` (nenhum download de modelo real na suíte) e usam diretório temporário para o ChromaDB (nunca o `data/chroma` real).
 
+### 4.8. Sugestão automática de manutenção — RAG via Ollama (RF-22 / RNF-46)
+
+**O que é**: `POST /v1/maintenance/suggest` (backend FastAPI) — quando a probabilidade de falha do modelo preditivo excede um limiar, orquestra MCP (RF-21) + Llama 3.2 3B local (Ollama) para gerar um plano de manutenção em Markdown fundamentado exclusivamente nos manuais recuperados. Implementado em `MaintenanceSuggestionService` (`apps/backend/src/services/maintenance_suggestion_service.py`), nunca na rota.
+
+```mermaid
+flowchart TD
+    REQ["POST /v1/maintenance/suggest<br/>failure_probability + equipamento/sintoma"] --> THR{"probability > 0.7 ?"}
+    THR -->|"não"| SKIP["triggered=false<br/>MCP e Ollama NÃO são chamados"]
+    THR -->|"sim"| MCP["MCPSearchClient<br/>-> search_maintenance_manual (RF-21)"]
+    MCP --> CTX["contexto: trechos + file_name/page/score"]
+    CTX --> PROMPT["System Prompt (fixo) + prompt do usuário<br/>(contexto delimitado, RF-22 §13)"]
+    PROMPT --> OLLAMA["Ollama /api/chat<br/>Llama 3.2 3B, local"]
+    OLLAMA --> VALID["validação: não vazio, não JSON, não HTML, tem cabeçalho"]
+    VALID --> RESP["MaintenanceSuggestionResponse<br/>(markdown + references)"]
+```
+
+| Aspecto | Valor real |
+|---|---|
+| Endpoint | `POST /v1/maintenance/suggest` (via Nginx: `POST /api/v1/maintenance/suggest`) |
+| Threshold (RF-22) | `failure_probability > 0.7` — **estrito**, `MAINTENANCE_SUGGESTION_THRESHOLD` em `maintenance_suggestion_service.py`. `0.70` exato **não** dispara |
+| Tool MCP usada | `search_maintenance_manual` (nome real confirmado no código — CLAUDE.md/AGENTS.md mencionam "search_manuals" como nome conceitual) |
+| Cliente MCP | `MCPSearchClient` (`apps/backend/src/services/mcp_client.py`) — SDK oficial `mcp` (mesmo pacote do mcp-server), transporte `streamable-http`, `initialize` → `call_tool` |
+| Modelo Ollama | `OLLAMA_MODEL` — default `llama3.2:3b` (Llama 3.2 3B, CLAUDE.md §4) |
+| Cliente Ollama | `OllamaClient` (`apps/backend/src/services/ollama_client.py`) — HTTP puro via `httpx` (já dependência do backend) contra `POST {OLLAMA_BASE_URL}/api/chat`, `stream: false` |
+| Processamento local (RNF-46) | Nenhuma chamada a OpenAI/Anthropic/Gemini/API externa — `OLLAMA_BASE_URL` aponta para o Ollama do host (`host.docker.internal`, resolvido nativamente pelo Docker Desktop, **sem** `extra_hosts`) |
+| ChromaDB | Reaproveitado — **nenhum segundo ChromaDB criado**. O backend nunca fala com o Chroma diretamente, só via MCP (ver "Decisão de arquitetura" abaixo) |
+
+#### Exemplo — requisição/resposta reais
+
+```bash
+curl -X POST http://localhost/api/v1/maintenance/suggest \
+  -H "Content-Type: application/json" \
+  -d '{
+    "failure_probability": 0.92,
+    "equipment_name": "Bomba centrifuga BC-200",
+    "symptom_description": "vazamento na bomba centrifuga"
+  }'
+```
+
+```json
+{
+  "triggered": true,
+  "failure_probability": 0.92,
+  "markdown": "# Plano de Manutenção\n\n## Diagnóstico provável\nVazamento na bomba centrifuga é um sintoma que pode ser relacionado ao desalinhamento do eixo ou à deterioração dos rolamentos.\n\n## Procedimento recomendado\n1. Verificar o alinhamento do eixo e o estado dos rolamentos.\n2. Realizar uma verificação mais detalhada da bomba centrifuga...\n\n## Ferramentas / peças\nNão especificado nos trechos recuperados.\n\n## Cuidados de segurança\nVerificar o manual específico do modelo BC-200...\n\n## Referências\n- `manual-bomba-centrifuga.pdf`, página 1",
+  "references": [
+    {"file_name": "manual-bomba-centrifuga.pdf", "page": 1, "chunk_index": 0, "source": "manual-bomba-centrifuga.pdf", "score": 0.7802}
+  ],
+  "model": "llama3.2:3b",
+  "message": null
+}
+```
+
+Com `failure_probability <= 0.7` (ex.: `0.70` exato), a resposta é imediata, sem chamar MCP/Ollama:
+
+```json
+{"triggered": false, "failure_probability": 0.7, "markdown": null, "references": [], "model": null, "message": "Probabilidade de falha (0.70) não excede o limiar de 0.7 — sugestão automática não acionada."}
+```
+
+#### Estratégia RAG e System Prompt
+
+O System Prompt (constante `SYSTEM_PROMPT` em `maintenance_suggestion_service.py`) instrui o Llama a: responder em português; usar **exclusivamente** o contexto fornecido; nunca inventar peças/torques/temperaturas/pressões; declarar "Limitações" quando o contexto for insuficiente; preservar avisos de segurança; nunca afirmar execução física; citar arquivo+página. O contexto de cada chunk é delimitado (`[MANUAL N]` com `Arquivo`/`Página`/`Score`/`Conteúdo`) e enviado como mensagem **separada** do System Prompt (`role: user`) — nunca concatenado.
+
+**Segurança contra prompt injection**: o System Prompt instrui explicitamente o modelo a tratar o conteúdo de cada `[MANUAL N]` como DADO, nunca como instrução — mesmo que um PDF malicioso contenha algo como "ignore as regras anteriores". Testado em `test_manual_content_never_merged_into_system_prompt`.
+
+**Sem contexto relevante**: o serviço sempre chama o Ollama quando o threshold é ultrapassado (mesmo com 0 resultados do MCP) — o prompt deixa isso explícito ("Nenhum trecho de manual relevante foi recuperado") e é o **próprio modelo**, via System Prompt, quem decide declarar a seção "Limitações" (não o código Python, que não tem como julgar "informação suficiente"). Ver Known Issues abaixo — Llama 3.2 3B nem sempre segue esse branch perfeitamente.
+
+#### Decisão de arquitetura — sem segundo ChromaDB
+
+A especificação desta task menciona `chromadb`/`CHROMADB_HOST`/porta `8001:8000` como possíveis requisitos de infraestrutura. **Não foram criados** — o ChromaDB já existe, persistido e funcional, dentro de `apps/mcp-server` (RF-20/RF-21). Criar uma segunda instância exigiria: (a) decidir qual delas é a fonte de verdade, (b) migrar/reindexar os dados, (c) manter as duas sincronizadas — duas fontes de verdade sem benefício real, já que o backend só precisa de **busca**, não de acesso direto ao vetor store. O backend fala com o ChromaDB **exclusivamente através do MCP** (`search_maintenance_manual`), preservando a separação de responsabilidades da RF-19/RNF-43 (MCP como domínio próprio, backend como consumidor). `chromadb`/`pypdf` **não foram adicionados** a `apps/backend/requirements.txt` — continuam exclusivos do mcp-server.
+
+#### Testes
+
+```bash
+docker compose exec api pytest tests/test_maintenance_suggestion.py tests/test_maintenance_endpoint.py -v
+```
+
+26 testes — threshold (0.69/0.70/0.7001/0.90 parametrizados), MCP/Ollama indisponíveis, resposta inválida do Ollama, contexto/metadados preservados, prompt contém só o contexto recuperado, prompt injection, contrato HTTP (200/503/422). Todos mockam MCP e Ollama — ver "Validação real" abaixo para a prova sem mocks.
+
+#### Validação real (não só mocks)
+
+Executado de ponta a ponta contra o ambiente real desta task (mcp-server real + Ollama real com `llama3.2:3b` rodando localmente):
+
+| Cenário | probability | Resultado real |
+|---|---|---|
+| Abaixo do threshold | `0.40` | `triggered=false`, MCP/Ollama não chamados (confirmado via `docker compose exec api`) |
+| Exatamente no threshold | `0.70` | `triggered=false` — confirma `>` estrito, não `>=` |
+| Acima, contexto relevante | `0.92` (bomba centrífuga) | `triggered=true`, 1 referência (`manual-bomba-centrifuga.pdf`, página 1, score 0.78), Markdown completo e coerente |
+| Acima, contexto relevante (2º manual) | `0.87` (motor elétrico) | `triggered=true`, referência correta ao `manual-motor-eletrico.pdf` |
+| Acima, sem contexto relevante | `0.95` (equipamento inexistente no corpus) | `triggered=true`, `references=[]`, plano com "Não especificado nos trechos recuperados" em vez de inventar procedimento |
+
+Validado via `curl`/`http.client` diretamente contra `http://localhost/api/v1/maintenance/suggest` (Nginx → api → mcp-server/Ollama reais).
+
+#### Benchmark (RNF-46)
+
+```bash
+docker compose exec api python benchmark_maintenance_suggestion.py
+```
+
+RNF-46 não define um SLA de latência explícito — o benchmark documenta a latência real medida (MCP, Ollama e total separados), sem inventar um PASS/FAIL. Resultado real desta task (10 execuções + 1 warm-up, `llama3.2:3b`, CPU):
+
+| Etapa | p50 | p95 | p99 | média | min | max |
+|---|--:|--:|--:|--:|--:|--:|
+| MCP | 31.0 ms | 51.3 ms | 57.4 ms | 34.9 ms | 29.9 ms | 59.0 ms |
+| Ollama | 1506.1 ms | 1954.9 ms | 2066.2 ms | 1512.2 ms | 1044.8 ms | 2094.0 ms |
+| **Total** | **1542.2 ms** | **1987.6 ms** | **2099.3 ms** | **1547.1 ms** | **1075.0 ms** | **2127.3 ms** |
+
+Evidência completa: [`apps/backend/maintenance_suggestion_benchmark.json`](apps/backend/maintenance_suggestion_benchmark.json). O Ollama (Llama 3.2 3B em CPU) domina a latência total, como esperado para geração de texto local sem GPU — o MCP contribui só ~2% do tempo total.
+
 ---
 
 ## 5. Modelos de Machine Learning
@@ -851,7 +959,10 @@ cp apps/frontend/.env.local.example apps/frontend/.env.local
 | `PROJECT_NAME` | Não | `Predictive Maintenance API` | Metadado exibido no Swagger (`/docs`) |
 | `VERSION` | Não | `0.1.0` | Versão exibida em `/health` e no Swagger |
 | `ALLOWED_ORIGINS` | Não | `["http://localhost:3000","http://127.0.0.1:3000"]` | Lista JSON de origens para `CORSMiddleware` — só relevante para chamadas REST **fora** do same-origin do Nginx (ver §4.3, CORS não aplicável a SSE/WS neste setup) |
-| `OLLAMA_BASE_URL` | Não | `http://host.docker.internal:11434` | Próxima fase (assistente RAG local) — ainda não consumido por nenhum endpoint ativo |
+| `OLLAMA_BASE_URL` | Não | `http://host.docker.internal:11434` | RF-22/RNF-46 — consumido por `OllamaClient` (§4.8). `host.docker.internal` resolvido nativamente pelo Docker Desktop, sem `extra_hosts` |
+| `OLLAMA_MODEL` | Não | `llama3.2:3b` | RF-22/RNF-46 — modelo usado por `MaintenanceSuggestionService` |
+| `OLLAMA_CLIENT_TIMEOUT_SECONDS` | Não | `120.0` | RF-22 — timeout do cliente HTTP do Ollama (Llama 3.2 3B em CPU pode levar dezenas de segundos) |
+| `MCP_CLIENT_TIMEOUT_SECONDS` | Não | `60.0` | RF-22 — timeout do cliente MCP (cobre o cold-start do `SemanticSearchService` no mcp-server, ~30s na 1ª chamada) |
 | `MCP_SERVER_PORT` | Não | `8100` | RF-19/RNF-43 — porta do serviço `mcp-server` (`streamable-http`) |
 | `MCP_SERVER_URL` | Não | `http://mcp-server:8100` | RF-19/RNF-43 — declarada, ainda não consumida por nenhum código (ver §4.6) |
 | `EMBEDDING_MODEL` | Não | `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2` | RF-20/RNF-44 — modelo usado por `apps/mcp-server/index_manuals.py` (ver §4.7). Trocar exige reindexar (o `embedding_model` fica registrado nos metadados de cada chunk, mas embeddings antigos e novos não são comparáveis entre modelos diferentes) |
@@ -1037,6 +1148,7 @@ alembic upgrade head
 | `PUT` | `/api/simulator/mode` | — | Troca o modo do simulador em ≤1 s |
 | `GET` | `/api/models` | `X-Admin-Token` | Lista modelos + `artefact_ready` boolean |
 | `PUT` | `/api/models/active` | `X-Admin-Token` | Hot-swap atômico (RNF-25); retorna `202 Accepted` |
+| `POST` | `/api/v1/maintenance/suggest` | — | RF-22 — sugestão de manutenção via RAG (MCP + Ollama/Llama 3.2 3B) quando `failure_probability > 0.7`. Ver §4.8 |
 | `GET` | `/docs` · `/redoc` · `/openapi.json` | — | Documentação |
 
 ### 10.2. Streaming
@@ -1608,6 +1720,10 @@ Divergências/observações reais encontradas na auditoria (RNF-41/RNF-42), docu
 - **Imagem do `mcp-server` cresceu para ~10 GB (RF-20/RNF-44)**: `pip install sentence-transformers` puxa `torch` da PyPI padrão, que inclui dependências CUDA (`nvidia-*`) mesmo num container CPU-only sem GPU. Funciona (PyTorch cai para CPU automaticamente — `Use pytorch device_name: cpu` no log), mas a imagem fica bem maior que o necessário. Otimização futura: instalar `torch` a partir do índice CPU-only da PyTorch (`--index-url https://download.pytorch.org/whl/cpu`) no `Dockerfile`.
 - **PDF sem texto extraível é reprocessado a cada execução** (RF-20): como nenhum `file_hash` é gravado para um arquivo que gerou zero chunks, ele nunca é marcado como "já visto" — cada run tenta extrair de novo (custo: só a extração via pypdf, nenhum embedding é gerado). Decisão deliberada: se o PDF ganhar texto extraível depois (ex.: substituído por uma versão não-escaneada), a próxima execução já pega automaticamente, sem precisar de nenhuma ação manual.
 - **Trocar `EMBEDDING_MODEL` não invalida embeddings antigos automaticamente**: cada chunk registra `embedding_model` nos metadados, mas a lógica de skip/reindex compara só `file_hash` — se você trocar de modelo sem tocar nos PDFs, os embeddings antigos (gerados pelo modelo anterior) continuam no ChromaDB, agora "misturados" com um `embedding_model` diferente do `EMBEDDING_MODEL` atual. Fora do escopo desta task (RF-20 pede consistência do modelo *dentro* de uma mesma indexação, não migração entre modelos); se for trocar de modelo, apague `data/chroma/` antes de reindexar.
+- **`tests/test_simulator.py` (backend) falha na coleta** com `IndexError: 3` em `Path(__file__).resolve().parents[3]` — pré-existente, não introduzido nem corrigido pela RF-22 (confirmado via `git stash` antes desta task). Contorno usado para rodar a suíte: `pytest --ignore=tests/test_simulator.py`.
+- **Llama 3.2 3B nem sempre segue a instrução de branch "Limitações" do System Prompt (RF-22)**: quando o MCP não retorna nenhum trecho relevante, o modelo às vezes mantém a estrutura completa do template (preenchendo "Não especificado nos trechos recuperados" nas seções, o que é seguro) em vez de trocar para a seção alternativa "## Limitações" exatamente como instruído — e uma vez chegou a citar a própria query do usuário como se fosse uma referência de manual. Validado que o modelo **nunca inventa** procedimento/peça/valor técnico nesses casos (a regra de segurança central se mantém), mas o *formato* exato da branch não é 100% determinístico com um modelo de 3B rodando localmente — limitação conhecida de modelos pequenos, não um bug de código.
+- **`apps/backend/requirements.txt` puxa `nvidia-nccl-cu12` (~340 MB) como dependência transitiva de `mcp` (RF-22)**, mesmo o backend sendo só um *cliente* MCP (nunca roda modelos de ML locais via essa lib). Não foi investigado a fundo qual extra do `mcp`/`opentelemetry` trafega isso — funciona normalmente (a lib nunca é importada em runtime), mas infla a imagem sem necessidade real. Mesma classe de problema do torch/CUDA no mcp-server (RF-20).
+- **`anyio`/`idna`/`typing_extensions` estavam com pin exato (`==`) em `apps/backend/requirements.txt`**, congelados de um `pip freeze` anterior, e conflitavam com as versões mínimas exigidas por `mcp` (RF-22). Resolvido removendo o pin exato dessas três dependências transitivas de baixo nível (deixando o pip resolver a versão compatível) — os pins de bibliotecas de topo (`fastapi`, `httpx`, `pydantic`, etc.) foram mantidos intactos.
 
 ---
 

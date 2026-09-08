@@ -72,22 +72,39 @@ class Settings(BaseSettings):
         description="SQLAlchemy async engine max_overflow (conexões extras sob pico).",
     )
 
-    # ── Ollama (local LLM) ────────────────────────────────────────────────
+    # ── Ollama (local LLM) — RF-22 / RNF-46 ─────────────────────────────────
     ollama_base_url: str = Field(
         default="http://host.docker.internal:11434",
         alias="OLLAMA_BASE_URL",
     )
+    # Modelo usado por MaintenanceSuggestionService (src/services/ollama_client.py).
+    # Default = Llama 3.2 3B (CLAUDE.md §4) — configurável sem redeploy.
+    ollama_model: str = Field(
+        default="llama3.2:3b",
+        alias="OLLAMA_MODEL",
+    )
+    # Timeout do cliente HTTP do Ollama — generoso porque um Llama 3.2 3B
+    # rodando em CPU pode levar dezenas de segundos para um plano completo.
+    ollama_client_timeout_seconds: float = Field(
+        default=120.0,
+        alias="OLLAMA_CLIENT_TIMEOUT_SECONDS",
+    )
 
     # RF-19 / RNF-43 — endereço do serviço MCP standalone (apps/mcp-server),
     # container e processo próprios (ver docker-compose.yml::mcp-server).
-    # Declarada aqui pelo mesmo motivo que `ollama_base_url`: reservar o
-    # ponto de configuração para a integração futura (Ollama -> MCP ->
-    # search_maintenance_manual) sem introduzir uma segunda forma de
-    # configurar URLs de serviço. Nenhum código consome este campo ainda —
-    # ver README "Arquitetura MCP" para o estado atual (stub, RF-19).
+    # Consumida desde a RF-22 por MaintenanceSuggestionService
+    # (src/services/mcp_client.py) — chama a tool `search_maintenance_manual`
+    # via streamable-http (SDK oficial `mcp`, ver requirements.txt).
     mcp_server_url: str = Field(
         default="http://mcp-server:8100",
         alias="MCP_SERVER_URL",
+    )
+    # Timeout do cliente MCP — generoso porque a primeira chamada após o
+    # mcp-server subir aciona o carregamento do SentenceTransformer
+    # (~segundos a ~30s a frio, ver apps/mcp-server/semantic_search.py).
+    mcp_client_timeout_seconds: float = Field(
+        default=60.0,
+        alias="MCP_CLIENT_TIMEOUT_SECONDS",
     )
 
     # ── CORS ──────────────────────────────────────────────────────────────

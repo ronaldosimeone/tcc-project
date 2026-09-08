@@ -30,6 +30,7 @@ from src.core.exceptions import (
 from src.core.logging import configure_logging
 from src.core.rate_limit import limiter, rate_limit_exceeded_handler
 from src.routers import health as health_router
+from src.routers import maintenance as maintenance_router
 from src.routers import models as models_router
 from src.routers import predict as predict_router
 from src.routers import predictions as predictions_router
@@ -154,6 +155,7 @@ def create_app() -> FastAPI:
     app.include_router(stream_router.router)
     app.include_router(simulator_router.router)
     app.include_router(alerts_ws.router)
+    app.include_router(maintenance_router.router)
 
     return app
 

@@ -63,6 +63,31 @@ class ModelNotAvailableError(AppError):
     detail = "Prediction model is not available. Check application startup logs."
 
 
+class MCPUnavailableError(AppError):
+    """RF-22 — o servidor MCP (apps/mcp-server) não respondeu ou retornou erro
+    ao chamar `search_maintenance_manual`. Nunca expõe a URL interna do MCP
+    nem o traceback ao cliente (RF-22 §13)."""
+
+    status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+    detail = "Serviço de busca em manuais técnicos (MCP) indisponível no momento."
+
+
+class OllamaUnavailableError(AppError):
+    """RF-22 — o Ollama (host.docker.internal:11434) não respondeu, recusou a
+    conexão, deu timeout, ou o modelo configurado não está disponível."""
+
+    status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+    detail = "Serviço de geração de sugestões (Ollama) indisponível no momento."
+
+
+class OllamaResponseError(AppError):
+    """RF-22 — o Ollama respondeu, mas o conteúdo não é um Markdown válido
+    (vazio, JSON, HTML) — nunca repassado ao cliente como se fosse o plano."""
+
+    status_code = status.HTTP_502_BAD_GATEWAY
+    detail = "Resposta inválida do serviço de geração de sugestões."
+
+
 # ---------------------------------------------------------------------------
 # Handlers
 # ---------------------------------------------------------------------------
