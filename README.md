@@ -202,6 +202,10 @@ projeto-tcc/
 
 ## 4. Fluxo de Dados em Tempo Real
 
+> Diagramas e documentação de SSE/WebSocket/Nginx abaixo atendem RNF-41.
+
+### 4.1. Pipeline de dados — da origem ao broadcast
+
 ```
                    ┌─────────────────────────────────────┐
                    │   apps/ml/data/processed/           │
@@ -238,6 +242,249 @@ projeto-tcc/
 ```
 
 **Warmup**: nos primeiros 15 ticks o buffer ainda não tem amostras suficientes para as features rolling (std/ma/lag/roc/min/max). Nesse intervalo o pipeline cai para inferência **stateless** (`predict(request)`) — sem bloqueio de startup.
+
+### 4.2. Diagrama arquitetural (Mermaid)
+
+Topologia real de rede — quem conecta em quem, por qual proxy, e onde SSE/WS/DB participam. Extraído do código (`infra/nginx/nginx.conf`, `routers/stream.py`, `routers/alerts_ws.py`, `sensor_stream_service.py`, `ws_manager.py`, `inference_pipeline.py`), não de um design idealizado.
+
+```mermaid
+flowchart TB
+    B["Browser<br/>Next.js Client Components<br/>useSSE · useAlertWebSocket"]
+    N["Nginx :80<br/>infra/nginx/nginx.conf"]
+
+    subgraph API["FastAPI — serviço api:8000 (root_path=/api)"]
+        SR["GET /stream/sensors<br/>routers/stream.py (SSE)"]
+        WR["WS /ws/alerts<br/>routers/alerts_ws.py"]
+        SS["SensorStreamService<br/>broadcast loop @1Hz"]
+        CM["ConnectionManager<br/>core/ws_manager.py"]
+        IP["InferencePipelineService"]
+        AS["AlertService"]
+    end
+
+    SIM["SensorSimulator<br/>replay metropt3.parquet"]
+    DB[("PostgreSQL<br/>tabela predictions")]
+
+    SIM -->|"1 Hz"| SS
+    SS -->|subscribe| SR
+    SS -->|subscribe| IP
+    IP -->|"predict + save_prediction"| DB
+    IP --> AS
+    AS -->|"probability > 0.70"| CM
+    CM --> WR
+
+    B ==>|"① GET /api/stream/sensors<br/>Accept: text/event-stream"| N
+    N ==>|"proxy_pass /stream/ (nginx remove /api)"| SR
+    SR ==>|"event: sensor_reading (1x/s)"| N
+    N ==>|"text/event-stream, sem buffering"| B
+
+    B -.->|"② WS /ws/alerts<br/>Upgrade: websocket"| N
+    N -.->|"proxy_pass, headers Upgrade/Connection"| WR
+    WR -.->|"{type:alert} / {type:ping} 30s"| N
+    N -.->|"frame WS"| B
+```
+
+**Leitura do diagrama:**
+
+1. **Conexão do cliente** — o browser abre DUAS conexões persistentes e independentes: uma SSE (`GET /api/stream/sensors`, seta cheia ①) e uma WebSocket (`WS /ws/alerts`, seta pontilhada ②). Nenhuma depende da outra estar aberta.
+2. **Onde a comunicação passa** — ambas atravessam o Nginx (`nginx.conf`), que decide o proxy por `location` (path-based), nunca indo direto do browser à API.
+3. **Quem usa WebSocket** — só `/ws/alerts` (alertas). Full-duplex: servidor manda `alert`/`ping`, cliente manda `ack`/`pong`.
+4. **Quem usa SSE** — só `/stream/sensors` (telemetria contínua). Unidirecional servidor→cliente.
+5. **Direção dos eventos** — SSE é sempre servidor→browser; WS é bidirecional, mas o `alert` sempre nasce no servidor (nunca o cliente inicia um alerta).
+6. **Onde ocorre o broadcast** — dois broadcasters distintos, sem relação um com o outro: `SensorStreamService._broadcast_loop` (1 fila `asyncio.Queue` por SSE subscriber) e `ConnectionManager.broadcast`/`broadcast_alert` (itera o `set` de WebSockets ativos). Cada um serve exatamente um dos dois canais.
+7. **Onde o banco participa** — **só no caminho de inferência** (`InferencePipelineService.save_prediction`), nunca diretamente na entrega de SSE ou WS. Nem `GET /stream/sensors` nem `WS /ws/alerts` abrem sessão de banco por cliente conectado.
+8. **Onde o Nginx atua** — único ponto de entrada externo (porta 80); decide por prefixo de path qual serviço upstream recebe cada request (`api` ou `frontend`), reescreve headers, e é responsável por manter a conexão aberta (buffering desligado, timeouts longos) — detalhado no §4.5.
+
+### 4.3. SSE — `GET /api/stream/sensors`
+
+#### Como funciona
+
+| Aspecto | Valor real (código) |
+|---|---|
+| Endpoint | `GET /stream/sensors` (backend) → `GET /api/stream/sensors` (via Nginx) |
+| Router | [`stream.py`](apps/backend/src/routers/stream.py) |
+| Método de conexão | `EventSource` nativo do browser, via [`useSSE`](apps/frontend/hooks/use-sse.ts) |
+| Formato do evento | `event: sensor_reading\ndata: {...12 sensores + timestamp + inference_latency_ms}\nid: <epoch_ms>\nretry: 3000\n\n` |
+| Frequência | 1 evento/segundo — `BROADCAST_INTERVAL = 1.0` em [`sensor_stream_service.py`](apps/backend/src/services/sensor_stream_service.py) |
+| Heartbeat/broadcast | Broadcast único e compartilhado (não é heartbeat de protocolo): `SensorStreamService._broadcast_loop` gera 1 leitura/s e faz `put_nowait` na fila de **cada** subscriber. Fila cheia (`_QUEUE_MAX_SIZE=10`) → cliente lento é evicted, não trava os demais. |
+| Reconexão | Dupla camada: (a) `EventSource` nativo tenta reconectar sozinho (`retry: 3000` no evento); (b) [`useSSE.ts`](apps/frontend/hooks/use-sse.ts) trata `onerror` com backoff exponencial próprio (1s → 30s, jitter ±20%), criando uma **nova** instância de `EventSource` — as duas reconexões não competem porque `useSSE` fecha o `EventSource` antigo antes de recriar. |
+| Timeout de leitura no servidor | `asyncio.wait_for(queue.get(), timeout=2.0)` — se não houver leitura em 2s, apenas verifica `is_disconnected()` e tenta de novo (não é um timeout de conexão). |
+| Encerramento | Cliente fecha a aba/`EventSource.close()` → Starlette detecta e chama `aclose()` no generator → bloco `finally` roda `service.unsubscribe(queue)` — sem vazamento de fila. |
+
+**Nota de arquitetura**: o broadcast é compartilhado com **um clock só** — um cliente que acabou de conectar pode esperar até ~1s pelo próximo tick antes do primeiro dado (não há "replay" do último valor ao conectar). Isso é intencional (cadência de 1Hz do produto), documentado também em [`locust_streaming.py`](locust_streaming.py) por afetar como medir latência de SSE (RNF-37, §14.5).
+
+#### Diagrama de sequência — SSE
+
+```mermaid
+sequenceDiagram
+    participant FE as Frontend (useSSE)
+    participant NG as Nginx
+    participant API as FastAPI (/stream/sensors)
+    participant SS as SensorStreamService
+
+    FE->>NG: GET /api/stream/sensors (Accept: text/event-stream)
+    NG->>API: proxy_pass /stream/sensors (prefixo /api removido)
+    API->>SS: subscribe() -> asyncio.Queue
+    API-->>NG: 200 OK, Content-Type: text/event-stream
+    NG-->>FE: 200 OK (headers passthrough, sem buffer)
+    loop a cada 1s
+        SS->>SS: SensorSimulator.generate_reading()
+        SS->>API: put_nowait(reading) em cada fila
+        API-->>NG: event: sensor_reading\ndata: {...}
+        NG-->>FE: encaminhado (X-Accel-Buffering: no)
+    end
+    FE-->>API: aba fechada / EventSource.close()
+    API->>SS: unsubscribe() [bloco finally]
+    Note over FE,API: em erro de rede: EventSource nativo tenta<br/>reconectar (retry:3000) E useSSE.ts aplica<br/>backoff próprio (1s-30s, jitter) recriando o EventSource
+```
+
+#### Diagnóstico
+
+```bash
+# 1. API está saudável? (verifica também o Postgres)
+curl -s http://localhost/api/health
+# {"status":"ok","version":"1.0.0","database":{"connected":true,"latency_ms":1.3,"error":null}}
+
+# 2. Containers de pé?
+docker compose ps
+
+# 3. Endpoint SSE acessível e emitindo? (Ctrl+C após alguns eventos)
+curl -N http://localhost/api/stream/sensors
+
+# 4. A conexão passa pelo Nginx corretamente? Compare direto na API...
+docker compose exec nginx sh -c "apk add --no-cache curl >/dev/null 2>&1; curl -N http://api:8000/stream/sensors" | head -c 300
+# ...com o caminho completo via Nginx:
+curl -N http://localhost/api/stream/sensors | head -c 300
+# Os dois devem ter o mesmo formato de evento (event:/data:/id:/retry:).
+
+# 5. Eventos realmente chegando (contagem em N segundos)?
+timeout 5 curl -N http://localhost/api/stream/sensors | grep -c "^event: sensor_reading"
+
+# 6. Logs do broadcast/subscribers
+docker compose logs api --tail=50 | grep -i sse
+```
+
+#### Problemas comuns
+
+| Sintoma | Causas possíveis (reais, deste projeto) | Diagnóstico | Solução |
+|---|---|---|---|
+| SSE não conecta (erro de rede no browser) | `api` não está de pé; Nginx não está rodando; porta 80 ocupada | `docker compose ps`; `docker compose logs nginx` | `docker compose up -d nginx api` |
+| Conexão fecha imediatamente | Simulador sem parquet gerado → `FileNotFoundError` no startup do pipeline (não afeta a rota SSE em si, mas o broadcast pode não ter dados) | `docker compose logs api \| grep -i simulator` | Gerar o parquet — ver §16 "`FileNotFoundError: Simulator parquet not found`" |
+| Eventos não chegam (conexão abre, mas fica muda) | Buffer do subscriber saturado e cliente evicted silenciosamente (`_QUEUE_MAX_SIZE=10`); ou 0 subscribers ativos parando o `_broadcast_loop` (ele só reinicia no próximo `subscribe()`) | `docker compose logs api \| grep sse_slow_consumers_evicted` | Reconectar (novo `EventSource`); se persistir, checar CPU do container (`docker stats api`) |
+| Funciona direto na API mas não via Nginx | `location /api/stream/` sem `X-Accel-Buffering: no` ou `chunked_transfer_encoding off` (nesta config eles existem — se removidos, o Nginx passa a bufferizar) | Comparar diagnóstico #4 acima | Restaurar os headers/directivas em `infra/nginx/nginx.conf` (ver §4.5) |
+| Timeout / conexão cai após ~60s | Timeout padrão de proxy (60s) em vez do configurado | `curl -N` e cronometrar quando cai | Já mitigado nesta config: `proxy_read_timeout 3600s` no bloco `/api/stream/` — se voltar a acontecer, confirme que o `nginx.conf` ativo no container é o do repo (`docker compose exec nginx cat /etc/nginx/conf.d/*.conf` ou o `nginx.conf` principal) |
+| Múltiplas conexões (várias abas) | Comportamento esperado — cada SSE subscriber tem sua própria fila; não há limite de conexões configurado no código | `docker compose logs api \| grep sse_subscribed` (contagem em `total=`) | N/A — validado até 100+ conexões simultâneas em `locust_streaming.py` (RNF-37, §14.5) |
+| Browser não recebe eventos, mas `curl -N` funciona | Extensão de browser/DevTools bloqueando `EventSource`; ou `NEXT_PUBLIC_API_URL` mal configurada no frontend (ver §7) | Console do browser (erros de rede/CORS); `curl -N` como baseline de comparação | Corrigir `apps/frontend/.env.local` (`NEXT_PUBLIC_API_URL=/api`) e recarregar |
+| Problemas de proxy buffering | `proxy_buffering` (default Nginx = on) não é desativado explicitamente no bloco `/api/stream/` — ele confia só em `chunked_transfer_encoding off` + `X-Accel-Buffering: no` | Ver diagnóstico #4; se o delay entre eventos parecer maior que 1s de forma consistente | **Observação, não corrigido nesta task** (fora do escopo alterar Nginx): adicionar `proxy_buffering off;` explicitamente no bloco seria mais robusto — ver "Known Issue" no final do documento |
+| Problemas de headers | Cliente sem `Accept: text/event-stream` — o backend não valida isso, mas alguns proxies/CDNs intermediários poderiam | Inspecionar request headers no DevTools → Network | Garantir que `EventSource` (que já envia o header certo automaticamente) seja o método de conexão, não `fetch` manual sem esse header |
+| CORS | Não aplicável neste fluxo — Nginx serve frontend e API no mesmo `http://localhost` (same-origin); `ALLOWED_ORIGINS` no backend é usado por `CORSMiddleware` só para chamadas REST fora desse domínio | — | — |
+| Container/API indisponível | `api` crashou (ex.: modelo ativo com artefato ausente no startup) | `docker compose ps` (status `Exited`); `docker compose logs api` | Ver §16 "`POST /predict/` retorna 503" e "`ACTIVE_MODEL` ignorado" |
+
+### 4.4. WebSocket — `WS /ws/alerts`
+
+#### Como funciona
+
+| Aspecto | Valor real (código) |
+|---|---|
+| Endpoint | `WS /ws/alerts` (backend) → `WS /ws/alerts` via Nginx (**sem** prefixo `/api` — bloco `location /ws/` dedicado, diferente do REST/SSE) |
+| Router | [`alerts_ws.py`](apps/backend/src/routers/alerts_ws.py) |
+| Gerenciador | [`ConnectionManager`](apps/backend/src/core/ws_manager.py) — singleton `manager`, registro em `set[WebSocket]` |
+| Autenticação | **Nenhuma** — endpoint público, sem `Depends`/token. Não confundir com `X-Admin-Token` (usado só em `/models`, REST) |
+| Conexão | Frontend: [`useAlertWebSocket`](apps/frontend/hooks/use-alert-websocket.ts) monta `ws://`/`wss://` a partir de `window.location` |
+| Mensagens servidor→cliente | `{"type": "alert", "message_id", "probability", "predicted_class", "timestamp", "inference_latency_ms"}` (RF-14, quando `probability > 0.70`) e `{"type": "ping"}` (heartbeat, a cada 30s) |
+| Mensagens cliente→servidor | `{"type": "ack", "message_id"}` (confirmação de entrega) e `{"type": "pong"}` (resposta ao heartbeat) |
+| Desconexão | Qualquer fechamento (limpo ou abrupto) cai no bloco `finally` de `alerts_ws.py` → `ws_manager.disconnect()` — sem vazamento de referência |
+| Reconexão | [`useAlertWebSocket.ts`](apps/frontend/hooks/use-alert-websocket.ts) — mesmo padrão do SSE: backoff exponencial 1s→30s, jitter ±20% |
+
+**Nota de arquitetura**: o heartbeat (`_heartbeat_loop`, 30s) só roda enquanto existe ≥1 cliente conectado (`_ensure_heartbeat`/`_cancel_heartbeat`); ele detecta conexões mortas de forma **implícita** — não há `pong` timeout ativo no servidor, uma conexão só é removida quando um `send` falha.
+
+#### Diagrama de sequência — WebSocket
+
+```mermaid
+sequenceDiagram
+    participant FE as Frontend (useAlertWebSocket)
+    participant NG as Nginx
+    participant API as FastAPI (/ws/alerts)
+    participant CM as ConnectionManager
+
+    FE->>NG: WS /ws/alerts (Upgrade: websocket)
+    NG->>API: proxy_pass (headers Upgrade/Connection preservados)
+    API->>CM: connect() -> accept() + registro no set
+    CM->>CM: _ensure_heartbeat() inicia Task
+
+    par heartbeat a cada 30s
+        CM->>API: {"type":"ping"}
+        API->>NG: frame ping
+        NG->>FE: frame ping
+        FE->>NG: {"type":"pong"}
+        NG->>API: frame pong
+    and alerta quando probability > 0.70
+        Note over CM: AlertService.process_prediction()
+        CM->>API: {"type":"alert", message_id, probability, ...}
+        API->>NG: frame alert
+        NG->>FE: frame alert
+        FE->>NG: {"type":"ack", message_id}
+        NG->>API: frame ack
+        API->>CM: send_personal({"type":"ack", ...})
+    end
+
+    FE-->>API: conexão cai (aba fechada / rede)
+    API->>CM: disconnect() [bloco finally]
+    Note over FE: useAlertWebSocket.ts reconecta com<br/>backoff exponencial (1s-30s, jitter ±20%)
+```
+
+#### Diagnóstico
+
+```bash
+# 1. API saudável?
+curl -s http://localhost/api/health
+
+# 2. Handshake WS funciona via Nginx? (código 101 Switching Protocols)
+curl -i -N \
+  -H "Connection: Upgrade" -H "Upgrade: websocket" \
+  -H "Sec-WebSocket-Version: 13" -H "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==" \
+  http://localhost/ws/alerts
+
+# 3. Direto na API (dentro da rede Docker), para isolar Nginx:
+docker compose exec nginx sh -c "apk add --no-cache curl >/dev/null 2>&1; curl -i -N \
+  -H 'Connection: Upgrade' -H 'Upgrade: websocket' \
+  -H 'Sec-WebSocket-Version: 13' -H 'Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==' \
+  http://api:8000/ws/alerts"
+
+# 4. Quantos clientes conectados agora (logs)
+docker compose logs api --tail=100 | grep ws_connected
+
+# 5. Alertas sendo disparados?
+docker compose logs api --tail=200 | grep alert_triggered
+```
+
+#### Problemas comuns
+
+| Sintoma | Causas possíveis (reais) | Diagnóstico | Solução |
+|---|---|---|---|
+| Handshake falhando (não chega a 101) | Nginx sem os headers `Upgrade`/`Connection` no bloco `/ws/`; ou request sem os headers WS obrigatórios | Diagnóstico #2 vs #3 acima — se #3 (direto na API) funciona mas #2 (via Nginx) não, o problema é o proxy | Confirmar `proxy_http_version 1.1`, `proxy_set_header Upgrade $http_upgrade`, `proxy_set_header Connection $connection_upgrade` no bloco `/ws/` de `nginx.conf` (já presentes nesta config — se removidos, é a causa) |
+| Conexão encerrando sem motivo aparente | Nenhum `pong` no timeout esperado NÃO fecha a conexão neste código (não há enforcement ativo) — se está caindo, é mais provável rede/proxy | `docker compose logs api \| grep ws_disconnected` (ver o `client=` e correlacionar com hora) | Verificar se é o browser fechando a aba, não o servidor |
+| Erro no proxy | `location /ws/` ausente/mal configurado, ou `proxy_pass http://api;` alterado para incluir path (mudaria a URI encaminhada) | Comparar a URI recebida pela API: `docker compose logs api \| grep ws_connected` mostra o `client`, não a URI — usar diagnóstico #3 para confirmar a URI final | Restaurar `nginx.conf` original do repo |
+| Erro de autenticação | **Não existe autenticação neste endpoint** — se um cliente está recebendo 401/403, o erro não vem de `/ws/alerts` | Confirmar a URL exata sendo chamada (não confundir com `/api/models`, que exige `X-Admin-Token`) | Corrigir a URL no cliente |
+| Mensagens não chegando | `probability <= 0.70` (não é bug — `broadcast_alert` silenciosamente ignora, é a regra RF-14); ou 0 clientes conectados no momento do broadcast | `docker compose logs api \| grep alert_skipped` vs `alert_triggered` | Esperado — só dispara acima do limiar. Para forçar, use `PUT /api/simulator/mode {"mode":"FAILURE"}` (§15) |
+| Problemas específicos do Nginx | `proxy_read_timeout`/`proxy_send_timeout` menores que o necessário fechariam conexões idle | Medir tempo até a queda | Já mitigado: `3600s` para ambos no bloco `/ws/` |
+
+### 4.5. Papel do Nginx na arquitetura real-time
+
+Config real: [`infra/nginx/nginx.conf`](infra/nginx/nginx.conf). Único ponto de entrada externo (porta 80/443) — `frontend` e `api` não são expostos diretamente (só `expose:`, sem `ports:` no `docker-compose.yml`).
+
+| Bloco (`location`) | Destino (`proxy_pass`) | Papel | Headers/diretivas chave |
+|---|---|---|---|
+| `/ws/` | `http://api` (URI original preservada — sem prefixo removido) | Proxy WebSocket | `proxy_http_version 1.1`; `Upgrade: $http_upgrade`; `Connection: $connection_upgrade` (mapeado: `upgrade` → mantém upgrade, vazio → `close`); timeouts **3600s** |
+| `/api/stream/` | `http://api/stream/` (prefixo `/api/stream/` removido, vira `/stream/...`) | Proxy SSE | `Connection: ''`; `Cache-Control: no-cache`; `X-Accel-Buffering: no`; `chunked_transfer_encoding off`; timeouts **3600s** |
+| `/docs`, `/redoc`, `/openapi.json` | `http://api/docs` etc. | Proxy da documentação OpenAPI | `proxy_http_version 1.1` |
+| `/api/` | `http://api/` (prefixo `/api/` removido) | Proxy REST genérico | timeouts **10s** connect / **3600s** read/send (herda o timeout longo mesmo sendo REST — não diferenciado por rota dentro deste bloco) |
+| `/` (catch-all) | `http://frontend` | Proxy do Next.js (inclui HMR/webpack em dev) | `Upgrade`/`Connection` (para o WS do Turbopack/webpack HMR); timeout **180s** (Turbopack compila rotas on-demand) |
+
+**Por que `/ws/` não usa o prefixo `/api/`**: o backend monta a rota WebSocket literal em `/ws/alerts` (sem prefixo — `root_path="/api"` do FastAPI só afeta geração de URLs no OpenAPI, não o roteamento real). Por isso o Nginx precisa de um bloco `location /ws/` **separado** do `/api/`, encaminhando a URI original sem remover nenhum prefixo. Já o router SSE está registrado em `/stream/sensors` e é exposto ao público como `/api/stream/sensors` — aqui o Nginx **remove** o prefixo `/api/stream/` ao repassar (por isso `proxy_pass` termina em `/stream/`, com barra).
+
+**Buffering desligado para streaming**: `X-Accel-Buffering: no` + `chunked_transfer_encoding off` no bloco SSE evitam que o Nginx acumule a resposta antes de entregar ao cliente — sem isso, os eventos apareceriam em lote em vez de 1x/segundo. `proxy_buffering` (a diretiva "oficial" para isso) não é setada explicitamente neste bloco — ver observação no §4.3 (não corrigido nesta task, fora do escopo alterar Nginx).
+
+**Upgrade de conexão**: só os blocos `/ws/` e `/` (frontend, por causa do HMR) enviam os headers `Upgrade`/`Connection: $connection_upgrade`. O bloco `/api/stream/` **não** precisa disso — SSE é HTTP puro (não faz upgrade de protocolo), só precisa de buffering desligado e timeout longo.
 
 ---
 
@@ -335,35 +582,69 @@ docker compose version     # Docker Compose v2.x.x
 
 ## 7. Variáveis de Ambiente
 
-Crie o arquivo `.env` na **raiz do projeto** antes de subir os serviços. Esse arquivo é consumido por **todos** os contêineres (`api`, `frontend`, `ml`, `db`, `mlflow`) via `env_file: .env`.
+> Tabelas de variáveis abaixo atendem RNF-42.
 
-```dotenv
-# projeto-tcc/.env
+Há **dois arquivos** de ambiente distintos — confundi-los é a causa mais comum de "funciona no meu Docker mas não localmente":
 
-# ── PostgreSQL ────────────────────────────────────────────────────────────
-POSTGRES_USER=user
-POSTGRES_PASSWORD=password
-POSTGRES_DB=tcc_db
+| Arquivo | Onde | Consumido por | Versionado? |
+|---|---|---|---|
+| `.env` (raiz do projeto) | `projeto-tcc/.env` | Todos os contêineres (`api`, `frontend`, `ml`, `db`, `mlflow`) via `env_file: .env` no `docker-compose.yml` | Não (`.gitignore`) — copie de [`.env.example`](.env.example) |
+| `.env.local` (frontend) | `apps/frontend/.env.local` | **Só** o Next.js, e **só** em build/runtime do frontend (lido por `process.env.NEXT_PUBLIC_API_URL` em [`lib/api-client.ts`](apps/frontend/lib/api-client.ts)) | Não (`apps/frontend/.gitignore`: `.env*`) — copie de [`apps/frontend/.env.local.example`](apps/frontend/.env.local.example) |
 
-# ── Backend (hostname "db" = nome do serviço na rede Docker) ──────────────
-DATABASE_URL=postgresql+asyncpg://user:password@db:5432/tcc_db
-
-# ── Modelo ativo na inicialização ────────────────────────────────────────
-# Valores válidos: random_forest | xgboost | mlp | random_forest_v2 |
-#                  xgboost_v2    | tcn     | bilstm | patchtst | autoencoder
-ACTIVE_MODEL=random_forest
-
-# ── Token de admin (necessário para PUT /models/active e GET /models) ────
-ADMIN_API_TOKEN=change-me-in-production
-
-# ── Frontend ──────────────────────────────────────────────────────────────
-NEXT_PUBLIC_API_URL=http://localhost
-
-# ── Ollama (próxima fase — assistente RAG local) ─────────────────────────
-OLLAMA_BASE_URL=http://host.docker.internal:11434
+```bash
+cp .env.example .env
+cp apps/frontend/.env.local.example apps/frontend/.env.local
 ```
 
-> **Atenção**: o backend é configurado para ler o parquet do simulador em `/ml/data/processed/metropt3.parquet`, conforme `SIMULATOR_PARQUET_PATH` no `docker-compose.yml`. Você precisa **gerar o parquet antes da primeira execução** (ver §12).
+> **Sem o segundo arquivo, o frontend lança `[api-client] NEXT_PUBLIC_API_URL não está definida.`** em runtime — o Next.js **não lê** o `.env` da raiz, e o `docker-compose.yml` também não injeta essa variável para o serviço `frontend` (nenhum `environment:` a define). Como `apps/frontend` é montado por bind mount no container, o arquivo precisa existir no **host** antes de `docker compose up`.
+
+### 7.1. Variáveis do `.env` (raiz)
+
+| Variável | Obrigatória | Default | Descrição |
+|---|---|---|---|
+| `POSTGRES_USER` | Sim | — | Usuário do Postgres (usado pelo serviço `db` e por `DATABASE_URL`) |
+| `POSTGRES_PASSWORD` | Sim | — | Senha do Postgres |
+| `POSTGRES_DB` | Sim | — | Nome do banco (`tcc_db`) |
+| `DATABASE_URL` | Sim | `postgresql+asyncpg://postgres:postgres@localhost:5432/tcc_db` (fallback do `Settings`, não usável em Docker) | String de conexão async — hostname `db` dentro da rede Docker, `localhost` se rodando o backend fora do Docker |
+| `ACTIVE_MODEL` | Não | `random_forest` | RF-10 — modelo ativo no startup. Valores válidos: `random_forest`, `xgboost`, `mlp`, `random_forest_v2`, `xgboost_v2`, `tcn`, `bilstm`, `patchtst`, `autoencoder` (ver [`model_registry.py`](apps/backend/src/services/model_registry.py):`KNOWN_MODELS`). Hot-swap em runtime via `PUT /models/active` sem precisar mudar esta variável |
+| `ADMIN_API_TOKEN` | Não | `change-me-in-production` | RF-11 — token do header `X-Admin-Token` em `/models/*`. **Com o valor default, a autenticação é desativada** (modo dev — ver [`auth.py`](apps/backend/src/core/auth.py)) |
+| `SMOTE_SAMPLING_STRATEGY` | Não | `auto` | Só usado pelos scripts de treino em `apps/ml/src/train_*.py` (via `balancing.py`) — **não afeta o runtime da API** |
+| `UVICORN_WORKERS` | Não | `1` | RNF-37 — nº de processos Uvicorn do serviço `api`, interpolado no `command:` do `docker-compose.yml` (`--workers ${UVICORN_WORKERS:-1}`). Mudar exige `docker compose up -d --force-recreate api`. **Testado e mantido em 1** — ver §14.7 |
+| `DB_POOL_SIZE` | Não | `10` | Tamanho do pool SQLAlchemy/asyncpg, por worker — [`config.py`](apps/backend/src/core/config.py) → [`database.py`](apps/backend/src/core/database.py) |
+| `DB_MAX_OVERFLOW` | Não | `20` | Conexões extra sob pico, além do `DB_POOL_SIZE` |
+| `PROJECT_NAME` | Não | `Predictive Maintenance API` | Metadado exibido no Swagger (`/docs`) |
+| `VERSION` | Não | `0.1.0` | Versão exibida em `/health` e no Swagger |
+| `ALLOWED_ORIGINS` | Não | `["http://localhost:3000","http://127.0.0.1:3000"]` | Lista JSON de origens para `CORSMiddleware` — só relevante para chamadas REST **fora** do same-origin do Nginx (ver §4.3, CORS não aplicável a SSE/WS neste setup) |
+| `OLLAMA_BASE_URL` | Não | `http://host.docker.internal:11434` | Próxima fase (assistente RAG local) — ainda não consumido por nenhum endpoint ativo |
+| `MODEL_PATH`, `XGBOOST_MODEL_PATH`, `MLP_ONNX_PATH`, `MLP_SCALER_PATH`, `RF_V2_ONNX_PATH`, `XGBOOST_V2_ONNX_PATH`, `TCN_ONNX_PATH`, `TCN_SCALER_PATH`, `BILSTM_ONNX_PATH`, `BILSTM_SCALER_PATH`, `PATCHTST_ONNX_PATH`, `PATCHTST_SCALER_PATH`, `AUTOENCODER_ONNX_PATH`, `AUTOENCODER_SCALER_PATH` | Não | resolvidos automaticamente para `apps/ml/models/<arquivo>` | Overrides individuais de caminho de artefato — raramente necessários; usados só se você mover os artefatos para fora de `apps/ml/models/` |
+
+Definidas **pelo `docker-compose.yml`** (não pelo `.env` — não precisam ir no arquivo):
+
+| Variável | Serviço | Valor | Descrição |
+|---|---|---|---|
+| `PYTHONPATH` | `api` | `/app` | Permite `from src...` funcionar dentro do container |
+| `SIMULATOR_PARQUET_PATH` | `api` | `/ml/data/processed/metropt3.parquet` | Caminho do parquet **dentro do container** (volume `./apps/ml/data:/ml/data:ro`) |
+| `NODE_OPTIONS` | `frontend` | `--max-old-space-size=3584` | Limite de heap do Node para o dev server |
+| `WATCHPACK_POLLING` | `frontend` | `true` | Polling de arquivos (webpack) — **não afeta o Turbopack** (usado por padrão nesta versão do Next.js), que tem seu próprio watcher e não recarrega de forma confiável via bind mount no Windows (ver §16) |
+
+### 7.2. Variáveis do `apps/frontend/.env.local`
+
+| Variável | Obrigatória | Default | Descrição |
+|---|---|---|---|
+| `NEXT_PUBLIC_API_URL` | **Sim** | nenhum — lança erro em runtime se ausente | RNF-13 — base URL das chamadas REST/paginação (`lib/api-client.ts`). `/api` para Docker Compose (same-origin via Nginx); `http://localhost:8000` para FastAPI standalone sem Nginx. **Não afeta SSE/WS** — `useSSE`/`useAlertWebSocket` montam a URL a partir de `window.location`, não desta variável |
+| `NEXT_PUBLIC_MSW_ENABLED` | Não — **não defina manualmente** | (ausente) | Liga o Mock Service Worker (`components/msw-provider.tsx`). Injetada automaticamente como `"true"` só pelo `webServer.env` de [`playwright.config.ts`](apps/frontend/playwright.config.ts) durante `pnpm e2e` — não faz parte do fluxo normal de desenvolvimento/Docker |
+
+### 7.3. Variáveis opcionais do load test (raiz, só para `locust_streaming.py`)
+
+Já documentadas em detalhe no §14.5 — resumo:
+
+| Variável | Obrigatória | Default | Descrição |
+|---|---|---|---|
+| `STREAMING_AUTH_TOKEN` | Não | nenhum | Enviaria `Authorization: Bearer <token>` — hoje sem efeito, pois `/stream/sensors` não exige auth |
+| `SSE_HOLD_SECONDS` | Não | `45` | Quanto tempo cada cliente simulado mantém a conexão SSE aberta |
+| `SSE_PATH` | Não | `/api/stream/sensors` | Path do endpoint testado |
+
+> **Atenção**: o backend lê o parquet do simulador em `/ml/data/processed/metropt3.parquet` **dentro do container** (`SIMULATOR_PARQUET_PATH`, definida pelo `docker-compose.yml`). Você precisa **gerar o parquet no host antes da primeira execução** (ver §12) — o volume `./apps/ml/data:/ml/data:ro` só expõe o que já existe em `apps/ml/data/processed/` no seu disco.
 
 ---
 
@@ -374,7 +655,10 @@ O projeto é orquestrado **exclusivamente via Docker Compose**. Todos os 6 servi
 ### 8.1. Subindo tudo
 
 ```powershell
-# Na raiz do projeto (.env já deve existir)
+# Na raiz do projeto — os DOIS arquivos de ambiente precisam existir (§7)
+copy .env.example .env
+copy apps\frontend\.env.local.example apps\frontend\.env.local
+
 docker compose up --build
 ```
 
@@ -1037,13 +1321,42 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 
 **Causa**: timeout do reverse proxy.
 
-**Solução**: já mitigado no Nginx — `proxy_read_timeout 3600s` para `/api/stream/` e `/ws/`.
+**Solução**: já mitigado no Nginx — `proxy_read_timeout 3600s` para `/api/stream/` e `/ws/`. Troubleshooting completo de SSE/WS (handshake, buffering, headers, CORS): §4.3 e §4.4.
+
+### Frontend lança `NEXT_PUBLIC_API_URL não está definida`
+
+**Causa**: `apps/frontend/.env.local` não existe — este arquivo é gitignorado e **não** é o mesmo que o `.env` da raiz (ver §7).
+
+**Solução**:
+
+```bash
+cp apps/frontend/.env.local.example apps/frontend/.env.local
+docker compose up -d --build frontend   # ou `pnpm dev` se rodando fora do Docker
+```
+
+### Editei um componente do frontend e nada mudou na tela
+
+**Causa**: Turbopack (Next.js dev server) às vezes não detecta mudanças de arquivo através do bind mount do Docker Desktop no Windows — o HMR mostra `[HMR] connected`, mas continua servindo a versão antiga, sem erro. `WATCHPACK_POLLING=true` (já definido no `docker-compose.yml`) não resolve porque essa variável é específica do watcher do webpack, não do Turbopack.
+
+**Solução**: force um reload completo do processo:
+
+```bash
+docker compose restart frontend
+```
 
 ### Docker Desktop com `out of memory` no `api`
 
 **Causa**: limite de 3 GB definido + carga do parquet + ONNX session de modelos sequenciais.
 
 **Solução**: aumente o limite em `docker-compose.yml` (`deploy.resources.limits.memory`) ou suba o Docker Desktop para 8+ GB em **Settings → Resources**.
+
+### Known Issues (não corrigidos nesta task — fora do escopo)
+
+Divergências/observações reais encontradas na auditoria (RNF-41/RNF-42), documentadas em vez de corrigidas porque esta é uma task de documentação, não de mudança de comportamento:
+
+- **`proxy_buffering` não está explicitamente desativado no bloco `/api/stream/`** de `infra/nginx/nginx.conf`. Funciona porque `chunked_transfer_encoding off` + `X-Accel-Buffering: no` já bastam nesta versão do Nginx, mas a diretiva "canônica" para SSE (`proxy_buffering off;`) não está presente. Se o comportamento de streaming mudar em uma atualização do Nginx, este é o primeiro lugar a checar.
+- **`/api/` (bloco REST genérico) herda `proxy_read_timeout 3600s`**, o mesmo valor usado para SSE/WS — nenhuma rota REST precisa de uma conexão de 1 hora; não é um bug funcional, mas é uma configuração mais permissiva do que o necessário para esse bloco.
+- **`ALLOWED_ORIGINS` inclui `http://localhost:8000`** no `.env` atual — não há nenhum serviço exposto diretamente nessa porta neste `docker-compose.yml` (a API só é alcançável via Nginx em `:80`), então essa origem parece vestigial de uma configuração anterior sem proxy.
 
 ---
 
