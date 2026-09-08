@@ -80,6 +80,22 @@ services:
     networks:
       - app-network
 
+  # RF-19 / RNF-43 — servidor MCP standalone, processo e container próprios,
+  # sem compartilhar nada com `api`. Alcançável na rede interna via
+  # MCP_SERVER_URL=http://mcp-server:<porta> (ver .env.example). O backend
+  # ainda não consome esta URL nesta task — ver README "Arquitetura MCP".
+  mcp-server:
+    build: ./apps/mcp-server
+    container_name: mcp-server
+    volumes:
+      - ./apps/mcp-server:/app
+    env_file:
+      - .env
+    expose:
+      - "${MCP_SERVER_PORT:-8100}"
+    networks:
+      - app-network
+
   db:
     image: postgres:15
     container_name: db

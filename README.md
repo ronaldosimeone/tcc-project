@@ -486,6 +486,99 @@ Config real: [`infra/nginx/nginx.conf`](infra/nginx/nginx.conf). Único ponto de
 
 **Upgrade de conexão**: só os blocos `/ws/` e `/` (frontend, por causa do HMR) enviam os headers `Upgrade`/`Connection: $connection_upgrade`. O bloco `/api/stream/` **não** precisa disso — SSE é HTTP puro (não faz upgrade de protocolo), só precisa de buffering desligado e timeout longo.
 
+### 4.6. MCP Server — arquitetura (RF-19 / RNF-43)
+
+**O que é**: um servidor [MCP](https://modelcontextprotocol.io) (Model Context Protocol) **standalone**, em `apps/mcp-server/`, processo e container Docker próprios — não roda dentro do processo do FastAPI, não compartilha memória/estado com ele. Hoje expõe exatamente **uma** ferramenta, `search_maintenance_manual`, em modo **stub** (sem busca real ainda).
+
+**Por que é separado**: o propósito de longo prazo (CLAUDE.md §4) é o Ollama (LLM local) consultar manuais técnicos via MCP para sugerir reparos — isso é um domínio de responsabilidade diferente do FastAPI (que faz predição/streaming), roda em processo próprio para poder escalar/reiniciar/trocar de implementação (real RAG) independentemente do backend, e para não acoplar as dependências de busca/embeddings ao container da API.
+
+```mermaid
+flowchart LR
+    C["Browser / Client"] --> N["Nginx"]
+    N --> API["FastAPI (api:8000)"]
+    N -.->|"ainda não roteado<br/>(fora do escopo desta task)"| MCP
+
+    API -.->|"MCP_SERVER_URL<br/>(configurada, NÃO consumida ainda)"| MCP["MCP Server<br/>apps/mcp-server (container próprio)"]
+    MCP --> TOOL["search_maintenance_manual<br/>(stub — RF-19)"]
+
+    style MCP stroke-dasharray: 3 3
+```
+
+> A seta tracejada `API -.-> MCP` existe só para mostrar a URL **configurada** (`MCP_SERVER_URL`) — o backend **não faz** essa chamada ainda nesta task (ver Known Issues/estado atual abaixo). Não é roteado pelo Nginx: é alcançado só pela rede interna Docker (`http://mcp-server:8100`), como `db`/`mlflow`.
+
+| Aspecto | Valor real |
+|---|---|
+| Localização | `apps/mcp-server/server.py` |
+| SDK | [`mcp`](https://pypi.org/project/mcp/) (SDK oficial do Model Context Protocol) — `mcp==2.2.0` |
+| Classe do servidor | `mcp.server.mcpserver.MCPServer` (renomeada de `FastMCP` na v1.x do SDK — `mcp.server.fastmcp` não existe mais nesta versão) |
+| Transporte | `streamable-http` — o transporte HTTP direto-por-URL suportado por este SDK (os outros dois, `stdio` e `sse`, não servem para um serviço standalone acessível pela rede) |
+| Endpoint | `POST http://mcp-server:8100/mcp` (JSON-RPC 2.0, protocolo MCP) |
+| Host/porta | `0.0.0.0` / `MCP_SERVER_PORT` (default `8100`) |
+| Container | `mcp-server` (`docker-compose.yml`) — `build: ./apps/mcp-server`, rede `app-network`, `expose` (só interno, sem `ports:`) |
+| `MCP_SERVER_URL` | `http://mcp-server:8100` — ver `.env.example`. Declarada em `Settings.mcp_server_url` (`apps/backend/src/core/config.py`), mesmo padrão de `OLLAMA_BASE_URL`: reservada para a integração futura, **não consumida por nenhum código ainda** |
+
+#### Ferramenta
+
+| Tool | Input | Estado | Função |
+|---|---|---|---|
+| `search_maintenance_manual` | `query: string` (obrigatório) | **Stub** | Interface inicial para busca em manual de manutenção |
+
+A implementação atual **não realiza busca real** — retorna uma estrutura determinística:
+
+```json
+{
+  "status": "stub",
+  "query": "<echo da consulta recebida>",
+  "results": [],
+  "message": "Busca real em manuais de manutenção ainda não implementada (RF-19). Esta é uma resposta stub determinística — nenhum acesso a banco de dados, arquivo ou serviço externo foi feito."
+}
+```
+
+Nenhum acesso a rede, disco ou banco acontece na execução do stub (coberto por teste — ver `apps/mcp-server/tests/test_mcp_server.py::test_stub_never_touches_network_or_filesystem`). A assinatura (`query: string` → `dict` com `status`/`query`/`results`/`message`) é a interface pública estável: a substituição futura por RAG real (embeddings + ChromaDB, orquestrado pelo Ollama) deve preservá-la.
+
+#### Como iniciar
+
+```bash
+docker compose up -d --build mcp-server
+docker compose logs mcp-server --tail=20
+```
+
+#### Como verificar se está funcionando
+
+```bash
+# 1. Container de pé e processo vivo?
+docker compose ps mcp-server
+
+# 2. Handshake MCP real, pela rede interna Docker (a partir de qualquer
+#    outro container na mesma rede — aqui usando o nginx como exemplo,
+#    já que ele já tem curl instalável via apk):
+docker compose exec nginx sh -c "apk add --no-cache curl >/dev/null 2>&1; \
+  curl -s -X POST http://mcp-server:8100/mcp \
+    -H 'Content-Type: application/json' \
+    -H 'Accept: application/json, text/event-stream' \
+    -d '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{\"protocolVersion\":\"2025-06-18\",\"capabilities\":{},\"clientInfo\":{\"name\":\"check\",\"version\":\"0\"}}}'"
+# Resposta esperada: evento SSE com "serverInfo":{"name":"predictiq-mcp",...}
+```
+
+O header de resposta `mcp-session-id` da chamada `initialize` deve ser reenviado (`-H "mcp-session-id: <valor>"`) nas chamadas seguintes (`tools/list`, `tools/call`) — é assim que a sessão MCP é mantida sobre HTTP stateless.
+
+#### Testes
+
+```bash
+docker compose exec mcp-server python -m pytest tests/ -v
+# ou localmente:
+cd apps/mcp-server && python -m venv .venv && .venv\Scripts\Activate.ps1
+pip install -r requirements.txt && pytest tests/ -v
+```
+
+#### Como substituir o stub por busca real (futuro)
+
+1. Manter a assinatura de `search_maintenance_manual(query: str) -> dict` e o formato de resposta (`status`/`query`/`results`/`message`) — trocar `"status": "stub"` por `"status": "ok"` e popular `results`.
+2. Implementar a busca dentro da própria função (embeddings + ChromaDB, conforme CLAUDE.md §4) — sem mudar o transporte, o schema de entrada ou o nome da ferramenta.
+3. Só então o backend passa a efetivamente chamar `settings.mcp_server_url` (hoje só declarada, não consumida) — a orquestração real é do Ollama, não do FastAPI diretamente (ver CLAUDE.md §4: "o LLM do sistema assume esta persona, invoca obrigatoriamente a ferramenta de produção `search_manuals`").
+
+> **Nota de nomenclatura**: CLAUDE.md/AGENTS.md descrevem esta ferramenta futura como `search_manuals`; a task RF-19 que implementou este stub especificou explicitamente o nome `search_maintenance_manual`. Mantido o nome da task (é o que está registrado no servidor real) — sinalizado aqui para quem for alinhar com a documentação conceitual mais antiga.
+
 ---
 
 ## 5. Modelos de Machine Learning

@@ -78,6 +78,18 @@ class Settings(BaseSettings):
         alias="OLLAMA_BASE_URL",
     )
 
+    # RF-19 / RNF-43 — endereço do serviço MCP standalone (apps/mcp-server),
+    # container e processo próprios (ver docker-compose.yml::mcp-server).
+    # Declarada aqui pelo mesmo motivo que `ollama_base_url`: reservar o
+    # ponto de configuração para a integração futura (Ollama -> MCP ->
+    # search_maintenance_manual) sem introduzir uma segunda forma de
+    # configurar URLs de serviço. Nenhum código consome este campo ainda —
+    # ver README "Arquitetura MCP" para o estado atual (stub, RF-19).
+    mcp_server_url: str = Field(
+        default="http://mcp-server:8100",
+        alias="MCP_SERVER_URL",
+    )
+
     # ── CORS ──────────────────────────────────────────────────────────────
     allowed_origins: list[str] = Field(
         default=["http://localhost:3000", "http://127.0.0.1:3000"],
