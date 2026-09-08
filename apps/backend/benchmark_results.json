@@ -1,0 +1,110 @@
+[
+  {
+    "name": "autoencoder",
+    "f1": 0.40979689366786143,
+    "latency_mean_ms": 20.14484215073753,
+    "latency_p50_ms": 19.994600035715848,
+    "latency_p95_ms": 21.423774916911498,
+    "latency_p99_ms": 27.16656598262489,
+    "memory_mb": 0.5979537963867188,
+    "eligible": true,
+    "score": 0.3899257728919293,
+    "error": null
+  },
+  {
+    "name": "bilstm",
+    "f1": 0.9743008314436886,
+    "latency_mean_ms": 20.424727749603335,
+    "latency_p50_ms": 20.282949961256236,
+    "latency_p95_ms": 21.441934938775375,
+    "latency_p99_ms": 25.554013930959627,
+    "memory_mb": 0.042545318603515625,
+    "eligible": true,
+    "score": 0.9682386477588921,
+    "error": null
+  },
+  {
+    "name": "mlp",
+    "f1": 0.9900990099009901,
+    "latency_mean_ms": 19.78639500006102,
+    "latency_p50_ms": 19.642399973236024,
+    "latency_p95_ms": 20.78987009008415,
+    "latency_p99_ms": 25.708995944587514,
+    "memory_mb": 0.0380706787109375,
+    "eligible": true,
+    "score": 0.9901536832655123,
+    "error": null
+  },
+  {
+    "name": "patchtst",
+    "f1": 0.8069861173309449,
+    "latency_mean_ms": 20.3750096000731,
+    "latency_p50_ms": 20.217650046106428,
+    "latency_p95_ms": 21.330930019030347,
+    "latency_p99_ms": 26.839167050784454,
+    "memory_mb": 0.025468826293945312,
+    "eligible": true,
+    "score": 0.7991547084877589,
+    "error": null
+  },
+  {
+    "name": "random_forest",
+    "f1": 0.9996152366294728,
+    "latency_mean_ms": 47.0560908994521,
+    "latency_p50_ms": 46.686749963555485,
+    "latency_p95_ms": 48.847275000298396,
+    "latency_p99_ms": 88.35605197469704,
+    "memory_mb": 19.729893684387207,
+    "eligible": true,
+    "score": 0.6,
+    "error": null
+  },
+  {
+    "name": "random_forest_v2",
+    "f1": 0.9996152366294728,
+    "latency_mean_ms": 20.00820140261203,
+    "latency_p50_ms": 19.83935001771897,
+    "latency_p95_ms": 21.027604915434495,
+    "latency_p99_ms": 25.99830103688873,
+    "memory_mb": 0.03350257873535156,
+    "eligible": true,
+    "score": 0.9977506514931557,
+    "error": null
+  },
+  {
+    "name": "tcn",
+    "f1": 0.967470340604669,
+    "latency_mean_ms": 20.89020475023426,
+    "latency_p50_ms": 20.775899989530444,
+    "latency_p95_ms": 21.76183004048653,
+    "latency_p99_ms": 27.41806601407006,
+    "memory_mb": 0.024831771850585938,
+    "eligible": true,
+    "score": 0.958574665569176,
+    "error": null
+  },
+  {
+    "name": "xgboost",
+    "f1": 0.0,
+    "latency_mean_ms": 0.0,
+    "latency_p50_ms": 0.0,
+    "latency_p95_ms": 0.0,
+    "latency_p99_ms": 0.0,
+    "memory_mb": 0.0,
+    "eligible": false,
+    "score": null,
+    "error": "`feature_names_in_` is defined only when `X` has feature names that are all strings."
+  },
+  {
+    "name": "xgboost_v2",
+    "f1": 0.9996152366294728,
+    "latency_mean_ms": 20.176302600011695,
+    "latency_p50_ms": 20.035249937791377,
+    "latency_p95_ms": 21.152769948821515,
+    "latency_p99_ms": 26.477451095124707,
+    "memory_mb": 0.01627826690673828,
+    "eligible": true,
+    "score": 0.9967664520302334,
+    "error": null
+  }
+]
