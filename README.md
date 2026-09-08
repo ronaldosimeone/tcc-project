@@ -488,7 +488,7 @@ Config real: [`infra/nginx/nginx.conf`](infra/nginx/nginx.conf). Único ponto de
 
 ### 4.6. MCP Server — arquitetura (RF-19 / RNF-43)
 
-**O que é**: um servidor [MCP](https://modelcontextprotocol.io) (Model Context Protocol) **standalone**, em `apps/mcp-server/`, processo e container Docker próprios — não roda dentro do processo do FastAPI, não compartilha memória/estado com ele. Hoje expõe exatamente **uma** ferramenta, `search_maintenance_manual`, em modo **stub** (sem busca real ainda).
+**O que é**: um servidor [MCP](https://modelcontextprotocol.io) (Model Context Protocol) **standalone**, em `apps/mcp-server/`, processo e container Docker próprios — não roda dentro do processo do FastAPI, não compartilha memória/estado com ele. Hoje expõe exatamente **uma** ferramenta, `search_maintenance_manual`, que faz **busca semântica real** (RF-21) sobre os manuais indexados pela pipeline da §4.7 (RF-20).
 
 **Por que é separado**: o propósito de longo prazo (CLAUDE.md §4) é o Ollama (LLM local) consultar manuais técnicos via MCP para sugerir reparos — isso é um domínio de responsabilidade diferente do FastAPI (que faz predição/streaming), roda em processo próprio para poder escalar/reiniciar/trocar de implementação (real RAG) independentemente do backend, e para não acoplar as dependências de busca/embeddings ao container da API.
 
@@ -499,7 +499,9 @@ flowchart LR
     N -.->|"ainda não roteado<br/>(fora do escopo desta task)"| MCP
 
     API -.->|"MCP_SERVER_URL<br/>(configurada, NÃO consumida ainda)"| MCP["MCP Server<br/>apps/mcp-server (container próprio)"]
-    MCP --> TOOL["search_maintenance_manual<br/>(stub — RF-19)"]
+    MCP --> TOOL["search_maintenance_manual<br/>(busca semântica real — RF-21)"]
+    TOOL --> SVC["SemanticSearchService"]
+    SVC --> CHROMA[("ChromaDB<br/>maintenance_manuals — RF-20")]
 
     style MCP stroke-dasharray: 3 3
 ```
@@ -521,20 +523,55 @@ flowchart LR
 
 | Tool | Input | Estado | Função |
 |---|---|---|---|
-| `search_maintenance_manual` | `query: string` (obrigatório) | **Stub** | Interface inicial para busca em manual de manutenção |
+| `search_maintenance_manual` | `query: string` (obrigatório) | **Busca semântica real (RF-21)** | Recupera, no máximo, os 5 trechos mais relevantes dos manuais indexados |
 
-A implementação atual **não realiza busca real** — retorna uma estrutura determinística:
+**Fluxo real** (`server.py` → `semantic_search.py` → ChromaDB, ver §4.7 para a indexação):
+
+```mermaid
+flowchart TD
+    Q["query: string"] --> ENC["SentenceTransformer.encode<br/>(mesmo EMBEDDING_MODEL da indexação)"]
+    ENC --> CAND["ChromaDB.query<br/>(candidatos por proximidade, ate 20)"]
+    CAND --> SCORE["cosine similarity<br/>(calculada aqui, nao a distancia do Chroma)"]
+    SCORE --> FILTER{"score > 0.6 ?"}
+    FILTER -->|"nao"| DROP["descartado"]
+    FILTER -->|"sim"| TOP5["top 5 por score"]
+    TOP5 --> RESP["query + results[]<br/>(text, score, metadata)"]
+```
+
+Resposta real (capturada via chamada MCP de verdade — ver "Validação ponta-a-ponta" abaixo):
 
 ```json
 {
-  "status": "stub",
-  "query": "<echo da consulta recebida>",
-  "results": [],
-  "message": "Busca real em manuais de manutenção ainda não implementada (RF-19). Esta é uma resposta stub determinística — nenhum acesso a banco de dados, arquivo ou serviço externo foi feito."
+  "query": "vazamento na bomba centrifuga",
+  "results": [
+    {
+      "text": "Manual de manutencao da bomba centrifuga modelo BC-200. Verificar o alinhamento do eixo e o estado dos rolamentos a cada 1000 horas de operacao continua.",
+      "score": 0.7108,
+      "metadata": {
+        "source": "manual-bomba-centrifuga.pdf",
+        "file_name": "manual-bomba-centrifuga.pdf",
+        "file_hash": "35af10763bc9...",
+        "page": 1,
+        "chunk_index": 0,
+        "embedding_model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+      }
+    }
+  ]
 }
 ```
 
-Nenhum acesso a rede, disco ou banco acontece na execução do stub (coberto por teste — ver `apps/mcp-server/tests/test_mcp_server.py::test_stub_never_touches_network_or_filesystem`). A assinatura (`query: string` → `dict` com `status`/`query`/`results`/`message`) é a interface pública estável: a substituição futura por RAG real (embeddings + ChromaDB, orquestrado pelo Ollama) deve preservá-la.
+| Regra | Valor |
+|---|---|
+| Máximo de resultados | 5 |
+| Threshold de score | `score > 0.6` (estrito — `score == 0.6` é descartado) |
+| Métrica de score | Cosine similarity, calculada em `semantic_search.py` a partir dos embeddings brutos (ver "Por que cosine similarity" abaixo) — **não** a distância que o ChromaDB devolve diretamente |
+| Sem resultado relevante | Resposta válida `{"query": ..., "results": []}` — nunca lança exceção |
+| Modelo de embeddings | O mesmo `EMBEDDING_MODEL` da indexação (§4.7), carregado **uma vez por processo** (singleton lazy em `server._get_service`) |
+| Collection consultada | `maintenance_manuals` (a mesma da indexação — nenhum ChromaDB novo) |
+
+#### Por que cosine similarity, não a distância bruta do ChromaDB
+
+A collection é criada sem `hnsw:space` explícito (§4.7) — o ChromaDB usa o default `l2` (distância L2 ao quadrado sobre embeddings não normalizados). Medido contra o corpus real desta task, essa distância fica em ~15–50 e uma conversão ingênua (`1/(1+distancia)`, fórmula padrão para espaços L2) nunca passava de `~0.07` — o threshold `> 0.6` da RF-21 rejeitaria **toda** consulta, por mais relevante que fosse. Corrigido calculando a cosine similarity diretamente a partir dos embeddings brutos (query + candidatos, este último obtido via `collection.query(..., include=["embeddings"])`) — invariante à norma dos vetores, portanto insensível a essa característica do modelo. O índice ANN do ChromaDB continua usado só para obter os candidatos de forma eficiente; o score que decide o filtro é sempre a cosine similarity. Ver docstring de [`semantic_search.py`](apps/mcp-server/semantic_search.py) para a investigação completa.
 
 #### Como iniciar
 
@@ -562,6 +599,18 @@ docker compose exec nginx sh -c "apk add --no-cache curl >/dev/null 2>&1; \
 
 O header de resposta `mcp-session-id` da chamada `initialize` deve ser reenviado (`-H "mcp-session-id: <valor>"`) nas chamadas seguintes (`tools/list`, `tools/call`) — é assim que a sessão MCP é mantida sobre HTTP stateless.
 
+#### Validação ponta-a-ponta (RF-21) — mesma sessão acima, `tools/call` real
+
+```bash
+# reenviar o mesmo mcp-session-id do initialize acima
+docker compose exec nginx sh -c "curl -s -X POST http://mcp-server:8100/mcp \
+  -H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream' \
+  -H 'mcp-session-id: <valor capturado no initialize>' \
+  -d '{\"jsonrpc\":\"2.0\",\"id\":3,\"method\":\"tools/call\",\"params\":{\"name\":\"search_maintenance_manual\",\"arguments\":{\"query\":\"vazamento na bomba centrifuga\"}}}'"
+```
+
+Rodado de verdade contra o ChromaDB real desta task (3 manuais indexados via §4.7): a query relevante acima devolveu 3 trechos do `manual-bomba-centrifuga.pdf` com score `0.71`/`0.70`/`0.63` (ver JSON de exemplo acima); uma query deliberadamente sem relação ("receita de bolo de chocolate") devolveu `{"results": []}`, sem erro.
+
 #### Testes
 
 ```bash
@@ -571,19 +620,41 @@ cd apps/mcp-server && python -m venv .venv && .venv\Scripts\Activate.ps1
 pip install -r requirements.txt && pytest tests/ -v
 ```
 
-#### Como substituir o stub por busca real (futuro)
+`tests/test_semantic_search.py` cobre `SemanticSearchService`/`cosine_similarity` isoladamente (threshold, ordenação, limite de 5, metadados); `tests/test_mcp_server.py` cobre a integração `search_maintenance_manual -> SemanticSearchService` (com um `SemanticSearchService` real sobre ChromaDB temporário — não um mock que só devolve um dict fixo).
 
-1. Manter a assinatura de `search_maintenance_manual(query: str) -> dict` e o formato de resposta (`status`/`query`/`results`/`message`) — trocar `"status": "stub"` por `"status": "ok"` e popular `results`.
-2. Implementar a busca dentro da própria função (embeddings + ChromaDB, conforme CLAUDE.md §4) — a base de conhecimento (chunks + embeddings já persistidos) é o que a §4.7 abaixo (RF-20) prepara; falta só o lado da consulta (query → embedding → `collection.query()`), sem mudar o transporte, o schema de entrada ou o nome da ferramenta.
-3. Só então o backend passa a efetivamente chamar `settings.mcp_server_url` (hoje só declarada, não consumida) — a orquestração real é do Ollama, não do FastAPI diretamente (ver CLAUDE.md §4: "o LLM do sistema assume esta persona, invoca obrigatoriamente a ferramenta de produção `search_manuals`").
+#### Benchmark de busca semântica (RNF-45)
 
-> **Nota de nomenclatura**: CLAUDE.md/AGENTS.md descrevem esta ferramenta futura como `search_manuals`; a task RF-19 que implementou este stub especificou explicitamente o nome `search_maintenance_manual`. Mantido o nome da task (é o que está registrado no servidor real) — sinalizado aqui para quem for alinhar com a documentação conceitual mais antiga.
+```bash
+docker compose exec mcp-server python benchmark_semantic_search.py
+```
+
+Mede a operação completa (`search_maintenance_manual` → `SemanticSearchService` → embedding da query → ChromaDB → resposta), contra o ChromaDB real (não mock), com warm-up excluído da medição. Resultado real desta task (3 manuais / 9 chunks indexados, 24 queries variadas, 3 de warm-up):
+
+```text
+Semantic Search Benchmark
+
+Model: sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+Documents: 9 chunks
+Queries: 24
+Warm-up: 3 iterations (not measured)
+Avg results/query: 0.75
+
+p50: 16.56 ms
+p95: 18.08 ms
+p99: 18.08 ms
+
+RNF-45 (p95 < 500.0 ms): PASS
+```
+
+Evidência completa (latência de cada uma das 24 queries): [`semantic_search_benchmark.json`](apps/mcp-server/semantic_search_benchmark.json).
+
+> `avg_results_per_query = 0.75` é esperado, não um bug: o corpus de teste tem só 3 manuais sintéticos e o threshold `> 0.6` é estrito (ver "Por que cosine similarity" acima) — várias das 24 queries do benchmark são só tematicamente relacionadas, não paráfrases próximas de um chunk específico, então ficam abaixo do threshold. O benchmark mede **latência**, não taxa de acerto da busca.
+
+> **Nota de nomenclatura**: CLAUDE.md/AGENTS.md descrevem esta ferramenta como `search_manuals`; a task RF-19 que criou o stub original especificou explicitamente o nome `search_maintenance_manual`, mantido em RF-21. Sinalizado aqui para quem for alinhar com a documentação conceitual mais antiga.
 
 ### 4.7. Ingestão de manuais — pipeline RAG offline (RF-20 / RNF-44)
 
-**O que é**: `apps/mcp-server/index_manuals.py` — um script batch, independente do transporte MCP, que lê PDFs, extrai texto, gera chunks com overlap, gera embeddings localmente e persiste tudo em um ChromaDB local. Prepara a base de conhecimento que a ferramenta `search_maintenance_manual` (§4.6) vai consumir numa task futura.
-
-> **Esta task NÃO conecta a busca.** O ChromaDB gerado aqui ainda não é lido por `search_maintenance_manual` — ela continua stub (§4.6). Ver "Como substituir o stub por busca real" acima.
+**O que é**: `apps/mcp-server/index_manuals.py` — um script batch, independente do transporte MCP, que lê PDFs, extrai texto, gera chunks com overlap, gera embeddings localmente e persiste tudo em um ChromaDB local. Prepara a base de conhecimento que a ferramenta `search_maintenance_manual` consome de verdade desde a RF-21 (§4.6).
 
 ```mermaid
 flowchart TD
