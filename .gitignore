@@ -33,3 +33,9 @@ apps/frontend/public/mockServiceWorker.js
 # Load test raw output (RNF-37/RNF-38) — reproduzível via locust_streaming.py
 # / check_memory_leak.py; resumo dos resultados fica no README.
 loadtest_results/
+
+# Frontend perf/Lighthouse raw output (RNF-39/RNF-40) — reproduzível via
+# apps/frontend/scripts/measure-perf.mjs + lighthouse; resumo fica em
+# frontend_performance_report.md.
+/frontend_perf_*.json
+/lighthouse_*.json

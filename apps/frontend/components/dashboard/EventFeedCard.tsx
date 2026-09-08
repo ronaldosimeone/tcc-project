@@ -14,7 +14,7 @@
  *    em silêncio, mantendo o cockpit visualmente populado para showcase do TCC.
  */
 
-import { useMemo, type ComponentType } from "react";
+import { memo, useMemo, type ComponentType } from "react";
 import { AlertTriangle, CheckCircle2, Info, Radio, Wrench } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -165,7 +165,14 @@ function formatClockTime(ts: number): string {
   });
 }
 
-export default function EventFeedCard() {
+/**
+ * `React.memo`: componente sem props — todo o estado (`alerts`) vem de
+ * `useAlertWebSocket()` internamente, uma fonte 100% independente do tick
+ * SSE de 1Hz que re-renderiza o `FleetDashboard` pai. Sem memo, ainda assim
+ * re-renderizava a cada tick SSE (medido com React Profiler — ver
+ * frontend_performance_report.md) mesmo sem nenhuma prop para justificar.
+ */
+const EventFeedCard = memo(function EventFeedCard() {
   const { alerts } = useAlertWebSocket();
 
   const events: FeedEvent[] = useMemo(() => {
@@ -282,4 +289,6 @@ export default function EventFeedCard() {
       </CardContent>
     </Card>
   );
-}
+});
+
+export default EventFeedCard;

@@ -8,7 +8,7 @@
  * (saudável/atenção/crítico). Donut clean — sem grid, sem legenda flutuante.
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import { Brain, ShieldCheck } from "lucide-react";
 import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts";
 
@@ -35,7 +35,15 @@ const COLORS = {
   critical: "#f43f5e",
 } as const;
 
-export default function ModelStatusCard({
+/**
+ * `React.memo`: `distribution` já chega memoizada do pai (useMemo em
+ * FleetDashboard, keyed em `effectiveRiskLevel`) — só muda de referência a
+ * cada 5s (poll) ou alerta WS, não a cada tick SSE de 1Hz. Medido com React
+ * Profiler: sem memo, este componente ainda re-renderizava a ~1/tick SSE
+ * mesmo com `distribution` referencialmente igual (ver
+ * frontend_performance_report.md).
+ */
+const ModelStatusCard = memo(function ModelStatusCard({
   distribution,
   confidence = 0.92,
 }: ModelStatusCardProps) {
@@ -157,4 +165,6 @@ export default function ModelStatusCard({
       </CardContent>
     </Card>
   );
-}
+});
+
+export default ModelStatusCard;

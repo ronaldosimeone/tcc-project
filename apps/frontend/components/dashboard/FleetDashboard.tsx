@@ -20,6 +20,7 @@ import EventFeedCard from "@/components/dashboard/EventFeedCard";
 import FleetHealthTable from "@/components/dashboard/FleetHealthTable";
 import FleetKPIs from "@/components/dashboard/FleetKPIs";
 import ModelStatusCard from "@/components/dashboard/ModelStatusCard";
+import { DevProfiler } from "@/lib/dev-profiler";
 import {
   getRiskLevel,
   useSensorData,
@@ -101,33 +102,41 @@ export default function FleetDashboard() {
       </div>
 
       {/* ── 4 KPIs industriais ── */}
-      <FleetKPIs
-        liveProbability={effectiveProb}
-        effectiveRiskLevel={effectiveRiskLevel}
-        latencyTelemetry={latencyTelemetry}
-        isLoading={isLoading}
-      />
+      <DevProfiler id="FleetKPIs">
+        <FleetKPIs
+          liveProbability={effectiveProb}
+          effectiveRiskLevel={effectiveRiskLevel}
+          latencyTelemetry={latencyTelemetry}
+          isLoading={isLoading}
+        />
+      </DevProfiler>
 
       {/* ── Grid intermediário: tabela (2/3) + modelo (1/3), altura emparelhada.
           `flex-1` faz esta região absorver o resto da altura disponível. ── */}
       <div className="grid flex-1 grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
-          <FleetHealthTable
-            effectiveRiskLevel={effectiveRiskLevel}
-            effectiveProb={effectiveProb}
-            isLoading={isLoading}
-            selectedId={selectedAssetId}
-            onSelect={setSelectedAssetId}
-          />
+          <DevProfiler id="FleetHealthTable">
+            <FleetHealthTable
+              effectiveRiskLevel={effectiveRiskLevel}
+              effectiveProb={effectiveProb}
+              isLoading={isLoading}
+              selectedId={selectedAssetId}
+              onSelect={setSelectedAssetId}
+            />
+          </DevProfiler>
         </div>
 
         <div className="lg:col-span-1">
-          <ModelStatusCard distribution={distribution} />
+          <DevProfiler id="ModelStatusCard">
+            <ModelStatusCard distribution={distribution} />
+          </DevProfiler>
         </div>
       </div>
 
       {/* ── Eventos Recentes: full-width na base, lista em grid responsivo. ── */}
-      <EventFeedCard />
+      <DevProfiler id="EventFeedCard">
+        <EventFeedCard />
+      </DevProfiler>
     </div>
   );
 }

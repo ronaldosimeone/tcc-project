@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import {
   Activity,
   BarChart3,
@@ -18,7 +19,15 @@ import {
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { SimulationPanel } from "@/components/simulation-panel";
+// Code splitting (RNF-40): o painel só é montado quando o usuário clica em
+// "Simulação" — nunca faz parte do primeiro paint do Dashboard. Sem isso,
+// seu JS (formulário + radio group) entrava no bundle inicial de toda
+// visita a "/" mesmo para quem nunca abre o painel. `ssr:false` é seguro
+// aqui porque o conteúdo só existe dentro de um <Sheet> fechado por padrão.
+const SimulationPanel = dynamic(
+  () => import("@/components/simulation-panel").then((m) => m.SimulationPanel),
+  { ssr: false },
+);
 import {
   Tooltip,
   TooltipContent,

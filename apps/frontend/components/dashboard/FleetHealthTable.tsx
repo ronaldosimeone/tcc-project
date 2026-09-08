@@ -8,10 +8,17 @@
  *
  * Cada linha exibe a saúde via <Progress> (verde/laranja/vermelho) em vez de
  * apenas texto, deixando o estado da frota legível em scan rápido.
+ *
+ * `React.memo` (RNF-39): props (`effectiveRiskLevel`/`effectiveProb`) só
+ * mudam de valor no poll de 5s ou em alerta WS — não no tick SSE de 1Hz.
+ * Medido com React Profiler: sem memo, este componente re-renderizava a
+ * ~1/tick SSE mesmo com os mesmos valores de props (ver
+ * frontend_performance_report.md). `onSelect` é o setter de useState do
+ * pai (`setSelectedAssetId`), garantidamente estável entre renders.
  */
 
 import Link from "next/link";
-import type { ComponentType } from "react";
+import { memo, type ComponentType } from "react";
 import {
   AlertTriangle,
   ArrowDownRight,
@@ -206,7 +213,7 @@ interface FleetHealthTableProps {
 
 const LIVE_ASSET_ID = "APU-Trem-042";
 
-export default function FleetHealthTable({
+const FleetHealthTable = memo(function FleetHealthTable({
   effectiveRiskLevel,
   effectiveProb,
   isLoading,
@@ -410,4 +417,6 @@ export default function FleetHealthTable({
       </CardContent>
     </Card>
   );
-}
+});
+
+export default FleetHealthTable;
