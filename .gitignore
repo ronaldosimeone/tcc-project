@@ -39,3 +39,7 @@ loadtest_results/
 # frontend_performance_report.md.
 /frontend_perf_*.json
 /lighthouse_*.json
+
+# Ingestão de manuais (RF-20/RNF-44) — PDFs reais e o ChromaDB gerado nunca
+# vão pro repo (dados grandes/binários, reproduzíveis via index_manuals.py).
+apps/mcp-server/data/

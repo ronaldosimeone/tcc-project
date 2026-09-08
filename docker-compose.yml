@@ -84,6 +84,12 @@ services:
   # sem compartilhar nada com `api`. Alcançável na rede interna via
   # MCP_SERVER_URL=http://mcp-server:<porta> (ver .env.example). O backend
   # ainda não consome esta URL nesta task — ver README "Arquitetura MCP".
+  #
+  # RF-20/RNF-44 — a persistência do ChromaDB (data/chroma) e os PDFs de
+  # entrada (data/manuals) NÃO ganham uma linha de volume própria aqui: eles
+  # vivem dentro de apps/mcp-server/, que já é bind-mount inteiro (linha
+  # abaixo) — mesmo padrão do serviço `ml` com apps/ml/data. Um segundo mount
+  # para um subdiretório já coberto seria redundante.
   mcp-server:
     build: ./apps/mcp-server
     container_name: mcp-server

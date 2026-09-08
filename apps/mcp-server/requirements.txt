@@ -1,2 +1,10 @@
 mcp==2.2.0
 pytest==9.1.1
+
+# RF-20 / RNF-44 — pipeline de ingestão de manuais (index_manuals.py).
+# Versões fixadas e validadas juntas para o Python 3.11-slim do Dockerfile
+# (chromadb 0.5.x e sentence-transformers 3.x sao as ultimas releases
+# estaveis compatíveis entre si e com pydantic v2 na epoca desta task).
+pypdf==5.1.0
+sentence-transformers==3.3.1
+chromadb==0.5.23

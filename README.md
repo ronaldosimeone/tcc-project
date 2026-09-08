@@ -574,10 +574,82 @@ pip install -r requirements.txt && pytest tests/ -v
 #### Como substituir o stub por busca real (futuro)
 
 1. Manter a assinatura de `search_maintenance_manual(query: str) -> dict` e o formato de resposta (`status`/`query`/`results`/`message`) — trocar `"status": "stub"` por `"status": "ok"` e popular `results`.
-2. Implementar a busca dentro da própria função (embeddings + ChromaDB, conforme CLAUDE.md §4) — sem mudar o transporte, o schema de entrada ou o nome da ferramenta.
+2. Implementar a busca dentro da própria função (embeddings + ChromaDB, conforme CLAUDE.md §4) — a base de conhecimento (chunks + embeddings já persistidos) é o que a §4.7 abaixo (RF-20) prepara; falta só o lado da consulta (query → embedding → `collection.query()`), sem mudar o transporte, o schema de entrada ou o nome da ferramenta.
 3. Só então o backend passa a efetivamente chamar `settings.mcp_server_url` (hoje só declarada, não consumida) — a orquestração real é do Ollama, não do FastAPI diretamente (ver CLAUDE.md §4: "o LLM do sistema assume esta persona, invoca obrigatoriamente a ferramenta de produção `search_manuals`").
 
 > **Nota de nomenclatura**: CLAUDE.md/AGENTS.md descrevem esta ferramenta futura como `search_manuals`; a task RF-19 que implementou este stub especificou explicitamente o nome `search_maintenance_manual`. Mantido o nome da task (é o que está registrado no servidor real) — sinalizado aqui para quem for alinhar com a documentação conceitual mais antiga.
+
+### 4.7. Ingestão de manuais — pipeline RAG offline (RF-20 / RNF-44)
+
+**O que é**: `apps/mcp-server/index_manuals.py` — um script batch, independente do transporte MCP, que lê PDFs, extrai texto, gera chunks com overlap, gera embeddings localmente e persiste tudo em um ChromaDB local. Prepara a base de conhecimento que a ferramenta `search_maintenance_manual` (§4.6) vai consumir numa task futura.
+
+> **Esta task NÃO conecta a busca.** O ChromaDB gerado aqui ainda não é lido por `search_maintenance_manual` — ela continua stub (§4.6). Ver "Como substituir o stub por busca real" acima.
+
+```mermaid
+flowchart TD
+    PDFS["PDF manuals<br/>(data/manuals/*.pdf)"] --> READER["pypdf<br/>(extrai texto por página)"]
+    READER --> CHUNK["text chunks<br/>(determinístico, com overlap)"]
+    CHUNK --> EMBED["SentenceTransformer<br/>(EMBEDDING_MODEL)"]
+    EMBED --> VEC["embeddings"]
+    VEC --> CHROMA[("ChromaDB persistente<br/>collection: maintenance_manuals")]
+```
+
+```mermaid
+flowchart TD
+    START["PDF"] --> HASH["SHA-256 do conteúdo"]
+    HASH --> CHECK{"já indexado<br/>com este hash?"}
+    CHECK -->|"sim"| SKIP["skip<br/>(nenhum chunk criado)"]
+    CHECK -->|"não, hash mudou"| PURGE["remove chunks antigos<br/>deste file_name"]
+    CHECK -->|"não, nunca visto"| EXTRACT
+    PURGE --> EXTRACT["extract → chunk → embed"]
+    EXTRACT --> UPSERT["upsert no ChromaDB<br/>+ novo file_hash nos metadados"]
+```
+
+| Aspecto | Valor real |
+|---|---|
+| Script | `apps/mcp-server/index_manuals.py` — executável direto: `python index_manuals.py` |
+| Dependências novas | `pypdf==5.1.0`, `sentence-transformers==3.3.1`, `chromadb==0.5.23` (`apps/mcp-server/requirements.txt`) |
+| Modelo de embeddings | `EMBEDDING_MODEL` (env) — default `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2` (multilíngue, cobre PT-BR dos manuais/queries; 100% local, sem API externa). Carregado **uma vez por execução**, nunca por chunk |
+| Diretório dos PDFs | `MANUALS_DIR` (env) — default `data/manuals` (relativo a `apps/mcp-server/`, resolvido pelo próprio script, não pelo cwd) |
+| ChromaDB | `CHROMA_DB_PATH` (env) — default `data/chroma` (`chromadb.PersistentClient`, nunca efêmero) |
+| Collection | `maintenance_manuals` |
+| Chunking | `CHUNK_SIZE` / `CHUNK_OVERLAP` (env) — default `1000`/`150` caracteres, por página (não cruza página, mantém `page` correto nos metadados). Determinístico: mesmo PDF + mesma config = mesmos chunks |
+| IDs dos chunks | `{file_hash}_p{page}_c{chunk_index}` — determinístico, sem UUID aleatório |
+| Metadados por chunk | `source`, `file_name`, `file_hash`, `page`, `chunk_index`, `embedding_model` |
+| Volume Docker | Nenhuma linha nova em `docker-compose.yml` — `data/manuals` e `data/chroma` vivem dentro de `apps/mcp-server/`, já coberto pelo bind mount `./apps/mcp-server:/app` do serviço `mcp-server` (mesmo padrão do `apps/ml/data` do serviço `ml`) |
+
+#### Onde colocar os PDFs
+
+```text
+apps/mcp-server/data/manuals/
+├── manual-bomba.pdf
+├── manual-compressor.pdf
+└── manual-motor.pdf
+```
+
+#### Como indexar
+
+```bash
+docker compose exec mcp-server python index_manuals.py
+```
+
+(Localmente, sem Docker: `cd apps/mcp-server && python index_manuals.py` — mesmo comportamento, resolve `data/manuals`/`data/chroma` relativo ao próprio script.)
+
+#### Incremental (RF-20)
+
+Não existe arquivo de estado separado — a fonte de verdade é o próprio ChromaDB (`file_hash` nos metadados de cada chunk). SHA-256 é calculado sobre o **conteúdo** do arquivo (nunca nome/data/tamanho): se o hash não mudou desde a última execução, o PDF é pulado (`skip`) — rodar duas vezes seguidas sem alterar nada não cria chunks duplicados (idempotente).
+
+#### Reindexação
+
+Alterar o conteúdo do PDF muda o hash. A pipeline detecta a divergência, remove **todos** os chunks antigos daquele `file_name` e só então insere os novos — nunca ficam chunks de hash antigo e hash novo misturados. Se a extração/chunking/embedding falhar no meio do processo, nada é removido/alterado no ChromaDB (a versão anterior, se existia, permanece válida).
+
+#### Testes
+
+```bash
+docker compose exec mcp-server pytest tests/test_index_manuals.py -v
+```
+
+Todos os testes mockam o `SentenceTransformer` (nenhum download de modelo real na suíte) e usam diretório temporário para o ChromaDB (nunca o `data/chroma` real).
 
 ---
 
@@ -709,6 +781,12 @@ cp apps/frontend/.env.local.example apps/frontend/.env.local
 | `VERSION` | Não | `0.1.0` | Versão exibida em `/health` e no Swagger |
 | `ALLOWED_ORIGINS` | Não | `["http://localhost:3000","http://127.0.0.1:3000"]` | Lista JSON de origens para `CORSMiddleware` — só relevante para chamadas REST **fora** do same-origin do Nginx (ver §4.3, CORS não aplicável a SSE/WS neste setup) |
 | `OLLAMA_BASE_URL` | Não | `http://host.docker.internal:11434` | Próxima fase (assistente RAG local) — ainda não consumido por nenhum endpoint ativo |
+| `MCP_SERVER_PORT` | Não | `8100` | RF-19/RNF-43 — porta do serviço `mcp-server` (`streamable-http`) |
+| `MCP_SERVER_URL` | Não | `http://mcp-server:8100` | RF-19/RNF-43 — declarada, ainda não consumida por nenhum código (ver §4.6) |
+| `EMBEDDING_MODEL` | Não | `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2` | RF-20/RNF-44 — modelo usado por `apps/mcp-server/index_manuals.py` (ver §4.7). Trocar exige reindexar (o `embedding_model` fica registrado nos metadados de cada chunk, mas embeddings antigos e novos não são comparáveis entre modelos diferentes) |
+| `MANUALS_DIR` | Não | `data/manuals` | RF-20 — diretório dos PDFs de entrada, relativo a `apps/mcp-server/` |
+| `CHROMA_DB_PATH` | Não | `data/chroma` | RF-20 — diretório persistente do ChromaDB, relativo a `apps/mcp-server/` |
+| `CHUNK_SIZE` / `CHUNK_OVERLAP` | Não | `1000` / `150` | RF-20 — tamanho do chunk e overlap (caracteres) usados pelo chunking determinístico |
 | `MODEL_PATH`, `XGBOOST_MODEL_PATH`, `MLP_ONNX_PATH`, `MLP_SCALER_PATH`, `RF_V2_ONNX_PATH`, `XGBOOST_V2_ONNX_PATH`, `TCN_ONNX_PATH`, `TCN_SCALER_PATH`, `BILSTM_ONNX_PATH`, `BILSTM_SCALER_PATH`, `PATCHTST_ONNX_PATH`, `PATCHTST_SCALER_PATH`, `AUTOENCODER_ONNX_PATH`, `AUTOENCODER_SCALER_PATH` | Não | resolvidos automaticamente para `apps/ml/models/<arquivo>` | Overrides individuais de caminho de artefato — raramente necessários; usados só se você mover os artefatos para fora de `apps/ml/models/` |
 
 Definidas **pelo `docker-compose.yml`** (não pelo `.env` — não precisam ir no arquivo):
@@ -1443,6 +1521,12 @@ docker compose restart frontend
 
 **Solução**: aumente o limite em `docker-compose.yml` (`deploy.resources.limits.memory`) ou suba o Docker Desktop para 8+ GB em **Settings → Resources**.
 
+### `index_manuals.py` loga `Failed to send telemetry event ... capture() takes 1 positional argument but 3 were given`
+
+**Causa**: incompatibilidade entre a versão de `chromadb==0.5.23` e a API do `posthog` (dependência transitiva) instalada — a telemetria anônima do ChromaDB tenta chamar `capture()` com uma assinatura que essa versão do `posthog` não aceita mais.
+
+**Impacto**: nenhum. É só logging de uma tentativa de telemetria (que já falha silenciosamente dentro do próprio ChromaDB) — indexação, busca e persistência funcionam normalmente (validado em `docker compose exec mcp-server python index_manuals.py`, ver §4.7). Se incomodar, `CHROMA_ANONYMIZED_TELEMETRY=false` no ambiente do container desativa a tentativa.
+
 ### Known Issues (não corrigidos nesta task — fora do escopo)
 
 Divergências/observações reais encontradas na auditoria (RNF-41/RNF-42), documentadas em vez de corrigidas porque esta é uma task de documentação, não de mudança de comportamento:
@@ -1450,6 +1534,9 @@ Divergências/observações reais encontradas na auditoria (RNF-41/RNF-42), docu
 - **`proxy_buffering` não está explicitamente desativado no bloco `/api/stream/`** de `infra/nginx/nginx.conf`. Funciona porque `chunked_transfer_encoding off` + `X-Accel-Buffering: no` já bastam nesta versão do Nginx, mas a diretiva "canônica" para SSE (`proxy_buffering off;`) não está presente. Se o comportamento de streaming mudar em uma atualização do Nginx, este é o primeiro lugar a checar.
 - **`/api/` (bloco REST genérico) herda `proxy_read_timeout 3600s`**, o mesmo valor usado para SSE/WS — nenhuma rota REST precisa de uma conexão de 1 hora; não é um bug funcional, mas é uma configuração mais permissiva do que o necessário para esse bloco.
 - **`ALLOWED_ORIGINS` inclui `http://localhost:8000`** no `.env` atual — não há nenhum serviço exposto diretamente nessa porta neste `docker-compose.yml` (a API só é alcançável via Nginx em `:80`), então essa origem parece vestigial de uma configuração anterior sem proxy.
+- **Imagem do `mcp-server` cresceu para ~10 GB (RF-20/RNF-44)**: `pip install sentence-transformers` puxa `torch` da PyPI padrão, que inclui dependências CUDA (`nvidia-*`) mesmo num container CPU-only sem GPU. Funciona (PyTorch cai para CPU automaticamente — `Use pytorch device_name: cpu` no log), mas a imagem fica bem maior que o necessário. Otimização futura: instalar `torch` a partir do índice CPU-only da PyTorch (`--index-url https://download.pytorch.org/whl/cpu`) no `Dockerfile`.
+- **PDF sem texto extraível é reprocessado a cada execução** (RF-20): como nenhum `file_hash` é gravado para um arquivo que gerou zero chunks, ele nunca é marcado como "já visto" — cada run tenta extrair de novo (custo: só a extração via pypdf, nenhum embedding é gerado). Decisão deliberada: se o PDF ganhar texto extraível depois (ex.: substituído por uma versão não-escaneada), a próxima execução já pega automaticamente, sem precisar de nenhuma ação manual.
+- **Trocar `EMBEDDING_MODEL` não invalida embeddings antigos automaticamente**: cada chunk registra `embedding_model` nos metadados, mas a lógica de skip/reindex compara só `file_hash` — se você trocar de modelo sem tocar nos PDFs, os embeddings antigos (gerados pelo modelo anterior) continuam no ChromaDB, agora "misturados" com um `embedding_model` diferente do `EMBEDDING_MODEL` atual. Fora do escopo desta task (RF-20 pede consistência do modelo *dentro* de uma mesma indexação, não migração entre modelos); se for trocar de modelo, apague `data/chroma/` antes de reindexar.
 
 ---
 
