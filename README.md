@@ -790,6 +790,143 @@ pnpm e2e:ui                    # modo UI interativo
 
 Specs: `e2e/dashboard_flow.spec.ts`, `e2e/failure_alert.spec.ts`.
 
+### 14.5. Load Test — SSE sob concorrência (RNF-37)
+
+`locust_streaming.py` (raiz do repo) mede a **latência de conexão SSE**
+(handshake + cabeçalhos de `GET /api/stream/sensors`) sob >=100 conexões
+concorrentes reais e mantidas abertas — não uma rajada de requests
+independentes. Reaproveita o parsing/validação de eventos já existente em
+`locust_sse.py` (RNF-28).
+
+**Por que "latência de conexão" e não "tempo até o 1º evento"?** O stream
+emite 1 evento/s por design (RF-12) num broadcast compartilhado com clock
+próprio — um cliente recém-conectado pode legitimamente esperar até ~1s
+pelo próximo tick antes do primeiro dado, o que é uma característica de
+produto (cadência de 1Hz), não de performance/infra. Medir isso como
+"latência" tornaria RNF-37 estruturalmente impossível de passar
+independente de qualquer otimização. Confirmado empiricamente com `curl`/
+socket cru: a conexão HTTP (200 OK, stream aberto) responde em poucos ms;
+só o evento de dado varia conforme o alinhamento com o tick do broadcast.
+
+```powershell
+pip install -r requirements-dev.txt   # locust, psutil
+
+# Stack precisa estar de pé (nginx expõe a porta 80)
+docker compose up -d db api nginx
+
+# 100 conexões concorrentes por 75s — via Nginx, mesmo path do frontend
+python -m locust -f locust_streaming.py --host http://localhost `
+    --headless -u 100 -r 20 --run-time 75s --csv=loadtest_results/run1
+```
+
+Variáveis de ambiente opcionais (nenhuma obrigatória — o endpoint hoje é
+público, sem auth):
+
+| Variável                | Uso                                                        | Default              |
+| ------------------------ | ----------------------------------------------------------- | --------------------- |
+| `STREAMING_AUTH_TOKEN`  | Envia `Authorization: Bearer <token>` se o endpoint exigir  | (nenhum)             |
+| `SSE_HOLD_SECONDS`      | Quanto tempo cada cliente mantém a conexão aberta           | `45`                  |
+| `SSE_PATH`              | Path do endpoint SSE                                        | `/api/stream/sensors` |
+
+O veredito RNF-37 (conexões, p50/p95/p99, PASS/FAIL) é impresso
+automaticamente ao final da run headless.
+
+### 14.6. Memory Leak Check (RNF-38)
+
+`check_memory_leak.py` (raiz do repo) mede o **RSS real** do container
+`api` (via `docker stats`, de fora — sem instalar nada na imagem) antes e
+depois de ciclos de carga SSE, para diferenciar alocação normal (estabiliza
+após aquecimento) de vazamento real (cresce ciclo a ciclo). Não usa
+`tracemalloc` — ele só enxerga alocações Python e sub-mediria memória
+nativa de asyncpg/ONNX Runtime/SQLAlchemy.
+
+```powershell
+docker compose up -d db api
+
+python check_memory_leak.py --container api --url http://localhost/api `
+    --clients 100 --cycles 3 --load-duration 30 --settle-seconds 10
+```
+
+Rodando fora do Docker (`uvicorn` local), use `--pid <PID>` em vez de
+`--container` — medição via `psutil`, documentada no output como não
+necessariamente representativa do ambiente containerizado de produção.
+
+**Interpretação:** o script imprime RSS por ciclo (baseline frio, pós-
+warmup — descartado do cálculo — e N ciclos de carga). O "crescimento"
+reportado é sempre `final - pós-warmup` (não `final - baseline frio`),
+porque a primeira carga sempre aquece pools/caches e infla a memória uma
+única vez; o que importa para detectar leak é se os ciclos SEGUINTES
+continuam crescendo.
+
+### 14.7. Configuração de produção — workers & connection pool
+
+Ambos configuráveis via `.env` (mesmo padrão do `ACTIVE_MODEL` — mudar
+requer `docker compose up -d --force-recreate api`):
+
+```bash
+UVICORN_WORKERS=1     # apps/backend + docker-compose.yml (command do serviço api)
+DB_POOL_SIZE=10       # src/core/config.py -> src/core/database.py
+DB_MAX_OVERFLOW=20
+```
+
+**Workers — testado 1 vs 2, mantido 1** (evidência abaixo). Mais workers
+significa mais PROCESSOS independentes, cada um carregando seu próprio
+modelo ONNX + seu próprio `SensorStreamService`/broadcast loop + seu
+próprio `InferencePipelineService` — não há compartilhamento de estado
+entre workers nesta arquitetura. Com 1 worker já atendendo 100 conexões
+SSE muito abaixo do SLA, 2 workers só duplicam custo:
+
+| Config | RAM idle | RAM sob 100 SSE | p50 | p95 | p99 |
+| ------ | -------: | ---------------: | --: | --: | --: |
+| workers=1 (final) | 552 MB | 572 MB | 22 ms | **33 ms** | 51 ms |
+| workers=2          | 1097 MB | 1120 MB | 16 ms | **48 ms** | 50 ms |
+
+Workers=2 quase dobra a memória (2 modelos carregados) e piora a cauda
+(p95 48ms vs 33ms — provável contenção de CPU entre 2 processos rodando
+feature engineering + inferência ONNX a cada 1s, sem ganho de throughput
+porque o event loop assíncrono de 1 worker já não é o gargalo para SSE).
+**Conclusão baseada em dados: mais workers não ajudou neste workload.**
+
+**Connection pool — mantido em 10/20 (default original), não testado
+variações.** `GET /stream/sensors` não usa `Depends(get_db)` — nenhuma
+conexão de banco é aberta por cliente SSE conectado; o único escritor no
+Postgres é `InferencePipelineService.save_prediction`, uma vez por segundo,
+independente de quantos clientes SSE estão conectados. O pool de conexões
+é estruturalmente irrelevante para RNF-37/RNF-38 nesta arquitetura — testar
+variações só para "ver o número mudar" violaria a instrução de não inflar
+o pool sem justificativa real. Se o padrão de acesso ao banco mudar (ex.:
+queries por cliente SSE), este ponto deve ser reavaliado.
+
+### 14.8. Resultados — RNF-37 e RNF-38
+
+**RNF-37** (config final: `workers=1`, `DB_POOL_SIZE=10`, ambiente:
+Docker Desktop / Windows, via Nginx):
+
+* Conexões simultâneas testadas: **200** (100 usuários × 2 ciclos de
+  reconexão em 75s de run, pico observado de 101 conexões concorrentes
+  nos logs do `api`)
+* p50 = 22ms · **p95 = 33ms** · p99 = 51ms
+* **RNF-37: PASS** (100+ conexões, p95 < 200ms — margem de ~6×)
+
+**RNF-38** (3 ciclos de 100 clientes × 30s, assentamento de 10s, métrica:
+RSS real do container `api` via `docker stats`):
+
+* Baseline (pós-warmup): 564.5 MB
+* Final (após 3 ciclos): 564.6 MB
+* Crescimento: **+0.1 MB**
+* **RNF-38: PASS** (limite 50 MB — sem sinal de leak)
+
+Resultados brutos (CSV do Locust, logs) em `loadtest_results/` (gerado
+localmente, não versionado — reproduza com os comandos acima).
+
+**Limitação do ambiente:** testado em Docker Desktop para Windows numa
+máquina de desenvolvimento única, não em infraestrutura de produção real
+(sem rede entre hosts, sem múltiplas réplicas, sem load balancer externo).
+Os números absolutos podem não se transferir diretamente para produção,
+mas a CONCLUSÃO relativa (workers=1 > workers=2 para este workload; pool
+de conexões é irrelevante para SSE) depende da arquitetura da aplicação,
+não do hardware, e deve se manter.
+
 ---
 
 ## 15. Demo do Simulador

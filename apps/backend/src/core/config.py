@@ -58,6 +58,20 @@ class Settings(BaseSettings):
         alias="DATABASE_URL",
     )
 
+    # RNF-37 — pool tunável via .env para o load test (locust_streaming.py /
+    # README §14.7). Defaults preservam o comportamento anterior (antes
+    # hardcoded 10/20 diretamente em database.py).
+    db_pool_size: int = Field(
+        default=10,
+        alias="DB_POOL_SIZE",
+        description="SQLAlchemy async engine pool_size (conexões persistentes por worker).",
+    )
+    db_max_overflow: int = Field(
+        default=20,
+        alias="DB_MAX_OVERFLOW",
+        description="SQLAlchemy async engine max_overflow (conexões extras sob pico).",
+    )
+
     # ── Ollama (local LLM) ────────────────────────────────────────────────
     ollama_base_url: str = Field(
         default="http://host.docker.internal:11434",
@@ -169,7 +183,11 @@ class Settings(BaseSettings):
     # Points to the processed MetroPT-3 parquet streamed by SensorSimulator.
     # Override via SIMULATOR_PARQUET_PATH env-var (e.g., in Docker Compose).
     simulator_parquet_path: Path = Field(
-        default=Path(__file__).resolve().parents[3] / "ml" / "data" / "processed" / "metropt3.parquet",
+        default=Path(__file__).resolve().parents[3]
+        / "ml"
+        / "data"
+        / "processed"
+        / "metropt3.parquet",
         alias="SIMULATOR_PARQUET_PATH",
         description="Absolute path to the processed MetroPT-3 parquet file.",
     )

@@ -29,3 +29,7 @@ playwright-report/
 test-results/
 e2e-results/
 apps/frontend/public/mockServiceWorker.js
+
+# Load test raw output (RNF-37/RNF-38) — reproduzível via locust_streaming.py
+# / check_memory_leak.py; resumo dos resultados fica no README.
+loadtest_results/

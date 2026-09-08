@@ -31,7 +31,11 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    command: sh -c "alembic upgrade head && uvicorn src.main:app --host 0.0.0.0 --port 8000"
+    # RNF-37 — workers configurável via UVICORN_WORKERS (.env), sem redeploy de
+    # imagem. Default 1 preserva o comportamento anterior. Requer recriar o
+    # container (`docker compose up -d --force-recreate api`) para aplicar,
+    # mesmo padrão do ACTIVE_MODEL.
+    command: sh -c "alembic upgrade head && uvicorn src.main:app --host 0.0.0.0 --port 8000 --workers ${UVICORN_WORKERS:-1}"
     deploy:
       resources:
         limits:
