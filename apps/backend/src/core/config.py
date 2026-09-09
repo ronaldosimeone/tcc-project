@@ -107,6 +107,40 @@ class Settings(BaseSettings):
         alias="MCP_CLIENT_TIMEOUT_SECONDS",
     )
 
+    # ── Notificações críticas via Telegram — RF-24 / RNF-48 ─────────────────
+    # `None` por padrão — sem token/chat_id configurados, TelegramNotificationAdapter
+    # trata como configuração ausente (RF-24 §11 N/O) e nunca tenta enviar.
+    telegram_bot_token: str | None = Field(default=None, alias="TELEGRAM_BOT_TOKEN")
+    telegram_chat_id: str | None = Field(default=None, alias="TELEGRAM_CHAT_ID")
+    telegram_api_base_url: str = Field(
+        default="https://api.telegram.org",
+        alias="TELEGRAM_API_BASE_URL",
+    )
+    telegram_client_timeout_seconds: float = Field(
+        default=10.0,
+        alias="TELEGRAM_CLIENT_TIMEOUT_SECONDS",
+    )
+    # URL absoluta e oficial do Dashboard — nunca aceita de payload/predição/LLM
+    # (RF-24 §4, evita open redirect). Default aponta para o Nginx local.
+    dashboard_url: str = Field(default="http://localhost", alias="DASHBOARD_URL")
+    # 15 minutos — RF-24, TTL do rate limit por equipamento (não confundir
+    # com MAINTENANCE_SUGGESTION_THRESHOLD/CRITICAL_FAILURE_THRESHOLD, que
+    # são constantes de código, não configuráveis por env).
+    critical_failure_rate_limit_seconds: int = Field(
+        default=900,
+        alias="CRITICAL_FAILURE_RATE_LIMIT_SECONDS",
+    )
+    # O pipeline real (InferencePipelineService) hoje simula um único ativo
+    # (MetroPT-3) — reaproveita o mesmo ID já usado na rota do frontend
+    # (`/sensors/APU-Trem-042`, ver Sidebar) em vez de inventar um novo.
+    default_equipment_id: str = Field(
+        default="APU-Trem-042", alias="DEFAULT_EQUIPMENT_ID"
+    )
+    default_equipment_name: str = Field(
+        default="Compressor de Ar Industrial (MetroPT-3)",
+        alias="DEFAULT_EQUIPMENT_NAME",
+    )
+
     # ── CORS ──────────────────────────────────────────────────────────────
     allowed_origins: list[str] = Field(
         default=["http://localhost:3000", "http://127.0.0.1:3000"],

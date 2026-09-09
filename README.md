@@ -910,6 +910,108 @@ Evidência: [`apps/backend/maintenance_stream_e2e_metrics.json`](apps/backend/ma
 - **Sem endpoint de arquivo estático para os PDFs** — por isso as referências são texto, não link (ver acima). Se um endpoint seguro de download for adicionado no futuro, `ReferencesList` é o único lugar que precisa mudar.
 - **Cancelamento manual em ambiente de teste local é difícil de observar via automação de browser** quando o Ollama já está "aquecido" — uma segunda geração pode completar em ~1-2s, mais rápido que o round-trip de uma ferramenta de automação externa. O comportamento de cancelamento em si é validado de forma determinística e confiável no teste automatizado (`__tests__/maintenance-assistant.test.tsx`, cenário L), que controla precisamente o timing via um generator mockado.
 
+### 4.10. Notificações críticas via Telegram (RF-24 / RNF-48)
+
+**O que é**: quando o modelo preditivo reporta `probability > 0.85` (falha **crítica** — limiar próprio, independente do `ALERT_PROBABILITY_THRESHOLD` de 0.70 da RF-14/§4.3 e do `MAINTENANCE_SUGGESTION_THRESHOLD` de 0.70 da RF-22/§4.8), o backend envia uma mensagem de texto simples para um chat do Telegram via `TelegramNotificationAdapter`, respeitando um rate limit de **1 alerta por equipamento a cada 15 minutos**. Reaproveita o mesmo ponto de integração da RF-14 (`AlertService.process_prediction`) — nenhuma segunda inferência, nenhum novo hook no pipeline de ML.
+
+```mermaid
+flowchart TD
+    PRED["InferencePipelineService / predict.py<br/>(mesma predição da RF-14)"] --> ALERT["AlertService.process_prediction()"]
+    ALERT -->|"probability > 0.70 (RF-14)"| WS["ConnectionManager.broadcast_alert()"]
+    ALERT -->|"sempre (RF-24)"| CRIT["CriticalFailureNotificationService.notify_if_critical()"]
+    CRIT -->|"probability <= 0.85"| SKIP["nada acontece"]
+    CRIT -->|"probability > 0.85"| LOCK["TelegramAlertRateLimiter.try_acquire(equipment_id)<br/>(UPSERT atômico no Postgres)"]
+    LOCK -->|"já bloqueado (< 15 min)"| SKIP2["nada acontece — sem 2ª mensagem"]
+    LOCK -->|"lock adquirido"| SEND["TelegramNotificationAdapter.send_critical_failure()"]
+    SEND -->|"falha (timeout/HTTP/etc.)"| RELEASE["rate_limiter.release() — permite retry"]
+    SEND -->|"sucesso"| DONE["lock mantido até expirar (TTL 900s)"]
+```
+
+#### Threshold (RF-24) — independente dos demais
+
+| Constante | Valor | Onde |
+|---|---|---|
+| `ALERT_PROBABILITY_THRESHOLD` (RF-14) | `0.70` | `apps/backend/src/core/ws_manager.py` |
+| `MAINTENANCE_SUGGESTION_THRESHOLD` (RF-22) | `0.70` | `apps/backend/src/services/maintenance_suggestion_service.py` |
+| `CRITICAL_FAILURE_THRESHOLD` (RF-24) | **`0.85`** | `apps/backend/src/services/critical_failure_notification_service.py` |
+
+As três constantes têm o mesmo valor numérico só por coincidência em dois casos — cada task pediu explicitamente uma constante própria, não reutilização. `probability == 0.85` exato **não** dispara (regra estrita `>`), validado em `test_notifications.py` com os quatro valores do critério de aceite (`0.0`/`0.5`/`0.84`/`0.85` → nunca chama o adapter; `0.8501`/`0.90`/`0.9999` → sempre chama).
+
+#### Rate limiting — por que Postgres, não Redis
+
+Auditoria do projeto antes de implementar: **não existe Redis (nem qualquer outro cache) em nenhum lugar do `docker-compose.yml` ou do backend**, e nenhuma tabela/serviço tem hoje o conceito de `equipment_id` (o pipeline simula um único ativo real, `APU-Trem-042`). Duas opções avaliadas:
+
+1. **Adicionar Redis só para isto** — rejeitada: um serviço/container novo (mais uma peça de infra para subir, versionar e documentar) para resolver um único contador com TTL, quando o projeto já tem um banco transacional rodando exatamente para este tipo de estado.
+2. **Postgres existente** (escolhida) — uma tabela nova de uma linha por equipamento (`telegram_alert_locks`, migração Alembic `0002`), com o mesmo padrão de acesso (SQLAlchemy async) já usado por toda a persistência do projeto.
+
+**Mecanismo** (`TelegramAlertRateLimiter.try_acquire`, `apps/backend/src/services/telegram_alert_rate_limiter.py`): um único `INSERT ... ON CONFLICT (equipment_id) DO UPDATE ... WHERE telegram_alert_locks.expires_at <= :now RETURNING equipment_id` — equivalente funcional ao `SET NX EX 900` do Redis:
+
+- Linha não existe → `INSERT` cria com `expires_at = now + 900s`, `RETURNING` devolve a linha → lock adquirido.
+- Linha existe e **já expirou** (`expires_at <= now`) → a cláusula `WHERE` do `DO UPDATE` casa, a linha é atualizada com um novo `expires_at`, `RETURNING` devolve a linha → lock adquirido (retry após expirar funciona).
+- Linha existe e **ainda não expirou** → a cláusula `WHERE` não casa, nenhuma linha é afetada, `RETURNING` não devolve nada → lock negado.
+
+Tudo em uma única instrução SQL — sem "ler o valor, decidir em Python, escrever de volta" (que teria uma janela de corrida entre o SELECT e o UPDATE). `release()` (chamado quando o envio ao Telegram falha, para permitir retry imediato em vez de esperar o TTL) é um `DELETE` simples pela chave primária.
+
+Implementação dialect-aware: `sqlalchemy.dialects.postgresql.insert` em produção, `sqlalchemy.dialects.sqlite.insert` nos testes (mesmo `ON CONFLICT` funciona nos dois) — selecionado em runtime via `db.get_bind().dialect.name`, o que permite testar o **mesmo código** contra SQLite em memória (`StaticPool`, para todas as conexões da suíte de teste compartilharem o mesmo `:memory:`) e contra o Postgres real de produção sem nenhum branch condicional na lógica de negócio.
+
+**Limitações conhecidas desta abordagem**: (a) o lock não é liberado automaticamente por um processo de limpeza (linhas expiradas só somem quando um novo `try_acquire` do mesmo equipamento roda o `UPSERT` — em prática nunca acumula mais que 1 linha por equipamento, então não é um vazamento real); (b) diferente de um TTL nativo do Redis, a expiração aqui é **verificada na leitura** (`WHERE expires_at <= now`), não expurgada em background — irrelevante para o volume atual (1 linha por ativo simulado), mas não escalaria da mesma forma para milhares de equipamentos sem um índice dedicado em `expires_at` (não criado nesta task — não necessário no volume atual).
+
+#### Injeção de relógio para testes determinísticos
+
+`TelegramAlertRateLimiter(clock: Callable[[], datetime] = lambda: datetime.now(timezone.utc))` — o teste de limite de TTL (`test_notifications.py`) substitui `clock` por uma função que lê de um `dict` mutável, avançando o "tempo" para `t=0`, `+5min`, `+14min59s`, `+15min` sem nenhum `sleep()` real (suíte inteira roda em milissegundos).
+
+#### Concorrência — prova de exclusão mútua real
+
+Teste dedicado dispara **duas chamadas concorrentes reais** de `try_acquire("mesmo-equipamento")` via `asyncio.gather`, contra o mesmo banco SQLite compartilhado (`StaticPool`), e verifica `sorted(resultados) == [False, True]` — exatamente uma das duas adquire o lock, nunca as duas, nunca nenhuma. A atomicidade vem do `INSERT ... ON CONFLICT` ser uma única instrução SQL avaliada pelo motor do banco, não de qualquer lock em memória do Python (que não protegeria contra múltiplos workers/processos do Uvicorn).
+
+#### Dashboard URL — construção segura (anti open-redirect)
+
+`CriticalFailureNotificationService._build_dashboard_url` monta a URL **exclusivamente** a partir de `settings.dashboard_url` (config do operador, variável de ambiente `DASHBOARD_URL`) concatenada com um path fixo `/sensors/{equipment_id}`, onde `equipment_id` vem sempre do **estado interno do pipeline** (nunca da predição do modelo ou da saída do LLM). Nenhum campo do payload de predição, do MCP ou do Ollama jamais é lido para compor esta URL — não há como injetar um domínio externo através de nenhum desses caminhos.
+
+#### Proteção do token
+
+`TELEGRAM_BOT_TOKEN` nunca aparece em log: a URL completa (que carrega o token no path, convenção da Bot API — `.../bot<TOKEN>/sendMessage`) nunca é logada; em erro HTTP, só `status_code` é logado (nunca o corpo da resposta, que em alguns erros 4xx pode ecoar dados da requisição de volta). Testado explicitamente (`test_notifications.py`, teste parametrizado que varre todos os `caplog` de todos os cenários de falha e garante que a substring do token nunca aparece).
+
+#### Criando o Bot do Telegram (BotFather)
+
+1. Abra uma conversa com [@BotFather](https://t.me/BotFather) no Telegram.
+2. Envie `/newbot`, escolha um nome de exibição e um `username` terminado em `bot` (ex.: `predictiq_alerts_bot`).
+3. O BotFather devolve o token no formato `123456789:AAdefault-example-do-not-use-this-token` — copie para `TELEGRAM_BOT_TOKEN` no `.env` (nunca commitar este valor).
+4. Para descobrir o `TELEGRAM_CHAT_ID`: envie qualquer mensagem para o bot recém-criado, depois abra `https://api.telegram.org/bot<TOKEN>/getUpdates` no navegador e leia `result[0].message.chat.id` (número, pode ser negativo para grupos).
+5. Preencha `TELEGRAM_CHAT_ID` no `.env` e reinicie o backend (`docker compose up -d --force-recreate api`).
+
+Sem `TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID` configurados, `notify_if_critical` simplesmente loga `telegram_config_missing` e não faz nenhuma tentativa de rede — o restante do pipeline (predição, alerta WS, sugestão de manutenção) continua funcionando normalmente.
+
+#### Variáveis de ambiente (RF-24)
+
+| Variável | Obrigatória | Default | Descrição |
+|---|---|---|---|
+| `TELEGRAM_BOT_TOKEN` | Não* | _(vazio)_ | Token do BotFather. *Sem ele, notificação fica desativada (não é erro) |
+| `TELEGRAM_CHAT_ID` | Não* | _(vazio)_ | Chat/grupo de destino. *Mesma regra acima |
+| `TELEGRAM_API_BASE_URL` | Não | `https://api.telegram.org` | Só para testes/mock — produção não precisa mudar |
+| `TELEGRAM_CLIENT_TIMEOUT_SECONDS` | Não | `10.0` | Timeout do HTTP client do adapter |
+| `DASHBOARD_URL` | Não | `http://localhost` | Base da URL do alerta — trocar para o domínio real em produção |
+| `CRITICAL_FAILURE_RATE_LIMIT_SECONDS` | Não | `900` | TTL do rate limit (15 min) |
+| `DEFAULT_EQUIPMENT_ID` | Não | `APU-Trem-042` | Mesmo ID já usado na rota do frontend `/sensors/APU-Trem-042` |
+| `DEFAULT_EQUIPMENT_NAME` | Não | `Compressor de Ar Industrial (MetroPT-3)` | Nome exibido na mensagem do Telegram |
+
+#### Testes
+
+```bash
+docker compose exec api pytest tests/test_notifications.py -v   # 35 testes
+```
+
+Cobre: `TelegramNotificationAdapter` (sucesso, config ausente, timeout, HTTP não-200, erro de conexão, JSON inválido, `ok: false`, token nunca aparece em log); `TelegramAlertRateLimiter` (1º alerta passa, 2º bloqueado, equipamentos diferentes não se bloqueiam mutuamente, `release()` permite retry imediato, limite de TTL nos 4 pontos do critério de aceite, concorrência real via `asyncio.gather`); `CriticalFailureNotificationService` (limiar nos 7 valores do critério de aceite, rate-limit impede chamada ao Telegram, envio bem-sucedido não libera o lock, falha do Telegram libera o lock e não propaga exceção, exceção inesperada não propaga, URL do dashboard construída corretamente).
+
+#### Validação real de infraestrutura (sem Telegram real)
+
+- Migração `0002_create_telegram_alert_locks_table` aplicada de verdade (`docker compose exec api alembic upgrade head`) e a tabela `telegram_alert_locks` inspecionada via `psql \d telegram_alert_locks` no Postgres real do projeto.
+- Concorrência atômica provada contra o Postgres real (além do teste automatizado contra SQLite): `asyncio.gather` de dois `try_acquire` simultâneos para o mesmo equipamento, confirmando exatamente um `True`.
+- Cadeia real `get_alert_service()` → `AlertService.process_prediction()` → `CriticalFailureNotificationService` exercitada com payloads sintéticos de alta probabilidade (0.90/0.92/0.80) diretamente contra o singleton real de produção (sem token real configurado — validou o caminho "config ausente, não derruba o pipeline").
+- Caminho de sucesso/falha do Telegram validado com classes reais (`AlertService`, `CriticalFailureNotificationService`, `TelegramNotificationAdapter`) e só a chamada HTTP (`httpx.AsyncClient.post`) mockada: 1ª chamada envia e mantém o lock; 2ª chamada para o mesmo equipamento é bloqueada pelo rate limit e o Telegram **não** é chamado de novo (`await_count == 1` nas duas tentativas).
+- **Telegram real (API pública) não foi testado** — não há `TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID` reais disponíveis neste ambiente de desenvolvimento. Todos os testes de HTTP usam mock (`respx`/`unittest.mock`) ou um `TELEGRAM_API_BASE_URL` apontando para um servidor fake — nenhum resultado de envio real foi fabricado ou assumido como sucesso.
+- Simulador restaurado para `NORMAL` e `telegram_alert_locks` confirmada vazia (0 linhas) ao final da validação manual.
+
 ---
 
 ## 5. Modelos de Machine Learning
@@ -1049,6 +1151,12 @@ cp apps/frontend/.env.local.example apps/frontend/.env.local
 | `MANUALS_DIR` | Não | `data/manuals` | RF-20 — diretório dos PDFs de entrada, relativo a `apps/mcp-server/` |
 | `CHROMA_DB_PATH` | Não | `data/chroma` | RF-20 — diretório persistente do ChromaDB, relativo a `apps/mcp-server/` |
 | `CHUNK_SIZE` / `CHUNK_OVERLAP` | Não | `1000` / `150` | RF-20 — tamanho do chunk e overlap (caracteres) usados pelo chunking determinístico |
+| `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` | Não* | _(vazio)_ | RF-24/RNF-48 — credenciais do Bot (ver §4.10). *Sem elas, notificação crítica fica desativada (não é erro) |
+| `TELEGRAM_API_BASE_URL` | Não | `https://api.telegram.org` | RF-24 — só para testes/mock |
+| `TELEGRAM_CLIENT_TIMEOUT_SECONDS` | Não | `10.0` | RF-24 — timeout do HTTP client do `TelegramNotificationAdapter` |
+| `DASHBOARD_URL` | Não | `http://localhost` | RF-24 — base da URL do alerta (nunca vem da predição/LLM — ver §4.10) |
+| `CRITICAL_FAILURE_RATE_LIMIT_SECONDS` | Não | `900` | RF-24 — TTL do rate limit de alertas críticos (15 min) |
+| `DEFAULT_EQUIPMENT_ID` / `DEFAULT_EQUIPMENT_NAME` | Não | `APU-Trem-042` / `Compressor de Ar Industrial (MetroPT-3)` | RF-24 — identifica o único ativo simulado hoje pelo pipeline |
 | `MODEL_PATH`, `XGBOOST_MODEL_PATH`, `MLP_ONNX_PATH`, `MLP_SCALER_PATH`, `RF_V2_ONNX_PATH`, `XGBOOST_V2_ONNX_PATH`, `TCN_ONNX_PATH`, `TCN_SCALER_PATH`, `BILSTM_ONNX_PATH`, `BILSTM_SCALER_PATH`, `PATCHTST_ONNX_PATH`, `PATCHTST_SCALER_PATH`, `AUTOENCODER_ONNX_PATH`, `AUTOENCODER_SCALER_PATH` | Não | resolvidos automaticamente para `apps/ml/models/<arquivo>` | Overrides individuais de caminho de artefato — raramente necessários; usados só se você mover os artefatos para fora de `apps/ml/models/` |
 
 Definidas **pelo `docker-compose.yml`** (não pelo `.env` — não precisam ir no arquivo):
@@ -1805,6 +1913,8 @@ Divergências/observações reais encontradas na auditoria (RNF-41/RNF-42), docu
 - **Llama 3.2 3B nem sempre segue a instrução de branch "Limitações" do System Prompt (RF-22)**: quando o MCP não retorna nenhum trecho relevante, o modelo às vezes mantém a estrutura completa do template (preenchendo "Não especificado nos trechos recuperados" nas seções, o que é seguro) em vez de trocar para a seção alternativa "## Limitações" exatamente como instruído — e uma vez chegou a citar a própria query do usuário como se fosse uma referência de manual. Validado que o modelo **nunca inventa** procedimento/peça/valor técnico nesses casos (a regra de segurança central se mantém), mas o *formato* exato da branch não é 100% determinístico com um modelo de 3B rodando localmente — limitação conhecida de modelos pequenos, não um bug de código.
 - **`apps/backend/requirements.txt` puxa `nvidia-nccl-cu12` (~340 MB) como dependência transitiva de `mcp` (RF-22)**, mesmo o backend sendo só um *cliente* MCP (nunca roda modelos de ML locais via essa lib). Não foi investigado a fundo qual extra do `mcp`/`opentelemetry` trafega isso — funciona normalmente (a lib nunca é importada em runtime), mas infla a imagem sem necessidade real. Mesma classe de problema do torch/CUDA no mcp-server (RF-20).
 - **`anyio`/`idna`/`typing_extensions` estavam com pin exato (`==`) em `apps/backend/requirements.txt`**, congelados de um `pip freeze` anterior, e conflitavam com as versões mínimas exigidas por `mcp` (RF-22). Resolvido removendo o pin exato dessas três dependências transitivas de baixo nível (deixando o pip resolver a versão compatível) — os pins de bibliotecas de topo (`fastapi`, `httpx`, `pydantic`, etc.) foram mantidos intactos.
+- **Rate limit de alertas críticos (RF-24) usa Postgres, não Redis** — decisão deliberada (nenhum cache existia no projeto; ver §4.10 para a análise completa). Funciona corretamente no volume atual (1 linha por ativo simulado), mas expiração é verificada na leitura (não expurgada em background) e não há índice dedicado em `expires_at` — não escalaria da mesma forma para milhares de equipamentos sem ajustes.
+- **Telegram (RF-24) não foi testado contra a API pública real** — nenhuma credencial real (`TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID`) está disponível neste ambiente de desenvolvimento. Toda a validação de HTTP usa mock; a lógica de negócio (threshold, rate limit, concorrência, orquestração) foi validada com infraestrutura real (Postgres real, classes reais), só a chamada de rede ao Telegram em si é simulada.
 
 ---
 

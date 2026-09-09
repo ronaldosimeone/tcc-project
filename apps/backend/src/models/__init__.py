@@ -5,3 +5,4 @@
 # tests that call Base.metadata.create_all(engine).
 
 from src.models.prediction import Prediction  # noqa: F401
+from src.models.telegram_alert_lock import TelegramAlertLock  # noqa: F401

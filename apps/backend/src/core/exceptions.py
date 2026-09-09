@@ -88,6 +88,18 @@ class OllamaResponseError(AppError):
     detail = "Resposta inválida do serviço de geração de sugestões."
 
 
+class TelegramNotificationError(AppError):
+    """RF-24 — falha ao enviar notificação crítica via Telegram (config
+    ausente, timeout, HTTP 4xx/5xx, JSON inválido, ou `ok: false` na
+    resposta). SEMPRE capturada internamente por
+    `CriticalFailureNotificationService` — nunca deve derrubar a
+    predição/inferência que já foi calculada (RF-24 §16). `detail` nunca
+    contém o token nem a URL completa do Bot API."""
+
+    status_code = status.HTTP_502_BAD_GATEWAY
+    detail = "Falha ao enviar notificação crítica via Telegram."
+
+
 # ---------------------------------------------------------------------------
 # Handlers
 # ---------------------------------------------------------------------------
