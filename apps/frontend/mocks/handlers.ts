@@ -50,22 +50,36 @@ export const handlers = [
   /**
    * GET /api/stream/sensors — SSE em tempo real (RF-12).
    *
+   * Registrado com PATH RELATIVO (sem `API_BASE`) — correção de bug real de
+   * integração MSW/Playwright: `hooks/use-sensor-data.ts::SSE_URL` conecta
+   * via `new EventSource("/api/stream/sensors")`, um caminho relativo que o
+   * browser resolve contra a origem da PRÓPRIA página (`http://localhost:3000`,
+   * o `next dev` iniciado pelo `webServer` do `playwright.config.ts` — sem
+   * Nginx na frente, ao contrário da produção). Um handler registrado em
+   * `${API_BASE}` (`http://localhost:8000`) nunca casa com essa origem — a
+   * requisição passava para a rede real (`onUnhandledRequest: "bypass"`) e
+   * recebia 404 silenciosamente, sem nenhum aviso do MSW. Path relativo no
+   * handler casa com QUALQUER origem (convenção oficial do MSW v2 para
+   * chamadas same-origin), exatamente como o consumidor real chama.
+   *
    * Retorna um único evento sensor_reading e mantém o stream aberto.
    * MSW v2 intercepta EventSource via service worker da mesma forma que fetch.
    */
-  http.get(`${API_BASE}/api/stream/sensors`, () => {
-    const isCritical =
-      typeof window !== "undefined" && window.__E2E_SCENARIO__ === "critical";
+  http.get("/api/stream/sensors", () => {
+    const scenario =
+      typeof window !== "undefined" ? window.__E2E_SCENARIO__ : undefined;
+    const isCritical = scenario === "critical";
+    const isAlert = scenario === "alert";
 
     const reading = JSON.stringify({
       timestamp: new Date().toISOString(),
-      TP2: isCritical ? 2.1 : 8.4,
-      TP3: isCritical ? 1.2 : 9.1,
+      TP2: isCritical ? 2.1 : isAlert ? 5.0 : 8.4,
+      TP3: isCritical ? 1.2 : isAlert ? 5.5 : 9.1,
       H1: 8.5,
       DV_pressure: 2.1,
       Reservoirs: 8.7,
-      Motor_current: isCritical ? 9.8 : 4.2,
-      Oil_temperature: isCritical ? 88.5 : 68.5,
+      Motor_current: isCritical ? 9.8 : isAlert ? 6.5 : 4.2,
+      Oil_temperature: isCritical ? 88.5 : isAlert ? 78.0 : 68.5,
       COMP: 1.0,
       DV_eletric: 0.0,
       Towers: 1.0,
@@ -116,17 +130,57 @@ export const handlers = [
 
   /**
    * GET /api/v1/predictions
-   * Returns an empty paginated response so the history endpoint never errors.
-   * The AlertPanel history is driven by usePredictionHistory (localStorage),
-   * not this endpoint, so an empty response is correct for E2E.
+   *
+   * Correção de bug real de integração MSW/Playwright (mesma causa do
+   * handler de SSE acima): registrado com PATH RELATIVO, porque
+   * `hooks/use-sensor-data.ts` chama `fetch("/api/v1/predictions?...")` —
+   * caminho relativo à origem da página, não a `API_BASE`.
+   *
+   * Também corrigido para responder ao cenário (`__E2E_SCENARIO__`) em vez
+   * de devolver sempre uma página vazia. `latest`/`riskLevel` em
+   * `useSensorData` — e, por consequência, o banner crítico do `AlertPanel`
+   * (RF-08) e o histórico persistido por `usePredictionHistory` (RNF-14) —
+   * são alimentados EXCLUSIVAMENTE pelos itens desta resposta (seed no mount
+   * + poll a cada `POLL_INTERVAL_MS`); o único outro caminho que atualiza
+   * `latest` é o WebSocket `/ws/alerts`, que este MSW não simula. Uma
+   * resposta sempre vazia — como antes — significa que nenhum cenário jamais
+   * chega a NORMAL/ALERTA/CRÍTICO via polling, independentemente da origem
+   * estar correta ou não. `timestamp` usa o relógio real (respeita
+   * `page.clock` quando instalado pelo teste, pois este handler roda no
+   * contexto JS da página, não na thread do Service Worker) para que cada
+   * chamada gere uma entrada nova e distinta no histórico.
    */
-  http.get(`${API_BASE}/api/v1/predictions`, ({ request }) => {
+  http.get("/api/v1/predictions", ({ request }) => {
     const url = new URL(request.url);
     const page = Number(url.searchParams.get("page") ?? "1");
     const size = Number(url.searchParams.get("size") ?? "20");
 
+    const scenario =
+      typeof window !== "undefined" ? window.__E2E_SCENARIO__ : undefined;
+    const failure_probability =
+      scenario === "critical" ? 0.9 : scenario === "alert" ? 0.45 : 0.08;
+    const predicted_class = scenario === "critical" ? 1 : 0;
+
+    const item = {
+      timestamp: new Date().toISOString(),
+      TP2: 8.4,
+      TP3: 9.1,
+      H1: 8.5,
+      DV_pressure: 2.1,
+      Reservoirs: 8.7,
+      Motor_current: 4.2,
+      Oil_temperature: 68.5,
+      COMP: 1.0,
+      DV_eletric: 0.0,
+      Towers: 1.0,
+      MPG: 1.0,
+      Oil_level: 1.0,
+      failure_probability,
+      predicted_class,
+    };
+
     return HttpResponse.json(
-      { items: [], total: 0, page, size, pages: 0 },
+      { items: [item], total: 1, page, size, pages: 1 },
       { status: 200 },
     );
   }),

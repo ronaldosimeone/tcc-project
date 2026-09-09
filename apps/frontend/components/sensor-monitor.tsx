@@ -657,6 +657,7 @@ const EventLog = memo(function EventLog({ latest, riskLevel }: EventLogProps) {
 
   return (
     <Card
+      data-testid="prediction-history"
       className={cn(
         "flex flex-col border-slate-200 transition-colors duration-500",
         riskLevel === "CRÍTICO" && "border-red-300",
@@ -711,6 +712,7 @@ const EventLog = memo(function EventLog({ latest, riskLevel }: EventLogProps) {
                 return (
                   <div
                     key={entry.id}
+                    data-risk={entry.riskLevel}
                     className="flex items-center gap-2 border-b border-slate-100 px-4 py-2 last:border-0"
                   >
                     <span className="w-14 shrink-0 font-mono text-[9px] text-muted-foreground/60">
@@ -949,6 +951,8 @@ export default function SensorMonitor() {
             ALERTA   → fundo âmbar suave + borda âmbar (atenção intermediária)
             NORMAL   → branco neutro */}
         <div
+          data-testid="alert-panel"
+          data-risk={effectiveRiskLevel}
           className={cn(
             "flex flex-wrap items-center justify-between gap-3 rounded-lg border px-4 py-3 transition-colors",
             isCriticalState
@@ -1003,6 +1007,8 @@ export default function SensorMonitor() {
             {!isLoading && (
               <Badge
                 variant="outline"
+                data-testid={isCriticalState ? "critical-banner" : undefined}
+                role={isCriticalState ? "alert" : undefined}
                 className={cn(
                   "gap-1.5 font-semibold",
                   isCriticalState
@@ -1018,7 +1024,7 @@ export default function SensorMonitor() {
                       <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75" />
                       <span className="relative inline-flex h-2 w-2 rounded-full bg-white" />
                     </span>
-                    FALHA CRÍTICA
+                    FALHA CRÍTICA DETECTADA
                   </>
                 ) : isAlertState ? (
                   <>

@@ -118,11 +118,14 @@ test.describe("Assistente de Manutenção — consulta e streaming (RF-23 / RNF-
     page,
   }) => {
     // 1. Falha detectada — banner crítico no Dashboard (RF-08), mesmo
-    // mecanismo já validado em failure_alert.spec.ts.
+    // mecanismo já validado em failure_alert.spec.ts. `AlertPanel` vive em
+    // `/sensors/[id]` (ver correção em failure_alert.spec.ts/
+    // dashboard_flow.spec.ts) — "APU-Trem-042" é o id real de navegação
+    // (Sidebar disponível globalmente também nesta rota).
     await page.addInitScript(() => {
       window.__E2E_SCENARIO__ = "critical";
     });
-    await gotoAndWaitMsw(page, "/");
+    await gotoAndWaitMsw(page, "/sensors/APU-Trem-042");
     await expect(page.getByTestId("critical-banner")).toBeVisible({
       timeout: 10_000,
     });
