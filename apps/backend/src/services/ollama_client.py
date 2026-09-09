@@ -15,6 +15,8 @@ pública por padrão desta configuração.
 
 from __future__ import annotations
 
+import json
+from collections.abc import AsyncIterator
 from typing import Any
 
 import httpx
@@ -95,3 +97,80 @@ class OllamaClient:
             )
 
         return content
+
+    async def generate_stream(
+        self, system_prompt: str, user_prompt: str
+    ) -> AsyncIterator[str]:
+        """
+        Streaming REAL de tokens (RF-23 / RNF-47) — `stream: true` no Ollama.
+
+        A API do Ollama devolve NDJSON: uma linha JSON por chunk, cada uma com
+        ``message.content`` (o pedaço de texto novo, pode ser vazio na linha
+        final) e ``done`` (`true` só na última linha). Cada linha é decodificada
+        e só o texto (`content`) é repassado ao chamador — nunca o JSON bruto.
+
+        NÃO gera tokens artificiais: se o Ollama não streamar de verdade, este
+        gerador simplesmente reflete isso (poucos chunks grandes) — não faz
+        `resposta_completa.split()` para simular.
+
+        Levanta `OllamaUnavailableError`/`OllamaResponseError` nos mesmos casos
+        de `generate()`. Uma falha APÓS o primeiro chunk já ter sido enviado
+        ainda é levantada (propaga para o chamador decidir como sinalizar ao
+        cliente SSE — ver `MaintenanceSuggestionService.suggest_stream`).
+        """
+        payload: dict[str, Any] = {
+            "model": self._model,
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            "stream": True,
+        }
+
+        try:
+            async with httpx.AsyncClient(timeout=self._timeout) as client:
+                async with client.stream(
+                    "POST", f"{self._base_url}/api/chat", json=payload
+                ) as response:
+                    if response.status_code == 404:
+                        raise OllamaUnavailableError(
+                            f"Modelo '{self._model}' não está disponível no Ollama."
+                        )
+                    if response.status_code != 200:
+                        raise OllamaUnavailableError(
+                            "Serviço de geração de sugestões retornou um erro inesperado."
+                        )
+
+                    got_any_chunk = False
+                    async for line in response.aiter_lines():
+                        if not line.strip():
+                            continue
+                        try:
+                            chunk: dict[str, Any] = json.loads(line)
+                        except ValueError:
+                            log.warning("ollama_stream_invalid_json_line")
+                            continue  # linha corrompida isolada — não aborta o stream inteiro
+
+                        content = chunk.get("message", {}).get("content")
+                        if content:
+                            got_any_chunk = True
+                            yield content
+
+                        if chunk.get("done"):
+                            break
+
+            if not got_any_chunk:
+                log.warning("ollama_stream_empty")
+                raise OllamaResponseError(
+                    "Serviço de geração de sugestões retornou conteúdo vazio."
+                )
+        except httpx.TimeoutException as exc:
+            log.warning("ollama_stream_timeout", model=self._model)
+            raise OllamaUnavailableError(
+                "Tempo limite excedido ao gerar a sugestão de manutenção."
+            ) from exc
+        except httpx.HTTPError as exc:
+            log.warning("ollama_stream_connection_error", error=str(exc))
+            raise OllamaUnavailableError(
+                "Não foi possível conectar ao serviço de geração de sugestões."
+            ) from exc

@@ -830,6 +830,86 @@ RNF-46 não define um SLA de latência explícito — o benchmark documenta a la
 
 Evidência completa: [`apps/backend/maintenance_suggestion_benchmark.json`](apps/backend/maintenance_suggestion_benchmark.json). O Ollama (Llama 3.2 3B em CPU) domina a latência total, como esperado para geração de texto local sem GPU — o MCP contribui só ~2% do tempo total.
 
+### 4.9. Streaming da sugestão de manutenção — SSE (RF-23 / RNF-47)
+
+**O que é**: `POST /v1/maintenance/suggest/stream` — mesma regra de negócio da §4.8 (threshold `> 0.7`, MCP, RAG, System Prompt), mas transmite os **tokens reais do Ollama** via Server-Sent Events conforme são gerados, em vez de esperar a resposta completa. `MaintenanceAssistant` (painel lateral, `apps/frontend/components/maintenance-assistant.tsx`) consome esse stream e atualiza o Markdown incrementalmente.
+
+> **Canal independente do SSE de sensores.** `/api/stream/sensors` (RF-12, §4.3) e `/api/v1/maintenance/suggest/stream` são dois endpoints SSE completamente separados — hooks diferentes (`useSSE` vs. o parser próprio em `lib/maintenance-stream.ts`), protocolos de evento diferentes, ciclos de vida diferentes (o de sensores é permanente/infinito; o de manutenção é um request-response de vida curta). Nenhum contrato do SSE de sensores foi alterado por esta task.
+
+```mermaid
+flowchart TD
+    UI["MaintenanceAssistant<br/>(clique em 'Gerar sugestão')"] --> FETCH["fetch() POST + ReadableStream<br/>lib/maintenance-stream.ts"]
+    FETCH --> EP["POST /v1/maintenance/suggest/stream"]
+    EP --> SVC["MaintenanceSuggestionService.suggest_stream()"]
+    SVC -->|"searching"| MCP["MCP: search_maintenance_manual"]
+    MCP -->|"token* (por chunk NDJSON real do Ollama)"| OLLAMA["Ollama /api/chat, stream: true"]
+    OLLAMA -->|"done: markdown completo + references"| UI
+```
+
+#### Protocolo de eventos SSE
+
+| Evento | `data` | Quando |
+|---|---|---|
+| `searching` | `{}` | Logo após o threshold passar, MCP acabou de ser chamado (real — não é enviado antes de a chamada acontecer) |
+| `token` | `{"token": "..."}` | Um chunk de texto novo, direto do NDJSON de streaming do Ollama — nunca um split artificial de uma resposta já completa |
+| `done` | `{"markdown": "...", "references": [...]}` | Geração concluída — Markdown completo (concatenação exata dos tokens) + referências (`file_name`, `page`, `chunk_index`, `source`, `score`) |
+| `skipped` | `{"message": "..."}` | `failure_probability <= 0.7` — nem MCP nem Ollama chamados |
+| `error` | `{"message": "..."}` | MCP/Ollama indisponível, resposta inválida, ou falha inesperada — mensagem sempre segura (sem URL interna, sem traceback) |
+
+Cada evento é `event: <tipo>\ndata: <json>\n\n` — mesmo padrão hand-rolled de `routers/stream.py` (RF-12), sem `sse_starlette`.
+
+#### Streaming real do Ollama (RNF-47)
+
+`OllamaClient.generate_stream` (`apps/backend/src/services/ollama_client.py`) chama `POST {OLLAMA_BASE_URL}/api/chat` com `"stream": true` — o Ollama devolve NDJSON (uma linha JSON por chunk, `done: true` só na última). Cada `message.content` é repassado ao chamador assim que chega — **não** há geração completa seguida de `.split()`; o gargalo de latência (ver benchmark abaixo) é inteiramente o tempo real de inferência do Llama 3.2 3B, chunk a chunk.
+
+#### Cliente SSE do frontend — `fetch()`, não `EventSource`
+
+O payload carrega `failure_probability`/`equipment_name`/`symptom_description` — `EventSource` nativo não suporta `POST` com corpo JSON, então `lib/maintenance-stream.ts` consome o stream via `fetch()` + `ReadableStream` com um parser SSE escrito à mão (sem lib nova): acumula bytes num buffer, corta em `\n\n`, sobrevive a um evento dividido entre dois chunks de rede e a vários eventos no mesmo chunk (testado em `__tests__/maintenance-stream.test.ts`).
+
+#### Cancelamento
+
+`AbortController` (`useMaintenanceStream`, `apps/frontend/hooks/use-maintenance-stream.ts`) — o botão "Cancelar" aborta o `fetch`, libera o `reader` e limpa o estado; desmontar o painel (fechar o Sheet) também aborta automaticamente (nenhuma atualização de estado após unmount).
+
+#### Segurança do Markdown
+
+`react-markdown` **sem** `rehype-raw` — HTML bruto do texto gerado (ex.: `<script>`) vira texto literal, nunca um elemento executado. Links Markdown (`[texto](url)`) passam por `isSafeHref`, que só permite `http:`/`https:` — `javascript:`, `data:` e qualquer outro esquema viram texto simples, nunca um `<a>` clicável. Testado em `__tests__/maintenance-assistant.test.tsx` (cenário K) com `<script>` e link `javascript:` reais no Markdown gerado.
+
+#### Referências aos manuais — nunca um link inventado
+
+As referências vêm exclusivamente dos metadados estruturados do evento `done` (nunca de uma URL que o LLM tenha escrito). Como não existe hoje nenhum endpoint que sirva os PDFs de `apps/mcp-server/data/manuals/`, o painel mostra cada referência como **texto** (`manual-x.pdf — página N (score 0.XX)`), nunca como link — ver `ReferencesList` em `maintenance-assistant.tsx`.
+
+#### Estados do painel
+
+`idle` · `connecting` · `searching` · `generating` · `done` · `skipped` · `error` · `offline` — nunca fica preso em "Gerando…" indefinidamente: qualquer falha (MCP indisponível, Ollama indisponível, rede) termina num estado de erro com mensagem clara e permite tentar de novo (o formulário reabilita e o botão "Gerar sugestão" reinicia do zero).
+
+#### Testes
+
+```bash
+docker compose exec api pytest tests/test_maintenance_suggestion.py tests/test_maintenance_endpoint.py -v   # 42 testes (service + endpoint, incl. streaming)
+docker compose exec frontend pnpm exec vitest run __tests__/maintenance-stream.test.ts __tests__/maintenance-assistant.test.tsx   # 21 testes
+```
+
+#### Validação real (E2E, sem mocks)
+
+Executado de ponta a ponta contra o ambiente real (mcp-server real + Ollama real): painel abre, formulário preenchido, tokens aparecem progressivamente na tela (confirmado visualmente, Markdown crescendo incrementalmente antes da conclusão), estado muda `Conectando… → Buscando manual… → Gerando… → Concluído`, referências exibidas como texto (nunca link). Também validado: `failure_probability` no limiar exato `0.70` não dispara; Ollama parado → estado `Erro` com mensagem clara; mcp-server parado → estado `Erro` com mensagem diferente (identifica a causa); reiniciar os serviços e tentar de novo funciona (nenhum travamento).
+
+Métrica real de uma execução completa (`docker compose exec api`, contra Ollama/mcp-server reais e já aquecidos):
+
+| Métrica | Valor real |
+|---|---|
+| Tempo até o 1º token | 0.28 s |
+| Duração total | 1.71 s |
+| Chunks/tokens recebidos | 197 |
+| Tamanho final do Markdown | 730 caracteres |
+
+Evidência: [`apps/backend/maintenance_stream_e2e_metrics.json`](apps/backend/maintenance_stream_e2e_metrics.json) (uma amostra real, não uma série estatística — RNF-47 não define SLA).
+
+#### Limitações conhecidas
+
+- **Llama 3.2 3B às vezes cita o placeholder interno `[MANUAL N]` literalmente** no texto do "Diagnóstico provável" (deveria usá-lo só como referência mental, citando o manual pelo nome na seção "Referências"). Não compromete a segurança/veracidade do conteúdo (o texto citado continua vindo do contexto real), é um artefato de um modelo pequeno seguindo instruções de formatação de forma imperfeita.
+- **Sem endpoint de arquivo estático para os PDFs** — por isso as referências são texto, não link (ver acima). Se um endpoint seguro de download for adicionado no futuro, `ReferencesList` é o único lugar que precisa mudar.
+- **Cancelamento manual em ambiente de teste local é difícil de observar via automação de browser** quando o Ollama já está "aquecido" — uma segunda geração pode completar em ~1-2s, mais rápido que o round-trip de uma ferramenta de automação externa. O comportamento de cancelamento em si é validado de forma determinística e confiável no teste automatizado (`__tests__/maintenance-assistant.test.tsx`, cenário L), que controla precisamente o timing via um generator mockado.
+
 ---
 
 ## 5. Modelos de Machine Learning
@@ -1156,6 +1236,7 @@ alembic upgrade head
 | Tipo | Caminho | Descrição |
 |---|---|---|
 | **SSE** | `GET /api/stream/sensors` | `text/event-stream` — emite `sensor_reading` 1× por segundo com timestamp + 12 sensores |
+| **SSE** | `POST /api/v1/maintenance/suggest/stream` | RF-23/RNF-47 — tokens do Llama 3.2 3B em tempo real (`searching`/`token`/`done`/`skipped`/`error`). Canal independente do SSE de sensores. Ver §4.9 |
 | **WebSocket** | `WS /ws/alerts` | JSON: server → `alert` / `ping`; client → `ack` / `pong`. Push imediato quando `probability > 0.70`. Heartbeat a cada 30 s. |
 
 ### 10.3. Exemplo — Inferência

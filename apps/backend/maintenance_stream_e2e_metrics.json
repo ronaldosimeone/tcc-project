@@ -1,0 +1,13 @@
+{
+  "description": "RF-23 / RNF-47 — métrica real de uma execução completa de POST /v1/maintenance/suggest/stream, medida via docker compose exec api (mcp-server e Ollama reais, sem mocks). Uma amostra, não um benchmark estatístico (ver apps/backend/benchmark_maintenance_suggestion.py para p50/p95/p99 do RF-22 não-streaming).",
+  "scenario": {
+    "equipment_name": "Bomba centrifuga BC-200",
+    "symptom_description": "vazamento na bomba centrifuga",
+    "failure_probability": 0.9
+  },
+  "model": "llama3.2:3b",
+  "time_to_first_token_s": 0.28,
+  "total_duration_s": 1.71,
+  "chunk_count": 197,
+  "markdown_chars_generated": 730
+}

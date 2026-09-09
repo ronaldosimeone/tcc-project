@@ -20,16 +20,36 @@ routers. Ver README "RF-22 — Divergências".
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, status
+import json
+from collections.abc import AsyncGenerator
+from typing import Any
+
+import structlog
+from fastapi import APIRouter, Depends, Request, status
+from fastapi.responses import StreamingResponse
 
 from src.core.config import settings
 from src.schemas.maintenance import (
     MaintenanceSuggestionRequest,
     MaintenanceSuggestionResponse,
 )
-from src.services.maintenance_suggestion_service import MaintenanceSuggestionService
+from src.services.maintenance_suggestion_service import (
+    MaintenanceSuggestionService,
+    SuggestionStreamEvent,
+)
 from src.services.mcp_client import MCPSearchClient
 from src.services.ollama_client import OllamaClient
+
+log = structlog.get_logger(__name__)
+
+# Mesmo padrão de headers de src/routers/stream.py (SSE de sensores, RF-12) —
+# desabilita buffering do Nginx via header de resposta (funciona em qualquer
+# location, não só /api/stream/ — ver README §4.9).
+_SSE_HEADERS = {
+    "Cache-Control": "no-cache",
+    "Connection": "keep-alive",
+    "X-Accel-Buffering": "no",
+}
 
 router: APIRouter = APIRouter(prefix="/v1/maintenance", tags=["Maintenance"])
 
@@ -81,3 +101,72 @@ async def suggest_maintenance(
     service: MaintenanceSuggestionService = Depends(get_maintenance_suggestion_service),
 ) -> MaintenanceSuggestionResponse:
     return await service.suggest(payload)
+
+
+def _format_sse_event(event: SuggestionStreamEvent) -> str:
+    """Serializa um `SuggestionStreamEvent` no protocolo SSE desta task
+    (RF-23 §2): ``event: <type>\\ndata: <json>\\n\\n``. Cada `data:` é sempre
+    JSON válido — nunca texto solto."""
+    data: dict[str, Any]
+    if event.type == "searching":
+        data = {}
+    elif event.type == "token":
+        data = {"token": event.token}
+    elif event.type == "done":
+        data = {
+            "markdown": event.markdown,
+            "references": [ref.model_dump() for ref in event.references],
+        }
+    else:  # "skipped" | "error"
+        data = {"message": event.message}
+    return f"event: {event.type}\ndata: {json.dumps(data)}\n\n"
+
+
+@router.post(
+    "/suggest/stream",
+    summary="Streaming (SSE) do plano de manutenção — tokens do Llama 3.2 3B em tempo real",
+    description=(
+        "**RF-23 / RNF-47** — mesma regra de negócio de `POST /suggest` "
+        "(threshold `> 0.7`, MCP, RAG), mas transmite os tokens do Ollama "
+        "via Server-Sent Events conforme são gerados, em vez de esperar a "
+        "resposta completa. Protocolo: eventos `searching` (MCP em andamento), "
+        "`token` (incremental), `done` (markdown completo + referências), "
+        "`skipped` (threshold não ultrapassado) ou `error`. Canal "
+        "independente do SSE de sensores "
+        "(`/api/stream/sensors`, RF-12) — não reaproveita nem altera esse "
+        "contrato."
+    ),
+    response_description="text/event-stream — eventos token/done/skipped/error.",
+)
+async def suggest_maintenance_stream(
+    request: Request,
+    payload: MaintenanceSuggestionRequest,
+    service: MaintenanceSuggestionService = Depends(get_maintenance_suggestion_service),
+) -> StreamingResponse:
+    async def event_generator() -> AsyncGenerator[str, None]:
+        log.info("maintenance_stream_opened", probability=payload.failure_probability)
+        try:
+            async for event in service.suggest_stream(payload):
+                if await request.is_disconnected():
+                    log.info("maintenance_stream_client_disconnected")
+                    break
+                yield _format_sse_event(event)
+        except Exception:
+            # Rede de segurança — qualquer exceção não prevista pelo service
+            # ainda fecha o stream com um evento estruturado, nunca uma
+            # conexão pendurada ou um traceback vazando pro cliente.
+            log.exception("maintenance_stream_unexpected_error")
+            yield _format_sse_event(
+                SuggestionStreamEvent(
+                    type="error",
+                    message="Erro inesperado ao gerar a sugestão de manutenção.",
+                )
+            )
+        finally:
+            log.info("maintenance_stream_closed")
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers=_SSE_HEADERS,
+    )

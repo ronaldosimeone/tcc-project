@@ -75,9 +75,27 @@ export interface SimulatorModeResponse {
   message: string;
 }
 
+// ── Domínio: Sugestão de manutenção via RAG (RF-22 / RF-23) ──────────────────
+
+/** Um trecho de manual citado no plano — metadados preservados do MCP/RF-21. */
+export interface ManualReference {
+  file_name: string;
+  page: number;
+  chunk_index: number;
+  source: string;
+  score: number;
+}
+
+/** Corpo de `POST /v1/maintenance/suggest[/stream]`. */
+export interface MaintenanceSuggestionPayload {
+  failure_probability: number;
+  equipment_name: string;
+  symptom_description?: string;
+}
+
 // ── Helpers internos ─────────────────────────────────────────────────────────
 
-function resolveBaseUrl(): string {
+export function resolveBaseUrl(): string {
   const url = process.env.NEXT_PUBLIC_API_URL;
   if (!url) {
     throw new Error(

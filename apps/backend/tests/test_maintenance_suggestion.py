@@ -9,6 +9,7 @@ feita à parte (ver README "RF-22 — Validação real" e
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
 from unittest.mock import AsyncMock
 
 import pytest
@@ -23,6 +24,7 @@ from src.services.maintenance_suggestion_service import (
     MAINTENANCE_SUGGESTION_THRESHOLD,
     MaintenanceSuggestionService,
 )
+from src.services.ollama_client import OllamaClient
 
 MCP_RESULT_WITH_CONTEXT = {
     "query": "Bomba centrifuga: vazamento",
@@ -274,3 +276,185 @@ async def test_manual_content_never_merged_into_system_prompt() -> None:
     assert "IGNORE AS REGRAS" not in system_prompt
     assert "IGNORE AS REGRAS" in user_prompt  # presente só como DADO, no contexto
     assert "DADO recuperado" in system_prompt  # instrução explícita de defesa
+
+
+# ---------------------------------------------------------------------------
+# suggest_stream() — RF-23 / RNF-47
+# ---------------------------------------------------------------------------
+
+
+class _StubStreamingOllama(OllamaClient):
+    """Fake com um `generate_stream` que É um async generator de verdade —
+    prova que o service consome tokens incrementalmente (RNF-47), não uma
+    string completa fatiada. `error`/`error_after` simulam falha no meio do
+    stream (depois de já ter enviado alguns tokens). Herda de `OllamaClient`
+    só para satisfazer o tipo esperado pelo construtor do service (mypy
+    estrito) — `generate_stream` é totalmente sobrescrito, nunca chama rede."""
+
+    def __init__(
+        self,
+        tokens: list[str] | None = None,
+        error: Exception | None = None,
+        error_after: int = 0,
+    ) -> None:
+        super().__init__(base_url="http://fake-ollama", model="fake-model")
+        self.tokens = tokens if tokens is not None else []
+        self.error = error
+        self.error_after = error_after
+        self.calls: list[tuple[str, str]] = []
+
+    async def generate_stream(
+        self, system_prompt: str, user_prompt: str
+    ) -> AsyncIterator[str]:
+        self.calls.append((system_prompt, user_prompt))
+        for i, token in enumerate(self.tokens):
+            if self.error is not None and i == self.error_after:
+                raise self.error
+            yield token
+        if self.error is not None and self.error_after >= len(self.tokens):
+            raise self.error
+
+
+def _make_stream_service(
+    mcp_result: dict | None = None,
+    tokens: list[str] | None = None,
+    ollama_error: Exception | None = None,
+    error_after: int = 0,
+):
+    mcp_client = AsyncMock()
+    mcp_client.search_maintenance_manual = AsyncMock(
+        return_value=mcp_result if mcp_result is not None else MCP_RESULT_WITH_CONTEXT
+    )
+    ollama_client = _StubStreamingOllama(
+        tokens=tokens if tokens is not None else ["# Plano", " de", " Manutenção"],
+        error=ollama_error,
+        error_after=error_after,
+    )
+    service = MaintenanceSuggestionService(
+        mcp_client=mcp_client, ollama_client=ollama_client, model="llama3.2:3b"
+    )
+    return service, mcp_client, ollama_client
+
+
+async def _collect(service: MaintenanceSuggestionService, probability: float):
+    return [event async for event in service.suggest_stream(_request(probability))]
+
+
+@pytest.mark.parametrize("probability", [0.0, 0.5, 0.69, 0.70])
+async def test_stream_below_or_equal_threshold_yields_only_skipped(
+    probability: float,
+) -> None:
+    service, mcp_client, ollama_client = _make_stream_service()
+
+    events = await _collect(service, probability)
+
+    assert len(events) == 1
+    assert events[0].type == "skipped"
+    assert events[0].message is not None and "0.7" in events[0].message
+    mcp_client.search_maintenance_manual.assert_not_called()
+    assert ollama_client.calls == []
+
+
+@pytest.mark.parametrize("probability", [0.7001, 0.71, 0.9])
+async def test_stream_above_threshold_yields_tokens_then_done(
+    probability: float,
+) -> None:
+    service, mcp_client, ollama_client = _make_stream_service(
+        tokens=["# Plano", " de", " Manutenção", "\n\n## Referências"]
+    )
+
+    events = await _collect(service, probability)
+
+    mcp_client.search_maintenance_manual.assert_awaited_once()
+    assert len(ollama_client.calls) == 1
+    assert events[0].type == "searching"  # emitido antes da chamada real ao MCP
+
+    token_events = [e for e in events if e.type == "token"]
+    assert [e.token for e in token_events] == [
+        "# Plano",
+        " de",
+        " Manutenção",
+        "\n\n## Referências",
+    ]
+    assert events[-1].type == "done"
+    # RNF-47: o markdown final é a CONCATENAÇÃO exata dos tokens recebidos —
+    # não um valor independente reconstituído de outra forma.
+    assert events[-1].markdown == "# Plano de Manutenção\n\n## Referências"
+
+
+async def test_stream_markdown_is_exact_concatenation_of_tokens() -> None:
+    """Nome do teste é literal: token1 + token2 + token3 == markdown esperado."""
+    service, _, _ = _make_stream_service(tokens=["# X", "\n\n", "## Y"])
+
+    events = await _collect(service, 0.9)
+
+    done = next(e for e in events if e.type == "done")
+    assert done.markdown == "# X" + "\n\n" + "## Y"
+
+
+async def test_stream_preserves_reference_metadata_in_done_event() -> None:
+    service, _, _ = _make_stream_service(mcp_result=MCP_RESULT_WITH_CONTEXT)
+
+    events = await _collect(service, 0.9)
+
+    done = next(e for e in events if e.type == "done")
+    assert len(done.references) == 1
+    ref = done.references[0]
+    assert ref.file_name == "manual-bomba-centrifuga.pdf"
+    assert ref.page == 3
+    assert ref.source == "manual-bomba-centrifuga.pdf"
+    assert ref.score == pytest.approx(0.71)
+
+
+async def test_stream_mcp_unavailable_yields_error_and_skips_ollama() -> None:
+    service, mcp_client, ollama_client = _make_stream_service()
+    mcp_client.search_maintenance_manual = AsyncMock(side_effect=MCPUnavailableError())
+
+    events = await _collect(service, 0.9)
+
+    assert [e.type for e in events] == ["searching", "error"]
+    assert ollama_client.calls == []
+
+
+async def test_stream_ollama_failure_mid_stream_yields_partial_tokens_then_error() -> (
+    None
+):
+    """Alguns tokens já foram enviados quando o Ollama cai — o stream deve
+    terminar com `error`, não travar nem perder os tokens já emitidos."""
+    service, mcp_client, _ = _make_stream_service(
+        tokens=["# Plano", " parcial", " nunca completado"],
+        ollama_error=OllamaUnavailableError(),
+        error_after=2,
+    )
+
+    events = await _collect(service, 0.9)
+
+    token_events = [e for e in events if e.type == "token"]
+    assert [e.token for e in token_events] == ["# Plano", " parcial"]
+    assert events[-1].type == "error"
+    mcp_client.search_maintenance_manual.assert_awaited_once()
+
+
+async def test_stream_invalid_final_markdown_yields_error() -> None:
+    """Tokens se acumulam num Markdown inválido (sem cabeçalho) — o erro só
+    pode ser detectado DEPOIS do último token, na validação final."""
+    service, _, _ = _make_stream_service(
+        tokens=["texto ", "sem ", "cabecalho markdown"]
+    )
+
+    events = await _collect(service, 0.9)
+
+    assert events[-1].type == "error"
+    token_events = [e for e in events if e.type == "token"]
+    assert len(token_events) == 3  # todos os tokens ainda foram entregues
+
+
+async def test_stream_empty_context_marks_prompt_explicitly() -> None:
+    service, _, ollama_client = _make_stream_service(mcp_result=MCP_RESULT_EMPTY)
+
+    events = await _collect(service, 0.9)
+
+    done = next(e for e in events if e.type == "done")
+    assert done.references == []
+    _, user_prompt = ollama_client.calls[0]
+    assert "nenhum trecho" in user_prompt.lower()

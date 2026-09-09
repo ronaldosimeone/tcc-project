@@ -28,6 +28,16 @@ const SimulationPanel = dynamic(
   () => import("@/components/simulation-panel").then((m) => m.SimulationPanel),
   { ssr: false },
 );
+// RF-23: mesmo motivo de code-splitting do SimulationPanel acima — o painel
+// (react-markdown + formulário + hook de streaming) só entra no bundle
+// quando o usuário clica em "Assistente de IA", nunca no first paint.
+const MaintenanceAssistant = dynamic(
+  () =>
+    import("@/components/maintenance-assistant").then(
+      (m) => m.MaintenanceAssistant,
+    ),
+  { ssr: false },
+);
 import {
   Tooltip,
   TooltipContent,
@@ -36,7 +46,7 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
-type NavAction = "simulation";
+type NavAction = "simulation" | "maintenance-assistant";
 
 interface NavItem {
   icon: React.ComponentType<{ className?: string }>;
@@ -49,9 +59,11 @@ interface NavItem {
   hint?: string;
 }
 
-// Navegação única — itens `disabled` (Assistente de IA, Configurações)
-// convivem com os ativos na mesma lista, mantendo a estética uniforme.
-// "Configurações" fica por último como ponto de acesso final convencional.
+// Navegação única — itens `disabled` (Configurações) convivem com os ativos
+// na mesma lista, mantendo a estética uniforme. "Assistente de IA" saiu do
+// roadmap nesta task (RF-23) — mesmo padrão do item "Simulação" (action +
+// Sheet). "Configurações" fica por último como ponto de acesso final
+// convencional.
 const NAV_ITEMS: NavItem[] = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/" },
   { icon: Gauge, label: "Sensores", href: "/sensors/APU-Trem-042" },
@@ -60,8 +72,7 @@ const NAV_ITEMS: NavItem[] = [
   {
     icon: Sparkles,
     label: "Assistente de IA",
-    disabled: true,
-    hint: "Em breve",
+    action: "maintenance-assistant",
   },
   { icon: Settings, label: "Configurações", disabled: true, hint: "Em breve" },
 ];
@@ -154,15 +165,22 @@ function NavLink({ item, active, isOpen, onAction }: NavLinkProps) {
 export default function Sidebar() {
   const [isOpen, setIsOpen] = useState(true);
   const [simulationOpen, setSimulationOpen] = useState(false);
+  const [maintenanceAssistantOpen, setMaintenanceAssistantOpen] =
+    useState(false);
   const pathname = usePathname();
 
   const handleAction = (action: NavAction) => {
     if (action === "simulation") setSimulationOpen(true);
+    if (action === "maintenance-assistant") setMaintenanceAssistantOpen(true);
   };
 
   return (
     <TooltipProvider delayDuration={0}>
       <SimulationPanel open={simulationOpen} onOpenChange={setSimulationOpen} />
+      <MaintenanceAssistant
+        open={maintenanceAssistantOpen}
+        onOpenChange={setMaintenanceAssistantOpen}
+      />
       <aside
         className={cn(
           "flex shrink-0 flex-col border-r border-slate-300 bg-sidebar",

@@ -26,12 +26,17 @@ só): `_build_query`, `_extract_contexts`, `_build_prompt`, `_validate_markdown`
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Any
+from collections.abc import AsyncIterator
+from dataclasses import dataclass, field
+from typing import Any, Literal
 
 import structlog
 
-from src.core.exceptions import OllamaResponseError
+from src.core.exceptions import (
+    MCPUnavailableError,
+    OllamaResponseError,
+    OllamaUnavailableError,
+)
 from src.schemas.maintenance import (
     ManualReference,
     MaintenanceSuggestionRequest,
@@ -93,6 +98,32 @@ Se o contexto fornecido NÃO contiver informação suficiente para determinar o 
 O manual recuperado não contém informações suficientes para determinar com segurança o procedimento necessário.
 
 Nunca preencha essa lacuna com conhecimento externo."""
+
+
+StreamEventType = Literal["searching", "token", "done", "skipped", "error"]
+
+
+@dataclass
+class SuggestionStreamEvent:
+    """
+    Um evento do stream SSE (RF-23 / RNF-47) — o router só serializa isto,
+    nenhuma lógica de negócio na camada HTTP.
+
+    type == "searching" -> MCP foi chamado, aguardando resultado da busca
+                           semântica (RF-21). Evento informativo real — não
+                           é enviado até o MCP ser efetivamente consultado.
+    type == "token"      -> `token` é o pedaço de texto novo (RNF-47: nunca
+                            um split artificial de uma resposta já completa).
+    type == "done"       -> `markdown` (texto completo) + `references`.
+    type == "skipped"    -> threshold não ultrapassado; `message` explica.
+    type == "error"      -> `message` seguro (sem URL/traceback interno).
+    """
+
+    type: StreamEventType
+    token: str | None = None
+    markdown: str | None = None
+    references: list[ManualReference] = field(default_factory=list)
+    message: str | None = None
 
 
 @dataclass
@@ -180,6 +211,85 @@ class MaintenanceSuggestionService:
             ],
             model=self._model,
             message=None,
+        )
+
+    async def suggest_stream(
+        self, request: MaintenanceSuggestionRequest
+    ) -> AsyncIterator[SuggestionStreamEvent]:
+        """
+        Equivalente em streaming de `suggest()` (RF-23 / RNF-47) — MESMA regra
+        de threshold, MESMO MCP, MESMO prompt/System Prompt, MESMA validação
+        final. Não duplica nenhuma dessas regras: reusa `_build_query`,
+        `_extract_contexts`, `_build_prompt`, `_validate_markdown` e a
+        constante `MAINTENANCE_SUGGESTION_THRESHOLD`.
+
+        Erros conhecidos (MCP/Ollama indisponível, resposta inválida) viram
+        um evento `error` estruturado e o generator termina (`return`) —
+        nunca deixa a conexão pendurada. Qualquer exceção NÃO prevista aqui
+        propaga para o router, que tem sua própria rede de segurança.
+        """
+        if request.failure_probability <= MAINTENANCE_SUGGESTION_THRESHOLD:
+            log.info(
+                "maintenance_suggestion_stream_skipped",
+                probability=request.failure_probability,
+                threshold=MAINTENANCE_SUGGESTION_THRESHOLD,
+            )
+            yield SuggestionStreamEvent(
+                type="skipped",
+                message=(
+                    f"Probabilidade de falha ({request.failure_probability:.2f}) não "
+                    f"excede o limiar de {MAINTENANCE_SUGGESTION_THRESHOLD} — "
+                    "sugestão automática não acionada."
+                ),
+            )
+            return
+
+        query = self._build_query(request)
+        yield SuggestionStreamEvent(type="searching")
+        try:
+            raw_results = await self._mcp.search_maintenance_manual(query)
+        except MCPUnavailableError as exc:
+            yield SuggestionStreamEvent(type="error", message=exc.detail)
+            return
+
+        contexts = self._extract_contexts(raw_results)
+        user_prompt = self._build_prompt(request, query, contexts)
+
+        log.info(
+            "maintenance_suggestion_stream_calling_ollama",
+            model=self._model,
+            context_chunks=len(contexts),
+        )
+
+        accumulated: list[str] = []
+        try:
+            async for token in self._ollama.generate_stream(SYSTEM_PROMPT, user_prompt):
+                accumulated.append(token)
+                yield SuggestionStreamEvent(type="token", token=token)
+        except (OllamaUnavailableError, OllamaResponseError) as exc:
+            yield SuggestionStreamEvent(type="error", message=exc.detail)
+            return
+
+        full_markdown = "".join(accumulated)
+        try:
+            self._validate_markdown(full_markdown)
+        except OllamaResponseError as exc:
+            yield SuggestionStreamEvent(type="error", message=exc.detail)
+            return
+
+        yield SuggestionStreamEvent(
+            type="done",
+            markdown=full_markdown,
+            references=[
+                ManualReference(
+                    file_name=ctx.file_name,
+                    page=ctx.page,
+                    chunk_index=ctx.chunk_index,
+                    source=ctx.source,
+                    score=ctx.score,
+                )
+                for ctx in contexts
+            ],
         )
 
     # ------------------------------------------------------------------
