@@ -1,12 +1,16 @@
 """
-Alert service — business logic for RF-14 / RF-24.
+Alert service — business logic for RF-14 / RF-24 / RF-25.
 
 Responsible for:
 - Enriching raw ML prediction payloads with alert metadata.
 - Delegating WebSocket broadcast to ConnectionManager when probability > 0.70.
 - Delegating critical-failure Telegram notification (RF-24) when
-  probability > 0.85, via CriticalFailureNotificationService (optional —
-  ``None`` when Telegram isn't configured, see ``get_alert_service``).
+  probability exceeds the effective threshold, via
+  CriticalFailureNotificationService (optional — ``None`` when Telegram
+  isn't configured, see ``get_alert_service``). RF-25: that threshold is
+  now the global setting from ``AlertSettingsService`` when one has been
+  saved via ``PUT /v1/settings/alerts``, falling back to the fixed
+  ``CRITICAL_FAILURE_THRESHOLD`` (0.85) otherwise.
 
 Deliberately decoupled from the transport layer so it can be tested without
 a real WebSocket connection. RF-24 reuses this SAME integration point
@@ -28,11 +32,16 @@ from src.core.ws_manager import (
     ConnectionManager,
     manager as _ws_manager,
 )
+from src.services.alert_settings_service import AlertSettingsService
 from src.services.critical_failure_notification_service import (
+    CRITICAL_FAILURE_THRESHOLD,
     CriticalFailureNotificationService,
 )
+from src.services.email_notification_adapter import EmailNotificationAdapter
+from src.services.notification_test_service import NotificationTestService
 from src.services.telegram_alert_rate_limiter import TelegramAlertRateLimiter
 from src.services.telegram_notification_adapter import TelegramNotificationAdapter
+from src.tasks.notification_tasks import enqueue_critical_failure_notification
 
 log = structlog.get_logger(__name__)
 
@@ -138,10 +147,47 @@ _telegram_adapter = TelegramNotificationAdapter(
 _telegram_rate_limiter = TelegramAlertRateLimiter(
     ttl_seconds=settings.critical_failure_rate_limit_seconds
 )
+# RF-25 — e-mail via Resend (RNF-49). Auditado antes desta task: nenhuma
+# integração de e-mail existia no projeto — primeiro canal de e-mail do
+# PredictIQ. Sempre construído mesmo sem API key configurada — a checagem
+# de configuração ausente acontece em `_send` (mesmo padrão do Telegram).
+_email_adapter = EmailNotificationAdapter(
+    api_key=settings.resend_api_key,
+    from_email=settings.resend_from_email,
+    api_base_url=settings.resend_api_base_url,
+    timeout=settings.resend_client_timeout_seconds,
+)
+# RF-25 — configuração global do limiar + canais, com fallback para o
+# comportamento fixo do RF-24 (CRITICAL_FAILURE_THRESHOLD = 0.85, Telegram
+# sempre ligado, e-mail sempre desligado) enquanto ninguém configurou nada
+# em /v1/settings/alerts.
+_alert_settings_service = AlertSettingsService(
+    default_threshold=CRITICAL_FAILURE_THRESHOLD
+)
+# RNF-50/51 — `enqueue_notification` real: `notify_if_critical` decide
+# enviar e adquire o rate limit aqui mesmo (Postgres, síncrono, atômico —
+# RF-24 inalterado), depois ENFILEIRA via Celery/Redis e retorna
+# imediatamente. O envio real (rede) acontece no processo do
+# `celery-worker` (src/tasks/notification_tasks.py) — a inferência nunca
+# aguarda Telegram/e-mail responderem.
 _critical_notifier = CriticalFailureNotificationService(
     adapter=_telegram_adapter,
     rate_limiter=_telegram_rate_limiter,
     dashboard_url=settings.dashboard_url,
+    settings_service=_alert_settings_service,
+    email_adapter=_email_adapter,
+    enqueue_notification=enqueue_critical_failure_notification,
+)
+# RF-25 — rate limiter PRÓPRIO do botão "Testar Notificação", TTL curto
+# (10s, só anti-duplo-clique) e totalmente separado do `_telegram_rate_limiter`
+# de 15 min acima — um teste manual nunca deve consumir a janela que
+# protegeria um alerta crítico real do mesmo equipamento logo em seguida.
+_notification_test_rate_limiter = TelegramAlertRateLimiter(ttl_seconds=10)
+_notification_test_service = NotificationTestService(
+    telegram_adapter=_telegram_adapter,
+    email_adapter=_email_adapter,
+    settings_service=_alert_settings_service,
+    test_rate_limiter=_notification_test_rate_limiter,
 )
 
 
@@ -149,3 +195,13 @@ def get_alert_service() -> AlertService:
     """FastAPI Depends factory — wires the module-level ConnectionManager
     singleton (RF-14) and the critical-failure Telegram notifier (RF-24)."""
     return AlertService(_ws_manager, critical_notifier=_critical_notifier)
+
+
+def get_alert_settings_service() -> AlertSettingsService:
+    """FastAPI Depends factory — RF-25, usado por `routers/settings.py`."""
+    return _alert_settings_service
+
+
+def get_notification_test_service() -> NotificationTestService:
+    """FastAPI Depends factory — RF-25, botão "Testar Notificação"."""
+    return _notification_test_service

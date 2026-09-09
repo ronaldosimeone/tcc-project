@@ -31,6 +31,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     # RNF-37 — workers configurável via UVICORN_WORKERS (.env), sem redeploy de
     # imagem. Default 1 preserva o comportamento anterior. Requer recriar o
     # container (`docker compose up -d --force-recreate api`) para aplicar,
@@ -99,6 +101,58 @@ services:
       - .env
     expose:
       - "${MCP_SERVER_PORT:-8100}"
+    networks:
+      - app-network
+
+  # RNF-50 / RNF-51 — broker do Celery (fila assíncrona de notificações
+  # críticas, ver services/critical_failure_notification_service.py +
+  # tasks/notification_tasks.py). Auditado antes desta task: nenhum
+  # Redis/cache existia no projeto (o rate limiter do RF-24 usa Postgres de
+  # propósito — telegram_alert_rate_limiter.py). Este Redis NUNCA substitui
+  # o Postgres nem guarda nenhum outro dado do domínio — é só o transporte
+  # de mensagens do Celery. Sem `ports:` (só `expose`, mesmo padrão de
+  # `api`/`frontend`/`mcp-server` acima) — nunca alcançável fora da rede
+  # Docker interna. Sem volume: o broker é só uma fila de trabalho efêmera
+  # (`task_ignore_result=True`, sem result backend) — se o Redis reiniciar,
+  # o pior caso é uma notificação enfileirada e ainda não processada se
+  # perder; a decisão de negócio (threshold + rate limit) já foi tomada e
+  # persistida no Postgres antes do enqueue, então nada de crítico depende
+  # da fila sobreviver a um restart.
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    expose:
+      - "6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
+
+  # RNF-50 / RNF-51 — worker Celery que consome a fila acima. Mesma imagem
+  # do backend (`build: ./apps/backend`, mesmo Dockerfile) e mesmo bind
+  # mount de código — reaproveita 100% do código já existente (adapters,
+  # rate limiter, config), não é uma segunda aplicação. NÃO sobe um
+  # servidor HTTP — só o processo `celery worker`.
+  celery-worker:
+    build: ./apps/backend
+    container_name: celery-worker
+    volumes:
+      - ./apps/backend:/app
+      - ./apps/ml/models:/ml/models:ro
+      - ./apps/ml/data:/ml/data:ro
+    env_file:
+      - .env
+    environment:
+      - PYTHONPATH=/app
+    command: celery -A src.core.celery_app worker --loglevel=info
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     networks:
       - app-network
 

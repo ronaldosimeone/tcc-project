@@ -32,6 +32,44 @@ merge/uso do sistema — documentados aqui para rastreio.
   qualquer deploy de produção, senão o link enviado no alerta do Telegram
   aponta para `localhost` do lado errado da rede.
 
+## RNF-50 / RNF-51 — Fila assíncrona de notificações (Celery + Redis)
+
+- **Sem retry automático** (`max_retries=0`, deliberado) — uma falha de rede
+  do worker não tenta de novo sozinha; o mecanismo de retry natural é a
+  próxima predição crítica real do mesmo equipamento, depois que o rate
+  limit é liberado. Reavaliar se o volume real de falhas transitórias
+  justificar um retry com backoff.
+- **Sem result backend** — o processo web nunca sabe se uma notificação
+  específica foi entregue; só os logs do `celery-worker` mostram isso.
+  Aceitável para o design fire-and-forget atual; adicionar um result
+  backend (o mesmo Redis serviria) se essa visibilidade se tornar
+  necessária no futuro.
+- **`celery-worker` não espera a migração Alembic do `api` terminar** —
+  `depends_on` no `docker-compose.yml` só espera Postgres/Redis saudáveis,
+  não o comando interno de outro serviço. Irrelevante na prática (nenhuma
+  task real é enfileirada antes do `api` terminar de subir), mas vale saber
+  se o padrão de deploy mudar.
+- **Telegram/Resend reais não testados através da fila** — mesma limitação
+  já registrada acima para RF-24/RF-25 (sem credenciais reais neste
+  ambiente); a validação real cobriu `producer -> Redis -> celery-worker ->
+  task` e o não-bloqueio da inferência, não o envio efetivo.
+
+## RF-25 / RNF-49 — Configuração de alertas (`/settings/alerts`)
+
+- **Telegram e e-mail (Resend) reais nunca foram testados contra as APIs
+  públicas.** Mesma limitação do RF-24 — nenhuma credencial real
+  (`TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID`/`RESEND_API_KEY`) disponível
+  neste ambiente. **Para fechar**: preencher as credenciais reais no
+  `.env`, habilitar os dois canais em `/settings/alerts`, e clicar em
+  "Testar Notificação" — confirmar recebimento em ambos.
+- **`RESEND_FROM_EMAIL` usa um domínio placeholder** (`predictiq.dev`) —
+  precisa ser trocado para um domínio verificado no Resend antes de
+  qualquer envio real funcionar em produção.
+- **Configuração é global (single-tenant), não por usuário** — decisão
+  deliberada documentada no README §4.11 (o projeto não possui sistema de
+  usuários). Se o projeto ganhar autenticação multiusuário no futuro,
+  `alert_settings` precisará de uma migração para sair do modelo singleton.
+
 ## RF-20 / RNF-44 — Ingestão de manuais
 
 - Imagem do `mcp-server` cresceu para ~10 GB porque `pip install

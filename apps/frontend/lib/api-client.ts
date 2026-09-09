@@ -93,6 +93,34 @@ export interface MaintenanceSuggestionPayload {
   symptom_description?: string;
 }
 
+// ── Domínio: Configuração de alertas (RF-25 / RNF-49) ────────────────────────
+
+/** Corpo/resposta de `GET|PUT /v1/settings/alerts`. Configuração GLOBAL do
+ * sistema — não há usuários individuais no projeto (ver README §4.11). */
+export interface AlertSettingsResponse {
+  /** Limiar efetivo de alerta crítico, em [0.5, 0.95]. */
+  alert_threshold: number;
+  /** Notificação crítica também enviada via Telegram. */
+  telegram_enabled: boolean;
+  /** Notificação crítica também enviada por e-mail (Resend). */
+  email_enabled: boolean;
+  /** Endereço de destino — obrigatório quando email_enabled=true. */
+  alert_email: string | null;
+}
+
+/** Corpo de `PUT /v1/settings/alerts`. */
+export interface AlertSettingsUpdatePayload {
+  alert_threshold: number;
+  telegram_enabled: boolean;
+  email_enabled: boolean;
+  alert_email: string | null;
+}
+
+/** Resposta de `POST /v1/settings/alerts/test`. */
+export interface NotificationTestResponse {
+  message: string;
+}
+
 // ── Helpers internos ─────────────────────────────────────────────────────────
 
 export function resolveBaseUrl(): string {
@@ -218,4 +246,64 @@ export async function setSimulatorMode(
   }
 
   return response.json() as Promise<SimulatorModeResponse>;
+}
+
+// ── Configuração de alertas (RF-25 / RNF-49) ─────────────────────────────────
+
+/** GET /v1/settings/alerts — configuração global atual (ou o default 0.85). */
+export async function getAlertSettings(): Promise<AlertSettingsResponse> {
+  const baseUrl = resolveBaseUrl();
+
+  const response = await fetch(`${baseUrl}/v1/settings/alerts`, {
+    method: "GET",
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error(
+      `[api-client] getAlertSettings() falhou — HTTP ${response.status} ${response.statusText}`,
+    );
+  }
+
+  return response.json() as Promise<AlertSettingsResponse>;
+}
+
+/** PUT /v1/settings/alerts — salva a configuração global (limiar + canais). */
+export async function updateAlertSettings(
+  payload: AlertSettingsUpdatePayload,
+): Promise<AlertSettingsResponse> {
+  const baseUrl = resolveBaseUrl();
+
+  const response = await fetch(`${baseUrl}/v1/settings/alerts`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error(
+      `[api-client] updateAlertSettings() falhou — HTTP ${response.status} ${response.statusText}`,
+    );
+  }
+
+  return response.json() as Promise<AlertSettingsResponse>;
+}
+
+/** POST /v1/settings/alerts/test — envia uma notificação de teste ao Telegram. */
+export async function testAlertNotification(): Promise<NotificationTestResponse> {
+  const baseUrl = resolveBaseUrl();
+
+  const response = await fetch(`${baseUrl}/v1/settings/alerts/test`, {
+    method: "POST",
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error(
+      `[api-client] testAlertNotification() falhou — HTTP ${response.status} ${response.statusText}`,
+    );
+  }
+
+  return response.json() as Promise<NotificationTestResponse>;
 }

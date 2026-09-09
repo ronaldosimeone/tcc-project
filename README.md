@@ -66,6 +66,8 @@ O **PredictIQ** é um sistema completo de **manutenção preditiva** para o comp
 | | Alembic | 1.18 | Migrations |
 | | structlog | 25.3 | Logging JSON |
 | | slowapi | 0.1.9 | Rate limiting |
+| | Celery | 5.4 | Fila assíncrona de notificações (RNF-50/RNF-51) |
+| | Redis | 7 (Docker) | Broker do Celery (só transporte de mensagens — não é o rate limiter) |
 | | ONNX Runtime | ≥1.18 | Servir todos os modelos DL |
 | | PyArrow + pandas | 14.x / 3.x | Leitura do parquet do simulador |
 | **Banco** | PostgreSQL | 15 (Docker) | Histórico de predições (`predictions`) |
@@ -1012,6 +1014,187 @@ Cobre: `TelegramNotificationAdapter` (sucesso, config ausente, timeout, HTTP nã
 - **Telegram real (API pública) não foi testado** — não há `TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID` reais disponíveis neste ambiente de desenvolvimento. Todos os testes de HTTP usam mock (`respx`/`unittest.mock`) ou um `TELEGRAM_API_BASE_URL` apontando para um servidor fake — nenhum resultado de envio real foi fabricado ou assumido como sucesso.
 - Simulador restaurado para `NORMAL` e `telegram_alert_locks` confirmada vazia (0 linhas) ao final da validação manual.
 
+### 4.11. Configuração de alertas — página `/settings/alerts` (RF-25 / RNF-49)
+
+**O que é**: uma página (`apps/frontend/app/settings/alerts`) onde o operador ajusta, via slider, o limiar que dispara a notificação crítica (RF-24) e liga/desliga cada **canal de notificação** — Telegram e/ou e-mail (via [Resend](https://resend.com)) — sem precisar editar `.env`/reiniciar o backend. Um botão **Testar Notificação** valida os canais habilitados sem depender de uma predição real.
+
+> **Configuração GLOBAL, não por usuário.** O projeto não possui nenhum sistema de autenticação/usuários (auditado explicitamente antes desta task — só existe o token de admin compartilhado do RF-11, binário, sem identidade individual). Por isso `alert_settings` é uma tabela **singleton** (uma única linha para o sistema inteiro), protegida pelo mesmo `X-Admin-Token` já usado por `/models` — nenhuma autenticação nova foi criada.
+
+> **E-mail é um canal novo.** Auditoria explícita antes desta task confirmou que **nenhuma integração de e-mail existia no projeto** (nem Resend, nem SMTP, nem qualquer outro provedor) — o `EmailNotificationAdapter` introduzido aqui é o primeiro canal de e-mail do PredictIQ, não uma reintegração de algo já existente.
+
+```mermaid
+flowchart TD
+    UI["/settings/alerts<br/>AlertSettingsForm"] -->|"GET"| EP1["GET /v1/settings/alerts"]
+    UI -->|"PUT ao salvar"| EP2["PUT /v1/settings/alerts"]
+    EP1 --> SVC["AlertSettingsService"]
+    EP2 --> SVC
+    SVC --> DB[("alert_settings<br/>singleton, id=1<br/>threshold + canais + e-mail")]
+    SVC -.->|"get_settings()"| CRIT["CriticalFailureNotificationService (RF-24)"]
+    CRIT -->|"telegram_enabled"| TG["TelegramNotificationAdapter"]
+    CRIT -->|"email_enabled + alert_email"| EM["EmailNotificationAdapter (Resend)"]
+    UI -->|"Testar Notificação"| EP3["POST /v1/settings/alerts/test"]
+    EP3 --> NTS["NotificationTestService"]
+    NTS -->|"rate limit próprio, 10s"| LOCK[("telegram_alert_locks<br/>chave reservada __settings_notification_test__")]
+    NTS -->|"só canais habilitados"| TG
+    NTS -->|"só canais habilitados"| EM
+```
+
+#### Threshold — o que o slider representa
+
+O slider (`0.5`–`0.95`) configura o **mesmo limiar de falha crítica do RF-24** (`CRITICAL_FAILURE_THRESHOLD`) — não um novo tipo de alerta. Essa decisão vem diretamente do enunciado da task (que amarra o RF-25 ao `CRITICAL_FAILURE_THRESHOLD = 0.85` do RF-24 e manda preservar `0.85` como default) e do fato de o botão "Testar Notificação" só fazer sentido para os canais Telegram/e-mail. `CriticalFailureNotificationService._resolve_settings()` agora lê `AlertSettingsService.get_settings()` a cada predição: usa o valor salvo (threshold + canais) se existir, ou os defaults do RF-24 (`0.85`, Telegram ligado, e-mail desligado) se nunca configurado — o comportamento do RF-14 (alerta WebSocket, `ALERT_PROBABILITY_THRESHOLD = 0.70`) **não é afetado** por esta task.
+
+#### Banco — singleton real, não "combinado por convenção"
+
+`alert_settings` (migração `0003`) tem `id` travado em `1` por `CHECK (id = 1)` — combinado com a chave primária, é fisicamente impossível ter uma segunda linha, não é uma regra só respeitada pelo código da aplicação. Reforçados também por CHECK constraint no próprio banco (defesa em profundidade — a primeira barreira é sempre a validação do Pydantic, que já devolve 422 antes de qualquer SQL rodar):
+
+| Constraint | Regra |
+|---|---|
+| `ck_alert_settings_singleton` | `id = 1` |
+| `ck_alert_settings_threshold_range` | `0.5 <= alert_threshold <= 0.95` |
+| `ck_alert_settings_email_required_when_enabled` | `NOT email_enabled OR alert_email IS NOT NULL` |
+
+`AlertSettingsService.upsert_settings` usa o mesmo padrão de UPSERT atômico do RF-24 (`INSERT ... ON CONFLICT (id) DO UPDATE ... RETURNING`, dialect-aware Postgres/SQLite) — salvar de novo sempre atualiza a mesma linha, nunca cria uma nova. `get_settings()` nunca cria a linha (sem efeito colateral numa leitura) — antes do primeiro `PUT`, devolve os defaults sem tocar no banco. `get_threshold()`/`upsert_threshold()` (RF-24) continuam funcionando — implementados sobre `get_settings()`/`upsert_settings()`, preservando os campos de canal já salvos quando só o limiar é alterado por esse caminho legado.
+
+#### Canais de notificação — Telegram e e-mail (Resend)
+
+| Campo | Default | Descrição |
+|---|---|---|
+| `telegram_enabled` | `true` | Reaproveita o `TelegramNotificationAdapter` do RF-24 — nenhum cliente novo |
+| `email_enabled` | `false` | Novo canal — `EmailNotificationAdapter`, API REST do Resend via `httpx` puro (sem SDK, mesmo estilo do Telegram) |
+| `alert_email` | `null` | Obrigatório quando `email_enabled=true` (Pydantic `EmailStr` + CHECK constraint) |
+
+**O frontend nunca configura credenciais** — só os toggles ON/OFF e o endereço de e-mail. `TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID`/`RESEND_API_KEY` continuam exclusivamente em variáveis de ambiente do backend (RF-24 §2, mesma regra estendida ao Resend).
+
+**Falha parcial de canais** (RF-25 §17) — um canal falhar nunca impede a tentativa do outro. `CriticalFailureNotificationService.notify_if_critical` tenta Telegram e e-mail independentemente e só libera o rate limit (permitindo retry) se **nenhum** dos canais habilitados enviou com sucesso; se ao menos um funcionou, a janela de 15 min é mantida (evita reenviar o mesmo alerta pelo canal que já funcionou). O mesmo raciocínio vale para `NotificationTestService`: a resposta de sucesso mostra o resultado por canal (ex.: `"Telegram: enviado · E-mail: falhou"`) — só retorna erro (502) se **todos** os canais habilitados falharem, e erro (400) se **nenhum** canal estiver habilitado.
+
+#### Endpoints
+
+| Método | Rota | Auth | Descrição |
+|---|---|---|---|
+| `GET` | `/v1/settings/alerts` | `X-Admin-Token` | Configuração atual, ou os defaults se nunca salva |
+| `PUT` | `/v1/settings/alerts` | `X-Admin-Token` | Valida threshold (`0.5–0.95`) e e-mail (formato + obrigatório se habilitado) — 422 caso contrário; persiste; devolve a configuração salva |
+| `POST` | `/v1/settings/alerts/test` | `X-Admin-Token` | Testa só os canais habilitados — 400 se nenhum habilitado, 502 se todos falharem |
+
+Exemplo de `GET`/`PUT`:
+
+```json
+{
+  "alert_threshold": 0.75,
+  "telegram_enabled": true,
+  "email_enabled": true,
+  "alert_email": "alertas@empresa.com.br"
+}
+```
+
+#### Botão "Testar Notificação" — reaproveita os adapters, rate limit próprio
+
+Testa exatamente os canais habilitados na configuração **já salva** (não o rascunho não salvo na tela) via `TelegramNotificationAdapter.send_test_notification()`/`EmailNotificationAdapter.send_test_email()` — mesmos clientes HTTP do fluxo real, mensagens claramente marcadas como teste (nunca o texto de falha crítica real). **Nunca** aciona `CriticalFailureNotificationService`/`AlertService` — não cria alerta no histórico, não consome uma predição real, não afeta nenhum equipamento.
+
+Rate limiter **separado** do de falha crítica: mesma classe `TelegramAlertRateLimiter`, mesma tabela `telegram_alert_locks`, mas uma instância com TTL de 10s (só anti-duplo-clique) e uma chave reservada (`__settings_notification_test__`) que nunca colide com um `equipment_id` real — um clique manual não pode consumir a janela de 15 min que protegeria um alerta crítico genuíno do mesmo equipamento logo em seguida. Uma falha do teste libera o lock imediatamente (permite corrigir a configuração e tentar de novo sem esperar); `TELEGRAM_BOT_TOKEN`/`RESEND_API_KEY` nunca aparecem na resposta HTTP nem em log.
+
+#### Variáveis de ambiente — Resend (novas nesta task)
+
+| Variável | Obrigatória | Default | Descrição |
+|---|---|---|---|
+| `RESEND_API_KEY` | Não* | _(vazio)_ | API key do Resend. *Sem ela, o canal de e-mail fica desativado (não é erro) |
+| `RESEND_FROM_EMAIL` | Não | `PredictIQ <alerts@predictiq.dev>` | Precisa ser um remetente de domínio verificado no Resend em produção |
+| `RESEND_API_BASE_URL` | Não | `https://api.resend.com` | Só para testes/mock |
+| `RESEND_CLIENT_TIMEOUT_SECONDS` | Não | `10.0` | Timeout do HTTP client do adapter |
+
+Variáveis do Telegram (`TELEGRAM_*`) inalteradas — ver §4.10.
+
+#### Testes
+
+```bash
+docker compose exec api pytest tests/test_alert_settings.py -v   # 46 testes (service, HTTP, validação de e-mail, canais, integração real com RF-24, rate limit do teste)
+docker compose exec frontend pnpm exec vitest run __tests__/alert-settings-form.test.tsx   # 22 testes
+```
+
+#### Validação real (E2E, sem mocks de rede)
+
+Executado contra o ambiente real (Postgres real, backend real, frontend real, via navegador): abrir `/settings/alerts` → mostra `85%`/Telegram ligado/e-mail desligado (defaults, nenhuma config salva); habilitar o switch de e-mail → campo de endereço aparece, botão "Salvar" fica desabilitado com "Informe um e-mail válido..." até um endereço válido ser digitado; digitar `operador@predictiq-dev.com` → "Salvar configurações" habilita → clicar → "Configuração salva." exibida → `SELECT * FROM alert_settings` no Postgres real confirma `telegram_enabled=t, email_enabled=t, alert_email='operador@predictiq-dev.com'`. `Testar Notificação` (sem `TELEGRAM_BOT_TOKEN`/`RESEND_API_KEY` reais neste ambiente) → `502`, log do backend mostra `telegram_config_missing` + `resend_config_missing` separadamente e a resposta combinada `"Telegram: falhou · E-mail: falhou"`, botão vira "Tentar novamente". Validado também via chamada direta à API: desabilitar os dois canais → `POST /test` retorna `400 Nenhum canal de notificação está habilitado.`. `telegram_alert_locks` confirmada vazia (0 linhas) ao final. Configuração devolvida aos defaults do RF-24 (`0.85`, Telegram ligado, e-mail desligado) ao fim da validação.
+
+**Telegram e e-mail reais não foram testados** — nenhuma credencial real (`TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID`/`RESEND_API_KEY`) disponível neste ambiente de desenvolvimento (mesma limitação já documentada no RF-24 para o Telegram).
+
+#### Limitações conhecidas
+
+- Sem sistema de usuários no projeto, a configuração é **global** — se o projeto ganhar autenticação multiusuário no futuro, `alert_settings` precisará de uma migração para sair do modelo singleton (`id` fixo) para um modelo por usuário/tenant.
+- `RESEND_FROM_EMAIL` usa um domínio placeholder (`predictiq.dev`) — precisa ser trocado para um domínio verificado no Resend antes de qualquer envio real funcionar em produção.
+
+### 4.12. Fila assíncrona de notificações — Celery + Redis (RNF-50 / RNF-51)
+
+**O que é**: o ENVIO real das notificações críticas (RF-24/RF-25 — as chamadas de rede ao Telegram/Resend, que podem levar segundos ou dar timeout) deixou de acontecer dentro do caminho síncrono da inferência. `CriticalFailureNotificationService.notify_if_critical()` continua decidindo se dispara (threshold) e adquirindo o rate limit (Postgres, atômico, inalterado) — mas em vez de chamar os adapters diretamente, **enfileira** um payload serializável via Celery e retorna imediatamente. O envio de fato acontece depois, num processo separado (`celery-worker`), consumindo da fila via Redis.
+
+> **Auditoria antes desta task**: nenhum Celery/Redis existia no projeto. O rate limiter do RF-24 usa Postgres deliberadamente (ver §4.10) — este Redis é **só o broker do Celery**, nunca um substituto do Postgres nem de nenhum outro dado do domínio.
+
+```mermaid
+flowchart TD
+    PRED["Predição crítica<br/>(probability > threshold)"] --> AS["AlertService.process_prediction()"]
+    AS --> CFS["CriticalFailureNotificationService.notify_if_critical()"]
+    CFS -->|"threshold + rate limit<br/>(Postgres, síncrono, inalterado)"| DECIDE{"adquiriu o lock?"}
+    DECIDE -->|"não"| SKIP["nada acontece"]
+    DECIDE -->|"sim"| ENQUEUE["enqueue_notification(payload)<br/>.delay() — RETORNA JÁ"]
+    ENQUEUE -.->|"processo separado"| REDIS[("Redis<br/>broker")]
+    REDIS --> WORKER["celery-worker<br/>(container próprio)"]
+    WORKER --> DISPATCH["dispatch_channels()<br/>MESMA lógica do RF-24/RF-25"]
+    DISPATCH -->|"telegram_enabled"| TG["TelegramNotificationAdapter"]
+    DISPATCH -->|"email_enabled + alert_email"| EM["EmailNotificationAdapter"]
+```
+
+#### Por que Celery — o que exatamente deixou de bloquear
+
+Antes: `notify_if_critical` chamava `adapter.send_critical_failure(...)`/`email_adapter.send_critical_failure_email(...)` diretamente, com `await` — se o Telegram ou o Resend demorassem (rede lenta, timeout de 10s configurado em `TELEGRAM_CLIENT_TIMEOUT_SECONDS`/`RESEND_CLIENT_TIMEOUT_SECONDS`), a predição inteira (`AlertService.process_prediction`, chamada pelo `InferencePipelineService` a cada tick) ficava presa esperando. Depois: o mesmo método monta um `dict` só com tipos serializáveis (`equipment_id`, `probability`, `timestamp`, `dashboard_url`, flags de canal, `alert_email`) e chama `enqueue_notification(payload)` — uma função síncrona que só publica a mensagem no Redis (`Celery.delay()`), sem esperar o consumo. Medição real (ver "Validação real" abaixo): **94 ms** para uma predição crítica completa (decisão + rate limit + enqueue) contra o pipeline de produção real, quando o envio de fato (que teria tentado o Telegram e recebido "configuração ausente") aconteceu **depois**, no worker, em processo separado.
+
+#### Onde cada responsabilidade ficou (nada de RF-24/RF-25 mudou de lugar)
+
+| Responsabilidade | Onde | Mudou? |
+|---|---|---|
+| Ler threshold/canais configurados | `AlertSettingsService.get_settings()` | Não — mesmo lugar, RF-25 |
+| Decidir disparar (`probability > threshold`) | `CriticalFailureNotificationService.notify_if_critical()` | Não — mesmo método, síncrono |
+| Adquirir o rate limit (Postgres, atômico) | `TelegramAlertRateLimiter.try_acquire()` | Não — continua **antes** do enqueue, no processo web, exatamente como antes (garante "no máximo um envio por janela" sem depender de idempotência na fila) |
+| Enviar ao Telegram/e-mail (chamada de rede) | `dispatch_channels()` — extraído do que antes era o final de `notify_if_critical` | **Sim** — agora roda no `celery-worker`, não mais no processo web |
+| Liberar o rate limit se todos os canais falharem | `dispatch_channels()` (dentro do `release()`) | Não — mesma regra, só o processo mudou |
+
+`dispatch_channels()` é a MESMA lógica de fan-out/falha-parcial (RF-25 §17) reaproveitada por dois caminhos: o fallback síncrono (`enqueue_notification=None`, usado por **todos os testes existentes de RF-24/RF-25 sem nenhuma alteração**) e a task do Celery (produção real) — nenhuma regra de negócio duplicada entre os dois.
+
+#### Celery — configuração
+
+`src/core/celery_app.py`: broker Redis (`CELERY_BROKER_URL`), `task_serializer="json"`/`accept_content=["json"]` (**nunca pickle** — evita execução arbitrária de código a partir de uma mensagem da fila), `task_ignore_result=True` e **sem result backend** (fire-and-forget deliberado — nenhum código deste projeto precisa ler de volta o resultado de uma task; adicionar um result backend sem essa necessidade seria complexidade sem benefício real). `broker_connection_retry_on_startup=True` explícito (Celery 6.0 muda o default) — tolera o `celery-worker`/`api` subirem antes do healthcheck do Redis terminar.
+
+#### `celery-worker` — o worker
+
+Container próprio no `docker-compose.yml`, **mesma imagem do backend** (`build: ./apps/backend`, mesmo `Dockerfile`, mesmo bind mount de código) — reaproveita 100% do código já existente, não é uma segunda aplicação nem sobe um servidor HTTP. Comando: `celery -A src.core.celery_app worker --loglevel=info`. `depends_on` Postgres e Redis saudáveis (mesmo `condition: service_healthy` já usado por `api`).
+
+`src/tasks/notification_tasks.py` reconstrói os adapters (`TelegramNotificationAdapter`, `EmailNotificationAdapter`, `TelegramAlertRateLimiter`) **dentro do processo do worker**, a partir das MESMAS variáveis de ambiente do processo web — os adapters do processo web nunca atravessam o broker (não são serializáveis).
+
+> **Detalhe de engenharia não óbvio**: cada execução da task roda `asyncio.run(...)` (Celery é síncrono por padrão; o código de domínio é `async`) — cada chamada cria um **novo event loop**. O `engine` async do SQLAlchemy é um singleton de módulo (`core/database.py`, compartilhado com o processo web) — sem cuidado, a SEGUNDA task executada por um worker de vida longa quebraria ao tentar reutilizar uma conexão asyncpg aberta no loop da PRIMEIRA (`RuntimeError: Future attached to a different loop`). Corrigido chamando `engine.dispose()` ao final de cada task (fecha as conexões ainda dentro do loop atual, seguro; a próxima task, em loop novo, abre conexões sob demanda). Validado na prática: 3 tasks reais em sequência no mesmo worker, sem erro (ver "Validação real" abaixo).
+
+#### Redis no Docker
+
+Imagem oficial `redis:7-alpine`, `healthcheck` via `redis-cli ping` (mesmo padrão de timing do healthcheck do Postgres). **Sem `ports:`** — só `expose: 6379` (mesmo padrão de `api`/`frontend`/`mcp-server`), nunca alcançável fora da rede Docker interna. **Sem volume persistente** — decisão deliberada: o broker é uma fila de trabalho efêmera (`task_ignore_result=True`), a decisão de negócio (threshold + rate limit) já foi tomada e persistida no Postgres *antes* do enqueue, então perder uma mensagem ainda não consumida num restart do Redis não perde nenhum dado de domínio — só, na pior hipótese, uma notificação que teria sido enviada. Sem `restart:` — mesma convenção do `db` (nenhum serviço deste projeto define uma restart policy hoje).
+
+#### Testes
+
+```bash
+docker compose exec api pytest tests/test_celery_notifications.py -v   # 13 testes
+```
+
+Cobre: task registrada no app Celery (§9.1); payload 100% serializável em JSON (§9.2); `notify_if_critical` enfileira em vez de chamar o adapter diretamente, e só enfileira se o rate limit foi adquirido (§9.3); **prova de não bloqueio** — `process_prediction()` com um adapter artificialmente lento (`asyncio.sleep`) retorna em <200ms com enqueue, contra ≥300ms no caminho antigo sem Celery, mesmo teste, mesma latência artificial (§9.4); execução direta da task chamando o adapter certo (§9.5); falha do adapter dentro da task não propaga e libera o rate limit (§9.6); Telegram + e-mail juntos continuam sendo tentados pela task (§9.7); nunca pickle; nenhuma credencial no payload ou nos logs.
+
+#### Validação real (E2E, Docker real — sem mocks)
+
+Executado contra `docker compose up -d redis celery-worker api` real: `celery-worker` conectou (`Connected to redis://redis:6379/0`) e registrou a task (`[tasks] . notifications.send_critical_failure`) no boot. Enfileiradas 3 tasks reais via `send_critical_failure_notification_task.delay(payload)` dentro do container `api` (broker real, sem mock) — o worker **recebeu** (`Task ... received`), **executou** (`notification_task_received` → `telegram_config_missing` → `critical_failure_telegram_failed` → `telegram_rate_limit_released` → `notification_task_completed`) e **concluiu com sucesso** (`Task ... succeeded in 0.03–0.06s`) as 3, incluindo duas seguidas no MESMO worker de vida longa (prova de que o `engine.dispose()` evita o bug de event loop). `telegram_alert_locks` confirmada vazia ao final (rate limit corretamente liberado pelas 3 falhas simuladas — sem `TELEGRAM_BOT_TOKEN` real).
+
+**Prova de não bloqueio contra o pipeline de produção real** (não só o teste automatizado): chamado `get_alert_service().process_prediction({"probability": 0.93, ...})` — o singleton REAL, com Postgres e Redis reais — `process_prediction` retornou em **94.4 ms**; o envio (que falhou por falta de token, como esperado) aconteceu depois, no log do `celery-worker`, em processo totalmente separado.
+
+**Telegram/Resend reais não foram testados** — mesma limitação já documentada no RF-24/RF-25 (nenhuma credencial real neste ambiente). O objetivo desta task — provar `producer -> Redis -> celery-worker -> task` e o desacoplamento do caminho de inferência — foi validado de ponta a ponta com infraestrutura 100% real.
+
+#### Limitações conhecidas
+
+- Sem retry automático (`max_retries=0`, deliberado — ver docstring da task): uma falha de rede não tenta de novo sozinha; a próxima predição crítica real do mesmo equipamento (após o rate limit liberado) é o mecanismo de retry natural. Reavaliar se o volume de falhas transitórias justificar um retry com backoff no futuro.
+- `celery-worker` depende de Postgres/Redis saudáveis no `docker-compose.yml`, mas **não** espera a migração Alembic do `api` terminar (`depends_on` não sincroniza com o comando interno de outro serviço) — na prática irrelevante, pois nenhuma task real é enfileirada antes do `api` (e seu `alembic upgrade head`) terminar de subir.
+- Sem result backend — o processo web nunca sabe se uma notificação específica foi entregue com sucesso (só os logs do worker mostram isso). Aceitável dado o design fire-and-forget desta task; um result backend (ex.: o mesmo Redis) poderia ser adicionado depois se essa visibilidade se tornar necessária.
+
 ---
 
 ## 5. Modelos de Machine Learning
@@ -1157,6 +1340,11 @@ cp apps/frontend/.env.local.example apps/frontend/.env.local
 | `DASHBOARD_URL` | Não | `http://localhost` | RF-24 — base da URL do alerta (nunca vem da predição/LLM — ver §4.10) |
 | `CRITICAL_FAILURE_RATE_LIMIT_SECONDS` | Não | `900` | RF-24 — TTL do rate limit de alertas críticos (15 min) |
 | `DEFAULT_EQUIPMENT_ID` / `DEFAULT_EQUIPMENT_NAME` | Não | `APU-Trem-042` / `Compressor de Ar Industrial (MetroPT-3)` | RF-24 — identifica o único ativo simulado hoje pelo pipeline |
+| `RESEND_API_KEY` | Não* | _(vazio)_ | RF-25/RNF-49 — API key do Resend (ver §4.11). *Sem ela, o canal de e-mail fica desativado (não é erro) |
+| `RESEND_FROM_EMAIL` | Não | `PredictIQ <alerts@predictiq.dev>` | RF-25 — precisa ser um remetente de domínio verificado no Resend em produção |
+| `RESEND_API_BASE_URL` | Não | `https://api.resend.com` | RF-25 — só para testes/mock |
+| `RESEND_CLIENT_TIMEOUT_SECONDS` | Não | `10.0` | RF-25 — timeout do HTTP client do `EmailNotificationAdapter` |
+| `CELERY_BROKER_URL` | Não | `redis://redis:6379/0` | RNF-50/RNF-51 — broker do Celery (ver §4.12). Nome do serviço `redis` do `docker-compose.yml` — nunca hardcoded no código |
 | `MODEL_PATH`, `XGBOOST_MODEL_PATH`, `MLP_ONNX_PATH`, `MLP_SCALER_PATH`, `RF_V2_ONNX_PATH`, `XGBOOST_V2_ONNX_PATH`, `TCN_ONNX_PATH`, `TCN_SCALER_PATH`, `BILSTM_ONNX_PATH`, `BILSTM_SCALER_PATH`, `PATCHTST_ONNX_PATH`, `PATCHTST_SCALER_PATH`, `AUTOENCODER_ONNX_PATH`, `AUTOENCODER_SCALER_PATH` | Não | resolvidos automaticamente para `apps/ml/models/<arquivo>` | Overrides individuais de caminho de artefato — raramente necessários; usados só se você mover os artefatos para fora de `apps/ml/models/` |
 
 Definidas **pelo `docker-compose.yml`** (não pelo `.env` — não precisam ir no arquivo):
@@ -1221,6 +1409,8 @@ docker compose up --build -d
 | **MLflow UI** | `http://localhost:5000` | Tracking server (porta dedicada) |
 | **Jupyter (ML)** | `http://localhost:8888` (rede interna) | Notebook server — adicione um `ports:` mapping no compose se quiser acesso externo |
 | **PostgreSQL** | `localhost:5432` | Apenas para conexões locais (já exposto) |
+| **Redis** | rede interna (`expose: 6379`) | Broker do Celery (RNF-50/RNF-51) — **sem** `ports:`, nunca alcançável fora da rede Docker |
+| **celery-worker** | (nenhuma — não é um servidor HTTP) | Processo `celery worker` puro; ver §4.12 |
 
 > O serviço `api` está em `expose: 8000` (rede interna), **não em `ports:`**. Acesse-o sempre através do Nginx em `http://localhost/api/...`. Por exemplo, `POST http://localhost/api/predict/`.
 
@@ -1915,6 +2105,9 @@ Divergências/observações reais encontradas na auditoria (RNF-41/RNF-42), docu
 - **`anyio`/`idna`/`typing_extensions` estavam com pin exato (`==`) em `apps/backend/requirements.txt`**, congelados de um `pip freeze` anterior, e conflitavam com as versões mínimas exigidas por `mcp` (RF-22). Resolvido removendo o pin exato dessas três dependências transitivas de baixo nível (deixando o pip resolver a versão compatível) — os pins de bibliotecas de topo (`fastapi`, `httpx`, `pydantic`, etc.) foram mantidos intactos.
 - **Rate limit de alertas críticos (RF-24) usa Postgres, não Redis** — decisão deliberada (nenhum cache existia no projeto; ver §4.10 para a análise completa). Funciona corretamente no volume atual (1 linha por ativo simulado), mas expiração é verificada na leitura (não expurgada em background) e não há índice dedicado em `expires_at` — não escalaria da mesma forma para milhares de equipamentos sem ajustes.
 - **Telegram (RF-24) não foi testado contra a API pública real** — nenhuma credencial real (`TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID`) está disponível neste ambiente de desenvolvimento. Toda a validação de HTTP usa mock; a lógica de negócio (threshold, rate limit, concorrência, orquestração) foi validada com infraestrutura real (Postgres real, classes reais), só a chamada de rede ao Telegram em si é simulada.
+- **E-mail via Resend (RF-25) não foi testado contra a API real** — mesma limitação do Telegram acima, sem `RESEND_API_KEY` real neste ambiente. `EmailNotificationAdapter` é o primeiro canal de e-mail do projeto (nenhuma integração existia antes desta task).
+- **Configuração de alertas (RF-25) é global, não por usuário** — o projeto não possui sistema de usuários; ver §4.11 para a decisão completa.
+- **Fila de notificações (RNF-50/51) sem retry automático e sem result backend** — decisões deliberadas de simplicidade; ver §4.12 para o raciocínio completo.
 
 ---
 

@@ -141,6 +141,36 @@ class Settings(BaseSettings):
         alias="DEFAULT_EQUIPMENT_NAME",
     )
 
+    # ── Notificações críticas via e-mail (Resend) — RF-25 / RNF-49 ──────────
+    # Auditoria explícita antes desta task: NENHUMA integração de e-mail
+    # existia no projeto (nem Resend, nem SMTP, nem qualquer outro provedor)
+    # — introduzida aqui pela primeira vez. `None` por padrão — sem API key,
+    # EmailNotificationAdapter trata como configuração ausente e nunca tenta
+    # enviar (mesmo padrão do TelegramNotificationAdapter acima).
+    resend_api_key: str | None = Field(default=None, alias="RESEND_API_KEY")
+    # Precisa ser um remetente de domínio verificado no Resend em produção;
+    # o placeholder abaixo funciona apenas em modo sandbox/teste do Resend.
+    resend_from_email: str = Field(
+        default="PredictIQ <alerts@predictiq.dev>", alias="RESEND_FROM_EMAIL"
+    )
+    resend_api_base_url: str = Field(
+        default="https://api.resend.com", alias="RESEND_API_BASE_URL"
+    )
+    resend_client_timeout_seconds: float = Field(
+        default=10.0, alias="RESEND_CLIENT_TIMEOUT_SECONDS"
+    )
+
+    # ── Fila assíncrona de notificações — Celery + Redis (RNF-50/RNF-51) ────
+    # Auditado antes desta task: nenhum Redis/Celery existia no projeto (o
+    # rate limiter do RF-24 usa Postgres deliberadamente — ver
+    # telegram_alert_rate_limiter.py). Redis aqui serve SÓ como broker do
+    # Celery, nunca substitui o Postgres do rate limiter nem nenhum outro
+    # dado. Default aponta para o serviço `redis` do docker-compose.yml —
+    # nunca hardcoded no código, sempre lido via esta variável.
+    celery_broker_url: str = Field(
+        default="redis://redis:6379/0", alias="CELERY_BROKER_URL"
+    )
+
     # ── CORS ──────────────────────────────────────────────────────────────
     allowed_origins: list[str] = Field(
         default=["http://localhost:3000", "http://127.0.0.1:3000"],

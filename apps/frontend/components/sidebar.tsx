@@ -59,11 +59,11 @@ interface NavItem {
   hint?: string;
 }
 
-// Navegação única — itens `disabled` (Configurações) convivem com os ativos
-// na mesma lista, mantendo a estética uniforme. "Assistente de IA" saiu do
-// roadmap nesta task (RF-23) — mesmo padrão do item "Simulação" (action +
-// Sheet). "Configurações" fica por último como ponto de acesso final
-// convencional.
+// Navegação única. "Assistente de IA" saiu do roadmap na RF-23 (action +
+// Sheet). "Configurações" saiu do roadmap na RF-25 — página real
+// (`/settings/alerts`), mesmo padrão de rota das demais páginas
+// (`/history`, `/sensors/[id]`), não um Sheet. Fica por último como ponto
+// de acesso final convencional.
 const NAV_ITEMS: NavItem[] = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/" },
   { icon: Gauge, label: "Sensores", href: "/sensors/APU-Trem-042" },
@@ -74,7 +74,7 @@ const NAV_ITEMS: NavItem[] = [
     label: "Assistente de IA",
     action: "maintenance-assistant",
   },
-  { icon: Settings, label: "Configurações", disabled: true, hint: "Em breve" },
+  { icon: Settings, label: "Configurações", href: "/settings/alerts" },
 ];
 
 function isActive(href: string | undefined, pathname: string): boolean {

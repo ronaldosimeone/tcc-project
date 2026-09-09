@@ -46,6 +46,8 @@ class NotificationAdapter(Protocol):
         self, notification: CriticalFailureNotification
     ) -> None: ...
 
+    async def send_test_notification(self) -> None: ...
+
 
 def build_critical_failure_message(notification: CriticalFailureNotification) -> str:
     """
@@ -89,13 +91,38 @@ class TelegramNotificationAdapter:
         `ok: false` na resposta do Telegram. Nunca inclui o token/URL
         completa na mensagem da exceção nem em log (RF-24 §2/§15).
         """
+        await self._send_message(
+            build_critical_failure_message(notification),
+            log_context={"equipment_id": notification.equipment_id},
+        )
+
+    async def send_test_notification(self) -> None:
+        """
+        RF-25 §13 — usada pelo botão "Testar Notificação" da página
+        `/settings/alerts`. Mensagem claramente marcada como teste (nunca o
+        texto de falha crítica real) para o operador nunca confundir um
+        teste manual com um alerta genuíno. Mesmo cliente HTTP, mesma
+        proteção de token, mesmas exceções de `send_critical_failure` — só
+        o texto muda.
+        """
+        message = (
+            "🔔 Notificação de teste — PredictIQ\n\n"
+            "Esta é uma mensagem de teste da configuração de alertas "
+            "(RF-25). Se você a recebeu, a integração com o Telegram está "
+            "funcionando corretamente."
+        )
+        await self._send_message(message, log_context={"test": True})
+
+    async def _send_message(self, message: str, *, log_context: dict[str, Any]) -> None:
+        """Lógica HTTP compartilhada por `send_critical_failure` e
+        `send_test_notification` — única implementação real da chamada à
+        Telegram Bot API (RF-25 §13: "não criar implementação paralela")."""
         if not self._bot_token or not self._chat_id:
-            log.warning("telegram_config_missing")
+            log.warning("telegram_config_missing", **log_context)
             raise TelegramNotificationError(
                 "Configuração do Telegram ausente (TELEGRAM_BOT_TOKEN/TELEGRAM_CHAT_ID)."
             )
 
-        message = build_critical_failure_message(notification)
         # URL contém o token no path (convenção da Bot API) — NUNCA logada.
         url = f"{self._api_base_url}/bot{self._bot_token}/sendMessage"
         payload = {"chat_id": self._chat_id, "text": message}
@@ -104,14 +131,12 @@ class TelegramNotificationAdapter:
             async with httpx.AsyncClient(timeout=self._timeout) as client:
                 response = await client.post(url, json=payload)
         except httpx.TimeoutException as exc:
-            log.warning("telegram_timeout", equipment_id=notification.equipment_id)
+            log.warning("telegram_timeout", **log_context)
             raise TelegramNotificationError(
                 "Timeout ao enviar notificação Telegram."
             ) from exc
         except httpx.HTTPError as exc:
-            log.warning(
-                "telegram_connection_error", equipment_id=notification.equipment_id
-            )
+            log.warning("telegram_connection_error", **log_context)
             raise TelegramNotificationError(
                 "Não foi possível conectar à API do Telegram."
             ) from exc
@@ -121,8 +146,8 @@ class TelegramNotificationAdapter:
             # ou detalhes de configuração de volta em alguns erros 4xx).
             log.warning(
                 "telegram_http_error",
-                equipment_id=notification.equipment_id,
                 status_code=response.status_code,
+                **log_context,
             )
             raise TelegramNotificationError(
                 f"Telegram retornou HTTP {response.status_code}."
@@ -131,15 +156,13 @@ class TelegramNotificationAdapter:
         try:
             data: dict[str, Any] = response.json()
         except ValueError as exc:
-            log.warning("telegram_invalid_json", equipment_id=notification.equipment_id)
+            log.warning("telegram_invalid_json", **log_context)
             raise TelegramNotificationError(
                 "Resposta do Telegram não é JSON válido."
             ) from exc
 
         if not data.get("ok"):
-            log.warning(
-                "telegram_reported_failure", equipment_id=notification.equipment_id
-            )
+            log.warning("telegram_reported_failure", **log_context)
             raise TelegramNotificationError(
                 "Telegram reportou falha no envio da mensagem."
             )

@@ -88,6 +88,15 @@ class OllamaResponseError(AppError):
     detail = "Resposta inválida do serviço de geração de sugestões."
 
 
+class NotificationTestRateLimitedError(AppError):
+    """RF-25 — o botão "Testar Notificação" foi clicado de novo antes do
+    fim de uma janela curta anti-spam (10s, independente do rate limit de
+    15 min do RF-24 — ver `services/telegram_alert_rate_limiter.py`)."""
+
+    status_code = status.HTTP_429_TOO_MANY_REQUESTS
+    detail = "Aguarde alguns segundos antes de testar novamente."
+
+
 class TelegramNotificationError(AppError):
     """RF-24 — falha ao enviar notificação crítica via Telegram (config
     ausente, timeout, HTTP 4xx/5xx, JSON inválido, ou `ok: false` na
@@ -98,6 +107,34 @@ class TelegramNotificationError(AppError):
 
     status_code = status.HTTP_502_BAD_GATEWAY
     detail = "Falha ao enviar notificação crítica via Telegram."
+
+
+class EmailNotificationError(AppError):
+    """RF-25 — falha ao enviar e-mail via Resend (config ausente, timeout,
+    HTTP não-2xx, JSON inválido). Mesma política do TelegramNotificationError:
+    SEMPRE capturada internamente, nunca derruba a predição/inferência.
+    `detail` nunca contém a API key do Resend."""
+
+    status_code = status.HTTP_502_BAD_GATEWAY
+    detail = "Falha ao enviar notificação crítica por e-mail."
+
+
+class NoNotificationChannelEnabledError(AppError):
+    """RF-25 §10 — POST /v1/settings/alerts/test chamado sem nenhum canal
+    (Telegram/e-mail) habilitado na configuração — nada para testar."""
+
+    status_code = status.HTTP_400_BAD_REQUEST
+    detail = "Nenhum canal de notificação está habilitado."
+
+
+class NotificationTestFailedError(AppError):
+    """RF-25 — todos os canais habilitados falharam durante o teste manual
+    (ao menos um habilitado, per NoNotificationChannelEnabledError acima,
+    mas nenhum enviou com sucesso). `detail` é a mensagem combinada por
+    canal (ex.: "Telegram: falhou · E-mail: falhou"), nunca um segredo."""
+
+    status_code = status.HTTP_502_BAD_GATEWAY
+    detail = "Não foi possível enviar a notificação em nenhum canal habilitado."
 
 
 # ---------------------------------------------------------------------------
