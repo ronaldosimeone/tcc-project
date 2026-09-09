@@ -156,6 +156,31 @@ services:
     networks:
       - app-network
 
+  # RF-27 / RNF-55 -- scheduler do Celery Beat (análise diária de data
+  # drift, `beat_schedule` em src/core/celery_app.py). MESMA aplicação
+  # Celery e MESMA imagem/Dockerfile de `celery-worker` acima — nenhum app
+  # Celery/Redis duplicado. O `celery-beat` NUNCA executa a task em si
+  # (só publica a mensagem na fila no horário agendado); quem processa é o
+  # `celery-worker`, por isso não precisa dos volumes de `ml/models`/`ml/data`
+  # (não roda DriftMonitor, só agenda). `depends_on: redis` porque o Beat
+  # precisa do broker para publicar; `db` não é necessário para o Beat em
+  # si, mas mantido por segurança/paridade operacional com o worker.
+  celery-beat:
+    build: ./apps/backend
+    container_name: celery-beat
+    volumes:
+      - ./apps/backend:/app
+    env_file:
+      - .env
+    environment:
+      - PYTHONPATH=/app
+    command: celery -A src.core.celery_app beat --loglevel=info
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - app-network
+
   db:
     image: postgres:15
     container_name: db

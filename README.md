@@ -1293,9 +1293,11 @@ flowchart TD
 
 "Reconhecimento" (item 9), definido pelo comportamento REAL da UI, não um componente novo: heading "Diagnóstico provável" + texto citando o equipamento + referência do manual (`bomba-centrifuga-cx500.pdf`, página 4, score 0.82) em `data-testid="maintenance-references"` — um `data-testid` novo adicionado ao `ReferencesList` (única mudança de produção desta task: um atributo, zero mudança de comportamento) porque o nome do arquivo aparece legitimamente duas vezes na tela (no Markdown gerado pelo LLM E na lista estruturada de metadados) — dois locators de texto válidos, não uma falha de acessibilidade.
 
-#### Achado — pré-existente, não corrigido (fora de escopo)
+#### Achado — pré-existente, corrigido numa task posterior
 
-O PRIMEIRO passo do teste RNF-53 (banner crítico do Dashboard) depende do mesmo mecanismo de `/api/stream/sensors`/`/api/v1/predictions` que os specs **já existentes** `failure_alert.spec.ts`/`dashboard_flow.spec.ts` usam. Ao validar esta task, reproduzi esses DOIS specs pré-existentes (sem alterar nenhuma linha deles) num ambiente isolado e limpo (container Playwright oficial, Node 20 — a versão real do projeto — e também Node 24) e **ambos falham** (8/9 e 6/6 testes, respectivamente) com o mesmo padrão: as rotas relativas `/api/stream/sensors`/`/api/v1/predictions` não são interceptadas pelo MSW nesse método de validação, então o banner crítico nunca aparece. Isso é **pré-existente e independente desta task** (reproduzido em specs que eu não toquei) — não foi corrigido, seguindo a instrução explícita de não corrigir testes não relacionados. Por causa disso, o teste RNF-53 (que depende do MESMO mecanismo só no seu primeiro passo) falha de forma consistente e determinística nesse método de validação — os outros 6 testes do mesmo arquivo, que não dependem desse mecanismo, passam 100% de forma estável. Não foi possível confirmar com certeza se o runner real do GitHub Actions (Ubuntu, ambiente diferente deste container ad-hoc) reproduz o mesmo problema — ver "Limitações" no relatório desta task.
+O PRIMEIRO passo do teste RNF-53 (banner crítico do Dashboard) depende do mesmo mecanismo de `/api/stream/sensors`/`/api/v1/predictions` que os specs **já existentes** `failure_alert.spec.ts`/`dashboard_flow.spec.ts` usam. Ao validar esta task, reproduzi esses DOIS specs pré-existentes (sem alterar nenhuma linha deles) num ambiente isolado e limpo (container Playwright oficial, Node 20 — a versão real do projeto — e também Node 24) e **ambos falharam** (8/9 e 6/6 testes, respectivamente): as rotas relativas `/api/stream/sensors`/`/api/v1/predictions` não eram interceptadas pelo MSW, então o banner crítico nunca aparecia. Isso era **pré-existente e independente desta task** (reproduzido em specs que eu não toquei) — não foi corrigido aqui, seguindo a instrução explícita de não corrigir testes não relacionados nesta task.
+>
+> **Atualização (task posterior — "fix de integração MSW/Playwright do Dashboard")**: causa raiz completa identificada e corrigida — três defeitos compostos, não só o mismatch de URL: (1) os handlers de `/api/stream/sensors`/`/api/v1/predictions` estavam registrados na origem absoluta `API_BASE` em vez de path relativo (o consumidor real, `hooks/use-sensor-data.ts`, chama caminho relativo, resolvido contra a origem da própria página); (2) o handler de `/api/v1/predictions` sempre devolvia uma página vazia, independente do cenário; (3) achado maior: `components/alert-panel.tsx` (testids `alert-panel`/`critical-banner` que esses dois specs usam) tinha sido desconectado de `SensorMonitor` no commit `de44dc1` ("immersive critical state"), muito antes — código morto. Corrigido com path relativo + handler responsivo ao cenário (`mocks/handlers.ts`) e 3 atributos `data-testid`/`data-risk`/`role` adicionados aos elementos já existentes de `sensor-monitor.tsx` (zero mudança de layout/lógica) — ver `PENDENCIAS.md` para o detalhe completo. Resultado: `failure_alert.spec.ts` 9/9, `dashboard_flow.spec.ts` 6/6, `maintenance_assistant.spec.ts` 7/7 (RNF-53 incluso), suíte completa 34/34, `--repeat-each=2` 44/44 sem intermitência.
 
 #### Testes e execução
 
@@ -1305,11 +1307,112 @@ pnpm exec playwright test e2e/alert_settings.spec.ts
 pnpm exec playwright test   # suíte completa
 ```
 
-`alert_settings.spec.ts`: **12/12 passam**, de forma estável em execuções repetidas. `maintenance_assistant.spec.ts`: **6/7 passam** de forma estável — o 7º (RNF-53) é bloqueado no primeiro passo pelo achado pré-existente acima.
+`alert_settings.spec.ts`: **12/12 passam**, de forma estável em execuções repetidas. `maintenance_assistant.spec.ts`: **7/7 passam**, de forma estável — o achado pré-existente acima (rota errada + integração MSW/predições) que bloqueava o 7º teste (RNF-53) foi corrigido numa task posterior (fix de integração MSW/Playwright do Dashboard) — ver detalhes em `PENDENCIAS.md`.
 
 #### CI
 
 **Nenhuma mudança no `.github/workflows/ci.yml`** — o job `test-e2e` já existente executa `pnpm e2e` (`playwright test`, `testDir: "./e2e"`), que descobre automaticamente qualquer `*.spec.ts` nessa pasta — os dois specs novos já rodam nesse pipeline sem nenhuma alteração de configuração. O job já instala o Chromium (`playwright install chromium --with-deps`), já preserva `playwright-report`/`e2e-results` como artefatos em caso de falha, e já roda sem nenhum serviço externo real (Ollama/Telegram/Resend/MCP/Redis/Postgres) — só o frontend + MSW.
+
+---
+
+### 4.15. Monitoramento de data drift — Evidently + Celery Beat (RF-27 / RNF-55)
+
+**O que é**: uma task diária em background (Celery Beat, reaproveitando a MESMA aplicação Celery do RNF-50/51) compara a distribuição das **features de entrada** do modelo entre um baseline (dados de treinamento) e os dados recentes (últimas 24h de predições reais), calcula o **PSI** (Population Stability Index, via Evidently) e persiste o resultado. `GET /monitoring/drift` expõe o histórico — o endpoint **nunca** dispara a análise.
+
+> **Data drift ≠ degradação de performance do modelo.** RF-27 monitora se a DISTRIBUIÇÃO das 7 features analógicas de entrada (TP2, TP3, H1, DV_pressure, Reservoirs, Oil_temperature, Motor_current) mudou em relação ao baseline — um sinal de que o modelo pode estar operando fora da distribuição em que foi treinado. Isso é DIFERENTE de medir se as predições do modelo continuam corretas (o que exigiria rótulos verdadeiros/ground truth de falhas reais confirmadas, que este projeto não coleta em produção). Um PSI alto não significa necessariamente que o modelo está errando — significa que os dados de entrada mudaram e merece investigação.
+
+```mermaid
+flowchart TD
+    BEAT["celery-beat<br/>crontab(hour=3, minute=0) UTC"] -->|"publica 1x/dia"| REDIS[("Redis<br/>broker, RNF-50")]
+    REDIS --> WORKER["celery-worker<br/>monitoring.daily_drift_analysis"]
+    WORKER --> DM["DriftMonitor.run_daily_analysis()"]
+    REF["Reference — amostra determinística<br/>(n=5000, seed=42, só linhas 'normais')<br/>do parquet MetroPT-3 original"] --> DM
+    CUR["Current — tabela `predictions` (RF-09)<br/>janela [now-24h, now]"] --> DM
+    DM --> EVI["Evidently real<br/>Report(metrics=[ValueDrift(method='psi')])"]
+    EVI --> PSI["PSI por feature → agregado = max(...)"]
+    PSI --> RULE{"PSI > 0.25?"}
+    RULE -->|"não"| OK1["drift_detected = false"]
+    RULE -->|"sim"| OK2["drift_detected = true"]
+    OK1 --> PERSIST["persist_report()<br/>upsert por analysis_date (idempotente)"]
+    OK2 --> PERSIST
+    PERSIST --> PG[("PostgreSQL<br/>drift_reports")]
+    PG --> EP["GET /monitoring/drift<br/>(só leitura, nunca dispara análise)"]
+```
+
+#### Auditoria antes desta task
+
+- **Celery**: `src/core/celery_app.py` já existia (RNF-50/51, notificações críticas) — reaproveitado integralmente, nenhuma segunda aplicação Celery criada. Adicionado só `beat_schedule` à configuração existente + um novo import de task no final do módulo (mesmo padrão de `notification_tasks`). **Celery Beat não existia** — só `celery-worker` (consumidor). `timezone="UTC"`/`enable_utc=True` já configurados pelo RNF-50, reaproveitados sem alteração.
+- **Dados**: tabela `predictions` (RF-09, `src/models/prediction.py`) já persiste as 12 features de entrada de TODA predição real — usada como fonte de "current" sem nenhuma tabela nova para isso. Dataset de referência: `apps/ml/data/processed/metropt3.parquet` (o MESMO parquet que `SensorSimulator` já usa para replay, `settings.simulator_parquet_path` já existente — nenhum caminho/config novo).
+- **Modelo**: `src/services/preprocessing.py::MetroPTPreprocessor._DEFAULT_SENSOR_COLS` — os 7 sensores analógicos que o pipeline de feature engineering REAL usa como base — é a fonte da lista `MONITORED_FEATURES`, não uma escolha arbitrária. O modelo ativo (`ACTIVE_MODEL=random_forest_v2`, confirmado via log de boot `features=80`) consome um vetor de 80 features ENGENHEIRADAS (rolling/lag/ratio) derivadas dessas 7 — monitorar drift nas 7 features de entrada RAW (persistidas verbatim, sem precisar recomputar janelas rolantes históricas numa task em batch) é a escolha defensável e rastreável ao pipeline real.
+- **Evidently**: não estava instalado. Versão mais recente disponível para Python 3.11 confirmada via `pip index versions` (`0.7.21`) e testada de verdade dentro do container antes de escrever qualquer código — API real é `evidently.Dataset`/`evidently.DataDefinition`/`evidently.Report`/`evidently.metrics.ValueDrift(method="psi")`, NÃO a API legada (`Report(metrics=[...])`/`Dashboard`) de tutoriais antigos.
+
+#### Reference (baseline) e Current — RF-27 §Fase 4
+
+| | Reference | Current |
+|---|---|---|
+| Fonte | `apps/ml/data/processed/metropt3.parquet` (dataset MetroPT-3 original, o mesmo do treinamento) | Tabela `predictions` (RF-09) — predições reais persistidas |
+| Filtro | Só linhas **normais** — fora das 4 janelas de falha conhecidas do paper MetroPT-3 (`_FAILURE_WINDOWS`/`_build_failure_mask_from_timestamps`, reaproveitados de `src/services/simulator.py`, RF-13 — mesma fonte de verdade, sem duplicar a lógica) | `WHERE timestamp BETWEEN now-24h AND now` |
+| Tamanho | Amostra determinística: `n=5000` (`random_state=42`) — >> mínimo estatístico recomendado para PSI (~1000), evita ler as 1.5M linhas numa task diária | O que existir na janela — `status="insufficient_data"` se `< 30` linhas (nenhum PSI inventado) |
+| Determinismo | Seed fixa — chamar `load_reference_data()` de novo produz a MESMA amostra (testado) | Janela sempre `[now-24h, now]` — determinística por construção |
+
+Nunca `reference = current`: são duas fontes genuinamente independentes (arquivo estático de treinamento vs. tabela viva de produção).
+
+#### PSI e a regra `> 0.25`
+
+`DriftMonitor.calculate_drift()` chama o Evidently real — um `Report(metrics=[ValueDrift(column=c, method="psi") for c in MONITORED_FEATURES])`, `report.run(reference_data=..., current_data=...)` — e extrai o PSI de CADA feature do dict retornado (`run.dict()["metrics"][i]["value"]`). O PSI agregado é o **máximo** entre as 7 features (pior caso — qualquer sensor individual drift a é suficiente para o alerta, mais conservador que uma média). A decisão `drift_detected = psi > 0.25` (**estrito, nunca `>=`**) é feita no código do projeto, nunca no `threshold` interno do Evidently (default `0.1`, sem relação com a regra de negócio do RF-27). Testado explicitamente na fronteira: `0.2499` → sem drift, `0.25` → sem drift, `0.2501` → drift.
+
+#### Dados insuficientes — nunca um PSI inventado
+
+Se a janela current tiver menos de `MIN_CURRENT_ROWS` (30) linhas, `run_daily_analysis()` retorna `status="insufficient_data"` **antes** de chamar o Evidently ou carregar o reference — `psi`/`drift_detected`/`features` ficam `None`, e o motivo (`error_message`) é persistido no histórico, nunca escondido. Falhas inesperadas (ex.: parquet ausente, erro do Evidently) são capturadas e persistidas como `status="error"` com a mensagem real — a task nunca deixa uma exceção derrubar o worker.
+
+#### Persistência — `drift_reports` (migration `0004`)
+
+| Coluna | O que guarda |
+|---|---|
+| `analysis_date` | Data (UTC) da janela — **UNIQUE**, chave de idempotência |
+| `analyzed_at` | Timestamp exato da execução |
+| `reference_period` / `current_period_start` / `current_period_end` | Descrição auditável do baseline usado + janela current exata |
+| `psi` / `drift_detected` | Resultado agregado — `NULL` quando `status != "ok"` |
+| `features` | PSI por feature individual (JSON) — transparência, não só o agregado |
+| `status` / `error_message` | `"ok"` \| `"insufficient_data"` \| `"error"` + motivo |
+
+**Idempotência (RF-27 §Fase 8)**: `persist_report()` faz `INSERT ... ON CONFLICT (analysis_date) DO UPDATE` (dialect-aware Postgres/SQLite, mesmo padrão de `alert_settings_service.py`/`telegram_alert_rate_limiter.py`) — reprocessar o MESMO dia (erro de scheduler, retry manual) sobrescreve o relatório daquele dia em vez de duplicar o histórico. Validado com SQLite (testes) **e** contra o Postgres real do `docker compose` (duas execuções da task no mesmo dia real — `id=1` continuou único, só os valores foram atualizados).
+
+#### Celery Beat
+
+`celery-beat` (novo serviço no `docker-compose.yml`, MESMA imagem/Dockerfile de `celery-worker` — nenhuma imagem/app duplicada) só publica a mensagem agendada; quem EXECUTA a task continua sendo o `celery-worker`. `beat_schedule` em `src/core/celery_app.py`: `crontab(hour=3, minute=0)` — uma execução por dia, 03:00 UTC (mesmo `timezone`/`enable_utc` do RNF-50). `celery-beat` não monta os volumes de `ml/models`/`ml/data` (não roda `DriftMonitor`, só agenda).
+
+#### Testes
+
+```bash
+docker compose exec api pytest tests/test_drift_monitor.py -v   # 20 testes
+```
+
+Cobre: fronteira do threshold (`0.2499`/`0.25`/`0.2501`, parametrizado); persistência real; histórico + paginação via `GET /monitoring/drift`; endpoint nunca dispara análise; dados insuficientes (incluindo zero linhas) sem PSI inventado; task registrada/roda sem HTTP; `beat_schedule` diário configurado; timezone UTC; idempotência (mesma `analysis_date` 2x não duplica; datas diferentes criam linhas separadas); **Evidently real, sem mock** — distribuições semelhantes → PSI baixo, distribuição claramente deslocada (`Motor_current` 4A → 12A) → PSI alto; `load_reference_data()` real contra o parquet MetroPT-3 (determinístico, mesma amostra em chamadas repetidas).
+
+#### Validação real (Docker, E2E — sem mocks)
+
+`docker compose build api celery-worker celery-beat` (evidently instalado via `requirements.txt`, não mais um `pip install` ad-hoc) → `docker compose up -d`: migration `0003 -> 0004` aplicada com sucesso contra o Postgres real (log do `api`); `celery-worker` iniciou com `[tasks] . monitoring.daily_drift_analysis . notifications.send_critical_failure` (mesma app, ambas as tasks); `celery-beat` iniciado (`beat: Starting...`).
+
+Task disparada manualmente 2x contra o stack real (`daily_drift_analysis_task.delay()`, broker Redis real) — 1ª execução: `current_rows=86270` (predições reais acumuladas por horas de simulador rodando), `psi≈2.70`, `drift_detected=true`, persistido. 2ª execução (mesmo dia real): `psi≈2.71` (dados mudaram levemente entre as duas chamadas), **mesma linha (`id=1`) atualizada, não duplicada** — idempotência confirmada contra Postgres real. `GET /api/monitoring/drift` (através do Nginx real, `/api/` → `api:8000`, mesmo padrão de todos os outros endpoints REST) devolveu o histórico correto.
+
+**Não observado em tempo real**: o Beat disparando autonomamente às 03:00 UTC (exigiria esperar até esse horário — ver PENDENCIAS.md). Validado via inspeção do `beat_schedule` real carregado + disparo manual da MESMA task contra a infraestrutura real (broker/worker/Postgres reais) — o caminho `task → DriftMonitor → Evidently → Postgres → endpoint` é idêntico ao que o Beat dispararia; só o gatilho (cron vs. manual) difere.
+
+#### Como executar manualmente para teste
+
+```bash
+docker compose exec api python -c "
+from src.tasks.drift_tasks import daily_drift_analysis_task
+r = daily_drift_analysis_task.delay()
+print(r.id)
+"
+```
+
+O `beat_schedule` (`crontab(hour=3, minute=0)`) não foi alterado para a validação — continua diário.
+
+#### Limitações conhecidas
+
+Ver seção "RF-27 / RNF-55" em [PENDENCIAS.md](PENDENCIAS.md) — PSI observado alto no ambiente de dev/demo atual (artefato do replay sequencial do simulador, não necessariamente um problema em produção real), `drift_detected` não aciona notificação (fora de escopo), reference é uma amostra fixa sem refresh automático, sem UI de frontend (fora de escopo).
 
 ---
 

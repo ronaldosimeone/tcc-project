@@ -29,11 +29,22 @@ Decisões de configuração:
   "mágico" de pacotes) — garante que a task fica registrada tanto no
   processo do worker (`celery -A src.core.celery_app worker`) quanto no
   processo web (que só precisa do nome da task para enfileirar).
+
+RF-27 / RNF-55 — Celery Beat (análise diária de data drift):
+Auditoria antes desta task: nenhum Celery Beat existia no projeto (só
+`celery-worker`, consumidor). Reaproveita esta MESMA aplicação Celery — o
+`beat_schedule` abaixo só REGISTRA quando `monitoring.daily_drift_analysis`
+(`src/tasks/drift_tasks.py`) deve ser enfileirada; quem efetivamente
+EXECUTA a task continua sendo o `celery-worker` (container próprio,
+`docker-compose.yml`), nunca o processo `celery beat` em si (que só publica
+mensagens na fila, no horário configurado). `timezone="UTC"`/`enable_utc`
+já definidos acima (RNF-50) — reaproveitados, não redefinidos.
 """
 
 from __future__ import annotations
 
 from celery import Celery
+from celery.schedules import crontab
 
 from src.core.config import settings
 
@@ -51,9 +62,22 @@ celery_app.conf.update(
     # (docker-compose não garante que o healthcheck do Redis termine antes
     # do primeiro import deste módulo dentro do container).
     broker_connection_retry_on_startup=True,
+    # RF-27 §Fase 7 — uma execução por dia, 03:00 UTC (horário de baixo
+    # tráfego, fora do expediente — escolha arbitrária apenas no SENTIDO de
+    # "qualquer horário ocioso serve"; a REGRA "uma vez por dia" é a exigida
+    # pelo requisito, não o minuto exato). `crontab(hour=3, minute=0)` roda
+    # todo dia às 03:00 no `timezone` configurado acima (UTC).
+    beat_schedule={
+        "daily-drift-analysis": {
+            "task": "monitoring.daily_drift_analysis",
+            "schedule": crontab(hour=3, minute=0),
+        },
+    },
 )
 
-# Import explícito (não autodiscovery) — registra `notifications.send_critical_failure`
-# neste app Celery. Feito no final do módulo porque `notification_tasks.py`
-# importa `celery_app` deste mesmo arquivo (decorator `@celery_app.task`).
+# Import explícito (não autodiscovery) — registra
+# `notifications.send_critical_failure` e `monitoring.daily_drift_analysis`
+# neste app Celery. Feito no final do módulo porque os módulos de task
+# importam `celery_app` deste mesmo arquivo (decorator `@celery_app.task`).
+from src.tasks import drift_tasks  # noqa: E402,F401
 from src.tasks import notification_tasks  # noqa: E402,F401

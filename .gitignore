@@ -43,3 +43,8 @@ loadtest_results/
 # Ingestão de manuais (RF-20/RNF-44) — PDFs reais e o ChromaDB gerado nunca
 # vão pro repo (dados grandes/binários, reproduzíveis via index_manuals.py).
 apps/mcp-server/data/
+
+# Celery Beat (RF-27/RNF-55) — arquivo de estado local do scheduler
+# (shelve DB), criado em runtime dentro do container `celery-beat`;
+# nunca deve ir pro repo (estado de máquina, não código).
+apps/backend/celerybeat-schedule*

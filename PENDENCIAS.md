@@ -32,23 +32,38 @@ merge/uso do sistema — documentados aqui para rastreio.
   qualquer deploy de produção, senão o link enviado no alerta do Telegram
   aponta para `localhost` do lado errado da rede.
 
-## RNF-53 / RNF-54 — E2E/visual (Playwright + MSW)
+## RNF-53 / RNF-54 — E2E/visual (Playwright + MSW) — RESOLVIDO
 
-- **`failure_alert.spec.ts`/`dashboard_flow.spec.ts` (pré-existentes,
-  RNF-16/17) falham num container Playwright isolado e limpo** — as rotas
-  relativas `/api/stream/sensors`/`/api/v1/predictions` não são
-  interceptadas pelo MSW nesse método de validação (reproduzido sob Node 20
-  e Node 24, sem alterar nenhuma linha desses specs). Não é uma regressão
-  desta task — descoberto DURANTE a validação de `maintenance_assistant.spec.ts`
-  (cujo teste RNF-53 depende do mesmo mecanismo no primeiro passo). **Para
-  investigar**: confirmar se o runner real do GitHub Actions reproduz o
-  mesmo problema (não verificado — só validado localmente/ad-hoc) e, se
-  sim, determinar por que as rotas relativas do dashboard não casam com os
-  handlers de `mocks/handlers.ts` nesse ambiente específico.
-- Consequência direta do item acima: o teste
-  `maintenance_assistant.spec.ts::RNF-53` falha de forma consistente no seu
-  PRIMEIRO passo (banner crítico do Dashboard) até o achado acima ser
-  corrigido — os outros 6 testes do mesmo arquivo passam 100% estáveis.
+~~`failure_alert.spec.ts`/`dashboard_flow.spec.ts` falham num container
+Playwright isolado~~ — **corrigido** (task "fix de integração MSW/Playwright
+do Dashboard"). Causa raiz real, composta por 3 defeitos independentes —
+não só o mismatch de URL suspeitado originalmente:
+
+1. `mocks/handlers.ts` registrava `/api/stream/sensors`/`/api/v1/predictions`
+   na origem absoluta `API_BASE`, mas `hooks/use-sensor-data.ts` chama
+   ambas com caminho relativo (resolvido contra a origem da própria
+   página) — handler nunca casava, request ia pra rede real e recebia 404
+   silenciosamente.
+2. O handler de `/api/v1/predictions` sempre devolvia uma página vazia,
+   independente do `__E2E_SCENARIO__` — `latest`/`riskLevel` nunca
+   atualizava via polling.
+3. **Achado maior**: `components/alert-panel.tsx` (testids `alert-panel`/
+   `critical-banner` que esses specs usam) tinha sido desconectado de
+   `SensorMonitor` no commit `de44dc1` ("immersive critical state"), muito
+   antes desta task — código morto, sem relação com MSW.
+
+Corrigido com path relativo + handler responsivo ao cenário
+(`mocks/handlers.ts`) e 3 atributos `data-testid`/`data-risk`/`role`
+adicionados aos elementos já existentes de `sensor-monitor.tsx` (zero
+mudança de layout/lógica) — ver README §4.14 (achado atualizado) ou o
+commit `fix(frontend): corrige integração MSW/Playwright do Dashboard
+(SSE + predictions)` para o detalhe completo. Resultado final:
+`failure_alert.spec.ts` 9/9,
+`dashboard_flow.spec.ts` 6/6, `maintenance_assistant.spec.ts` 7/7 (RNF-53
+incluso), suíte completa 34/34, `--repeat-each=2` 44/44 sem intermitência.
+Não verificado: se o runner real do GitHub Actions reproduzia o problema
+original antes da correção (não era necessário verificar depois de
+corrigido na origem).
 
 ## RNF-50 / RNF-51 — Fila assíncrona de notificações (Celery + Redis)
 
@@ -113,6 +128,45 @@ merge/uso do sistema — documentados aqui para rastreio.
   pequeno seguindo formatação de forma imperfeita.
 - Sem endpoint de arquivo estático para os PDFs dos manuais — por isso as
   referências no painel aparecem como texto, nunca como link clicável.
+
+## RF-27 / RNF-55 — Monitoramento de data drift (Evidently + Celery Beat)
+
+- **PSI observado no ambiente de dev/demo atual é alto (~2.7, dominado por
+  `Oil_temperature`)** — resultado REAL (Evidently rodou de verdade contra
+  Postgres real, não um valor fabricado), mas provavelmente um artefato do
+  simulador: o "current" (últimas 24h de `predictions`) reflete o replay
+  SEQUENCIAL do simulador (`SensorSimulator`, RF-13) — uma janela temporal
+  estreita e não-aleatória do parquet — contra um "reference" amostrado
+  ALEATORIAMENTE do dataset inteiro (RF-27 §Fase 4). Em produção real, com
+  operação variada ao longo do dia, esse efeito tende a ser menor; sem
+  histórico de incidentes reais de drift para calibrar, `MIN_CURRENT_ROWS`
+  (30) e o tamanho/seed da amostra de referência (5000/42) são escolhas de
+  engenharia documentadas, não valores empiricamente validados.
+- **`drift_detected=True` não aciona nenhuma notificação** (Telegram/
+  e-mail) — deliberado, fora do escopo desta task ("não alterar... fluxo
+  de notificações"). Hoje só é visível via `GET /monitoring/drift`. Se
+  alertar humanos sobre drift se tornar um requisito, avaliar reaproveitar
+  `CriticalFailureNotificationService`/Celery (RF-24/RNF-50) — nunca
+  duplicar essa infraestrutura.
+- **Celery Beat disparando autonomamente às 03:00 UTC não foi observado em
+  tempo real** (exigiria esperar até esse horário) — validado por: (a)
+  inspeção do `beat_schedule` real carregado pelo `celery-beat` (schedule
+  diário, mesmo timezone UTC do RNF-50) e (b) disparo manual da MESMA task
+  registrada (`daily_drift_analysis_task.delay()`) contra o
+  `celery-worker`/Redis/Postgres reais — ponta a ponta idêntica ao que o
+  Beat dispararia, só o gatilho (manual vs. cron) é diferente.
+- **Reference é uma amostra FIXA do dataset de treinamento original** — não
+  há mecanismo de atualização automática do baseline (ex.: após um
+  re-treino legítimo do modelo com dados mais recentes). Se o baseline
+  precisar mudar no futuro, é uma edição manual de
+  `DriftMonitor.load_reference_data()`/`REFERENCE_SAMPLE_SEED`.
+- **Sem UI de frontend** — deliberado, fora do escopo desta task ("Não
+  criar UI para drift").
+- **Distinção explícita**: RF-27 monitora **data drift** (distribuição das
+  7 features de entrada analógicas — TP2, TP3, H1, DV_pressure,
+  Reservoirs, Oil_temperature, Motor_current), nunca **degradação de
+  performance do modelo** (que exigiria rótulos verdadeiros/ground truth
+  de falhas reais, não coletados em produção) — ver README §4.15.
 
 ## Pré-existente (não introduzido por nenhuma das tasks acima)
 
