@@ -32,6 +32,7 @@ from typing import Any, Literal
 
 import structlog
 
+from src.core.config import settings
 from src.core.exceptions import (
     MCPUnavailableError,
     OllamaResponseError,
@@ -388,3 +389,38 @@ class MaintenanceSuggestionService:
             raise OllamaResponseError(
                 "Resposta do Ollama não contém cabeçalhos Markdown — formato inesperado."
             )
+
+
+# ---------------------------------------------------------------------------
+# Dependência FastAPI — RNF-56
+# ---------------------------------------------------------------------------
+#
+# Movida de `routers/maintenance.py` para cá: o router não deve importar
+# `MCPSearchClient`/`OllamaClient` (infraestrutura) diretamente — só o
+# Protocol (`MaintenanceSuggestionServiceProtocol`) e esta factory, mesmo
+# padrão já usado por `get_alert_service`/`get_model_service` (factory
+# colocada junto do service que ela constrói, não centralizada num pacote
+# `dependencies/` à parte — ver `src/services/protocols.py` para o
+# racional dessa escolha).
+
+
+def get_maintenance_suggestion_service() -> MaintenanceSuggestionService:
+    """FastAPI Depends factory — instancia clientes leves (sem estado de
+    conexão persistente) a cada requisição, igual ao padrão de
+    `get_alert_service`. Nenhum singleton de processo necessário aqui: o
+    custo real (modelo de embeddings, ChromaDB) já é amortizado do lado do
+    mcp-server (RF-21, `server._get_service`)."""
+    mcp_client = MCPSearchClient(
+        base_url=settings.mcp_server_url,
+        timeout=settings.mcp_client_timeout_seconds,
+    )
+    ollama_client = OllamaClient(
+        base_url=settings.ollama_base_url,
+        model=settings.ollama_model,
+        timeout=settings.ollama_client_timeout_seconds,
+    )
+    return MaintenanceSuggestionService(
+        mcp_client=mcp_client,
+        ollama_client=ollama_client,
+        model=settings.ollama_model,
+    )

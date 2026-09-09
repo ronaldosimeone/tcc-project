@@ -1,0 +1,53 @@
+[tool.importlinter]
+root_package = "src"
+
+# RNF-56 — routers não devem importar clientes externos/infraestrutura
+# DIRETAMENTE: MCP, Ollama, Telegram, e-mail, Celery. Estes módulos NUNCA
+# têm uma razão legítima para ser importados por um router — nem a classe
+# nem uma `Depends` factory vivem neles voltados a uso direto por router
+# (as factories reais, quando existem, vivem em `alert_service.py`/
+# `maintenance_suggestion_service.py`, que os routers importam em vez
+# disso). `src.core.ws_manager`/`src.services.model_service`/
+# `src.services.model_registry` NÃO entram aqui de propósito: são o lar
+# canônico de suas próprias `Depends` factories (`get_ws_manager`,
+# `get_model_service`, `get_model_registry`), o mesmo padrão já usado em
+# todo o projeto — o router importa a FACTORY de onde ela mora, só nunca
+# instancia a classe concreta ele mesmo nem usa a classe como tipo do
+# parâmetro (isso é o que os Protocols em `services/protocols.py` resolvem).
+#
+# `allow_indirect_imports = true` porque o próprio propósito da camada de
+# Protocol/Depends é interpor uma abstração entre o router e essas
+# classes — um caminho INDIRETO router -> protocols ->
+# maintenance_suggestion_service -> mcp_client é exatamente o desenho
+# pretendido, não uma violação; o que este contrato proíbe é o router
+# importar o cliente concreto ele mesmo, diretamente.
+[[tool.importlinter.contracts]]
+name = "Routers não importam infraestrutura diretamente (RNF-56)"
+type = "forbidden"
+source_modules = ["src.routers"]
+forbidden_modules = [
+    "src.services.mcp_client",
+    "src.services.ollama_client",
+    "src.services.telegram_notification_adapter",
+    "src.services.email_notification_adapter",
+    "src.core.celery_app",
+    "src.tasks",
+]
+allow_indirect_imports = true
+
+[tool.coverage.run]
+source = ["src"]
+branch = true
+
+[tool.coverage.report]
+# RNF-57 — falha o comando (e o CI) se a cobertura total cair abaixo de
+# 80%. `show_missing` para o relatório continuar apontando linhas
+# específicas sem cobertura (mesmo formato já usado durante esta task).
+fail_under = 80
+show_missing = true
+skip_covered = false
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+]

@@ -43,13 +43,19 @@ class ConnectionManager:
         """Accept and register a new connection."""
         await websocket.accept()
         self._active.add(websocket)
-        log.info("ws_connected", total_active=len(self._active), client=str(websocket.client))
+        log.info(
+            "ws_connected", total_active=len(self._active), client=str(websocket.client)
+        )
         self._ensure_heartbeat()
 
     def disconnect(self, websocket: WebSocket) -> None:
         """Remove a connection from the registry (idempotent)."""
         self._active.discard(websocket)
-        log.info("ws_disconnected", total_active=len(self._active), client=str(websocket.client))
+        log.info(
+            "ws_disconnected",
+            total_active=len(self._active),
+            client=str(websocket.client),
+        )
         if not self._active:
             self._cancel_heartbeat()
 
@@ -57,7 +63,9 @@ class ConnectionManager:
     # Send helpers
     # ------------------------------------------------------------------
 
-    async def send_personal(self, websocket: WebSocket, payload: dict[str, Any]) -> bool:
+    async def send_personal(
+        self, websocket: WebSocket, payload: dict[str, Any]
+    ) -> bool:
         """
         Send a JSON payload to a single client.
 
@@ -160,3 +168,19 @@ class ConnectionManager:
 
 # Module-level singleton consumed by the router and AlertService.
 manager = ConnectionManager()
+
+
+# ---------------------------------------------------------------------------
+# FastAPI dependency — RNF-56
+# ---------------------------------------------------------------------------
+#
+# Colocada junto da classe/singleton que ela expõe (mesmo padrão de
+# `get_model_registry` em `model_registry.py`) — movida de
+# `routers/alerts_ws.py` para cá: o router não deve importar
+# `ConnectionManager`/`manager` diretamente, só o Protocol
+# (`AlertBroadcasterProtocol`, em `services/protocols.py`) e esta factory.
+
+
+def get_ws_manager() -> ConnectionManager:
+    """Return the module-level singleton ConnectionManager."""
+    return manager

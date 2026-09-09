@@ -34,10 +34,25 @@ from unittest.mock import MagicMock, patch
 import pytest
 from fastapi.responses import StreamingResponse
 
+from src.core.config import settings
 from src.schemas.stream import SensorReading
 from src.services.sensor_stream_service import (
     BROADCAST_INTERVAL,
     SensorStreamService,
+)
+
+# RNF-56/57 — este arquivo constrói um `SensorSimulator` REAL por design
+# ("Fresh, isolated SensorStreamService for every test"), que carrega o
+# parquet MetroPT-3 (gitignored, *.parquet — não disponível num checkout
+# limpo de CI). Mesma situação, mesmo motivo, de test_simulator.py (RF-13),
+# já excluído da suíte geral por esse motivo — ver README/PENDENCIAS.md.
+pytestmark = pytest.mark.skipif(
+    not settings.simulator_parquet_path.exists(),
+    reason=(
+        "Requer o parquet real do MetroPT-3 "
+        "(apps/ml/data/processed/metropt3.parquet) — não disponível num "
+        "checkout limpo de CI."
+    ),
 )
 
 # ---------------------------------------------------------------------------

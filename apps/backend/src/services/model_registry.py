@@ -31,11 +31,14 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from fastapi import Request
 
-from src.core.exceptions import ModelNotAvailableError
+from src.core.config import settings
+from src.core.exceptions import ModelNotAvailableError, NotFoundError
+from src.schemas.models import ModelSummary
 
 if TYPE_CHECKING:
     from src.services.model_service import ModelService
@@ -62,6 +65,26 @@ KNOWN_MODELS: frozenset[str] = frozenset(
         "autoencoder",
     }
 )
+
+# RNF-56 — movido de `routers/models.py`: mapeia cada modelo conhecido ao
+# Path que sinaliza que o artefato está pronto em disco. `mlp` exige
+# tanto o .onnx quanto o scaler; checamos o .onnx como sinal canônico (o
+# scaler é sempre produzido junto). Entradas V2 apontam para os .onnx
+# servidos por OnnxTreeAdapter.
+_ARTEFACT_PATHS: dict[str, Path] = {
+    "random_forest": settings.model_path,
+    "xgboost": settings.xgboost_model_path,
+    "mlp": settings.mlp_onnx_path,
+    "random_forest_v2": settings.rf_v2_onnx_path,
+    "xgboost_v2": settings.xgboost_v2_onnx_path,
+    # Sequential DL models — RNF-24 extension. O .onnx é o sinal canônico de
+    # prontidão; o scaler por canal é sempre produzido junto por
+    # train_sequential.py e rastreado via _MODEL_CARDS.
+    "tcn": settings.tcn_onnx_path,
+    "bilstm": settings.bilstm_onnx_path,
+    "patchtst": settings.patchtst_onnx_path,
+    "autoencoder": settings.autoencoder_onnx_path,
+}
 
 
 class ModelRegistry:
@@ -156,6 +179,45 @@ class ModelRegistry:
 
         logger.info("[RNF-25] Model swap complete: '%s' → '%s'", previous, model_name)
         return previous
+
+    # ------------------------------------------------------------------
+    # RNF-56 — movido de `routers/models.py`: "artefato pronto no disco" é
+    # uma decisão de domínio (o que conta como um modelo "disponível"), não
+    # I/O de rota. O router agora só chama estes dois métodos e traduz
+    # `NotFoundError` para HTTP 404 via o handler global já existente
+    # (`core/exceptions.py::app_error_handler`) — mesmo padrão de erro
+    # usado pelo resto do projeto (RF-24 `NotFoundError`, etc.).
+    # ------------------------------------------------------------------
+
+    def list_summaries(self) -> list[ModelSummary]:
+        """Status de disponibilidade de cada modelo conhecido — RF-11."""
+        active = self.active_name
+        return [
+            ModelSummary(
+                name=name,
+                active=(name == active),
+                artefact_ready=_ARTEFACT_PATHS[name].exists(),
+            )
+            for name in sorted(KNOWN_MODELS)
+        ]
+
+    def ensure_artefact_ready(self, model_name: str) -> None:
+        """
+        Valida a presença do artefato ANTES de aceitar um swap (RNF-25) —
+        evita uma falha silenciosa dentro da background task, onde o
+        cliente nunca saberia do erro.
+
+        Raises
+        ------
+        NotFoundError
+            Quando o artefato não existe no disco — traduzido para HTTP 404
+            pelo handler global (nenhuma tradução manual no router).
+        """
+        artefact_path = _ARTEFACT_PATHS.get(model_name)
+        if artefact_path is not None and not artefact_path.exists():
+            raise NotFoundError(
+                f"Model artefact not found for '{model_name}': {artefact_path}"
+            )
 
 
 # ---------------------------------------------------------------------------

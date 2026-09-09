@@ -27,6 +27,7 @@ from src.core.ws_manager import (
     ALERT_PROBABILITY_THRESHOLD,
     HEARTBEAT_INTERVAL,
     ConnectionManager,
+    get_ws_manager,
 )
 from src.routers.alerts_ws import router as ws_router
 from src.services.alert_service import AlertService
@@ -44,13 +45,16 @@ def manager() -> ConnectionManager:
 
 @pytest.fixture()
 def app(manager: ConnectionManager) -> FastAPI:
-    """Minimal FastAPI app with the WS router, manager injected."""
-    import src.routers.alerts_ws as _module
+    """Minimal FastAPI app with the WS router, manager injected.
 
-    _module.manager = manager  # override singleton for this test
-
+    RNF-56: `get_ws_manager` agora vive em `core/ws_manager.py`, não mais
+    em `routers/alerts_ws.py` — override via `dependency_overrides` (o
+    mecanismo canônico do FastAPI) em vez de monkeypatch de global de
+    módulo, que só funcionava enquanto a factory lia o `manager` do MESMO
+    módulo do router."""
     application = FastAPI()
     application.include_router(ws_router)
+    application.dependency_overrides[get_ws_manager] = lambda: manager
     return application
 
 
@@ -81,7 +85,9 @@ def _make_ws(state: WebSocketState = WebSocketState.CONNECTED) -> MagicMock:
 class TestConnectionManager:
 
     @pytest.mark.asyncio
-    async def test_connect_accepts_and_registers(self, manager: ConnectionManager) -> None:
+    async def test_connect_accepts_and_registers(
+        self, manager: ConnectionManager
+    ) -> None:
         ws = _make_ws()
         await manager.connect(ws)
 
@@ -89,7 +95,9 @@ class TestConnectionManager:
         assert manager.active_count == 1
 
     @pytest.mark.asyncio
-    async def test_disconnect_removes_connection(self, manager: ConnectionManager) -> None:
+    async def test_disconnect_removes_connection(
+        self, manager: ConnectionManager
+    ) -> None:
         ws = _make_ws()
         await manager.connect(ws)
         manager.disconnect(ws)
@@ -103,7 +111,9 @@ class TestConnectionManager:
         assert manager.active_count == 0
 
     @pytest.mark.asyncio
-    async def test_broadcast_reaches_all_clients(self, manager: ConnectionManager) -> None:
+    async def test_broadcast_reaches_all_clients(
+        self, manager: ConnectionManager
+    ) -> None:
         ws1, ws2, ws3 = _make_ws(), _make_ws(), _make_ws()
         for ws in (ws1, ws2, ws3):
             await manager.connect(ws)
@@ -115,7 +125,9 @@ class TestConnectionManager:
             ws.send_json.assert_awaited_once_with(payload)
 
     @pytest.mark.asyncio
-    async def test_broadcast_evicts_dead_connections(self, manager: ConnectionManager) -> None:
+    async def test_broadcast_evicts_dead_connections(
+        self, manager: ConnectionManager
+    ) -> None:
         ws_ok = _make_ws()
         ws_dead = _make_ws()
         ws_dead.send_json = AsyncMock(side_effect=RuntimeError("broken pipe"))
@@ -130,7 +142,9 @@ class TestConnectionManager:
         ws_ok.send_json.assert_awaited_once()
 
     @pytest.mark.asyncio
-    async def test_broadcast_evicts_disconnected_state(self, manager: ConnectionManager) -> None:
+    async def test_broadcast_evicts_disconnected_state(
+        self, manager: ConnectionManager
+    ) -> None:
         """WebSocket in DISCONNECTED state is removed without calling send_json."""
         ws = _make_ws(state=WebSocketState.DISCONNECTED)
         manager._active.add(ws)  # bypass connect() intentionally
@@ -141,11 +155,15 @@ class TestConnectionManager:
         assert manager.active_count == 0
 
     @pytest.mark.asyncio
-    async def test_broadcast_with_no_clients_is_silent(self, manager: ConnectionManager) -> None:
+    async def test_broadcast_with_no_clients_is_silent(
+        self, manager: ConnectionManager
+    ) -> None:
         await manager.broadcast({"type": "ping"})  # must not raise
 
     @pytest.mark.asyncio
-    async def test_send_personal_returns_false_on_error(self, manager: ConnectionManager) -> None:
+    async def test_send_personal_returns_false_on_error(
+        self, manager: ConnectionManager
+    ) -> None:
         ws = _make_ws()
         ws.send_json = AsyncMock(side_effect=OSError("reset by peer"))
 
@@ -154,7 +172,9 @@ class TestConnectionManager:
         assert result is False
 
     @pytest.mark.asyncio
-    async def test_send_personal_returns_true_on_success(self, manager: ConnectionManager) -> None:
+    async def test_send_personal_returns_true_on_success(
+        self, manager: ConnectionManager
+    ) -> None:
         ws = _make_ws()
         result = await manager.send_personal(ws, {"type": "x"})
 
@@ -194,7 +214,9 @@ class TestRF14:
         ws.send_json.assert_not_awaited()
 
     @pytest.mark.asyncio
-    async def test_exact_threshold_does_not_trigger(self, manager: ConnectionManager) -> None:
+    async def test_exact_threshold_does_not_trigger(
+        self, manager: ConnectionManager
+    ) -> None:
         """Boundary: probability == 0.70 must NOT trigger (rule is strict >)."""
         ws = _make_ws()
         await manager.connect(ws)
@@ -232,6 +254,7 @@ class TestHeartbeat:
         ws = _make_ws()
         await manager.connect(ws)
         task = manager._heartbeat_task
+        assert task is not None
 
         manager.disconnect(ws)
         await asyncio.sleep(0)  # yield to let the cancellation propagate
@@ -244,6 +267,7 @@ class TestHeartbeat:
         await manager.connect(ws)
 
         with patch("src.core.ws_manager.HEARTBEAT_INTERVAL", 0):
+            assert manager._heartbeat_task is not None
             manager._heartbeat_task.cancel()
             manager._heartbeat_task = asyncio.create_task(manager._heartbeat_loop())
             await asyncio.sleep(0.05)
@@ -269,6 +293,7 @@ class TestHeartbeat:
         task_b = manager._heartbeat_task
 
         # Second connect must reuse the running task, not create a new one.
+        assert task_a is not None
         assert task_a is task_b or task_a.done()
 
         manager.disconnect(ws1)
@@ -313,7 +338,9 @@ class TestAlertService:
         ws.send_json.assert_not_awaited()
 
     @pytest.mark.asyncio
-    async def test_payload_contains_required_fields(self, manager: ConnectionManager) -> None:
+    async def test_payload_contains_required_fields(
+        self, manager: ConnectionManager
+    ) -> None:
         service = AlertService(manager)
         result = await service.process_prediction({"probability": 0.3})
 
@@ -321,7 +348,9 @@ class TestAlertService:
             assert field in result, f"Missing field: {field}"
 
     @pytest.mark.asyncio
-    async def test_message_id_is_unique_per_call(self, manager: ConnectionManager) -> None:
+    async def test_message_id_is_unique_per_call(
+        self, manager: ConnectionManager
+    ) -> None:
         service = AlertService(manager)
         r1 = await service.process_prediction({"probability": 0.1})
         r2 = await service.process_prediction({"probability": 0.1})

@@ -16,6 +16,12 @@ Nota de convenção: dos routers existentes, só `predictions.py` usa prefixo
 inexistente — como a especificação desta task pede o path exato com `/v1/`,
 seguimos o precedente de `predictions.py` aqui, sem alterar os outros
 routers. Ver README "RF-22 — Divergências".
+
+RNF-56: a factory `get_maintenance_suggestion_service` e os imports de
+`MCPSearchClient`/`OllamaClient` (infraestrutura) foram movidos para
+`src/services/maintenance_suggestion_service.py` — este router só conhece
+o Protocol (`MaintenanceSuggestionServiceProtocol`), nunca os clientes
+concretos por trás dele.
 """
 
 from __future__ import annotations
@@ -28,17 +34,15 @@ import structlog
 from fastapi import APIRouter, Depends, Request, status
 from fastapi.responses import StreamingResponse
 
-from src.core.config import settings
 from src.schemas.maintenance import (
     MaintenanceSuggestionRequest,
     MaintenanceSuggestionResponse,
 )
 from src.services.maintenance_suggestion_service import (
-    MaintenanceSuggestionService,
     SuggestionStreamEvent,
+    get_maintenance_suggestion_service,
 )
-from src.services.mcp_client import MCPSearchClient
-from src.services.ollama_client import OllamaClient
+from src.services.protocols import MaintenanceSuggestionServiceProtocol
 
 log = structlog.get_logger(__name__)
 
@@ -52,28 +56,6 @@ _SSE_HEADERS = {
 }
 
 router: APIRouter = APIRouter(prefix="/v1/maintenance", tags=["Maintenance"])
-
-
-def get_maintenance_suggestion_service() -> MaintenanceSuggestionService:
-    """FastAPI Depends factory — instancia clientes leves (sem estado de
-    conexão persistente) a cada requisição, igual ao padrão de
-    `get_alert_service`. Nenhum singleton de processo necessário aqui: o
-    custo real (modelo de embeddings, ChromaDB) já é amortizado do lado do
-    mcp-server (RF-21, `server._get_service`)."""
-    mcp_client = MCPSearchClient(
-        base_url=settings.mcp_server_url,
-        timeout=settings.mcp_client_timeout_seconds,
-    )
-    ollama_client = OllamaClient(
-        base_url=settings.ollama_base_url,
-        model=settings.ollama_model,
-        timeout=settings.ollama_client_timeout_seconds,
-    )
-    return MaintenanceSuggestionService(
-        mcp_client=mcp_client,
-        ollama_client=ollama_client,
-        model=settings.ollama_model,
-    )
 
 
 @router.post(
@@ -98,7 +80,9 @@ def get_maintenance_suggestion_service() -> MaintenanceSuggestionService:
 )
 async def suggest_maintenance(
     payload: MaintenanceSuggestionRequest,
-    service: MaintenanceSuggestionService = Depends(get_maintenance_suggestion_service),
+    service: MaintenanceSuggestionServiceProtocol = Depends(
+        get_maintenance_suggestion_service
+    ),
 ) -> MaintenanceSuggestionResponse:
     return await service.suggest(payload)
 
@@ -141,7 +125,9 @@ def _format_sse_event(event: SuggestionStreamEvent) -> str:
 async def suggest_maintenance_stream(
     request: Request,
     payload: MaintenanceSuggestionRequest,
-    service: MaintenanceSuggestionService = Depends(get_maintenance_suggestion_service),
+    service: MaintenanceSuggestionServiceProtocol = Depends(
+        get_maintenance_suggestion_service
+    ),
 ) -> StreamingResponse:
     async def event_generator() -> AsyncGenerator[str, None]:
         log.info("maintenance_stream_opened", probability=payload.failure_probability)

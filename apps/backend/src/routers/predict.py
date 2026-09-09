@@ -20,6 +20,11 @@ threadpool via ``asyncio.to_thread`` so other coroutines (SSE broadcast,
 WebSocket alerts, health checks) keep running while a single prediction is
 in flight.  Combined with multiple Uvicorn workers in production this gives
 near-linear horizontal scaling under concurrent load.
+
+RNF-56: dependencies typed against `ModelServiceProtocol`/`AlertServiceProtocol`
+(`src/services/protocols.py`) instead of the concrete classes — the
+factories (`get_model_service`/`get_alert_service`) are unchanged, already
+override-friendly (see `tests/test_predict_endpoint.py`).
 """
 
 import asyncio
@@ -30,9 +35,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.core.database import get_db
 from src.core.rate_limit import PREDICT_RATE_LIMIT, limiter
 from src.schemas.predict import PredictRequest, PredictResponse
-from src.services.alert_service import AlertService, get_alert_service
-from src.services.model_service import ModelService, get_model_service
+from src.services.alert_service import get_alert_service
+from src.services.model_service import get_model_service
 from src.services.prediction_service import save_prediction
+from src.services.protocols import AlertServiceProtocol, ModelServiceProtocol
 
 router: APIRouter = APIRouter(prefix="/predict", tags=["Predictions"])
 
@@ -59,9 +65,9 @@ router: APIRouter = APIRouter(prefix="/predict", tags=["Predictions"])
 async def predict(
     request: Request,
     payload: PredictRequest,
-    service: ModelService = Depends(get_model_service),
+    service: ModelServiceProtocol = Depends(get_model_service),
     db: AsyncSession = Depends(get_db),
-    alert_service: AlertService = Depends(get_alert_service),
+    alert_service: AlertServiceProtocol = Depends(get_alert_service),
 ) -> PredictResponse:
     """Run fault detection, persist the result (RF-09) and push WS alert (RF-14)."""
     # CPU-bound inference is dispatched to the default threadpool so the

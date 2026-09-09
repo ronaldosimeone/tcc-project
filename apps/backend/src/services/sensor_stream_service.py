@@ -106,12 +106,29 @@ class SensorStreamService:
         return self._simulator.generate_reading()
 
 
-# Module-level singletons — same pattern as ws_manager.
-# Both share the same SensorSimulator instance so that mode changes from
-# PUT /simulator/mode are immediately reflected in the SSE stream.
-_service = SensorStreamService(simulator=get_simulator())
+# Module-level singleton — same pattern as ws_manager. Shares the same
+# SensorSimulator instance so that mode changes from PUT /simulator/mode
+# are immediately reflected in the SSE stream.
+#
+# RNF-56/57 — achado real: esta linha construía o singleton (e portanto o
+# `SensorSimulator`, e portanto carregava o parquet MetroPT-3 inteiro na
+# memória) NO IMPORT do módulo — `import src.main` (feito por QUALQUER
+# teste, mesmo um que nunca toca `/stream/sensors`) já disparava a leitura
+# do parquet, apesar de `services/simulator.py::get_simulator()` já
+# documentar EXPLICITAMENTE lazy initialization pelo motivo inverso
+# ("avoids crashing the entire test suite when the parquet is absent").
+# Chamar `get_simulator()` aqui, no import, anulava essa proteção — e é a
+# causa raiz real de `pytest` (suíte geral) nunca ter sido habilitado no
+# CI (o comentário em ci.yml culpava Postgres; o bloqueio de verdade era
+# este). Corrigido para o MESMO padrão lazy de `get_simulator()` — nenhuma
+# mudança de comportamento em produção (o singleton continua único, só
+# passa a ser construído no primeiro uso em vez de no import).
+_service: SensorStreamService | None = None
 
 
 def get_sensor_stream_service() -> SensorStreamService:
-    """FastAPI dependency returning the process-wide singleton."""
+    """FastAPI dependency returning the process-wide singleton (lazy)."""
+    global _service
+    if _service is None:
+        _service = SensorStreamService(simulator=get_simulator())
     return _service

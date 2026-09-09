@@ -15,6 +15,11 @@ Client → Server
 RF-14: alerts are pushed immediately when probability > 0.70.
 RNF-30: server sends a ping frame every 30 s; dead connections are
          evicted automatically on the next failed send.
+
+RNF-56: `get_ws_manager` e o import de `ConnectionManager`/`manager`
+(infraestrutura) foram movidos para `src/core/ws_manager.py` — este router
+só conhece o Protocol (`AlertBroadcasterProtocol`), nunca a classe
+concreta/singleton por trás dele.
 """
 
 from __future__ import annotations
@@ -24,21 +29,12 @@ from typing import Any
 import structlog
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
 
-from src.core.ws_manager import ConnectionManager, manager
+from src.core.ws_manager import get_ws_manager
+from src.services.protocols import AlertBroadcasterProtocol
 
 log = structlog.get_logger(__name__)
 
 router = APIRouter(tags=["websocket"])
-
-
-# ---------------------------------------------------------------------------
-# Dependency injection
-# ---------------------------------------------------------------------------
-
-
-def get_ws_manager() -> ConnectionManager:
-    """Return the module-level singleton ConnectionManager."""
-    return manager
 
 
 # ---------------------------------------------------------------------------
@@ -58,7 +54,7 @@ def _ack(message_id: str, status: str = "received") -> dict[str, Any]:
 @router.websocket("/ws/alerts")
 async def websocket_alerts(
     websocket: WebSocket,
-    ws_manager: ConnectionManager = Depends(get_ws_manager),
+    ws_manager: AlertBroadcasterProtocol = Depends(get_ws_manager),
 ) -> None:
     """
     Bidirectional alert channel.

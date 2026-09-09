@@ -4,8 +4,24 @@ __pycache__/
 apps/frontend/.pnpm-store/
 
 # ML data – never commit datasets
-apps/ml/data/
+#
+# RNF-56/57 — exceção deliberada: apps/ml/data/processed/metropt3.parquet
+# (~28MB) É commitado, mesmo padrão já usado pelos artefatos .onnx/.joblib
+# (maiores, já versionados em apps/ml/models/). Necessário para que a
+# suíte de testes (SensorSimulator/SensorStreamService/DriftMonitor) rode
+# de ponta a ponta num checkout limpo de CI, sem Postgres/Docker — sem
+# ele, ~34 testes ficam pulados (skipif) e a cobertura medida no CI cai
+# abaixo do piso de 80% (RNF-57). O dataset bruto (apps/ml/data/raw/,
+# ~430MB) continua fora do git — só o parquet PROCESSADO, já pequeno o
+# suficiente, é a exceção. `apps/ml/data/` trocado por `apps/ml/data/*`
+# porque o git não permite "designorar" um arquivo cujo diretório pai
+# esteja ignorado recursivamente (a barra final na regra antiga).
+apps/ml/data/*
+!apps/ml/data/processed/
+apps/ml/data/processed/*
+!apps/ml/data/processed/metropt3.parquet
 *.parquet
+!apps/ml/data/processed/metropt3.parquet
 *.csv
 apps/ml/checkpoints/
 

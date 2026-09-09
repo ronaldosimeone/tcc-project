@@ -29,8 +29,10 @@ from src.services.alert_service import (
     get_alert_settings_service,
     get_notification_test_service,
 )
-from src.services.alert_settings_service import AlertSettingsService
-from src.services.notification_test_service import NotificationTestService
+from src.services.protocols import (
+    AlertSettingsServiceProtocol,
+    NotificationTestServiceProtocol,
+)
 
 router: APIRouter = APIRouter(
     prefix="/v1/settings",
@@ -51,7 +53,7 @@ router: APIRouter = APIRouter(
     ),
 )
 async def get_alert_settings(
-    service: AlertSettingsService = Depends(get_alert_settings_service),
+    service: AlertSettingsServiceProtocol = Depends(get_alert_settings_service),
 ) -> AlertSettingsResponse:
     config = await service.get_settings()
     return AlertSettingsResponse(
@@ -76,7 +78,7 @@ async def get_alert_settings(
 )
 async def update_alert_settings(
     payload: AlertSettingsUpdateRequest,
-    service: AlertSettingsService = Depends(get_alert_settings_service),
+    service: AlertSettingsServiceProtocol = Depends(get_alert_settings_service),
 ) -> AlertSettingsResponse:
     saved = await service.upsert_settings(
         alert_threshold=payload.alert_threshold,
@@ -113,7 +115,7 @@ async def update_alert_settings(
     },
 )
 async def test_notification(
-    service: NotificationTestService = Depends(get_notification_test_service),
+    service: NotificationTestServiceProtocol = Depends(get_notification_test_service),
 ) -> NotificationTestResponse:
     message = await service.send_test_notification()
     return NotificationTestResponse(message=message)

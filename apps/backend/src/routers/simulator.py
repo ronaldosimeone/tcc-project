@@ -10,7 +10,8 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends
 
 from src.schemas.simulator import ModeRequest, ModeResponse
-from src.services.simulator import SensorSimulator, get_simulator
+from src.services.protocols import SensorSimulatorProtocol
+from src.services.simulator import get_simulator
 
 router = APIRouter(prefix="/simulator", tags=["simulator"])
 
@@ -22,7 +23,7 @@ router = APIRouter(prefix="/simulator", tags=["simulator"])
 )
 async def set_mode(
     payload: ModeRequest,
-    simulator: SensorSimulator = Depends(get_simulator),
+    simulator: SensorSimulatorProtocol = Depends(get_simulator),
 ) -> ModeResponse:
     """
     Switch the data-generation mode in real time.
@@ -43,7 +44,7 @@ async def set_mode(
     summary="Query current simulator mode",
 )
 async def get_mode(
-    simulator: SensorSimulator = Depends(get_simulator),
+    simulator: SensorSimulatorProtocol = Depends(get_simulator),
 ) -> ModeResponse:
     """Return the currently active simulation mode."""
     return ModeResponse(

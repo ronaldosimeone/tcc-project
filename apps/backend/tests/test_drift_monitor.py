@@ -36,6 +36,8 @@ from typing import AsyncGenerator
 import numpy as np
 import pandas as pd
 import pytest
+
+from src.core.config import settings
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import (
@@ -394,6 +396,14 @@ def test_task_is_registered_in_celery_app() -> None:
     assert callable(daily_drift_analysis_task)
 
 
+@pytest.mark.skipif(
+    not settings.simulator_parquet_path.exists(),
+    reason=(
+        "A task real chama DriftMonitor.load_reference_data(), que precisa "
+        "do parquet MetroPT-3 real — não disponível num checkout limpo de "
+        "CI. Ver test_reference_data_loads_real_baseline_excluding_failure_windows."
+    ),
+)
 def test_task_runs_directly_without_http(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
@@ -602,6 +612,18 @@ def test_evidently_real_high_psi_when_distributions_differ_significantly() -> No
     assert overall_psi > DRIFT_PSI_THRESHOLD
 
 
+@pytest.mark.skipif(
+    not settings.simulator_parquet_path.exists(),
+    reason=(
+        "Requer o parquet real do MetroPT-3 "
+        "(apps/ml/data/processed/metropt3.parquet) — gitignored "
+        "(*.parquet), não disponível num checkout limpo de CI. Gerado "
+        "localmente/no Docker via apps/ml/src/ingest_metropt.py. Mesma "
+        "situação de test_simulator.py (RF-13), que depende do mesmo "
+        "arquivo e já é ignorado da suíte por esse motivo — ver README/"
+        "PENDENCIAS.md."
+    ),
+)
 def test_reference_data_loads_real_baseline_excluding_failure_windows() -> None:
     """`load_reference_data()` real — lê o parquet MetroPT-3 de verdade
     (settings.simulator_parquet_path) e devolve só as colunas monitoradas,

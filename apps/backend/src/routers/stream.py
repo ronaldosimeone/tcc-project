@@ -22,10 +22,8 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
 
 from src.schemas.stream import SensorReading
-from src.services.sensor_stream_service import (
-    SensorStreamService,
-    get_sensor_stream_service,
-)
+from src.services.protocols import SensorStreamServiceProtocol
+from src.services.sensor_stream_service import get_sensor_stream_service
 
 log = structlog.get_logger(__name__)
 
@@ -45,7 +43,7 @@ _SSE_HEADERS = {
 )
 async def stream_sensors(
     request: Request,
-    service: SensorStreamService = Depends(get_sensor_stream_service),
+    service: SensorStreamServiceProtocol = Depends(get_sensor_stream_service),
 ) -> StreamingResponse:
     """
     RF-12: emits all 12 sensor features every 1 second.

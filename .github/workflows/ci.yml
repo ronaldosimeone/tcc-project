@@ -67,28 +67,47 @@ jobs:
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip pytest httpx
+          python -m pip install --upgrade pip pytest httpx pytest-cov import-linter
           if [ -f apps/backend/requirements.txt ]; then pip install -r apps/backend/requirements.txt; fi
           if [ -f apps/ml/requirements.txt ]; then pip install -r apps/ml/requirements.txt; fi
 
-      - name: Run Pytest (Backend)
+      # RNF-56/57 — o step geral de pytest estava desabilitado há tempos
+      # (comentário antigo dizia que exigiria provisionar Postgres no
+      # runner). Auditoria desta task: NENHUM teste do backend usa Postgres
+      # real — todos os que tocam banco usam SQLite em memória
+      # (`sqlite+aiosqlite:///:memory:`, ver qualquer `tests/test_*.py`) —
+      # a causa raiz real era outra (um singleton em
+      # `sensor_stream_service.py` construía o `SensorSimulator` — e
+      # carregava o parquet MetroPT-3 inteiro — no IMPORT do módulo,
+      # quebrando a coleta de QUALQUER teste que importasse `src.main`
+      # sem o parquet disponível; corrigido para lazy, mesmo padrão já
+      # documentado em `services/simulator.py::get_simulator()`).
+      # `--ignore=tests/test_simulator.py`: falha de coleta pré-existente
+      # e não relacionada (`IndexError: 3`, confirmado via `git stash`
+      # antes da RF-22) — mesmo contorno já usado em toda validação local.
+      # Os ~34 testes que ainda dependem do parquet real
+      # (`test_sse_endpoint.py`, 2 testes de `test_drift_monitor.py`) têm
+      # guarda `skipif` própria e são pulados de forma limpa SE o arquivo
+      # não existir — mas ele agora É commitado (ver .gitignore), então em
+      # CI eles rodam normalmente também.
+      #
+      # `--cov=src --cov-report=term-missing`: config de cobertura real em
+      # `apps/backend/pyproject.toml` (`[tool.coverage.report]`,
+      # `fail_under = 80`) — o comando FALHA (exit != 0) se a cobertura
+      # total ficar abaixo de 80% (RNF-57), sem precisar de um step
+      # separado só para checar o número.
+      - name: Run Pytest (Backend, com cobertura — RNF-57)
         run: |
           cd apps/backend
-          # pytest # Descomente quando criar o test_health.py
+          pytest --ignore=tests/test_simulator.py --cov=src --cov-report=term-missing -v
 
-      # RF-26 / RNF-52 — suíte de integração do pipeline completo (Detecção
-      # -> AlertService -> RF-24/25 -> RNF-50 Celery enqueue, e Detecção ->
-      # MaintenanceSuggestionService -> MCP/RF-20-21 (mockado) -> LLM/RF-22
-      # (mockado)). Step isolado e não condicional ao pytest geral acima
-      # (que continua desabilitado — reabilitá-lo está fora do escopo desta
-      # task, ver README "RF-26 — CI"): este arquivo é 100% determinístico
-      # (RNF-52) e não depende de Postgres/Redis/MCP/Ollama/Telegram/Resend
-      # reais, então é seguro rodar isoladamente sem provisionar nenhum
-      # serviço externo no runner.
-      - name: Run Pytest (RF-26 Full Pipeline Integration Test)
+      # RNF-56 — garante que a fronteira routers -> infraestrutura
+      # (MCP/Ollama/Telegram/e-mail/Celery, ver
+      # apps/backend/pyproject.toml::[tool.importlinter]) não regride.
+      - name: Run import-linter (RNF-56)
         run: |
           cd apps/backend
-          pytest tests/test_full_pipeline.py -v
+          lint-imports
 
       - name: Run Pytest (ML)
         run: |
