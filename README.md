@@ -1195,6 +1195,66 @@ Executado contra `docker compose up -d redis celery-worker api` real: `celery-wo
 - `celery-worker` depende de Postgres/Redis saudáveis no `docker-compose.yml`, mas **não** espera a migração Alembic do `api` terminar (`depends_on` não sincroniza com o comando interno de outro serviço) — na prática irrelevante, pois nenhuma task real é enfileirada antes do `api` (e seu `alembic upgrade head`) terminar de subir.
 - Sem result backend — o processo web nunca sabe se uma notificação específica foi entregue com sucesso (só os logs do worker mostram isso). Aceitável dado o design fire-and-forget desta task; um result backend (ex.: o mesmo Redis) poderia ser adicionado depois se essa visibilidade se tornar necessária.
 
+### 4.13. Suíte de integração do pipeline completo — RF-26 / RNF-52
+
+**O que é**: `apps/backend/tests/test_full_pipeline.py` — uma suíte de integração que atravessa as fronteiras reais entre todos os subsistemas construídos nas tasks anteriores, provando que continuam funcionando **em conjunto**, não só isoladamente: Detecção → `AlertService` → RF-14 (alerta WebSocket) + RF-24/25 (decisão de falha crítica) → RNF-50 (enfileiramento Celery, nunca envio síncrono) → task real; e, do mesmo evento, `MaintenanceSuggestionService` → MCP/RF-20-21 → LLM/RF-22 → plano validado.
+
+> **Achado de auditoria (não uma limitação inventada para o teste)**: `MaintenanceSuggestionService` nunca é chamado a partir de `AlertService`/`CriticalFailureNotificationService` em produção — confirmado por busca em todo `src/`, o único ponto de construção é `routers/maintenance.py`, acionado sob demanda pelo frontend (RF-22/23). Os dois "ramos" do diagrama abaixo são hoje fluxos **independentes** que só compartilham a mesma predição de origem, não uma cadeia de chamadas única. A suíte exercita os dois ramos a partir do mesmo evento determinístico de detecção, sem inventar uma integração direta que não existe no código real.
+
+```mermaid
+flowchart TD
+    SENSOR["Sensor Data<br/>(determinístico)"] --> DETECT["Detecção<br/>(contrato exato de InferencePipelineService)"]
+    DETECT --> AS["AlertService.process_prediction()"]
+    AS -->|"RF-14: > 0.70"| WS["broadcast_alert() — WebSocket"]
+    AS --> CFS["CriticalFailureNotificationService<br/>RF-24/25: > 0.85"]
+    CFS -->|"RNF-50"| ENQ["enqueue_notification() — NUNCA síncrono"]
+    ENQ -.->|"testado via chamada direta e controlada"| TASK["celery-worker task"]
+    TASK --> ADAPT["Telegram/EmailNotificationAdapter (mockados)"]
+
+    DETECT -.->|"ramo independente, mesma detecção"| MS["MaintenanceSuggestionService.suggest()<br/>RF-22/23: > 0.70"]
+    MS --> MCP["MCPSearchClient (mockado na fronteira real)"]
+    MCP --> LLM["OllamaClient (mockado)"]
+    LLM --> PLAN["Markdown validado + referências"]
+```
+
+#### Por que o MCP é mockado, não uma ChromaDB real neste arquivo
+
+`SemanticSearchService`/ChromaDB vivem em `apps/mcp-server` — pacote Python e container Docker inteiramente separados de `apps/backend`, sem `chromadb`/`sentence-transformers` nas dependências do backend (confirmado — nenhum dos dois está instalado no container `api`). O backend só fala com o MCP pela rede (`MCPSearchClient`, protocolo streamable-http), nunca em processo. Mockar em `MCPSearchClient.search_maintenance_manual()` é o **menor ponto de integração real** — a fronteira que `MaintenanceSuggestionService` de fato usa — evitando tanto reimplementar a lógica de cosine similarity (duplicação de produção) quanto inflar o backend com uma dependência pesada só para um teste (mesma classe de problema já documentada para o `mcp-server` no §14 "Limitações conhecidas" do torch/CUDA).
+
+A cobertura real e determinística da busca semântica com ChromaDB efêmero — a que os itens 3-5 do enunciado desta task pediam — já existe em `apps/mcp-server/tests/test_semantic_search.py` (RF-21) e foi **estendida** nesta mesma task com `test_distinguishes_pump_motor_and_irrelevant_queries_deterministically`: um modelo de embeddings fake mas sensível ao conteúdo (ao contrário do `_FixedVectorModel` original, que ignora o texto) prova, com um ChromaDB real em diretório temporário, que uma consulta sobre bomba recupera só o manual de bomba, uma sobre motor só o de motor, e uma irrelevante não recupera nada.
+
+#### RF-26 — limite de 5 segundos
+
+Medido com `time.perf_counter()` no teste principal (`test_full_pipeline_critical_prediction`) — **3.1 ms** medidos numa execução isolada, muito abaixo do limite. O gate mede a orquestração real (threshold → rate limit → enqueue → chamada MCP → montagem de prompt → validação de Markdown) — o LLM é mockado e retorna instantaneamente, então o tempo de geração REAL do Ollama (segundos, medido separadamente em `benchmark_maintenance_suggestion.py`, RF-22) está deliberadamente fora desta medição.
+
+#### RNF-52 — determinismo
+
+Sem `random`/`uuid4` sem controle, sem `datetime.now()` nas entradas do teste (timestamps/queries/scores fixos), sem download de modelo, sem Ollama/MCP/Telegram/Resend/Redis/Postgres reais. `AlertService.process_prediction` (código de produção, inalterado) gera internamente um `message_id` (`uuid4()`) e um timestamp de servidor (`datetime.now()`) — nenhuma asserção do teste depende do valor exato desses dois campos: RNF-52 exige que as **entradas** do teste sejam determinísticas, não que código de produção pré-existente pare de usar relógio/uuid real internamente. Executado duas vezes em sequência durante a validação desta task — resultado idêntico (7 passed) nas duas.
+
+#### Fallbacks testados
+
+| Cenário | Comportamento real confirmado |
+|---|---|
+| LLM indisponível (`OllamaUnavailableError`) | `suggest()` propaga a exceção estruturada (sem try/except nesse caminho) — nenhum plano fabricado. O MCP já havia sido consultado com sucesso antes (falha isolada ao LLM) |
+| MCP indisponível (`MCPUnavailableError`) | `suggest()` propaga a exceção — o Ollama nunca chega a ser chamado sem contexto |
+| Nenhum manual indexado (Chroma vazio → `results: []`) | `MaintenanceSuggestionService` **não tem** curto-circuito para contexto vazio — o Ollama É chamado mesmo assim, com um placeholder no prompt; a System Prompt (Regra 4) instrui o modelo a declarar isso em "Limitações" em vez de inventar. `references` fica vazio |
+| Predição abaixo de RF-14/RF-22 (0.65) | Nem WS, nem MCP, nem LLM, nem enqueue |
+| Predição entre RF-22 (0.70) e RF-24 (0.85) — ex. 0.80 | **Sugestão de manutenção DISPARA** (MCP/LLM chamados), mas a notificação crítica **não é enfileirada** — prova de que os dois limiares são realmente independentes (ver nota de auditoria abaixo) |
+
+> **Nota sobre o valor `0.80`**: o enunciado original desta task usa `0.80` como exemplo de "abaixo do threshold" partindo da premissa de um único limiar para todo o pipeline. A auditoria confirmou que RF-22 (`MAINTENANCE_SUGGESTION_THRESHOLD = 0.70`) e RF-24 (`CRITICAL_FAILURE_THRESHOLD = 0.85`) são constantes independentes (documentado desde o RF-24). O teste reflete o comportamento real do projeto em vez de forçar a premissa do enunciado.
+
+#### Celery — enqueue validado com a task real
+
+`test_enqueued_payload_is_consumed_by_the_real_celery_task` usa o payload exato que o passo de notificação produziria e chama `send_critical_failure_notification_task(...)` diretamente (sem broker/worker reais, RNF-52) para fechar o loop `pipeline -> enqueue -> task -> adapter`. Roda como função síncrona (não `async def`) de propósito — a task real faz `asyncio.run(...)` internamente, e chamar isso de dentro do event loop do pytest-asyncio replicaria um erro que um worker Celery real (processo síncrono) nunca teria.
+
+#### Testes e CI
+
+```bash
+docker compose exec api pytest tests/test_full_pipeline.py -v   # 7 testes
+```
+
+Adicionado como step isolado no job `test-python` existente do `.github/workflows/ci.yml` (não um workflow novo) — **não** reabilita o step geral de `pytest` daquele job, que segue comentado desde a criação do CI (fora do escopo desta task: reabilitá-lo exigiria provisionar Postgres no runner para as dezenas de testes pré-existentes que dependem dele, um trabalho maior e não relacionado). `test_full_pipeline.py` é 100% determinístico e não depende de nenhum serviço externo, então é seguro rodá-lo isoladamente no CI hoje.
+
 ---
 
 ## 5. Modelos de Machine Learning

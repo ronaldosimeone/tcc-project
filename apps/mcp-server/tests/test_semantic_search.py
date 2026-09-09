@@ -440,3 +440,86 @@ def test_very_large_query_does_not_crash(tmp_path: Path) -> None:
     results = service.search(huge_query)  # não deve lançar exceção
 
     assert isinstance(results, list)
+
+
+# ---------------------------------------------------------------------------
+# 16 — Distinção temática real (RF-26 / RNF-52, suíte de integração do
+# pipeline completo): prova que a busca semântica distingue CONTEÚDO, não só
+# que a fórmula de cosine similarity funciona em abstrato (já coberto acima
+# com `_FixedVectorModel`, que ignora o texto de entrada). Usa ChromaDB
+# efêmero real (`tmp_path`, nunca `data/chroma`) — nenhum download de modelo.
+# ---------------------------------------------------------------------------
+
+
+class _KeywordVectorModel:
+    """Fake SentenceTransformer cujo embedding depende do CONTEÚDO do texto
+    (ao contrário de `_FixedVectorModel`, que devolve sempre o mesmo vetor
+    não importa a entrada). Necessário para provar, deterministicamente e
+    sem baixar nenhum modelo real, que consultas de temas diferentes
+    recuperam documentos diferentes."""
+
+    def __init__(self) -> None:
+        self.encode_calls: list[str] = []
+
+    def encode(
+        self, texts, batch_size=32, show_progress_bar=False, convert_to_numpy=True
+    ):
+        self.encode_calls.extend(texts)
+        return np.array([_keyword_vector(text) for text in texts])
+
+
+def _keyword_vector(text: str) -> list[float]:
+    """3 eixos determinísticos — [bomba, motor, outro] — 1.0 se a palavra
+    aparece no texto (case-insensitive), senão 0.0. Simples o bastante para
+    ser auditável a olho, mas usa a MESMA `cosine_similarity` real do
+    módulo — nenhuma lógica de produção é reimplementada aqui."""
+    lowered = text.lower()
+    is_pump = "bomba" in lowered
+    is_motor = "motor" in lowered
+    return [
+        1.0 if is_pump else 0.0,
+        1.0 if is_motor else 0.0,
+        1.0 if not (is_pump or is_motor) else 0.0,
+    ]
+
+
+def test_distinguishes_pump_motor_and_irrelevant_queries_deterministically(
+    tmp_path: Path,
+) -> None:
+    """Insere um chunk de manual de bomba e um de motor (metadados RF-20
+    completos) — consulta sobre bomba recupera só o chunk de bomba, consulta
+    sobre motor recupera só o de motor, consulta irrelevante não recupera
+    nada. Sem `random`, sem download, sem I/O de rede — só ChromaDB efêmero
+    + o fake model acima."""
+    collection = im.get_collection(tmp_path / "chroma")
+    _add_chunk(
+        collection,
+        "pump-1",
+        "Manual da bomba centrífuga: verificar vedação a cada 6 meses.",
+        [1.0, 0.0, 0.0],
+        file_name="bomba-centrifuga-cx500.pdf",
+        page=4,
+    )
+    _add_chunk(
+        collection,
+        "motor-1",
+        "Manual do motor elétrico: lubrificar rolamentos a cada 3 meses.",
+        [0.0, 1.0, 0.0],
+        file_name="motor-eletrico-me200.pdf",
+        page=2,
+    )
+
+    service = SemanticSearchService(collection=collection, model=_KeywordVectorModel())
+
+    pump_results = service.search("Problema na bomba")
+    motor_results = service.search("Problema no motor")
+    irrelevant_results = service.search("Receita de bolo de chocolate")
+
+    assert len(pump_results) == 1
+    assert pump_results[0].metadata["file_name"] == "bomba-centrifuga-cx500.pdf"
+    assert pump_results[0].score == pytest.approx(1.0)
+
+    assert len(motor_results) == 1
+    assert motor_results[0].metadata["file_name"] == "motor-eletrico-me200.pdf"
+
+    assert irrelevant_results == []

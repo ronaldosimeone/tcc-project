@@ -76,6 +76,20 @@ jobs:
           cd apps/backend
           # pytest # Descomente quando criar o test_health.py
 
+      # RF-26 / RNF-52 — suíte de integração do pipeline completo (Detecção
+      # -> AlertService -> RF-24/25 -> RNF-50 Celery enqueue, e Detecção ->
+      # MaintenanceSuggestionService -> MCP/RF-20-21 (mockado) -> LLM/RF-22
+      # (mockado)). Step isolado e não condicional ao pytest geral acima
+      # (que continua desabilitado — reabilitá-lo está fora do escopo desta
+      # task, ver README "RF-26 — CI"): este arquivo é 100% determinístico
+      # (RNF-52) e não depende de Postgres/Redis/MCP/Ollama/Telegram/Resend
+      # reais, então é seguro rodar isoladamente sem provisionar nenhum
+      # serviço externo no runner.
+      - name: Run Pytest (RF-26 Full Pipeline Integration Test)
+        run: |
+          cd apps/backend
+          pytest tests/test_full_pipeline.py -v
+
       - name: Run Pytest (ML)
         run: |
           cd apps/ml
