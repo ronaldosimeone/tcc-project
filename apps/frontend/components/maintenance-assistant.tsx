@@ -254,13 +254,16 @@ function SuggestionForm({ disabled, onSubmit }: SuggestionFormProps) {
 function ReferencesList({ references }: { references: ManualReference[] }) {
   if (references.length === 0) {
     return (
-      <p className="text-xs text-muted-foreground">
+      <p
+        data-testid="maintenance-references"
+        className="text-xs text-muted-foreground"
+      >
         Nenhum manual foi citado como referência para este plano.
       </p>
     );
   }
   return (
-    <ul className="flex flex-col gap-1.5">
+    <ul data-testid="maintenance-references" className="flex flex-col gap-1.5">
       {references.map((ref, i) => (
         <li
           key={`${ref.file_name}-${ref.page}-${ref.chunk_index}-${i}`}

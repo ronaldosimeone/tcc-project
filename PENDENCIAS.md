@@ -32,6 +32,24 @@ merge/uso do sistema — documentados aqui para rastreio.
   qualquer deploy de produção, senão o link enviado no alerta do Telegram
   aponta para `localhost` do lado errado da rede.
 
+## RNF-53 / RNF-54 — E2E/visual (Playwright + MSW)
+
+- **`failure_alert.spec.ts`/`dashboard_flow.spec.ts` (pré-existentes,
+  RNF-16/17) falham num container Playwright isolado e limpo** — as rotas
+  relativas `/api/stream/sensors`/`/api/v1/predictions` não são
+  interceptadas pelo MSW nesse método de validação (reproduzido sob Node 20
+  e Node 24, sem alterar nenhuma linha desses specs). Não é uma regressão
+  desta task — descoberto DURANTE a validação de `maintenance_assistant.spec.ts`
+  (cujo teste RNF-53 depende do mesmo mecanismo no primeiro passo). **Para
+  investigar**: confirmar se o runner real do GitHub Actions reproduz o
+  mesmo problema (não verificado — só validado localmente/ad-hoc) e, se
+  sim, determinar por que as rotas relativas do dashboard não casam com os
+  handlers de `mocks/handlers.ts` nesse ambiente específico.
+- Consequência direta do item acima: o teste
+  `maintenance_assistant.spec.ts::RNF-53` falha de forma consistente no seu
+  PRIMEIRO passo (banner crítico do Dashboard) até o achado acima ser
+  corrigido — os outros 6 testes do mesmo arquivo passam 100% estáveis.
+
 ## RNF-50 / RNF-51 — Fila assíncrona de notificações (Celery + Redis)
 
 - **Sem retry automático** (`max_retries=0`, deliberado) — uma falha de rede

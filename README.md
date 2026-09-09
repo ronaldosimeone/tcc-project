@@ -1255,6 +1255,62 @@ docker compose exec api pytest tests/test_full_pipeline.py -v   # 7 testes
 
 Adicionado como step isolado no job `test-python` existente do `.github/workflows/ci.yml` (não um workflow novo) — **não** reabilita o step geral de `pytest` daquele job, que segue comentado desde a criação do CI (fora do escopo desta task: reabilitá-lo exigiria provisionar Postgres no runner para as dezenas de testes pré-existentes que dependem dele, um trabalho maior e não relacionado). `test_full_pipeline.py` é 100% determinístico e não depende de nenhum serviço externo, então é seguro rodá-lo isoladamente no CI hoje.
 
+### 4.14. Cobertura E2E/visual — Assistente de Manutenção e Configurações de Alertas (RNF-53 / RNF-54)
+
+**O que é**: dois specs Playwright que exercitam a aplicação como um usuário real (clicar, preencher, observar loading/streaming/erro) contra os dois painéis construídos nas tasks anteriores — o Assistente de Manutenção (RF-22/23) e a página `/settings/alerts` (RF-25) — usando o Playwright + MSW **já existentes** no projeto (`playwright.config.ts`, `apps/frontend/e2e/`, `mocks/handlers.ts`, `MswProvider`), reutilizados e estendidos, não recriados.
+
+> **Convenção de arquivo**: o enunciado desta task sugere `apps/frontend/tests/*.spec.ts`, mas o projeto já usa `apps/frontend/e2e/*.spec.ts` (`dashboard_flow.spec.ts`, `failure_alert.spec.ts`, RNF-16/17) — os dois novos specs seguem a convenção REAL já estabelecida.
+
+#### Auditoria (RNF-54) — Anthropic não existe; a integração real é o Ollama
+
+O enunciado desta task menciona "Anthropic", mas o projeto **nunca usou Anthropic** — confirmado por busca em todo o repositório (a única menção existente é uma negação explícita no docstring de `ollama_client.py`: *"nenhuma chamada a OpenAI/Anthropic/Gemini"*). A integração de LLM real é o **Ollama local** (Llama 3.2 3B, RF-22/RNF-46), consumida via streaming SSE (`fetch` + `ReadableStream`, RF-23/RNF-47). A fronteira mockada por MSW é exatamente essa — `POST /v1/maintenance/suggest/stream` — não uma integração Anthropic inventada. Telegram (RF-24) e e-mail/Resend (RF-25) — as integrações de notificação que o enunciado também menciona — **já existem de verdade** no projeto e foram mockadas em suas fronteiras reais (`POST /v1/settings/alerts/test`), sem substituição por nada diferente.
+
+#### Endpoints reais interceptados (`mocks/handlers.ts`)
+
+| Endpoint real | Usado por | Cenários (`window.__E2E_*_SCENARIO__`) |
+|---|---|---|
+| `GET /v1/settings/alerts` | `AlertSettingsForm` | default · `configured` · `get-error` |
+| `PUT /v1/settings/alerts` | `AlertSettingsForm` | grava o payload em `window.__E2E_LAST_SETTINGS_PUT__` · `put-error` |
+| `POST /v1/settings/alerts/test` | `AlertSettingsForm` (botão "Testar Notificação") | conta chamadas em `window.__E2E_TEST_NOTIFICATION_CALL_COUNT__` · `test-error` |
+| `POST /v1/maintenance/suggest/stream` | `MaintenanceAssistant` (`useMaintenanceStream`) | default (plano da bomba) · `llm-error` · `no-manual` |
+
+O corpo do stream é um `ReadableStream` **real** (não uma string única disfarçada) — os eventos SSE são enfileirados com um pequeno delay entre si (`sseStream()` em `handlers.ts`) para que os estados intermediários (`searching`/`generating`) tenham uma janela real de tempo para renderizar, exercitando o parser incremental de `maintenance-stream.ts` de verdade.
+
+**Autenticação (item 19)**: auditado — `lib/api-client.ts` nunca envia `X-Admin-Token`, nem em produção (a proteção real depende do modo dev do RF-11). Nada para mockar do lado do browser; nenhuma autenticação paralela foi criada.
+
+#### RNF-53 — Falha → Assistente → Reconhecimento
+
+```mermaid
+flowchart TD
+    A["Dashboard: __E2E_SCENARIO__='critical'<br/>banner 'FALHA CRÍTICA DETECTADA' (RF-08)"] --> B["Usuário clica 'Assistente de IA' na Sidebar"]
+    B --> C["Preenche o MESMO equipamento/sintoma da falha"]
+    C --> D["searching — 'Buscando manual…'"]
+    D --> E["generating — Markdown chega incrementalmente"]
+    E --> F["done — Diagnóstico + Procedimento + Referência do manual"]
+```
+
+> **Achado de arquitetura**: o Dashboard e o Assistente **não compartilham dados automaticamente** — confirmado lendo `SuggestionForm`: valores default fixos, nunca derivados do alerta ativo. O teste reflete essa realidade real do produto (detecta no Dashboard, abre o Assistente — disponível globalmente via Sidebar —, informa manualmente os dados do mesmo equipamento) em vez de inventar um data-binding que não existe.
+
+"Reconhecimento" (item 9), definido pelo comportamento REAL da UI, não um componente novo: heading "Diagnóstico provável" + texto citando o equipamento + referência do manual (`bomba-centrifuga-cx500.pdf`, página 4, score 0.82) em `data-testid="maintenance-references"` — um `data-testid` novo adicionado ao `ReferencesList` (única mudança de produção desta task: um atributo, zero mudança de comportamento) porque o nome do arquivo aparece legitimamente duas vezes na tela (no Markdown gerado pelo LLM E na lista estruturada de metadados) — dois locators de texto válidos, não uma falha de acessibilidade.
+
+#### Achado — pré-existente, não corrigido (fora de escopo)
+
+O PRIMEIRO passo do teste RNF-53 (banner crítico do Dashboard) depende do mesmo mecanismo de `/api/stream/sensors`/`/api/v1/predictions` que os specs **já existentes** `failure_alert.spec.ts`/`dashboard_flow.spec.ts` usam. Ao validar esta task, reproduzi esses DOIS specs pré-existentes (sem alterar nenhuma linha deles) num ambiente isolado e limpo (container Playwright oficial, Node 20 — a versão real do projeto — e também Node 24) e **ambos falham** (8/9 e 6/6 testes, respectivamente) com o mesmo padrão: as rotas relativas `/api/stream/sensors`/`/api/v1/predictions` não são interceptadas pelo MSW nesse método de validação, então o banner crítico nunca aparece. Isso é **pré-existente e independente desta task** (reproduzido em specs que eu não toquei) — não foi corrigido, seguindo a instrução explícita de não corrigir testes não relacionados. Por causa disso, o teste RNF-53 (que depende do MESMO mecanismo só no seu primeiro passo) falha de forma consistente e determinística nesse método de validação — os outros 6 testes do mesmo arquivo, que não dependem desse mecanismo, passam 100% de forma estável. Não foi possível confirmar com certeza se o runner real do GitHub Actions (Ubuntu, ambiente diferente deste container ad-hoc) reproduz o mesmo problema — ver "Limitações" no relatório desta task.
+
+#### Testes e execução
+
+```bash
+pnpm exec playwright test e2e/maintenance_assistant.spec.ts
+pnpm exec playwright test e2e/alert_settings.spec.ts
+pnpm exec playwright test   # suíte completa
+```
+
+`alert_settings.spec.ts`: **12/12 passam**, de forma estável em execuções repetidas. `maintenance_assistant.spec.ts`: **6/7 passam** de forma estável — o 7º (RNF-53) é bloqueado no primeiro passo pelo achado pré-existente acima.
+
+#### CI
+
+**Nenhuma mudança no `.github/workflows/ci.yml`** — o job `test-e2e` já existente executa `pnpm e2e` (`playwright test`, `testDir: "./e2e"`), que descobre automaticamente qualquer `*.spec.ts` nessa pasta — os dois specs novos já rodam nesse pipeline sem nenhuma alteração de configuração. O job já instala o Chromium (`playwright install chromium --with-deps`), já preserva `playwright-report`/`e2e-results` como artefatos em caso de falha, e já roda sem nenhum serviço externo real (Ollama/Telegram/Resend/MCP/Redis/Postgres) — só o frontend + MSW.
+
 ---
 
 ## 5. Modelos de Machine Learning
