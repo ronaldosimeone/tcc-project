@@ -25,6 +25,17 @@ apps/ml/data/processed/*
 *.csv
 apps/ml/checkpoints/
 
+# RNF-60/61 — o dataset bruto (o .zip oficial da UCI, ~208 MB; o
+# MetroPT3(AirCompressor).csv extraído dele, ~218 MB, é regenerado do zip
+# e permanece só local) passa a ser rastreado pelo DVC (`dvc add`) em vez
+# de ficar só no disco do dev sem versionamento nenhum. O Git continua sem
+# o binário em si — só o ponteiro `.dvc` (poucos bytes) que o `dvc add`
+# gera precisa ser designorado aqui, mesmo padrão de negação já usado
+# acima para o parquet processado.
+!apps/ml/data/raw/
+apps/ml/data/raw/*
+!apps/ml/data/raw/*.dvc
+
 # Python
 # Python Virtual Environment
 .venv/

@@ -114,6 +114,26 @@ jobs:
           cd apps/ml
           # pytest # Descomente quando criar o test_ingest_metropt.py
 
+      # RNF-60/61 — validação ESTRUTURAL do pipeline DVC (grafo bem-formado,
+      # ambiente sadio). Deliberadamente NÃO roda `dvc repro`/`push`/`pull`
+      # aqui: exigiria o .zip bruto (~208 MB, não versionado no Git — só o
+      # ponteiro .dvc) e um MinIO/S3 real acessível pelo runner —
+      # infraestrutura que o CI não tem hoje. Reprodução completa é validada
+      # localmente (ver relatório da task RNF-60/61); documentado como
+      # limitação conhecida, não mascarado com mocks que não validariam o
+      # pipeline real. Os 3 comandos saem com código 0 mesmo sem o .zip e
+      # sem credenciais (testado): `doctor` checa o ambiente, `dag` valida
+      # que o dvc.yaml é um grafo bem-formado, `status` falha só se o
+      # dvc.lock estiver corrompido/incoerente (a linha "deleted:
+      # metropt-3+dataset.zip" que ele imprime no CI é esperada e não
+      # quebra o build).
+      - name: Validate DVC pipeline structure (RNF-60/61)
+        run: |
+          cd apps/ml
+          dvc doctor
+          dvc dag
+          dvc status
+
   # 4. Lint TypeScript (ESLint, Prettier)
   lint-typescript:
     name: Lint TypeScript

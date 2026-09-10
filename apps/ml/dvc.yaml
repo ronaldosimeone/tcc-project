@@ -1,0 +1,91 @@
+stages:
+  # ── Ingestão (RF-01) ────────────────────────────────────────────────────
+  # download/extração do ZIP oficial (auditado: apenas se ausente) → CSV →
+  # rotulagem de anomalias (intervalos de falha reais) → Parquet.
+  # `data/raw/metropt-3+dataset.zip` (~208 MB) é o único binário GRANDE que
+  # não era versionado por nada (nem Git, nem DVC) antes desta task — por
+  # isso é o único `dep` real gerenciado pelo DVC neste stage (RNF-61).
+  # O CSV extraído fica em disco mas não entra como dep/out formal: é
+  # regenerado deterministicamente do zip por `extract_csv()` sempre que
+  # ausente, e não faz sentido guardar duas cópias quase idênticas dos
+  # mesmos ~430 MB no remote.
+  ingest:
+    cmd: python -m src.ingest_metropt
+    deps:
+      - src/ingest_metropt.py
+      - data/raw/metropt-3+dataset.zip
+    outs:
+      # metropt3.parquet (~28 MB) já é commitado DIRETAMENTE no Git desde a
+      # RNF-56/57 desta mesma sessão — a suíte de testes do backend
+      # (SensorSimulator/SensorStreamService/DriftMonitor) depende dele
+      # existir num checkout limpo de CI, sem precisar de `dvc pull`.
+      # `cache: false` mantém esse contrato: o DVC rastreia que este
+      # arquivo É a saída do stage `ingest` (para o grafo de dependências
+      # e detecção de staleness), mas NÃO move o arquivo para o cache/
+      # remote DVC nem o re-gitignora — continua um arquivo Git normal.
+      - data/processed/metropt3.parquet:
+          cache: false
+
+  # ── Treino — Random Forest (RF-04 / RNF-10) ─────────────────────────────
+  # Modelo ATIVO em produção (ACTIVE_MODEL=random_forest_v2, vencedor do
+  # benchmark RF-18/RNF-36 — ver .env.example). GridSearchCV + refit final
+  # com SMOTE, tudo com random_state=42 fixo — determinístico.
+  train_random_forest:
+    cmd: python -m src.train_random_forest
+    deps:
+      - src/train_random_forest.py
+      - src/preprocessing.py
+      - src/balancing.py
+      - data/processed/metropt3.parquet
+    outs:
+      # Os artefatos já são commitados diretamente no Git (mesmo padrão de
+      # model_card.json/onnx já estabelecido no projeto) — o backend os
+      # consome via bind-mount, sem passo de `dvc pull`. Mesmo raciocínio
+      # do `cache: false` do stage `ingest` acima. `model_card.json` entra
+      # como `metrics:` (não `outs:` de novo — o DVC trata isso como
+      # duplicata) porque também é uma saída, só que com métricas reais.
+      - models/random_forest_final.joblib:
+          cache: false
+      - models/random_forest_v2.onnx:
+          cache: false
+    metrics:
+      - models/model_card.json:
+          cache: false
+
+  # ── Treino — XGBoost (RF-10 / RNF-23) ────────────────────────────────────
+  # Candidato de benchmark (não é o ACTIVE_MODEL hoje). `--n-trials 5`
+  # aqui é o "quick smoke run" já documentado no próprio script (linha
+  # "Quick smoke run (5 trials, ~2 min...)") — usado deliberadamente para
+  # manter `dvc repro` rápido o bastante para validar de verdade neste
+  # pipeline (idempotência, rebuild, etc.); um retrain de produção real
+  # usaria `--n-trials 100` manualmente, fora do dvc repro automático.
+  #
+  # NOTA DE DETERMINISMO (seção 5): `optuna.create_study()` não recebe
+  # `sampler=TPESampler(seed=...)` — a AMOSTRAGEM de hiperparâmetros pelo
+  # Optuna não é semeada explicitamente. `random_state=42` cobre o split
+  # train/test, o K-Fold da CV interna e o XGBClassifier em si, mas a
+  # ESCOLHA de quais hiperparâmetros o TPE testa em cada trial pode variar
+  # entre execuções "do zero" (study.db ausente). Isto é uma lacuna real
+  # pré-existente do script, não introduzida por esta task — documentada
+  # aqui e nas Pendências do relatório, não corrigida (mudar a lógica de
+  # treino está fora do escopo desta task de DVC).
+  train_xgboost:
+    cmd: python -m src.train_xgboost --n-trials 5
+    deps:
+      - src/train_xgboost.py
+      - src/preprocessing.py
+      - data/processed/metropt3.parquet
+    outs:
+      - models/xgboost_v1.joblib:
+          cache: false
+      - models/xgboost_v2.onnx:
+          cache: false
+      # data/optuna/xgboost_study.db é DELIBERADAMENTE excluído de outs:
+      # é um SQLite que ACUMULA trials entre execuções (Optuna
+      # `load_if_exists=True`) — não é uma função pura de seus deps, então
+      # não se encaixa no contrato "mesmos deps => mesmo out" que o DVC
+      # espera de um `outs`. Continua gitignored/local, como já era antes
+      # desta task (ver apps/ml/data/*.gitignore).
+    metrics:
+      - models/xgboost_v1_card.json:
+          cache: false

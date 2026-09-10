@@ -1933,6 +1933,85 @@ eval_*_cv.json                   ← Cross-validation temporal por arquitetura
 
 `MetroPTPreprocessor` (transformer sklearn) é compartilhado entre treino (`apps/ml/src/preprocessing.py`) e inferência (`apps/backend/src/services/preprocessing.py`). Cria **rolling features** sobre os 7 sensores analógicos: `std`, `ma` (moving average), `lag`, `roc` (rate of change), `min`, `max`. Como o backend não importa o pacote `ml/`, as duas implementações são mantidas **byte-for-byte equivalentes** — alterar uma exige espelhar na outra e re-treinar.
 
+### 12.6. DVC — Versionamento de Dados (RNF-60 / RNF-61)
+
+O pipeline de **ingestão + treino dos modelos de produção** (Random Forest e XGBoost — os dois candidatos do benchmark RF-18/RNF-36, ver `.env.example`) é versionado e reproduzível via [DVC](https://dvc.org/), com dados/artefatos grandes num remote S3-compatível (MinIO local) em vez do Git.
+
+> **Git** versiona código e metadados DVC (`dvc.yaml`, `dvc.lock`, `*.dvc`); **DVC** gerencia os dados/artefatos grandes no remote storage.
+
+**Nem todo output do `dvc.yaml` vai para o remote.** `data/raw/metropt-3+dataset.zip` (~208 MB) é o único dependency real movido para o cache/remote do DVC (`dvc add`, ponteiro `.dvc` no Git). Já `data/processed/metropt3.parquet` e todo `models/*.joblib`/`*.onnx` são declarados como `outs` do `dvc.yaml` com `cache: false` — isso os mantém no **grafo de dependências** do DVC (`dvc dag`/`dvc status` detectam quando ficam desatualizados em relação a `ingest.py`/`train_*.py`/ao parquet), mas o arquivo em si **continua commitado no Git normalmente**, exatamente como já era decidido desde a RNF-56/57 (ver `PENDENCIAS.md`). Por isso `dvc push` só envia o `.zip` bruto ao MinIO — o parquet e os modelos nunca aparecem no bucket, de propósito.
+
+Escopo desta primeira passada: `ingest` → `train_random_forest` → `train_xgboost`. Os modelos de deep learning (`train_mlp.py`, `train_sequential.py` ×3 arquiteturas, `train_autoencoder.py`) e `promote_model.py` continuam existindo e funcionando exatamente como antes (§12.3), mas **não** são stages do `dvc.yaml` nesta versão — `promote_model.py` em particular não é sequer candidato a stage DVC (seu input real é o estado mutável de runs já logados num servidor MLflow, não um conjunto de arquivos com hash estável); os demais têm tempo de treino de dezenas de minutos a horas, não são o modelo ativo em produção (`ACTIVE_MODEL=random_forest_v2`) e um deles (`train_mlp.py`) nem sequer fixa seed hoje. Ver `PENDENCIAS.md` (seção RNF-60/RNF-61) para o racional completo.
+
+#### Instalação
+
+Dentro do venv de `apps/ml/` (§12.1) — `dvc[s3]` já está em `requirements.txt`:
+
+```powershell
+cd apps\ml
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+```
+
+#### Configuração do remote (S3/MinIO)
+
+O projeto já sobe um serviço `minio` em `docker-compose.yml` (bucket `dvc-store`, credenciais em `.env` — nunca no `.dvc/config`, que só guarda `url`/`endpointurl`/`region`):
+
+```powershell
+docker compose up -d minio
+```
+
+As credenciais (`AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY`) são lidas do ambiente (via `.env`, o `dvc-s3`/boto3 as resolve automaticamente) — nunca ficam em `apps/ml/.dvc/config`, que é versionado no Git. Para apontar para um S3/MinIO diferente (ex.: produção), edite apenas o `endpointurl`:
+
+```bash
+dvc remote modify storage endpointurl https://seu-minio-ou-s3.exemplo.com
+```
+
+#### Obter os dados (dataset bruto do remote)
+
+```powershell
+cd apps\ml
+dvc pull
+```
+
+Baixa `data/raw/metropt-3+dataset.zip` (~208 MB) do MinIO — sem isso, `dvc repro` tenta baixar automaticamente da UCI (`src/ingest_metropt.py`), mais lento e sujeito à instabilidade do link oficial.
+
+#### Reproduzir o pipeline
+
+```powershell
+dvc repro
+```
+
+Recria `data/processed/metropt3.parquet` e os artefatos de `models/` (Random Forest + XGBoost) só se algo relevante mudou (script, dependência ou dado de entrada) — reexecuções sem mudanças são no-op.
+
+#### Ver o grafo de dependências
+
+```powershell
+dvc dag
+```
+
+#### Ver o que mudou desde a última reprodução
+
+```powershell
+dvc status
+```
+
+#### Enviar dados/artefatos para o remote
+
+```powershell
+dvc push
+```
+
+#### Reconstruir do zero
+
+Para forçar a reconstrução completa (ex.: após limpar `data/processed/` e `models/` manualmente, preservando `dvc.yaml`/`dvc.lock`/os `.dvc`):
+
+```powershell
+dvc repro --force
+```
+
+`data/raw/metropt-3+dataset.zip` nunca precisa ser apagado — ele é o dado de entrada, não uma saída do pipeline.
+
 ---
 
 ## 13. MLOps com MLflow

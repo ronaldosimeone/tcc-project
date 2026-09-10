@@ -1,0 +1,78 @@
+schema: '2.0'
+stages:
+  ingest:
+    cmd: python -m src.ingest_metropt
+    deps:
+    - path: data/raw/metropt-3+dataset.zip
+      hash: md5
+      md5: c6fb0621aaa9230f90b2924f6f4ef774
+      size: 218381995
+    - path: src/ingest_metropt.py
+      hash: md5
+      md5: 9c8e68ae1b7304be31b96e36b0de3b75
+      size: 7102
+    outs:
+    - path: data/processed/metropt3.parquet
+      hash: md5
+      md5: bdedc4907d954d16a99f56827957b933
+      size: 30014984
+  train_random_forest:
+    cmd: python -m src.train_random_forest
+    deps:
+    - path: data/processed/metropt3.parquet
+      hash: md5
+      md5: bdedc4907d954d16a99f56827957b933
+      size: 30014984
+    - path: src/balancing.py
+      hash: md5
+      md5: c9ea073a22271a71e7589f24e3eda010
+      size: 13604
+    - path: src/preprocessing.py
+      hash: md5
+      md5: 240093c29a326a318250daa2c3050611
+      size: 14031
+    - path: src/train_random_forest.py
+      hash: md5
+      md5: d48b8a3dd779076c285e0fa01c654dc2
+      size: 20195
+    outs:
+    - path: models/model_card.json
+      hash: md5
+      md5: bf382a219f17b97ac3cea01105763188
+      size: 4513
+    - path: models/random_forest_final.joblib
+      hash: md5
+      md5: 1ee3cbcc214a9e64ad557b99d7302b41
+      size: 12735993
+    - path: models/random_forest_v2.onnx
+      hash: md5
+      md5: d6eacc66dcae9a4bad85d8bcc82e12d7
+      size: 6191598
+  train_xgboost:
+    cmd: python -m src.train_xgboost --n-trials 5
+    deps:
+    - path: data/processed/metropt3.parquet
+      hash: md5
+      md5: bdedc4907d954d16a99f56827957b933
+      size: 30014984
+    - path: src/preprocessing.py
+      hash: md5
+      md5: 240093c29a326a318250daa2c3050611
+      size: 14031
+    - path: src/train_xgboost.py
+      hash: md5
+      md5: 70cb1ff57a4b892eeea9bf31ee677aaa
+      size: 16705
+    outs:
+    - path: models/xgboost_v1.joblib
+      hash: md5
+      md5: aef2c17b732cf8e3ed2fb34031877f77
+      size: 804547
+    - path: models/xgboost_v1_card.json
+      hash: md5
+      md5: 8cbf05c1e07538b74bab5d9c599aaf7d
+      size: 3642
+    - path: models/xgboost_v2.onnx
+      hash: md5
+      md5: 092281b8eb38e9487eee3f4da20f32d0
+      size: 565755

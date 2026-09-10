@@ -198,6 +198,36 @@ services:
     networks:
       - app-network
 
+  # RNF-61 — remote DVC compatível com S3 para dados/artefatos grandes de
+  # apps/ml (o Git mantém só os ponteiros .dvc). Auditado antes de criar:
+  # o projeto NÃO tinha nenhum MinIO/S3 existente (grep no repo inteiro),
+  # daí a decisão de subir a instância mais simples possível para
+  # dev/teste — não é infraestrutura de produção. Credenciais vêm de
+  # `.env` (nunca hardcoded aqui, nunca commitadas com valor real — ver
+  # `.env.example`). `ports:` (não só `expose`) porque `dvc push`/`pull`
+  # rodam no host (venv de apps/ml), não dentro da rede Docker.
+  minio:
+    image: minio/minio:latest
+    container_name: minio
+    env_file:
+      - .env
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER:-minioadmin}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:-minioadmin123}
+    ports:
+      - "9000:9000" # API S3
+      - "9001:9001" # Console web
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
+
   mlflow:
     image: ghcr.io/mlflow/mlflow:latest
     container_name: mlflow
@@ -227,3 +257,4 @@ volumes:
   mlflow_artifacts:
   frontend_node_modules:
   postgres_data:
+  minio_data:

@@ -1,6 +1,6 @@
 {
   "schema_version": "2.0",
-  "trained_at": "2026-04-29T14:51:11.425360+00:00",
+  "trained_at": "2026-09-10T05:15:52.823158+00:00",
   "model_type": "RandomForestClassifier",
   "dataset": "MetroPT-3",
   "target_column": "anomaly",

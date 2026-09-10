@@ -168,6 +168,163 @@ corrigido na origem).
   performance do modelo** (que exigiria rótulos verdadeiros/ground truth
   de falhas reais, não coletados em produção) — ver README §4.15.
 
+## RNF-60 / RNF-61 — DVC (Data Version Control)
+
+- **Escopo do `dvc.yaml` = `ingest` → `train_random_forest` → `train_xgboost`,
+  não o pipeline de ML inteiro. Reavaliado explicitamente (não apenas
+  reafirmado) numa auditoria de acompanhamento** — decisão por script, não
+  uma desculpa genérica de "são experimentais":
+  - **`promote_model.py`: exclusão definitiva, motivo técnico, não de
+    conveniência.** Seu input real é o estado *mutável* de runs já logados
+    num servidor MLflow (`MlflowClient.search_runs(...order_by=[metric
+    DESC], max_results=1)` — pega o "melhor run até agora"), não um
+    conjunto de arquivos com hash estável. DVC detecta staleness por hash de
+    dependência; não existe hash para "o melhor run que a MLflow tiver
+    quando isto rodar". Declarar isso como stage seria reprodutibilidade de
+    fachada — o resultado dependeria de quantos treinos alguém já rodou
+    contra aquele MLflow, não do código/dado versionado.
+  - **`train_mlp.py`: teria a MESMA classe de problema de determinismo já
+    documentada para o Optuna, só que pior.** Auditoria desta rodada
+    encontrou que o script **nunca chama `pl.seed_everything`** (nenhuma
+    ocorrência de "seed" no arquivo) — diferente de `train_sequential.py`
+    (linha ~342) e `train_autoencoder.py` (linha ~256), que semeiam
+    corretamente. Registrar `train_mlp` como stage "reproduzível" no
+    `dvc.yaml` hoje seria inventar uma garantia que o código não tem.
+  - **`train_sequential.py` (TCN/BiLSTM/PatchTST) e `train_autoencoder.py`
+    são, tecnicamente, os candidatos mais próximos de virarem stages** — são
+    semeados (`pl.seed_everything`) e toleram MLflow indisponível (fallback
+    gracioso, `logger=False`). Mesmo assim, decisão de MANTER fora nesta
+    task por três motivos que não são "talvez": (a) nenhum é o
+    `ACTIVE_MODEL` de produção (`random_forest_v2`, vencedor do benchmark
+    RF-18/RNF-36 — `.env.example`); (b) treinam em dezenas de minutos a
+    horas por arquitetura (vs. minutos do RF/XGBoost), o que inviabilizaria
+    validar de verdade idempotência/rebuild/push/pull dentro desta task;
+    (c) adicioná-los agora, só porque tecnicamente caberiam, seria escopo
+    além do que foi pedido — a instrução desta auditoria foi explícita:
+    "não adicione stages apenas por precaução". Se um retreino automatizado
+    dos modelos sequenciais virar requisito futuro, são os candidatos
+    naturais a novos stages (o padrão `cache: false` já estabelecido aqui
+    se estende diretamente) — registrado aqui como trabalho futuro
+    explícito, não implementado agora.
+- **Optuna (`train_xgboost.py`) não é semeado (`sampler=TPESampler(seed=...)`
+  ausente).** `random_state=42` cobre o split treino/teste, o K-Fold interno
+  e o `XGBClassifier`, mas a escolha de quais hiperparâmetros o TPE testa em
+  cada trial pode variar entre execuções "do zero" (sem
+  `data/optuna/xgboost_study.db` prévio). Lacuna pré-existente do script, não
+  introduzida por esta task — não corrigida aqui porque alterar a lógica de
+  treino está fora do escopo de uma task de versionamento de dados. Na
+  prática, isso só importa quando o `study.db` é apagado: com ele presente
+  (caso normal de reprodução local), `load_if_exists=True` reaproveita os
+  trials já rodados e o resultado é estável.
+- **`data/optuna/xgboost_study.db` é deliberadamente excluído do
+  `dvc.yaml`.** É um SQLite que ACUMULA trials entre execuções — não é uma
+  função pura de seus deps declarados, então não se encaixa no contrato
+  "mesmos deps ⇒ mesmo out" que o DVC espera. Continua gitignored/local,
+  como já era antes desta task.
+- **O stage `train_xgboost` usa `--n-trials 5`** (o "quick smoke run" já
+  documentado no próprio script), não os `--n-trials 100` de um retreino de
+  produção real — escolha deliberada para manter `dvc repro` rápido o
+  bastante para validar de verdade (idempotência, rebuild, push/pull) dentro
+  desta task. Um retreino de produção real continua sendo
+  `python -m src.train_xgboost --n-trials 100`, rodado manualmente fora do
+  `dvc repro` automático (o `dvc.yaml` não impede isso).
+- **MinIO é uma instância de desenvolvimento/teste, não produção.** O
+  projeto não tinha nenhum MinIO/S3 pré-existente (auditado antes de criar);
+  a instância adicionada em `docker-compose.yml` é a mais simples possível
+  (single-node, sem TLS, credenciais placeholder em `.env.example`). Para um
+  ambiente real, trocar `endpointurl` do remote DVC (`apps/ml/.dvc/config`)
+  para o S3/MinIO real e fornecer credenciais reais só via variável de
+  ambiente/secret — nunca no `.dvc/config` versionado.
+- **`data/processed/metropt3.parquet` e os artefatos de `models/` continuam
+  commitados diretamente no Git** (`cache: false` no `dvc.yaml`), não
+  migrados para o DVC. **Reavaliado explicitamente numa auditoria de
+  acompanhamento** (a alternativa — migrar para DVC e remover do Git — foi
+  considerada de novo, não só reafirmada):
+  - Migrar para DVC exigiria que TODO consumidor desses arquivos rode
+    `dvc pull` antes de usá-los — isso inclui o CI do backend
+    (`test-python`, que hoje faz apenas `actions/checkout` e lê
+    `metropt3.parquet` direto do working tree para ~34 testes, ver
+    `.github/workflows/ci.yml`) e qualquer `docker compose up` de
+    desenvolvimento que monta `apps/ml/models/` no backend. Isso
+    acoplaria infraestrutura de CI/dev a um MinIO/S3 real — exatamente o
+    tipo de dependência externa que o item de CI abaixo evita
+    deliberadamente para o próprio `dvc.yaml`.
+  - `models/*.onnx`/`*.joblib` são consumidos em produção pelo backend via
+    bind-mount direto do checkout do Git (`ACTIVE_MODEL`, `model_registry.py`)
+    — nunca passam por `dvc pull` em runtime. Removê-los do Git sem mudar
+    esse mecanismo de carregamento quebraria o boot da API num checkout
+    limpo; mudar o mecanismo de carregamento está fora do escopo de uma
+    task de versionamento de dados (seria alteração de arquitetura de
+    backend/deploy, explicitamente proibida nesta task).
+  - Tamanho: o footprint binário em Git NÃO é trivial —
+    `metropt3.parquet` ≈ 29 MB, `random_forest_final.joblib` ≈ 12,4 MB,
+    `random_forest_v2.onnx` ≈ 6 MB, mais ~5 MB dos modelos de DL — total
+    ~55 MB rastreados no Git, e cada retreino real commita um blob novo de
+    ~47 MB no histórico. Isso NÃO é ideal e é o argumento mais forte a
+    favor da migração eventual. Ainda assim, é ordens de magnitude abaixo
+    do dataset bruto de ~208 MB (esse sim migrado para o DVC nesta task).
+  - **Conclusão desta task (escopo limitado), com ressalva explícita**:
+    parquet e modelos ficam no Git com `cache: false` (mesmo padrão
+    RNF-56/57) porque migrá-los agora exigiria mexer no CI do backend e no
+    bootstrap do compose — fora do escopo. O `dvc.yaml` já os rastreia
+    como saídas (grafo/staleness) sem assumir a posse do armazenamento.
+    **Follow-up recomendado** (não feito aqui, requer decisão do
+    responsável): remover o `cache: false` de `metropt3.parquet` +
+    `models/random_forest_*` + `models/xgboost_*`, deixar o DVC gerenciá-los
+    de verdade (cache + remote), gitignorá-los, e adicionar um passo
+    `dvc pull` ao job `test-python` do CI e ao bootstrap de
+    desenvolvimento. Só aí o repositório atinge de fato o "sem binários
+    grandes regeneráveis no Git" que a RNF-61 idealiza.
+- **`train_random_forest` falhou 1× em 3 execuções reais** durante esta
+  validação — crash do backend `loky` do joblib no meio do `GridSearchCV`
+  (`n_jobs=2`), com `resource_tracker: leaked file/folder objects` e um
+  `FileNotFoundError` na limpeza do memmap temporário do Windows, sem
+  disco cheio, sem processo zumbi e sem lock preso. Reexecução simples
+  (`dvc repro`, sem mudar nada) passou. É fragilidade conhecida do
+  multiprocessing do joblib/loky no Windows sob cargas paralelas pesadas
+  repetidas — NÃO é defeito do DVC, NÃO foi introduzida por esta task (o
+  mesmo `train_random_forest.py` rodou OK 2× antes com config idêntica) e
+  NÃO foi "corrigida" mexendo em `n_jobs`/GridSearch (seria alterar lógica
+  de ML). Registrada como fragilidade operacional real: em máquina
+  Windows, contar com `dvc repro` reexecutável na primeira tentativa.
+- **Determinismo é por-artefato, não uniforme.** Comprovado empiricamente
+  num ciclo completo apagar→`dvc pull`→retreino: `metropt3.parquet` e os
+  `.joblib` dos modelos treinados saem **byte-idênticos** entre execuções
+  (seeds funcionam). Já os `.onnx` saem com **bytes diferentes mas
+  inferência idêntica ao bit** (diferença é ordem de serialização do
+  protobuf, não o modelo — o `.joblib` de origem é idêntico e o export foi
+  verificado: `max|Δ|` sklearn-vs-ONNX = 0). Os `*_card.json` diferem
+  **só** no campo `trained_at` (timestamp ISO). Nenhuma dessas diferenças
+  é defeito; documentadas para não alegar um determinismo byte-a-byte que
+  o pipeline não tem no export ONNX.
+- **`train_xgboost --n-trials 5` NÃO roda 5 trials se `data/optuna/`
+  `xgboost_study.db` já existir** (o caso normal neste repo — o arquivo
+  local tem 100 trials acumulados). Nesse caso o script loga
+  `Study already has 100 trials — skipping optimisation` e reusa os
+  melhores hiperparâmetros já encontrados. Só num ambiente 100% limpo
+  (sem o `.db`, que é gitignored e não vai pro DVC) o `--n-trials 5`
+  dispara 5 trials reais do zero — e aí, por causa do `TPESampler` não
+  semeado (item acima), os hiperparâmetros escolhidos podem diferir. O
+  comentário "quick smoke run" no `dvc.yaml` está correto para o caso
+  limpo mas pode confundir; nuance registrada aqui.
+- **Binários de checkpoint no Git (não relacionado a RNF-60/61 — só
+  documentado).** `git ls-files` acusa `apps/ml/checkpoints/`
+  `best-epoch=05-val_f1=0.8645.ckpt` (~628 KB) — que ESTÁ em `.gitignore`
+  mas foi commitado antes da regra existir, então a regra nunca surtiu
+  efeito nele — e `apps/ml/models/checkpoints/autoencoder_v1-*.ckpt` (2
+  arquivos ~1,3 MB cada, um deles um duplicado `-v1` aparentemente
+  acidental), esses sem nenhuma regra de ignore. São snapshots
+  intermediários de treino do PyTorch Lightning, não artefatos de
+  serving. Fora do escopo desta task (remover/untrackear arquivo exige
+  decisão do responsável); registrado para avaliação futura —
+  `git rm --cached` nesses 3 + regra de ignore, ou migração para DVC.
+- **5 arquivos `*.onnx.data`** (pesos externos dos modelos de DL:
+  mlp/tcn/bilstm/patchtst/autoencoder, ~2,3 MB somados) são rastreados
+  pelo Git mas passam despercebidos num filtro ingênuo por extensão
+  (`.onnx`) — não terminam em `.onnx`. Mesma categoria/decisão dos `.onnx`
+  correspondentes (ficam no Git, consumidos por bind-mount pelo backend);
+  citados aqui só para a auditoria de binários ficar completa.
+
 ## Pré-existente (não introduzido por nenhuma das tasks acima)
 
 - `apps/backend/tests/test_simulator.py` falha na coleta com `IndexError: 3`
