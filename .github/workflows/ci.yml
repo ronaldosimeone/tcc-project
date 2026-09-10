@@ -141,6 +141,14 @@ jobs:
       - name: Run Prettier
         run: cd apps/frontend && pnpm prettier --check .
 
+      # RNF-58: nenhum componente pode exceder 200 linhas. Checagem
+      # COMPLEMENTAR à regra `complexity` do ESLint acima — um arquivo pode
+      # ficar sob 200 linhas e ainda ser complexo demais, e vice-versa; o
+      # ESLint não tem uma regra nativa de "max linhas por componente React"
+      # confiável o bastante, daí o script dedicado.
+      - name: Check component size (RNF-58, max 200 lines)
+        run: cd apps/frontend && pnpm check:component-size
+
   # 5. Testes TypeScript (Vitest)
   test-typescript:
     name: Test TypeScript
@@ -163,10 +171,22 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Run Vitest
+      # RNF-59: cobertura mínima de 70% (statements/branches/functions/lines)
+      # — gate real via `coverage.thresholds` em vitest.config.ts (mesmo
+      # padrão do `fail_under=80` do backend em pyproject.toml). O comando
+      # sai com código != 0 se qualquer métrica ficar abaixo do piso, sem
+      # precisar de um step de CI separado só para checar o número.
+      - name: Run Vitest com cobertura (RNF-59)
         run: |
           cd apps/frontend
-          pnpm test
+          pnpm exec vitest run --coverage
+
+      # RNF-58: garante que o catálogo de componentes builda de verdade —
+      # falha de build do Storybook quebra o CI, não só um "parece ok".
+      - name: Build Storybook (RNF-58)
+        run: |
+          cd apps/frontend
+          pnpm exec storybook build
 
   # 6. Testes E2E com Playwright + MSW (RNF-16 / RNF-17)
   test-e2e:

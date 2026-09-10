@@ -1,147 +1,26 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
-import {
-  AlertOctagon,
-  AlertTriangle,
-  ArrowDown,
-  ArrowUp,
-  ArrowUpDown,
-  CheckCircle2,
-  ClipboardCheck,
-  FileSearch,
-  Zap,
-} from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+/**
+ * RNF-58: decomposto em `components/history/event-log-table/*` —
+ * constants (config de severidade/tipo), helpers (formatTimestamp),
+ * SortableHead, EmptyState, EventRow, EventLogPagination. Este arquivo
+ * mantém só o estado de ordenação/paginação e a orquestração da tabela.
+ * Nenhuma mudança de comportamento/DOM.
+ */
+
+import { useCallback, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
-import type { HistoryEvent, Severity, EventType } from "@/lib/history-mock";
-
-// ── Constants ──────────────────────────────────────────────────────────────
-
-const PAGE_SIZE = 10;
-
-const SEVERITY_ORDER: Record<Severity, number> = {
-  CRÍTICO: 2,
-  ALERTA: 1,
-  NORMAL: 0,
-};
-
-const SEVERITY_CONFIG: Record<
-  Severity,
-  { className: string; icon: typeof CheckCircle2 }
-> = {
-  CRÍTICO: {
-    className: "border-red-500/40 bg-red-500/10 text-red-400",
-    icon: AlertOctagon,
-  },
-  ALERTA: {
-    className: "border-amber-500/40 bg-amber-500/10 text-amber-400",
-    icon: AlertTriangle,
-  },
-  NORMAL: {
-    className: "border-green-500/40 bg-green-500/10 text-green-400",
-    icon: CheckCircle2,
-  },
-};
-
-const EVENT_TYPE_CONFIG: Record<
-  EventType,
-  { className: string; icon: typeof CheckCircle2 }
-> = {
-  Falha: { className: "text-red-400", icon: AlertOctagon },
-  Alerta: { className: "text-amber-400", icon: Zap },
-  Diagnóstico: { className: "text-green-400", icon: ClipboardCheck },
-};
-
-// ── Types ──────────────────────────────────────────────────────────────────
-
-type SortColumn = "timestamp" | "equipment" | "type" | "severity";
-type SortDir = "asc" | "desc";
-
-interface SortState {
-  column: SortColumn;
-  direction: SortDir;
-}
-
-// ── Helpers ────────────────────────────────────────────────────────────────
-
-function formatTimestamp(iso: string): string {
-  return new Intl.DateTimeFormat("pt-BR", {
-    day: "2-digit",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-    timeZone: "UTC",
-  })
-    .format(new Date(iso))
-    .replace(".", "");
-}
-
-// ── Sub-components ─────────────────────────────────────────────────────────
-
-function SortIndicator({
-  column,
-  sort,
-}: {
-  column: SortColumn;
-  sort: SortState;
-}) {
-  if (sort.column !== column)
-    return <ArrowUpDown className="h-3 w-3 opacity-25" />;
-  return sort.direction === "asc" ? (
-    <ArrowUp className="h-3 w-3 text-primary" />
-  ) : (
-    <ArrowDown className="h-3 w-3 text-primary" />
-  );
-}
-
-function SortableHead({
-  label,
-  column,
-  sort,
-  onSort,
-  align = "left",
-}: {
-  label: string;
-  column: SortColumn;
-  sort: SortState;
-  onSort: (col: SortColumn) => void;
-  align?: "left" | "right";
-}) {
-  return (
-    <th
-      className={cn(
-        "pb-2.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground",
-        align === "right" ? "text-right" : "text-left",
-      )}
-    >
-      <button
-        onClick={() => onSort(column)}
-        className="flex items-center gap-1 transition-colors hover:text-foreground"
-      >
-        {label}
-        <SortIndicator column={column} sort={sort} />
-      </button>
-    </th>
-  );
-}
-
-function EmptyState() {
-  return (
-    <div className="flex flex-col items-center gap-3 py-16 text-center">
-      <FileSearch className="h-10 w-10 text-muted-foreground/25" />
-      <p className="text-sm font-medium text-muted-foreground">
-        Nenhum evento encontrado
-      </p>
-      <p className="text-xs text-muted-foreground/60">
-        Ajuste os filtros para ampliar a busca
-      </p>
-    </div>
-  );
-}
+import type { HistoryEvent } from "@/lib/history-mock";
+import {
+  PAGE_SIZE,
+  SEVERITY_ORDER,
+  type SortColumn,
+  type SortState,
+} from "./event-log-table/constants";
+import { EmptyState } from "./event-log-table/empty-state";
+import { EventRow } from "./event-log-table/event-row";
+import { EventLogPagination } from "./event-log-table/pagination";
+import { SortableHead } from "./event-log-table/sortable-head";
 
 // ── Component ──────────────────────────────────────────────────────────────
 
@@ -150,6 +29,9 @@ interface EventLogTableProps {
   /** Disparado ao clicar numa linha — opcional; abre o RootCauseDrawer. */
   onSelectEvent?: (event: HistoryEvent) => void;
 }
+
+const COL_HEAD =
+  "pb-2.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground text-left";
 
 export default function EventLogTable({
   events,
@@ -210,9 +92,6 @@ export default function EventLogTable({
       return acc;
     }, []);
 
-  const COL_HEAD =
-    "pb-2.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground text-left";
-
   return (
     <Card className="border-border bg-card">
       <CardHeader className="px-5 pb-3 pt-4">
@@ -267,135 +146,26 @@ export default function EventLogTable({
                 </thead>
 
                 <tbody>
-                  {paginated.map((event) => {
-                    const sevCfg = SEVERITY_CONFIG[event.severity];
-                    const typeCfg = EVENT_TYPE_CONFIG[event.type];
-                    const SevIcon = sevCfg.icon;
-                    const TypeIcon = typeCfg.icon;
-
-                    return (
-                      <tr
-                        key={event.id}
-                        onClick={() => onSelectEvent?.(event)}
-                        className={cn(
-                          "group/row border-b border-slate-100 transition-colors duration-150 last:border-0",
-                          onSelectEvent
-                            ? "cursor-pointer hover:bg-slate-50"
-                            : "hover:bg-muted/20",
-                        )}
-                      >
-                        {/* Timestamp */}
-                        <td className="py-3 pr-5">
-                          <span className="whitespace-nowrap font-mono text-xs tabular-nums text-muted-foreground">
-                            {formatTimestamp(event.timestamp)}
-                          </span>
-                        </td>
-
-                        {/* Equipment */}
-                        <td className="py-3 pr-5">
-                          <span className="font-mono text-xs font-medium text-foreground">
-                            {event.equipment}
-                          </span>
-                        </td>
-
-                        {/* Type */}
-                        <td className="py-3 pr-5">
-                          <div
-                            className={cn(
-                              "flex items-center gap-1.5 text-xs font-medium",
-                              typeCfg.className,
-                            )}
-                          >
-                            <TypeIcon className="h-3.5 w-3.5 shrink-0" />
-                            {event.type}
-                          </div>
-                        </td>
-
-                        {/* Severity */}
-                        <td className="py-3 pr-5">
-                          <Badge
-                            variant="outline"
-                            className={cn(
-                              "gap-1 text-[11px] font-semibold",
-                              sevCfg.className,
-                            )}
-                          >
-                            <SevIcon className="h-3 w-3" />
-                            {event.severity}
-                          </Badge>
-                        </td>
-
-                        {/* Duration */}
-                        <td className="py-3 pr-5">
-                          <span className="whitespace-nowrap font-mono text-xs tabular-nums text-muted-foreground">
-                            {event.duration}
-                          </span>
-                        </td>
-
-                        {/* Description */}
-                        <td className="max-w-sm py-3">
-                          <span className="line-clamp-2 text-xs leading-relaxed text-foreground/70 transition-colors group-hover/row:text-foreground/90">
-                            {event.description}
-                          </span>
-                        </td>
-                      </tr>
-                    );
-                  })}
+                  {paginated.map((event) => (
+                    <EventRow
+                      key={event.id}
+                      event={event}
+                      onSelectEvent={onSelectEvent}
+                    />
+                  ))}
                 </tbody>
               </table>
             </div>
 
-            {/* Pagination */}
             {totalPages > 1 && (
-              <div className="mt-5 flex items-center justify-between border-t border-border pt-4">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8 text-xs"
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  disabled={safePage === 1}
-                >
-                  Anterior
-                </Button>
-
-                <div className="flex items-center gap-1">
-                  {pageNumbers.map((p, i) =>
-                    p === "…" ? (
-                      <span
-                        key={`ellipsis-${i}`}
-                        className="px-1 text-xs text-muted-foreground"
-                      >
-                        …
-                      </span>
-                    ) : (
-                      <Button
-                        key={p}
-                        variant={
-                          Number(safePage) === Number(p) ? "outline" : "ghost"
-                        }
-                        className={
-                          Number(safePage) === Number(p)
-                            ? "h-8 w-8 rounded-full border-2 border-primary font-bold text-primary"
-                            : "h-8 w-8 rounded-full text-muted-foreground"
-                        }
-                        onClick={() => setPage(p as number)}
-                      >
-                        {p}
-                      </Button>
-                    ),
-                  )}
-                </div>
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8 text-xs"
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={safePage === totalPages}
-                >
-                  Próxima
-                </Button>
-              </div>
+              <EventLogPagination
+                safePage={safePage}
+                totalPages={totalPages}
+                pageNumbers={pageNumbers}
+                onPrev={() => setPage((p) => Math.max(1, p - 1))}
+                onNext={() => setPage((p) => Math.min(totalPages, p + 1))}
+                onPageSelect={setPage}
+              />
             )}
           </>
         )}

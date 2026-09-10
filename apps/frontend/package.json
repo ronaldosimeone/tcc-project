@@ -12,7 +12,10 @@
     "e2e": "playwright test",
     "e2e:headed": "playwright test --headed",
     "e2e:ui": "playwright test --ui",
-    "e2e:setup": "msw init public/ --save"
+    "e2e:setup": "msw init public/ --save",
+    "check:component-size": "node scripts/check-component-size.mjs",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build"
   },
   "msw": {
     "workerDirectory": [
@@ -35,7 +38,11 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.59.1",
+    "@storybook/addon-a11y": "^10.6.0",
+    "@storybook/addon-docs": "^10.6.0",
+    "@storybook/nextjs-vite": "^10.6.0",
     "@tailwindcss/postcss": "^4",
+    "@tailwindcss/vite": "^4.3.3",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
@@ -43,12 +50,16 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^6.0.1",
+    "@vitest/coverage-v8": "4.1.4",
     "eslint": "^9",
     "eslint-config-next": "16.2.3",
+    "eslint-plugin-storybook": "^10.6.0",
     "jsdom": "^29.0.2",
     "msw": "^2.13.3",
+    "storybook": "^10.6.0",
     "tailwindcss": "^4",
     "typescript": "^5",
+    "vite": "^8.2.2",
     "vitest": "^4.1.4"
   }
 }

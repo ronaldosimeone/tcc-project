@@ -13,105 +13,40 @@
  *
  * Posição: painel lateral direito, altura total, fixo enquanto o conteúdo
  * principal rola. A largura é gerenciada pelo flex layout do SensorMonitor.
+ *
+ * NOTA (auditoria RNF-58 / fix MSW-Playwright anterior): este componente
+ * está desconectado do SensorMonitor desde o commit `de44dc1` ("immersive
+ * critical state") — confirmado via `git log -S`/grep, zero imports fora de
+ * testes. Mantido e decomposto (não removido) por estar fora do escopo desta
+ * tarefa (decomposição, não limpeza de código morto); ver PENDENCIAS.md.
+ *
+ * RNF-58: decomposto em `components/alert-panel/*` — RiskBadge (+
+ * RISK_CONFIG), HistoryRow. Nenhuma mudança de comportamento/DOM (incl.
+ * `data-testid="alert-panel"`/`data-risk` e `data-testid="critical-banner"`
+ * preservados).
  */
 
 import {
   AlertTriangle,
   Bell,
-  CheckCircle2,
   ClipboardList,
   Loader2,
   Trash2,
-  XCircle,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
-import {
-  usePredictionHistory,
-  type PredictionHistoryEntry,
-} from "@/hooks/use-prediction-history";
+import { usePredictionHistory } from "@/hooks/use-prediction-history";
 import type { PredictResponse } from "@/lib/api-client";
 import type { RiskLevel } from "@/hooks/use-sensor-data";
+import { HistoryRow } from "./alert-panel/history-row";
+import { RiskBadge } from "./alert-panel/risk-badge";
 
 // ── Props ─────────────────────────────────────────────────────────────────
 
 interface AlertPanelProps {
   latest: PredictResponse | null;
   riskLevel: RiskLevel;
-}
-
-// ── Sub-componentes ───────────────────────────────────────────────────────
-
-const RISK_CONFIG: Record<
-  RiskLevel,
-  {
-    badgeClass: string;
-    icon: React.ComponentType<{ className?: string }>;
-  }
-> = {
-  NORMAL: {
-    badgeClass: "border-green-500/40 bg-green-500/10 text-green-400",
-    icon: CheckCircle2,
-  },
-  ALERTA: {
-    badgeClass: "border-amber-500/40 bg-amber-500/10 text-amber-400",
-    icon: AlertTriangle,
-  },
-  CRÍTICO: {
-    badgeClass: "border-red-500/40 bg-red-500/10 text-red-400",
-    icon: XCircle,
-  },
-};
-
-function RiskBadge({ level }: { level: RiskLevel }) {
-  const { icon: Icon, badgeClass } = RISK_CONFIG[level];
-  return (
-    <Badge
-      variant="outline"
-      className={cn("gap-1 px-2 py-0.5 text-[10px] font-bold", badgeClass)}
-    >
-      <Icon className="h-3 w-3" />
-      {level}
-    </Badge>
-  );
-}
-
-function HistoryRow({ entry }: { entry: PredictionHistoryEntry }) {
-  const pct = (entry.failure_probability * 100).toFixed(1);
-  const time = new Date(entry.timestamp).toLocaleTimeString("pt-BR", {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  });
-
-  const probColor =
-    entry.riskLevel === "CRÍTICO"
-      ? "text-red-400"
-      : entry.riskLevel === "ALERTA"
-      ? "text-amber-400"
-      : "text-muted-foreground";
-
-  return (
-    <div
-      className="flex items-center gap-2 border-b border-border/40 px-3 py-2 last:border-0"
-      data-risk={entry.riskLevel}
-    >
-      <span className="w-16 shrink-0 font-mono text-[10px] text-muted-foreground/60">
-        {time}
-      </span>
-      <RiskBadge level={entry.riskLevel} />
-      <span
-        className={cn(
-          "ml-auto font-mono text-xs font-semibold tabular-nums",
-          probColor,
-        )}
-      >
-        {pct}%
-      </span>
-    </div>
-  );
 }
 
 // ── Componente principal ───────────────────────────────────────────────────

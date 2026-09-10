@@ -1,14 +1,18 @@
 "use client";
 
-import type { ComponentType } from "react";
-import Link from "next/link";
-import { ArrowRight, CheckCircle2, AlertTriangle, XCircle } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+/**
+ * RNF-58: decomposto em `components/dashboard/asset-table/*` —
+ * mock-assets, cells (RiskBadge/ProbabilityCell/SelectionBar),
+ * TableSkeleton, LiveRow, MockRow. Nenhuma mudança de comportamento/DOM.
+ */
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import type { RiskLevel } from "@/hooks/use-sensor-data";
+import { LIVE_ASSET_ID, LiveRow } from "./asset-table/live-row";
+import { MockRow } from "./asset-table/mock-row";
+import { MOCK_ASSETS } from "./asset-table/mock-assets";
+import { TableSkeleton } from "./asset-table/table-skeleton";
 
 // ── Props ─────────────────────────────────────────────────────────────────
 
@@ -22,110 +26,8 @@ interface AssetTableProps {
   onSelect: (id: string) => void;
 }
 
-// ── Mock data ─────────────────────────────────────────────────────────────
-
-export interface MockAsset {
-  id: string;
-  riskLevel: RiskLevel;
-  prob: number;
-  tp2: number;
-  tp3: number;
-  motorCurrent: number;
-  oilTemp: number;
-  lastSeen: string;
-}
-
-export const MOCK_ASSETS: MockAsset[] = [
-  { id: "APU-Trem-015", riskLevel: "NORMAL", prob: 0.123, tp2: 8.2, tp3: 7.9, motorCurrent: 5.1, oilTemp: 72.0, lastSeen: "2 min" },
-  { id: "APU-Trem-023", riskLevel: "ALERTA", prob: 0.456, tp2: 7.8, tp3: 7.2, motorCurrent: 7.8, oilTemp: 81.3, lastSeen: "1 min" },
-  { id: "APU-Trem-031", riskLevel: "NORMAL", prob: 0.089, tp2: 8.4, tp3: 8.1, motorCurrent: 4.2, oilTemp: 68.5, lastSeen: "3 min" },
-  { id: "APU-Trem-055", riskLevel: "NORMAL", prob: 0.221, tp2: 8.1, tp3: 7.8, motorCurrent: 6.3, oilTemp: 74.1, lastSeen: "4 min" },
-];
-
-// ── Helpers ───────────────────────────────────────────────────────────────
-
-const RISK_CONFIG: Record<
-  RiskLevel,
-  {
-    icon: ComponentType<{ className?: string }>;
-    badgeClass: string;
-    barClass: string;
-  }
-> = {
-  NORMAL: {
-    icon: CheckCircle2,
-    badgeClass: "border-green-500/40 bg-green-500/10 text-green-400",
-    barClass: "bg-green-500",
-  },
-  ALERTA: {
-    icon: AlertTriangle,
-    badgeClass: "border-amber-500/40 bg-amber-500/10 text-amber-400",
-    barClass: "bg-amber-500",
-  },
-  CRÍTICO: {
-    icon: XCircle,
-    badgeClass: "border-red-500/40 bg-red-500/10 text-red-400",
-    barClass: "bg-red-500",
-  },
-};
-
-function RiskBadge({ level }: { level: RiskLevel }) {
-  const { icon: Icon, badgeClass } = RISK_CONFIG[level];
-  return (
-    <Badge variant="outline" className={cn("gap-1 text-[11px] font-semibold", badgeClass)}>
-      <Icon className="h-3 w-3" />
-      {level}
-    </Badge>
-  );
-}
-
-function ProbabilityCell({ prob, riskLevel }: { prob: number; riskLevel: RiskLevel }) {
-  const { barClass } = RISK_CONFIG[riskLevel];
-  return (
-    <div className="flex flex-col items-end gap-1">
-      <span className="font-mono text-xs tabular-nums text-foreground">
-        {(prob * 100).toFixed(1)}%
-      </span>
-      <div className="h-1 w-16 overflow-hidden rounded-full bg-muted" aria-hidden="true">
-        <div
-          className={cn("h-full rounded-full transition-[width] duration-500", barClass)}
-          style={{ width: `${Math.min(100, prob * 100)}%` }}
-        />
-      </div>
-    </div>
-  );
-}
-
-function SelectionBar({ active }: { active: boolean }) {
-  return (
-    <span
-      className={cn(
-        "h-5 w-[3px] shrink-0 rounded-full transition-all duration-200",
-        active ? "bg-primary" : "bg-transparent",
-      )}
-      aria-hidden="true"
-    />
-  );
-}
-
-// ── Loading skeleton ───────────────────────────────────────────────────────
-
-function TableSkeleton() {
-  return (
-    <div className="space-y-3">
-      {Array.from({ length: 5 }).map((_, i) => (
-        <div key={i} className="flex items-center gap-4 py-2.5">
-          <Skeleton className="h-4 w-28" />
-          <Skeleton className="h-5 w-20" />
-          <Skeleton className="ml-auto h-4 w-12" />
-          <Skeleton className="h-4 w-14" />
-          <Skeleton className="h-4 w-14" />
-          <Skeleton className="h-7 w-24" />
-        </div>
-      ))}
-    </div>
-  );
-}
+const COL_HEAD =
+  "pb-2.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground";
 
 // ── Component ─────────────────────────────────────────────────────────────
 
@@ -138,11 +40,6 @@ export default function AssetTable({
   selectedId,
   onSelect,
 }: AssetTableProps) {
-  const COL_HEAD =
-    "pb-2.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground";
-
-  const isLiveSelected = selectedId === "APU-Trem-042";
-
   return (
     <Card className="border-border bg-card">
       <CardHeader className="px-5 pb-3 pt-4">
@@ -174,123 +71,23 @@ export default function AssetTable({
               </thead>
 
               <tbody>
-                {/* ── Linha real: APU-Trem-042 ── */}
-                <tr
-                  onClick={() => onSelect("APU-Trem-042")}
-                  className={cn(
-                    "group/row border-b border-border/50 cursor-pointer",
-                    "transition-colors duration-150",
-                    isLiveSelected
-                      ? "bg-accent/40 border-l-4 border-primary"
-                      : "hover:bg-muted/50",
-                  )}
-                >
-                  <td className="py-3 pr-4">
-                    <div className="flex items-center gap-2">
-                      <SelectionBar active={isLiveSelected} />
-                      <span className="relative flex h-2 w-2 shrink-0">
-                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-400 opacity-75" />
-                        <span className="relative inline-flex h-2 w-2 rounded-full bg-blue-500" />
-                      </span>
-                      <span className="font-mono text-xs font-semibold text-foreground">
-                        APU-Trem-042
-                      </span>
-                      <Badge
-                        variant="outline"
-                        className="border-blue-500/30 bg-blue-500/10 px-1.5 py-0 text-[9px] font-bold tracking-wider text-blue-400"
-                      >
-                        LIVE
-                      </Badge>
-                    </div>
-                  </td>
+                <LiveRow
+                  effectiveRiskLevel={effectiveRiskLevel}
+                  effectiveProb={effectiveProb}
+                  tp2={tp2}
+                  oilTemp={oilTemp}
+                  isSelected={selectedId === LIVE_ASSET_ID}
+                  onSelect={onSelect}
+                />
 
-                  <td className="py-3 pr-4">
-                    <RiskBadge level={effectiveRiskLevel} />
-                  </td>
-
-                  <td className="py-3 pr-4 text-right">
-                    <ProbabilityCell prob={effectiveProb} riskLevel={effectiveRiskLevel} />
-                  </td>
-
-                  <td className="py-3 pr-4 text-right font-mono text-xs tabular-nums text-foreground">
-                    {tp2.toFixed(2)} <span className="text-muted-foreground">bar</span>
-                  </td>
-
-                  <td className="py-3 pr-4 text-right font-mono text-xs tabular-nums text-foreground">
-                    {oilTemp.toFixed(1)} <span className="text-muted-foreground">°C</span>
-                  </td>
-
-                  <td className="py-3 pr-3 text-right" onClick={(e) => e.stopPropagation()}>
-                    <Button
-                      asChild
-                      size="sm"
-                      variant="outline"
-                      className={cn(
-                        "h-7 gap-1.5 px-2.5 text-[11px] font-semibold",
-                        "border-primary/30 bg-primary/5 text-primary",
-                        "transition-colors duration-150 hover:bg-primary/10 hover:text-primary",
-                      )}
-                    >
-                      <Link href="/sensors/APU-Trem-042">
-                        Telemetria
-                        <ArrowRight className="h-3 w-3 transition-transform duration-150 group-hover/row:translate-x-0.5" />
-                      </Link>
-                    </Button>
-                  </td>
-                </tr>
-
-                {/* ── Linhas mockadas ── */}
-                {MOCK_ASSETS.map((asset) => {
-                  const isMockSelected = selectedId === asset.id;
-                  return (
-                    <tr
-                      key={asset.id}
-                      onClick={() => onSelect(asset.id)}
-                      className={cn(
-                        "border-b border-border/50 cursor-pointer",
-                        "transition-colors duration-150",
-                        isMockSelected
-                          ? "bg-accent/40 border-l-4 border-primary"
-                          : "hover:bg-muted/50",
-                      )}
-                    >
-                      <td className="py-3 pr-4">
-                        <div className="flex items-center gap-2">
-                          <SelectionBar active={isMockSelected} />
-                          <span
-                            className="h-1.5 w-1.5 shrink-0 rounded-full bg-muted-foreground/30"
-                            aria-hidden="true"
-                          />
-                          <span className="font-mono text-xs text-muted-foreground">
-                            {asset.id}
-                          </span>
-                        </div>
-                      </td>
-
-                      <td className="py-3 pr-4">
-                        <RiskBadge level={asset.riskLevel} />
-                      </td>
-
-                      <td className="py-3 pr-4 text-right">
-                        <ProbabilityCell prob={asset.prob} riskLevel={asset.riskLevel} />
-                      </td>
-
-                      <td className="py-3 pr-4 text-right font-mono text-xs tabular-nums text-muted-foreground">
-                        {asset.tp2.toFixed(2)} <span className="text-muted-foreground/50">bar</span>
-                      </td>
-
-                      <td className="py-3 pr-4 text-right font-mono text-xs tabular-nums text-muted-foreground">
-                        {asset.oilTemp.toFixed(1)} <span className="text-muted-foreground/50">°C</span>
-                      </td>
-
-                      <td className="py-3 pr-3 text-right">
-                        <span className="font-mono text-[10px] italic text-muted-foreground/40">
-                          {asset.lastSeen} atrás
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
+                {MOCK_ASSETS.map((asset) => (
+                  <MockRow
+                    key={asset.id}
+                    asset={asset}
+                    isSelected={selectedId === asset.id}
+                    onSelect={onSelect}
+                  />
+                ))}
               </tbody>
             </table>
           </div>

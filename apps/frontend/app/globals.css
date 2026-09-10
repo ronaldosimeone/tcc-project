@@ -4,34 +4,42 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* ── Tailwind v4: mapeia utilitários semânticos para as variáveis shadcn ─── */
+/* ── Tailwind v4: mapeia utilitários semânticos para as variáveis shadcn ───
+   As variáveis abaixo (--background, --primary, etc.) já são valores
+   `oklch(...)` completos (ver :root/.dark) — NÃO envolver em `hsl(...)`.
+   Isso produzia `hsl(oklch(...))`, uma cor CSS inválida que o navegador
+   descarta silenciosamente: qualquer utilitário Tailwind baseado nesses
+   tokens (bg-primary, text-destructive, border-ring, etc.) renderizava
+   transparente. Bug pré-existente, descoberto ao validar o Storybook
+   (RNF-58) — confirmado também na app real (`/settings/alerts`, Switch em
+   estado "checked"). Corrigido aqui referenciando a variável diretamente. */
 @theme inline {
-  --color-background: hsl(var(--background));
-  --color-foreground: hsl(var(--foreground));
-  --color-card: hsl(var(--card));
-  --color-card-foreground: hsl(var(--card-foreground));
-  --color-popover: hsl(var(--popover));
-  --color-popover-foreground: hsl(var(--popover-foreground));
-  --color-primary: hsl(var(--primary));
-  --color-primary-foreground: hsl(var(--primary-foreground));
-  --color-secondary: hsl(var(--secondary));
-  --color-secondary-foreground: hsl(var(--secondary-foreground));
-  --color-muted: hsl(var(--muted));
-  --color-muted-foreground: hsl(var(--muted-foreground));
-  --color-accent: hsl(var(--accent));
-  --color-accent-foreground: hsl(var(--accent-foreground));
-  --color-destructive: hsl(var(--destructive));
-  --color-destructive-foreground: hsl(var(--destructive-foreground));
-  --color-border: hsl(var(--border));
-  --color-input: hsl(var(--input));
-  --color-ring: hsl(var(--ring));
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
 
   /* Chart tokens */
-  --color-chart-1: hsl(var(--chart-1));
-  --color-chart-2: hsl(var(--chart-2));
-  --color-chart-3: hsl(var(--chart-3));
-  --color-chart-4: hsl(var(--chart-4));
-  --color-chart-5: hsl(var(--chart-5));
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
 
   /* Tipografia */
   --font-sans: var(--font-sans);
@@ -82,7 +90,10 @@
 
   /* Destrutivo / alerta crítico */
   --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: 0 0% 98%;
+  /* Era "0 0% 98%" (triplete HSL cru, incompatível com os demais tokens —
+     ver nota no @theme inline acima). Substituído por oklch equivalente ao
+     --primary-foreground (mesmo "quase-branco" usado em todo o tema). */
+  --destructive-foreground: oklch(0.985 0 0);
 
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
@@ -121,8 +132,8 @@ body {
 }
 
 body {
-  background: hsl(var(--background));
-  color: hsl(var(--foreground));
+  background: var(--background);
+  color: var(--foreground);
   font-family: var(--font-geist-sans, Arial, sans-serif);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -134,14 +145,14 @@ body {
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: hsl(var(--background));
+  background: var(--background);
 }
 ::-webkit-scrollbar-thumb {
-  background: hsl(var(--border));
+  background: var(--border);
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: hsl(var(--muted-foreground));
+  background: var(--muted-foreground);
 }
 
 .dark {
