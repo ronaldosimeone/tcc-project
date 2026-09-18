@@ -1,0 +1,13 @@
+# RNF-62 — evita enviar artefatos locais de dev (node_modules, build
+# cache, secrets locais) ao contexto de build do Docker. Reduz
+# superfície/tamanho da imagem e o tempo de build.
+node_modules/
+.next/
+.storybook-static/
+coverage/
+playwright-report/
+test-results/
+.env
+.env*.local
+*.log
+.git/

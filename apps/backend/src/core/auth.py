@@ -7,10 +7,16 @@ All `/models` management endpoints require a pre-shared token sent in the
 
 Dev bypass
 ----------
-When `ADMIN_API_TOKEN` is unset (the placeholder default `"change-me-in-production"`
-is in effect), the dependency is a no-op.  This avoids 401 noise during local
-development where no real secret is configured.  In any non-default
-configuration (i.e. production, staging) the token is enforced strictly.
+When `DEBUG=true` **and** `ADMIN_API_TOKEN` is still the placeholder default
+`"change-me-in-production"`, the dependency is a no-op.  This avoids 401 noise
+during local development where no real secret is configured.
+
+RNF-62 — the bypass now requires `DEBUG=true` as well: a production/staging
+deployment (`DEBUG` unset → `False`) that forgot to set `ADMIN_API_TOKEN`
+**fails closed** (all `/models` and `/v1/settings` admin routes return 401)
+instead of silently exposing them.  A ZAP scan of the previous behaviour
+found `GET /v1/settings/alerts` reachable with no credentials because
+`.env.example` shipped the placeholder value.
 
 Design notes
 ------------
@@ -57,8 +63,10 @@ async def require_admin_token(
 
         @router.get("/foo", dependencies=[Depends(require_admin_token)])
     """
-    # Dev mode: no real secret configured → skip auth entirely.
-    if settings.admin_api_token == _DEV_PLACEHOLDER_TOKEN:
+    # Dev mode: DEBUG=true AND no real secret configured → skip auth entirely.
+    # RNF-62: sem o `settings.debug`, um ambiente de produção que esqueceu de
+    # trocar o ADMIN_API_TOKEN ficaria com as rotas admin abertas (fail-open).
+    if settings.debug and settings.admin_api_token == _DEV_PLACEHOLDER_TOKEN:
         return
 
     # Guard against None before compare_digest: both arguments must be str

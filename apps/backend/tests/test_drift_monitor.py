@@ -12,7 +12,7 @@ Cobertura (RF-27 §Fase 10):
                                               roda sem HTTP
   8. Celery Beat                          -> schedule diário configurado
   9. Idempotência                         -> mesma janela 2x não duplica
-  10. Evidently real                      -> integração real (sem mock),
+  10. PSI real                             -> integração real (sem mock),
                                               dados determinísticos
                                               (reference≈current -> PSI baixo;
                                               reference≠current -> PSI alto)
@@ -20,7 +20,7 @@ Cobertura (RF-27 §Fase 10):
 Estratégia dos testes de fronteira (1-3): o valor exato de PSI é INJETADO
 via um `DriftMonitor` que sobrescreve `calculate_drift()` — a regra de
 negócio testada é a COMPARAÇÃO (`psi > 0.25`, nunca `>=`), não a precisão
-numérica do Evidently sobre uma distribuição sintética arbitrária (isso é
+numérica do cálculo de PSI sobre uma distribuição sintética arbitrária (isso é
 coberto, sem mock, pelo teste 10 — "PSI real"). Mesma filosofia do
 `test_full_pipeline.py::test_between_maintenance_and_critical_threshold...`
 (RF-26): isolar a regra de negócio do resto do pipeline quando o objetivo é
@@ -164,7 +164,7 @@ class _StubMonitor(DriftMonitor):
     """`DriftMonitor` com `load_reference_data`/`calculate_drift`
     substituídos por valores controlados — usado SÓ pelos testes de
     fronteira (1-3), onde o que se testa é a comparação `psi > 0.25`, não a
-    precisão numérica do Evidently."""
+    precisão numérica do cálculo de PSI."""
 
     def __init__(self, psi_by_feature: dict[str, float]) -> None:
         super().__init__()
@@ -339,7 +339,7 @@ async def test_insufficient_current_data_does_not_fabricate_psi(
     await _seed_predictions(session_factory, MIN_CURRENT_ROWS - 1)
 
     async with session_factory() as db:
-        monitor = DriftMonitor()  # SEM stub — prova que nem chega a chamar Evidently
+        monitor = DriftMonitor()  # SEM stub — prova que nem chega a calcular PSI
         result = await monitor.run_daily_analysis(db, now=_NOW)
 
     assert result.status == "insufficient_data"
@@ -449,7 +449,7 @@ def test_task_runs_directly_without_http(
     asyncio.run(engine.dispose())
 
     assert len(rows) == 1
-    assert rows[0].status == "ok"  # dados reais suficientes -> Evidently real rodou
+    assert rows[0].status == "ok"  # dados reais suficientes -> PSI real rodou
 
 
 # ---------------------------------------------------------------------------
@@ -533,13 +533,13 @@ async def test_different_analysis_dates_create_separate_rows(
 
 
 # ---------------------------------------------------------------------------
-# 10. Evidently REAL (sem mock) — dados determinísticos (RF-27 §Fase 11)
+# 10. PSI REAL (sem mock) — dados determinísticos (RF-27 §Fase 11)
 # ---------------------------------------------------------------------------
 
 
-def test_evidently_real_low_psi_when_distributions_are_similar() -> None:
+def test_psi_real_low_when_distributions_are_similar() -> None:
     """reference + current semelhante -> PSI abaixo do threshold. Nenhum
-    mock do Evidently aqui — `Report`/`Dataset`/`ValueDrift` reais."""
+    mock aqui — `DriftMonitor.calculate_drift` real (`_population_stability_index`)."""
     rng = np.random.default_rng(42)
     reference = pd.DataFrame(
         {
@@ -575,7 +575,7 @@ def test_evidently_real_low_psi_when_distributions_are_similar() -> None:
     )
 
 
-def test_evidently_real_high_psi_when_distributions_differ_significantly() -> None:
+def test_psi_real_high_when_distributions_differ_significantly() -> None:
     """reference + current SIGNIFICATIVAMENTE diferente -> PSI acima do
     threshold. Mesma feature (Motor_current) com média completamente
     deslocada — drift real e óbvio, não um valor "só um pouco acima"."""

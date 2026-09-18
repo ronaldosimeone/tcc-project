@@ -1,26 +1,30 @@
 """
 PredictIQ — Busca semântica sobre manuais indexados (RF-21 / RNF-45).
 
-Consulta a MESMA collection ChromaDB (`maintenance_manuals`) preparada por
+Consulta a MESMA collection (`maintenance_manuals`) preparada por
 `index_manuals.py` (RF-20) — nenhuma indexação, modelo ou persistência nova é
 criada aqui. `SemanticSearchService` só faz a leitura:
 
-    query -> embedding (EMBEDDING_MODEL) -> candidatos via ChromaDB
+    query -> embedding (EMBEDDING_MODEL) -> candidatos via vector store
           -> cosine similarity (calculada aqui) -> filtro score > 0.6 -> top 5
 
-Métrica do ChromaDB — auditado ANTES de implementar, e corrigido depois de
+RNF-62: o armazenamento vetorial deixou de ser o pacote `chromadb` (CVEs
+High/Critical sem correção no seu servidor HTTP — ver README §17.1) e passou
+a ser o `vector_store.py` local (sqlite3 + numpy). A lógica desta função
+NÃO mudou: L2 para pré-selecionar candidatos, cosine para o score final.
+
+Métrica de distância — auditada ANTES de implementar, e corrigida depois de
 medir com dados reais
 --------------------------------------------------------------------------
-A collection é criada em `index_manuals.get_collection()` via
-`get_or_create_collection(name=..., metadata={"description": ...})` — **sem**
-`hnsw:space` explícito. Nessa configuração o ChromaDB usa o espaço default,
-`l2` (distância L2 ao quadrado / squared Euclidean) sobre os embeddings
-brutos do SentenceTransformer, que não são normalizados. Confirmado
-empiricamente (distância de um vetor consigo mesmo = `0.0`).
+O `vector_store.py` ordena candidatos por distância L2 ao quadrado (squared
+Euclidean) sobre os embeddings brutos do SentenceTransformer, que não são
+normalizados — a mesma métrica default que o `chromadb` usava (collection sem
+`hnsw:space` explícito). Confirmado empiricamente (distância de um vetor
+consigo mesmo = `0.0`).
 
 A primeira versão desta função convertia essa distância com
 `similarity = 1 / (1 + distance)` (fórmula padrão para espaços L2, usada por
-integrações como LangChain). **Validada contra o ChromaDB real desta task,
+integrações como LangChain). **Validada contra dados reais desta task,
 essa fórmula se mostrou inutilizável**: com o modelo multilíngue configurado,
 as distâncias squared-L2 reais entre a query e os chunks indexados ficam na
 faixa de ~15 a ~50 (vetores de norma alta, não normalizados) — o que produz
@@ -36,12 +40,14 @@ nenhuma reindexação). Cosine similarity é invariante à norma dos vetores
 (por isso funciona igual não importa a magnitude que este modelo produz) e
 fica naturalmente em `[-1, 1]` — `> 0.6` volta a ser um limiar com
 significado real. Validado contra o corpus real desta task: consultas
-claramente relevantes chegam a `~0.71`–`~0.77`; uma consulta deliberadamente
-irrelevante ("receita de bolo de chocolate") fica em `~0.0` ou negativa.
+que parafraseiam uma frase do manual chegam a `~0.65`–`~0.75`; uma consulta
+deliberadamente irrelevante ("receita de bolo de chocolate") fica em `~0.0`
+ou negativa. O limiar `0.6` é estrito de propósito (RF-21) — a maioria das
+consultas genéricas devolve `[]`, o que é um resultado válido.
 
-O índice ANN do ChromaDB (ordenado por distância L2) continua sendo usado
-só para buscar a lista de CANDIDATOS de forma eficiente — o score final que
-decide o filtro/ranking é sempre a cosine similarity calculada aqui.
+A pré-seleção por distância L2 (feita no `vector_store.py`) continua sendo
+usada só para buscar a lista de CANDIDATOS de forma eficiente — o score final
+que decide o filtro/ranking é sempre a cosine similarity calculada aqui.
 """
 
 from __future__ import annotations

@@ -1,0 +1,10 @@
+# Dependencias APENAS de desenvolvimento/teste - NAO entram na imagem de
+# producao (o Dockerfile instala so requirements.txt). Instale com:
+#   pip install -r requirements.txt -r requirements-dev.txt
+#
+# RNF-62 - pytest saiu de requirements.txt (PYSEC-2026-1845 afeta ate
+# 8.3.5 - test-only, sem impacto em producao) e foi fixado aqui numa
+# faixa >= 9.0.3 ja corrigida, junto com os plugins compativeis.
+pytest>=9.0.3
+pytest-asyncio>=1.0.0
+pytest-cov>=7.0.0

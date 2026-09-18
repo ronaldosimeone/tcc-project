@@ -75,3 +75,8 @@ apps/mcp-server/data/
 # (shelve DB), criado em runtime dentro do container `celery-beat`;
 # nunca deve ir pro repo (estado de máquina, não código).
 apps/backend/celerybeat-schedule*
+
+# RNF-62 — relatórios de execução do OWASP ZAP (zap.json/html/md/yaml),
+# gerados localmente em apps/backend/.audit_tmp/zap/. Artefatos de scan,
+# não código — nunca versionar (ver README "Segurança" §17.3).
+apps/backend/.audit_tmp/

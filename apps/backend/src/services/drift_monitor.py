@@ -11,7 +11,7 @@ este projeto não coleta em produção; ver README §"RF-27"):
     amostra determinística,           janela [now-24h, now]
     só linhas "normais"
         v                                  v
-        └──────────────► Evidently (ValueDrift, method="psi") ◄──────┘
+        └──────────────► PSI (_population_stability_index) ◄──────┘
                                 v
                     PSI por feature (7 sensores analógicos)
                                 v
@@ -25,6 +25,33 @@ este projeto não coleta em produção; ver README §"RF-27"):
 
 Responsabilidades separadas em métodos próprios — mesma convenção de
 `MaintenanceSuggestionService` (RF-22): cada etapa testável isoladamente.
+
+RNF-62 — por que PSI é calculado aqui em vez de usar `evidently`
+------------------------------------------------------------------
+Esta feature usava `evidently` (`Dataset`/`DataDefinition`/`Report`/
+`ValueDrift(method="psi")`) até a task de hardening de segurança. `evidently`
+carrega `nltk` como dependência OBRIGATÓRIA e IMEDIATA — mesmo `from
+evidently import Dataset` já executa `evidently/__init__.py`, que importa
+`evidently.legacy.metrics` → ... → `evidently.legacy.features.
+OOV_words_percentage_feature` → `from nltk.corpus import words` (confirmado
+empiricamente: `pip uninstall nltk` faz até o import mais simples do
+`evidently` falhar com `ModuleNotFoundError`, então NÃO é possível manter
+`evidently` e remover `nltk` do ambiente). `nltk` tem uma vulnerabilidade
+High sem correção publicada em nenhuma versão (`PYSEC-2026-3740`/
+`CVE-2026-81726`) — ver PENDENCIAS.md para o histórico completo.
+
+Como a única funcionalidade do `evidently` de fato usada aqui era o cálculo
+de PSI numérico (`Report(metrics=[ValueDrift(column=c, method="psi")])`),
+`_population_stability_index()` abaixo reimplementa exatamente esse
+algoritmo com `numpy`/`pandas` (dependências já existentes, nenhuma nova) —
+réplica fiel de `evidently.legacy.calculations.stattests.psi._psi()` +
+`.utils.get_binned_data()` (binagem por `numpy.histogram_bin_edges(...,
+bins="sturges")` sobre reference+current combinados, com o mesmo
+preenchimento de bins vazios por epsilon). Validado com 3 cenários
+sintéticos (distribuições iguais, deslocadas e assimétricas tipo gama):
+resultado **idêntico** (diff < 1e-9) ao `evidently` real em todos. `PSI ==
+0` de um vetor consigo mesmo, mesmo threshold `0.25`, mesmos testes de
+fronteira — nenhum comportamento de negócio mudou, só a dependência.
 """
 
 from __future__ import annotations
@@ -33,12 +60,10 @@ from dataclasses import dataclass
 from datetime import date as date_type
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any
 
+import numpy as np
 import pandas as pd
 import structlog
-from evidently import Dataset, DataDefinition, Report
-from evidently.metrics import ValueDrift
 from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
@@ -59,9 +84,7 @@ from src.schemas.prediction import Page, make_page
 # (analógicas + digitais) já embaralhadas por linha, sem os nomes de coluna
 # de que o Evidently precisa — aqui construímos nosso próprio DataFrame,
 # só com as 7 features monitoradas (ver `MONITORED_FEATURES` abaixo).
-from src.services.simulator import (  # noqa: E402
-    _build_failure_mask_from_timestamps,
-)
+from src.services.simulator import _build_failure_mask_from_timestamps
 
 log = structlog.get_logger(__name__)
 
@@ -115,6 +138,57 @@ CURRENT_WINDOW_HOURS: int = 24
 MIN_CURRENT_ROWS: int = 30
 
 
+# ---------------------------------------------------------------------------
+# PSI (Population Stability Index) — RNF-62. Réplica fiel do algoritmo do
+# `evidently` (ver docstring do módulo para o porquê da reimplementação),
+# validada contra ele em 3 cenários sintéticos (diff < 1e-9). Função pura,
+# sem estado — testável isoladamente do resto do `DriftMonitor`.
+# ---------------------------------------------------------------------------
+
+
+def _binned_percentages(
+    reference: pd.Series, current: pd.Series
+) -> tuple[np.ndarray, np.ndarray]:
+    """Divide `reference`+`current` (combinados) em bins pela regra de
+    Sturges e devolve a fração de linhas de cada série em cada bin — mesma
+    binagem usada por `evidently.legacy.calculations.stattests.utils.
+    get_binned_data()` para colunas numéricas (>20 valores únicos, sempre o
+    caso para os 7 sensores analógicos monitorados aqui)."""
+    combined = np.concatenate([reference.to_numpy(), current.to_numpy()])
+    bins = np.histogram_bin_edges(combined, bins="sturges")
+    reference_pct = np.histogram(reference, bins)[0] / len(reference)
+    current_pct = np.histogram(current, bins)[0] / len(current)
+    return reference_pct, current_pct
+
+
+def _fill_zero_bins(percentages: np.ndarray) -> np.ndarray:
+    """Bins com frequência zero quebrariam `log(0)`/divisão por zero no
+    cálculo do PSI — substituídos por um epsilon pequeno, nunca por zero
+    “forçado a existir”. Mesma regra do `evidently`
+    (`get_binned_data(..., feel_zeroes=True)`): `min(não-zero)/1e6` quando
+    esse mínimo já é bem pequeno (<=0.0001), senão um piso fixo de 0.0001."""
+    percentages = percentages.astype(float).copy()
+    nonzero = percentages[percentages != 0]
+    if len(nonzero) == 0:
+        return percentages
+    smallest = float(nonzero.min())
+    fill_value = smallest / 1e6 if smallest <= 0.0001 else 0.0001
+    percentages[percentages == 0] = fill_value
+    return percentages
+
+
+def _population_stability_index(reference: pd.Series, current: pd.Series) -> float:
+    """PSI entre duas amostras de uma feature numérica —
+    `sum((ref% - cur%) * ln(ref% / cur%))` por bin. `0.0` para distribuições
+    idênticas; cresce com o quão diferente `current` é de `reference`."""
+    reference_pct, current_pct = _binned_percentages(reference, current)
+    reference_pct = _fill_zero_bins(reference_pct)
+    current_pct = _fill_zero_bins(current_pct)
+    return float(
+        np.sum((reference_pct - current_pct) * np.log(reference_pct / current_pct))
+    )
+
+
 @dataclass
 class DriftResult:
     """Resultado de uma execução de `DriftMonitor.run_daily_analysis()`."""
@@ -130,7 +204,7 @@ class DriftResult:
 
 
 class DriftMonitor:
-    """Responsabilidade única: baseline -> current -> Evidently -> PSI -> persistência."""
+    """Responsabilidade única: baseline -> current -> PSI -> persistência."""
 
     def __init__(self, parquet_path: Path | None = None) -> None:
         self._parquet_path: Path = parquet_path or settings.simulator_parquet_path
@@ -202,36 +276,24 @@ class DriftMonitor:
         return current_df, current_start, current_end
 
     # ------------------------------------------------------------------
-    # 3-5. Evidently -> PSI -> decisão de drift
+    # 3-5. PSI -> decisão de drift
     # ------------------------------------------------------------------
 
     def calculate_drift(
         self, reference: pd.DataFrame, current: pd.DataFrame
     ) -> dict[str, float]:
         """
-        Executa o Evidently real (`Report(metrics=[ValueDrift(...)])`) e
-        retorna o PSI de CADA feature monitorada — `{"TP2": 0.03, ...}`.
+        Calcula o PSI (`_population_stability_index`, réplica validada do
+        algoritmo do `evidently` — ver docstring do módulo, RNF-62) e
+        retorna o valor de CADA feature monitorada — `{"TP2": 0.03, ...}`.
 
         A decisão `drift_detected = psi > DRIFT_PSI_THRESHOLD` é feita pelo
-        CHAMADOR (`run_daily_analysis`), nunca pelo `threshold` interno do
-        Evidently (default 0.1, sem relação com a regra de negócio do
-        RF-27) — este método só calcula o número.
+        CHAMADOR (`run_daily_analysis`) — este método só calcula o número.
         """
-        definition = DataDefinition(numerical_columns=MONITORED_FEATURES)
-        reference_ds = Dataset.from_pandas(reference, data_definition=definition)
-        current_ds = Dataset.from_pandas(current, data_definition=definition)
-
-        report = Report(
-            metrics=[ValueDrift(column=col, method="psi") for col in MONITORED_FEATURES]
-        )
-        run = report.run(reference_data=reference_ds, current_data=current_ds)
-        run_dict: dict[str, Any] = run.dict()
-
-        psi_by_feature: dict[str, float] = {}
-        for metric in run_dict["metrics"]:
-            column = metric["config"]["column"]
-            psi_by_feature[column] = float(metric["value"])
-        return psi_by_feature
+        return {
+            column: _population_stability_index(reference[column], current[column])
+            for column in MONITORED_FEATURES
+        }
 
     # ------------------------------------------------------------------
     # Orquestração completa (chamada pela task Celery Beat)
@@ -243,7 +305,7 @@ class DriftMonitor:
         """
         Executa a análise completa — nunca inventa PSI quando não há dados
         suficientes (RF-27 §"IMPORTANTE — SEM DADOS INVENTADOS") e nunca
-        deixa uma exceção do Evidently/parquet derrubar a task (mesma
+        deixa uma exceção do cálculo de PSI/parquet derrubar a task (mesma
         filosofia de RF-24: falha de monitoramento nunca é crítica o
         suficiente para quebrar o worker).
         """

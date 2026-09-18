@@ -1,0 +1,6 @@
+# Dependências só de desenvolvimento/teste do mcp-server — NÃO entram na
+# imagem de produção (o Dockerfile instala apenas requirements.txt).
+# RNF-62: mantém `pytest` fora da árvore de produção auditada.
+-r requirements.txt
+
+pytest==9.1.1

@@ -59,10 +59,22 @@ from src.services.notification_test_service import (
 from src.services.telegram_alert_rate_limiter import TelegramAlertRateLimiter
 
 # ---------------------------------------------------------------------------
-# Fixture — SQLite em memória (StaticPool), mesmo padrão de test_notifications.py
+# Fixtures
 # ---------------------------------------------------------------------------
 
 
+@pytest.fixture(autouse=True)
+def _dev_mode(monkeypatch: pytest.MonkeyPatch) -> None:
+    """RNF-62 — o bypass de auth do RF-11 agora exige `DEBUG=true` (ver
+    `src/core/auth.py`). Este arquivo testa o comportamento em modo dev
+    (todos os casos assertam `admin_api_token == "change-me-in-production"`),
+    então liga o DEBUG por padrão. Casos específicos sobrescrevem
+    (`test_requires_admin_token_when_configured` põe um token real;
+    `test_placeholder_token_without_debug_fails_closed` desliga o DEBUG)."""
+    monkeypatch.setattr(settings, "debug", True)
+
+
+# SQLite em memória (StaticPool), mesmo padrão de test_notifications.py.
 @pytest.fixture()
 async def db_session_factory():
     engine: AsyncEngine = create_async_engine(
@@ -358,17 +370,33 @@ async def test_requires_admin_token_when_configured(
 
 
 async def test_dev_placeholder_token_allows_access_without_header(
-    db_session_factory,
+    db_session_factory, monkeypatch
 ) -> None:
-    """Com o token default (`change-me-in-production`, modo dev — RF-11),
-    nenhum header é exigido — mesmo comportamento de `/models` hoje."""
+    """Com o token default (`change-me-in-production`) **e** `DEBUG=true`
+    (modo dev — RF-11 / RNF-62), nenhum header é exigido."""
     assert settings.admin_api_token == "change-me-in-production"
+    monkeypatch.setattr(settings, "debug", True)
     service = AlertSettingsService(
         default_threshold=0.85, session_factory=db_session_factory
     )
     async with await _client_for(service) as client:
         response = await client.get("/v1/settings/alerts")
     assert response.status_code == 200
+
+
+async def test_placeholder_token_without_debug_fails_closed(
+    db_session_factory, monkeypatch
+) -> None:
+    """RNF-62 — token ainda no placeholder mas `DEBUG` desligado (produção):
+    as rotas admin NÃO ficam abertas, retornam 401 (fail-closed)."""
+    assert settings.admin_api_token == "change-me-in-production"
+    monkeypatch.setattr(settings, "debug", False)
+    service = AlertSettingsService(
+        default_threshold=0.85, session_factory=db_session_factory
+    )
+    async with await _client_for(service) as client:
+        response = await client.get("/v1/settings/alerts")
+    assert response.status_code == 401
 
 
 # ---------------------------------------------------------------------------

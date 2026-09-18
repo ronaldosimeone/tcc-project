@@ -1,10 +1,34 @@
 mcp==2.2.0
-pytest==9.1.1
 
-# RF-20 / RNF-44 — pipeline de ingestão de manuais (index_manuals.py).
-# Versões fixadas e validadas juntas para o Python 3.11-slim do Dockerfile
-# (chromadb 0.5.x e sentence-transformers 3.x sao as ultimas releases
-# estaveis compatíveis entre si e com pydantic v2 na epoca desta task).
-pypdf==5.1.0
-sentence-transformers==3.3.1
-chromadb==0.5.23
+# RF-20 / RF-21 / RNF-44 — pipeline RAG offline + busca semântica.
+#   index_manuals.py : PDF -> texto -> chunks -> embeddings -> vector store
+#   semantic_search.py: query -> embedding -> candidatos -> cosine -> top 5
+#
+# RNF-62 — versões auditadas com `pip-audit -r requirements.txt` no
+# python:3.11-slim do Dockerfile. HIGH/CRITICAL = 0 (ver README §17.1):
+#
+#  • transformers 5.17.0 / tokenizers 0.23.2 / sentence-transformers 6.0.1
+#    / torch 2.14.0 — upgrade em cascata que zera os CVEs de `transformers`
+#    4.46.3 (RCE via arquivo de modelo, ReDoS no tokenizer, etc.). O
+#    conflito antigo de `tokenizers` (chromadb 0.5.x exigia <=0.20.3) deixou
+#    de existir com a remoção do chromadb abaixo.
+#
+#  • chromadb REMOVIDO. Toda versão publicada (>=0.4.17, incl. a última
+#    1.5.9) tem CVE High/Critical SEM CORREÇÃO no seu componente servidor
+#    HTTP (CVE-2026-45829/45830/45831/45833) — `pip-audit` nunca fica
+#    verde com chromadb na árvore. Substituído por `vector_store.py`
+#    (sqlite3 stdlib + numpy): mesmo contrato (PersistentClient /
+#    get_or_create_collection / add / upsert / query / get / count /
+#    delete), mesma dimensão de embedding (384), mesma métrica L2 para
+#    pré-seleção. Ver docstring de vector_store.py e README §17.1.
+#
+#  • pypdf 6.x — corrige 2 DoS High (loop infinito em imagem inline não
+#    terminada) que existiam no 5.1.0.
+#
+# pytest saiu daqui para requirements-dev.txt (não vai para a imagem de
+# produção — o Dockerfile instala só este arquivo).
+pypdf==6.18.0
+sentence-transformers==6.0.1
+transformers==5.17.0
+tokenizers==0.23.2
+torch==2.14.0

@@ -1,0 +1,17 @@
+# RNF-62 — evita enviar artefatos locais de dev (venv, caches, secrets
+# locais) ao contexto de build do Docker. Reduz superfície/tamanho da
+# imagem e o tempo de build; nada aqui é necessário em produção.
+.venv/
+__pycache__/
+*.pyc
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.pytest-of-*/
+htmlcov/
+.coverage
+.env
+.env.local
+*.db
+*.sqlite3
+.git/

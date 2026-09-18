@@ -81,7 +81,7 @@ O **PredictIQ** é um sistema completo de **manutenção preditiva** para o comp
 | **MLOps** | MLflow | ≥2.14 (Docker) | Tracking + promotion |
 | **Infra** | Docker + Compose | 24.x / v2 | Orquestração |
 | | Nginx | 1.25-alpine | Reverse proxy / SSE-WS |
-| **IA Local (próxima fase)** | Ollama (Llama 3.2 3B) + MCP + ChromaDB | — | Assistente RAG para sugestões de reparo |
+| **IA Local (próxima fase)** | Ollama (Llama 3.2 3B) + MCP + vetor store local | — | Assistente RAG para sugestões de reparo |
 
 ---
 
@@ -503,7 +503,7 @@ flowchart LR
     API -->|"MCP_SERVER_URL<br/>(consumida desde RF-22, ver §4.8)"| MCP["MCP Server<br/>apps/mcp-server (container próprio)"]
     MCP --> TOOL["search_maintenance_manual<br/>(busca semântica real — RF-21)"]
     TOOL --> SVC["SemanticSearchService"]
-    SVC --> CHROMA[("ChromaDB<br/>maintenance_manuals — RF-20")]
+    SVC --> CHROMA[("vector store local<br/>maintenance_manuals — RF-20")]
 
     style MCP stroke-dasharray: 3 3
 ```
@@ -527,13 +527,13 @@ flowchart LR
 |---|---|---|---|
 | `search_maintenance_manual` | `query: string` (obrigatório) | **Busca semântica real (RF-21)** | Recupera, no máximo, os 5 trechos mais relevantes dos manuais indexados |
 
-**Fluxo real** (`server.py` → `semantic_search.py` → ChromaDB, ver §4.7 para a indexação):
+**Fluxo real** (`server.py` → `semantic_search.py` → vector store local `vector_store.py`, ver §4.7 para a indexação):
 
 ```mermaid
 flowchart TD
     Q["query: string"] --> ENC["SentenceTransformer.encode<br/>(mesmo EMBEDDING_MODEL da indexação)"]
-    ENC --> CAND["ChromaDB.query<br/>(candidatos por proximidade, ate 20)"]
-    CAND --> SCORE["cosine similarity<br/>(calculada aqui, nao a distancia do Chroma)"]
+    ENC --> CAND["vector_store.query<br/>(candidatos por proximidade L2, ate 20)"]
+    CAND --> SCORE["cosine similarity<br/>(calculada aqui, nao a distancia L2 do store)"]
     SCORE --> FILTER{"score > 0.6 ?"}
     FILTER -->|"nao"| DROP["descartado"]
     FILTER -->|"sim"| TOP5["top 5 por score"]
@@ -566,14 +566,14 @@ Resposta real (capturada via chamada MCP de verdade — ver "Validação ponta-a
 |---|---|
 | Máximo de resultados | 5 |
 | Threshold de score | `score > 0.6` (estrito — `score == 0.6` é descartado) |
-| Métrica de score | Cosine similarity, calculada em `semantic_search.py` a partir dos embeddings brutos (ver "Por que cosine similarity" abaixo) — **não** a distância que o ChromaDB devolve diretamente |
+| Métrica de score | Cosine similarity, calculada em `semantic_search.py` a partir dos embeddings brutos (ver "Por que cosine similarity" abaixo) — **não** a distância L2 que o vector store devolve diretamente |
 | Sem resultado relevante | Resposta válida `{"query": ..., "results": []}` — nunca lança exceção |
 | Modelo de embeddings | O mesmo `EMBEDDING_MODEL` da indexação (§4.7), carregado **uma vez por processo** (singleton lazy em `server._get_service`) |
-| Collection consultada | `maintenance_manuals` (a mesma da indexação — nenhum ChromaDB novo) |
+| Collection consultada | `maintenance_manuals` (a mesma da indexação — nenhum store novo) |
 
-#### Por que cosine similarity, não a distância bruta do ChromaDB
+#### Por que cosine similarity, não a distância L2 bruta do vector store
 
-A collection é criada sem `hnsw:space` explícito (§4.7) — o ChromaDB usa o default `l2` (distância L2 ao quadrado sobre embeddings não normalizados). Medido contra o corpus real desta task, essa distância fica em ~15–50 e uma conversão ingênua (`1/(1+distancia)`, fórmula padrão para espaços L2) nunca passava de `~0.07` — o threshold `> 0.6` da RF-21 rejeitaria **toda** consulta, por mais relevante que fosse. Corrigido calculando a cosine similarity diretamente a partir dos embeddings brutos (query + candidatos, este último obtido via `collection.query(..., include=["embeddings"])`) — invariante à norma dos vetores, portanto insensível a essa característica do modelo. O índice ANN do ChromaDB continua usado só para obter os candidatos de forma eficiente; o score que decide o filtro é sempre a cosine similarity. Ver docstring de [`semantic_search.py`](apps/mcp-server/semantic_search.py) para a investigação completa.
+O `vector_store.py` ordena candidatos por distância L2 ao quadrado sobre os embeddings brutos, não normalizados (mesma métrica que o `chromadb` usava por default, antes de ser removido nesta task — RNF-62, ver §17.1). Medido contra o corpus real desta task, essa distância fica em ~15–50 e uma conversão ingênua (`1/(1+distancia)`, fórmula padrão para espaços L2) nunca passava de `~0.07` — o threshold `> 0.6` da RF-21 rejeitaria **toda** consulta, por mais relevante que fosse. Corrigido calculando a cosine similarity diretamente a partir dos embeddings brutos (query + candidatos, este último obtido via `collection.query(..., include=["embeddings"])`) — invariante à norma dos vetores, portanto insensível a essa característica do modelo. A pré-seleção por L2 continua usada só para obter os candidatos de forma eficiente; o score que decide o filtro é sempre a cosine similarity. Ver docstring de [`semantic_search.py`](apps/mcp-server/semantic_search.py) para a investigação completa.
 
 #### Como iniciar
 
@@ -611,7 +611,7 @@ docker compose exec nginx sh -c "curl -s -X POST http://mcp-server:8100/mcp \
   -d '{\"jsonrpc\":\"2.0\",\"id\":3,\"method\":\"tools/call\",\"params\":{\"name\":\"search_maintenance_manual\",\"arguments\":{\"query\":\"vazamento na bomba centrifuga\"}}}'"
 ```
 
-Rodado de verdade contra o ChromaDB real desta task (3 manuais indexados via §4.7): a query relevante acima devolveu 3 trechos do `manual-bomba-centrifuga.pdf` com score `0.71`/`0.70`/`0.63` (ver JSON de exemplo acima); uma query deliberadamente sem relação ("receita de bolo de chocolate") devolveu `{"results": []}`, sem erro.
+Rodado de verdade contra o vector store real desta task (3 manuais indexados via §4.7): a query relevante acima devolveu 3 trechos do `manual-bomba-centrifuga.pdf` com score `0.71`/`0.70`/`0.63` (ver JSON de exemplo acima); uma query deliberadamente sem relação ("receita de bolo de chocolate") devolveu `{"results": []}`, sem erro.
 
 #### Testes
 
@@ -622,7 +622,7 @@ cd apps/mcp-server && python -m venv .venv && .venv\Scripts\Activate.ps1
 pip install -r requirements.txt && pytest tests/ -v
 ```
 
-`tests/test_semantic_search.py` cobre `SemanticSearchService`/`cosine_similarity` isoladamente (threshold, ordenação, limite de 5, metadados); `tests/test_mcp_server.py` cobre a integração `search_maintenance_manual -> SemanticSearchService` (com um `SemanticSearchService` real sobre ChromaDB temporário — não um mock que só devolve um dict fixo).
+`tests/test_semantic_search.py` cobre `SemanticSearchService`/`cosine_similarity` isoladamente (threshold, ordenação, limite de 5, metadados); `tests/test_mcp_server.py` cobre a integração `search_maintenance_manual -> SemanticSearchService` (com um `SemanticSearchService` real sobre um vector store temporário — não um mock que só devolve um dict fixo).
 
 #### Benchmark de busca semântica (RNF-45)
 
@@ -630,7 +630,7 @@ pip install -r requirements.txt && pytest tests/ -v
 docker compose exec mcp-server python benchmark_semantic_search.py
 ```
 
-Mede a operação completa (`search_maintenance_manual` → `SemanticSearchService` → embedding da query → ChromaDB → resposta), contra o ChromaDB real (não mock), com warm-up excluído da medição. Resultado real desta task (3 manuais / 9 chunks indexados, 24 queries variadas, 3 de warm-up):
+Mede a operação completa (`search_maintenance_manual` → `SemanticSearchService` → embedding da query → vector store → resposta), contra o vector store real (não mock), com warm-up excluído da medição. Resultado real (3 manuais / 9 chunks indexados, 24 queries variadas, 3 de warm-up), medido no `vector_store.py` (sqlite3 + numpy, RNF-62):
 
 ```text
 Semantic Search Benchmark
@@ -641,12 +641,16 @@ Queries: 24
 Warm-up: 3 iterations (not measured)
 Avg results/query: 0.75
 
-p50: 16.56 ms
-p95: 18.08 ms
-p99: 18.08 ms
+p50: 22.31 ms
+p95: 38.31 ms
+p99: 46.51 ms
 
 RNF-45 (p95 < 500.0 ms): PASS
 ```
+
+`avg_results/query = 0.75` e os scores (query que parafraseia o manual da bomba
+→ `0.71`/`0.70`/`0.63`) são **idênticos** aos medidos com o `chromadb` antes da
+RNF-62 — a troca do armazenamento não mudou o resultado do RAG.
 
 Evidência completa (latência de cada uma das 24 queries): [`semantic_search_benchmark.json`](apps/mcp-server/semantic_search_benchmark.json).
 
@@ -656,7 +660,7 @@ Evidência completa (latência de cada uma das 24 queries): [`semantic_search_be
 
 ### 4.7. Ingestão de manuais — pipeline RAG offline (RF-20 / RNF-44)
 
-**O que é**: `apps/mcp-server/index_manuals.py` — um script batch, independente do transporte MCP, que lê PDFs, extrai texto, gera chunks com overlap, gera embeddings localmente e persiste tudo em um ChromaDB local. Prepara a base de conhecimento que a ferramenta `search_maintenance_manual` consome de verdade desde a RF-21 (§4.6).
+**O que é**: `apps/mcp-server/index_manuals.py` — um script batch, independente do transporte MCP, que lê PDFs, extrai texto, gera chunks com overlap, gera embeddings localmente e persiste tudo num vector store local (`vector_store.py` — `sqlite3` + `numpy`). Prepara a base de conhecimento que a ferramenta `search_maintenance_manual` consome de verdade desde a RF-21 (§4.6).
 
 ```mermaid
 flowchart TD
@@ -664,7 +668,7 @@ flowchart TD
     READER --> CHUNK["text chunks<br/>(determinístico, com overlap)"]
     CHUNK --> EMBED["SentenceTransformer<br/>(EMBEDDING_MODEL)"]
     EMBED --> VEC["embeddings"]
-    VEC --> CHROMA[("ChromaDB persistente<br/>collection: maintenance_manuals")]
+    VEC --> CHROMA[("vector store persistente<br/>(vector_store.py)<br/>collection: maintenance_manuals")]
 ```
 
 ```mermaid
@@ -675,16 +679,16 @@ flowchart TD
     CHECK -->|"não, hash mudou"| PURGE["remove chunks antigos<br/>deste file_name"]
     CHECK -->|"não, nunca visto"| EXTRACT
     PURGE --> EXTRACT["extract → chunk → embed"]
-    EXTRACT --> UPSERT["upsert no ChromaDB<br/>+ novo file_hash nos metadados"]
+    EXTRACT --> UPSERT["upsert no vector store<br/>+ novo file_hash nos metadados"]
 ```
 
 | Aspecto | Valor real |
 |---|---|
 | Script | `apps/mcp-server/index_manuals.py` — executável direto: `python index_manuals.py` |
-| Dependências novas | `pypdf==5.1.0`, `sentence-transformers==3.3.1`, `chromadb==0.5.23` (`apps/mcp-server/requirements.txt`) |
+| Dependências | `pypdf`, `sentence-transformers` (+ `transformers`/`tokenizers`/`torch`) em `apps/mcp-server/requirements.txt`. O armazenamento vetorial é local e sem dependência externa — [`vector_store.py`](apps/mcp-server/vector_store.py) (`sqlite3` + `numpy`); ver §17.1 para o motivo da saída do `chromadb`. |
 | Modelo de embeddings | `EMBEDDING_MODEL` (env) — default `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2` (multilíngue, cobre PT-BR dos manuais/queries; 100% local, sem API externa). Carregado **uma vez por execução**, nunca por chunk |
 | Diretório dos PDFs | `MANUALS_DIR` (env) — default `data/manuals` (relativo a `apps/mcp-server/`, resolvido pelo próprio script, não pelo cwd) |
-| ChromaDB | `CHROMA_DB_PATH` (env) — default `data/chroma` (`chromadb.PersistentClient`, nunca efêmero) |
+| Vector store | `CHROMA_DB_PATH` (env, nome mantido p/ compat) — default `data/chroma`, agora um `vector_store.sqlite3` (`vector_store.PersistentClient`), nunca efêmero |
 | Collection | `maintenance_manuals` |
 | Chunking | `CHUNK_SIZE` / `CHUNK_OVERLAP` (env) — default `1000`/`150` caracteres, por página (não cruza página, mantém `page` correto nos metadados). Determinístico: mesmo PDF + mesma config = mesmos chunks |
 | IDs dos chunks | `{file_hash}_p{page}_c{chunk_index}` — determinístico, sem UUID aleatório |
@@ -710,11 +714,11 @@ docker compose exec mcp-server python index_manuals.py
 
 #### Incremental (RF-20)
 
-Não existe arquivo de estado separado — a fonte de verdade é o próprio ChromaDB (`file_hash` nos metadados de cada chunk). SHA-256 é calculado sobre o **conteúdo** do arquivo (nunca nome/data/tamanho): se o hash não mudou desde a última execução, o PDF é pulado (`skip`) — rodar duas vezes seguidas sem alterar nada não cria chunks duplicados (idempotente).
+Não existe arquivo de estado separado — a fonte de verdade é o próprio vector store (`file_hash` nos metadados de cada chunk). SHA-256 é calculado sobre o **conteúdo** do arquivo (nunca nome/data/tamanho): se o hash não mudou desde a última execução, o PDF é pulado (`skip`) — rodar duas vezes seguidas sem alterar nada não cria chunks duplicados (idempotente).
 
 #### Reindexação
 
-Alterar o conteúdo do PDF muda o hash. A pipeline detecta a divergência, remove **todos** os chunks antigos daquele `file_name` e só então insere os novos — nunca ficam chunks de hash antigo e hash novo misturados. Se a extração/chunking/embedding falhar no meio do processo, nada é removido/alterado no ChromaDB (a versão anterior, se existia, permanece válida).
+Alterar o conteúdo do PDF muda o hash. A pipeline detecta a divergência, remove **todos** os chunks antigos daquele `file_name` e só então insere os novos — nunca ficam chunks de hash antigo e hash novo misturados. Se a extração/chunking/embedding falhar no meio do processo, nada é removido/alterado no vector store (a versão anterior, se existia, permanece válida).
 
 #### Testes
 
@@ -722,7 +726,7 @@ Alterar o conteúdo do PDF muda o hash. A pipeline detecta a divergência, remov
 docker compose exec mcp-server pytest tests/test_index_manuals.py -v
 ```
 
-Todos os testes mockam o `SentenceTransformer` (nenhum download de modelo real na suíte) e usam diretório temporário para o ChromaDB (nunca o `data/chroma` real).
+Todos os testes mockam o `SentenceTransformer` (nenhum download de modelo real na suíte) e usam diretório temporário para o vector store (nunca o `data/chroma` real).
 
 ### 4.8. Sugestão automática de manutenção — RAG via Ollama (RF-22 / RNF-46)
 
@@ -749,7 +753,7 @@ flowchart TD
 | Modelo Ollama | `OLLAMA_MODEL` — default `llama3.2:3b` (Llama 3.2 3B, CLAUDE.md §4) |
 | Cliente Ollama | `OllamaClient` (`apps/backend/src/services/ollama_client.py`) — HTTP puro via `httpx` (já dependência do backend) contra `POST {OLLAMA_BASE_URL}/api/chat`, `stream: false` |
 | Processamento local (RNF-46) | Nenhuma chamada a OpenAI/Anthropic/Gemini/API externa — `OLLAMA_BASE_URL` aponta para o Ollama do host (`host.docker.internal`, resolvido nativamente pelo Docker Desktop, **sem** `extra_hosts`) |
-| ChromaDB | Reaproveitado — **nenhum segundo ChromaDB criado**. O backend nunca fala com o Chroma diretamente, só via MCP (ver "Decisão de arquitetura" abaixo) |
+| Vector store | Reaproveitado — **nenhum segundo store criado**. O backend nunca fala com o vector store diretamente, só via MCP (ver "Decisão de arquitetura" abaixo) |
 
 #### Exemplo — requisição/resposta reais
 
@@ -790,9 +794,9 @@ O System Prompt (constante `SYSTEM_PROMPT` em `maintenance_suggestion_service.py
 
 **Sem contexto relevante**: o serviço sempre chama o Ollama quando o threshold é ultrapassado (mesmo com 0 resultados do MCP) — o prompt deixa isso explícito ("Nenhum trecho de manual relevante foi recuperado") e é o **próprio modelo**, via System Prompt, quem decide declarar a seção "Limitações" (não o código Python, que não tem como julgar "informação suficiente"). Ver Known Issues abaixo — Llama 3.2 3B nem sempre segue esse branch perfeitamente.
 
-#### Decisão de arquitetura — sem segundo ChromaDB
+#### Decisão de arquitetura — sem segundo vetor store
 
-A especificação desta task menciona `chromadb`/`CHROMADB_HOST`/porta `8001:8000` como possíveis requisitos de infraestrutura. **Não foram criados** — o ChromaDB já existe, persistido e funcional, dentro de `apps/mcp-server` (RF-20/RF-21). Criar uma segunda instância exigiria: (a) decidir qual delas é a fonte de verdade, (b) migrar/reindexar os dados, (c) manter as duas sincronizadas — duas fontes de verdade sem benefício real, já que o backend só precisa de **busca**, não de acesso direto ao vetor store. O backend fala com o ChromaDB **exclusivamente através do MCP** (`search_maintenance_manual`), preservando a separação de responsabilidades da RF-19/RNF-43 (MCP como domínio próprio, backend como consumidor). `chromadb`/`pypdf` **não foram adicionados** a `apps/backend/requirements.txt` — continuam exclusivos do mcp-server.
+A especificação desta task menciona `chromadb`/`CHROMADB_HOST`/porta `8001:8000` como possíveis requisitos de infraestrutura. **Não foram criados** — o vetor store já existe, persistido e funcional, dentro de `apps/mcp-server` (RF-20/RF-21; desde a RNF-62 é o [`vector_store.py`](apps/mcp-server/vector_store.py) local, não mais o pacote `chromadb`). Criar uma segunda instância exigiria: (a) decidir qual delas é a fonte de verdade, (b) migrar/reindexar os dados, (c) manter as duas sincronizadas — duas fontes de verdade sem benefício real, já que o backend só precisa de **busca**, não de acesso direto ao vetor store. O backend fala com o vetor store **exclusivamente através do MCP** (`search_maintenance_manual`), preservando a separação de responsabilidades da RF-19/RNF-43 (MCP como domínio próprio, backend como consumidor). Nenhuma dependência de busca/embeddings foi adicionada a `apps/backend/requirements.txt` — continuam exclusivas do mcp-server.
 
 #### Testes
 
@@ -1217,11 +1221,11 @@ flowchart TD
     LLM --> PLAN["Markdown validado + referências"]
 ```
 
-#### Por que o MCP é mockado, não uma ChromaDB real neste arquivo
+#### Por que o MCP é mockado, não um vetor store real neste arquivo
 
-`SemanticSearchService`/ChromaDB vivem em `apps/mcp-server` — pacote Python e container Docker inteiramente separados de `apps/backend`, sem `chromadb`/`sentence-transformers` nas dependências do backend (confirmado — nenhum dos dois está instalado no container `api`). O backend só fala com o MCP pela rede (`MCPSearchClient`, protocolo streamable-http), nunca em processo. Mockar em `MCPSearchClient.search_maintenance_manual()` é o **menor ponto de integração real** — a fronteira que `MaintenanceSuggestionService` de fato usa — evitando tanto reimplementar a lógica de cosine similarity (duplicação de produção) quanto inflar o backend com uma dependência pesada só para um teste (mesma classe de problema já documentada para o `mcp-server` no §14 "Limitações conhecidas" do torch/CUDA).
+`SemanticSearchService`/vetor store vivem em `apps/mcp-server` — pacote Python e container Docker inteiramente separados de `apps/backend`, sem `sentence-transformers`/`torch` (nem, antes da RNF-62, `chromadb`) nas dependências do backend (confirmado — nada disso está instalado no container `api`). O backend só fala com o MCP pela rede (`MCPSearchClient`, protocolo streamable-http), nunca em processo. Mockar em `MCPSearchClient.search_maintenance_manual()` é o **menor ponto de integração real** — a fronteira que `MaintenanceSuggestionService` de fato usa — evitando tanto reimplementar a lógica de cosine similarity (duplicação de produção) quanto inflar o backend com uma dependência pesada só para um teste (mesma classe de problema já documentada para o `mcp-server` no §14 "Limitações conhecidas" do torch/CUDA).
 
-A cobertura real e determinística da busca semântica com ChromaDB efêmero — a que os itens 3-5 do enunciado desta task pediam — já existe em `apps/mcp-server/tests/test_semantic_search.py` (RF-21) e foi **estendida** nesta mesma task com `test_distinguishes_pump_motor_and_irrelevant_queries_deterministically`: um modelo de embeddings fake mas sensível ao conteúdo (ao contrário do `_FixedVectorModel` original, que ignora o texto) prova, com um ChromaDB real em diretório temporário, que uma consulta sobre bomba recupera só o manual de bomba, uma sobre motor só o de motor, e uma irrelevante não recupera nada.
+A cobertura real e determinística da busca semântica com um vetor store efêmero — a que os itens 3-5 do enunciado desta task pediam — já existe em `apps/mcp-server/tests/test_semantic_search.py` (RF-21) e foi **estendida** nesta mesma task com `test_distinguishes_pump_motor_and_irrelevant_queries_deterministically`: um modelo de embeddings fake mas sensível ao conteúdo (ao contrário do `_FixedVectorModel` original, que ignora o texto) prova, com um vetor store real em diretório temporário, que uma consulta sobre bomba recupera só o manual de bomba, uma sobre motor só o de motor, e uma irrelevante não recupera nada.
 
 #### RF-26 — limite de 5 segundos
 
@@ -1315,9 +1319,20 @@ pnpm exec playwright test   # suíte completa
 
 ---
 
-### 4.15. Monitoramento de data drift — Evidently + Celery Beat (RF-27 / RNF-55)
+### 4.15. Monitoramento de data drift — PSI + Celery Beat (RF-27 / RNF-55)
 
-**O que é**: uma task diária em background (Celery Beat, reaproveitando a MESMA aplicação Celery do RNF-50/51) compara a distribuição das **features de entrada** do modelo entre um baseline (dados de treinamento) e os dados recentes (últimas 24h de predições reais), calcula o **PSI** (Population Stability Index, via Evidently) e persiste o resultado. `GET /monitoring/drift` expõe o histórico — o endpoint **nunca** dispara a análise.
+**O que é**: uma task diária em background (Celery Beat, reaproveitando a MESMA aplicação Celery do RNF-50/51) compara a distribuição das **features de entrada** do modelo entre um baseline (dados de treinamento) e os dados recentes (últimas 24h de predições reais), calcula o **PSI** (Population Stability Index) e persiste o resultado. `GET /monitoring/drift` expõe o histórico — o endpoint **nunca** dispara a análise.
+
+> **RNF-62 (2026-09-18)**: o cálculo do PSI usava a biblioteca `evidently`
+> até a task de hardening de segurança — removida e substituída por uma
+> reimplementação própria (`numpy`/`pandas`, dependências já existentes).
+> Motivo, prova de equivalência e detalhes técnicos completos: subseção
+> "PSI sem `evidently` (RNF-62)" mais abaixo. **O restante desta seção
+> descreve a arquitetura original do RF-27 tal como auditada quando a
+> feature foi construída** — o mecanismo de cálculo de PSI em si mudou de
+> biblioteca, mas o algoritmo, o resultado, os testes e todo o resto do
+> fluxo (Celery Beat, persistência, endpoint, regra `> 0.25`) são
+> idênticos.
 
 > **Data drift ≠ degradação de performance do modelo.** RF-27 monitora se a DISTRIBUIÇÃO das 7 features analógicas de entrada (TP2, TP3, H1, DV_pressure, Reservoirs, Oil_temperature, Motor_current) mudou em relação ao baseline — um sinal de que o modelo pode estar operando fora da distribuição em que foi treinado. Isso é DIFERENTE de medir se as predições do modelo continuam corretas (o que exigiria rótulos verdadeiros/ground truth de falhas reais confirmadas, que este projeto não coleta em produção). Um PSI alto não significa necessariamente que o modelo está errando — significa que os dados de entrada mudaram e merece investigação.
 
@@ -1328,7 +1343,7 @@ flowchart TD
     WORKER --> DM["DriftMonitor.run_daily_analysis()"]
     REF["Reference — amostra determinística<br/>(n=5000, seed=42, só linhas 'normais')<br/>do parquet MetroPT-3 original"] --> DM
     CUR["Current — tabela `predictions` (RF-09)<br/>janela [now-24h, now]"] --> DM
-    DM --> EVI["Evidently real<br/>Report(metrics=[ValueDrift(method='psi')])"]
+    DM --> EVI["_population_stability_index()<br/>numpy/pandas (RNF-62 — antes: Evidently)"]
     EVI --> PSI["PSI por feature → agregado = max(...)"]
     PSI --> RULE{"PSI > 0.25?"}
     RULE -->|"não"| OK1["drift_detected = false"]
@@ -1359,11 +1374,11 @@ Nunca `reference = current`: são duas fontes genuinamente independentes (arquiv
 
 #### PSI e a regra `> 0.25`
 
-`DriftMonitor.calculate_drift()` chama o Evidently real — um `Report(metrics=[ValueDrift(column=c, method="psi") for c in MONITORED_FEATURES])`, `report.run(reference_data=..., current_data=...)` — e extrai o PSI de CADA feature do dict retornado (`run.dict()["metrics"][i]["value"]`). O PSI agregado é o **máximo** entre as 7 features (pior caso — qualquer sensor individual drift a é suficiente para o alerta, mais conservador que uma média). A decisão `drift_detected = psi > 0.25` (**estrito, nunca `>=`**) é feita no código do projeto, nunca no `threshold` interno do Evidently (default `0.1`, sem relação com a regra de negócio do RF-27). Testado explicitamente na fronteira: `0.2499` → sem drift, `0.25` → sem drift, `0.2501` → drift.
+`DriftMonitor.calculate_drift()` chama `_population_stability_index(reference[col], current[col])` para cada uma das 7 features (RNF-62 — antes chamava o `evidently` real; ver subseção dedicada abaixo). O PSI agregado é o **máximo** entre as 7 features (pior caso — qualquer sensor individual em drift já é suficiente para o alerta, mais conservador que uma média). A decisão `drift_detected = psi > 0.25` (**estrito, nunca `>=`**) é feita no código do projeto — nunca dentro do cálculo de PSI em si. Testado explicitamente na fronteira: `0.2499` → sem drift, `0.25` → sem drift, `0.2501` → drift.
 
 #### Dados insuficientes — nunca um PSI inventado
 
-Se a janela current tiver menos de `MIN_CURRENT_ROWS` (30) linhas, `run_daily_analysis()` retorna `status="insufficient_data"` **antes** de chamar o Evidently ou carregar o reference — `psi`/`drift_detected`/`features` ficam `None`, e o motivo (`error_message`) é persistido no histórico, nunca escondido. Falhas inesperadas (ex.: parquet ausente, erro do Evidently) são capturadas e persistidas como `status="error"` com a mensagem real — a task nunca deixa uma exceção derrubar o worker.
+Se a janela current tiver menos de `MIN_CURRENT_ROWS` (30) linhas, `run_daily_analysis()` retorna `status="insufficient_data"` **antes** de calcular PSI ou carregar o reference — `psi`/`drift_detected`/`features` ficam `None`, e o motivo (`error_message`) é persistido no histórico, nunca escondido. Falhas inesperadas (ex.: parquet ausente) são capturadas e persistidas como `status="error"` com a mensagem real — a task nunca deixa uma exceção derrubar o worker.
 
 #### Persistência — `drift_reports` (migration `0004`)
 
@@ -1388,15 +1403,54 @@ Se a janela current tiver menos de `MIN_CURRENT_ROWS` (30) linhas, `run_daily_an
 docker compose exec api pytest tests/test_drift_monitor.py -v   # 20 testes
 ```
 
-Cobre: fronteira do threshold (`0.2499`/`0.25`/`0.2501`, parametrizado); persistência real; histórico + paginação via `GET /monitoring/drift`; endpoint nunca dispara análise; dados insuficientes (incluindo zero linhas) sem PSI inventado; task registrada/roda sem HTTP; `beat_schedule` diário configurado; timezone UTC; idempotência (mesma `analysis_date` 2x não duplica; datas diferentes criam linhas separadas); **Evidently real, sem mock** — distribuições semelhantes → PSI baixo, distribuição claramente deslocada (`Motor_current` 4A → 12A) → PSI alto; `load_reference_data()` real contra o parquet MetroPT-3 (determinístico, mesma amostra em chamadas repetidas).
+Cobre: fronteira do threshold (`0.2499`/`0.25`/`0.2501`, parametrizado); persistência real; histórico + paginação via `GET /monitoring/drift`; endpoint nunca dispara análise; dados insuficientes (incluindo zero linhas) sem PSI inventado; task registrada/roda sem HTTP; `beat_schedule` diário configurado; timezone UTC; idempotência (mesma `analysis_date` 2x não duplica; datas diferentes criam linhas separadas); **PSI real, sem mock** (`test_psi_real_low_when_distributions_are_similar`/`test_psi_real_high_when_distributions_differ_significantly`, RNF-62) — distribuições semelhantes → PSI baixo, distribuição claramente deslocada (`Motor_current` 4A → 12A) → PSI alto; `load_reference_data()` real contra o parquet MetroPT-3 (determinístico, mesma amostra em chamadas repetidas).
+
+#### PSI sem `evidently` (RNF-62)
+
+Até a task de hardening de segurança, `calculate_drift()` chamava o `evidently`
+real (`Report(metrics=[ValueDrift(column=c, method="psi")])`). Removido porque
+`evidently` carrega `nltk` como dependência **obrigatória e imediata** — até
+`from evidently import Dataset` executa `evidently/__init__.py`, que importa
+(entre outras coisas) `evidently.legacy.features.OOV_words_percentage_feature`,
+que faz `from nltk.corpus import words` — confirmado empiricamente: com `nltk`
+desinstalado, até o import mais simples do `evidently` falha com
+`ModuleNotFoundError`. `nltk` tem uma vulnerabilidade **High**
+(`PYSEC-2026-3740`/`CVE-2026-81726`) **sem correção publicada em nenhuma
+versão** (a mais recente do PyPI, `3.10.3`, ainda está afetada).
+
+A ÚNICA funcionalidade do `evidently` de fato usada aqui era o cálculo de PSI
+numérico. `apps/backend/src/services/drift_monitor.py::_population_stability_index`
+reimplementa exatamente esse algoritmo com `numpy`/`pandas` (dependências já
+existentes, **zero pacote novo**) — réplica de
+`evidently.legacy.calculations.stattests.psi._psi()` +
+`.utils.get_binned_data()`: bins pela regra de Sturges
+(`numpy.histogram_bin_edges(reference+current combinados, bins="sturges")`),
+mesmo preenchimento de bins vazios por epsilon.
+
+**Validação de equivalência** — 3 cenários sintéticos (distribuições iguais,
+deslocadas, e assimétricas tipo gama) comparando `evidently` real vs. a
+reimplementação, PSI por feature:
+
+```
+same_dist:  TP2 evidently=0.109185 mine=0.109185 diff=0.00000000
+shifted:    TP2 evidently=9.632074 mine=9.632074 diff=0.00000000
+gamma:      TP2 evidently=0.215129 mine=0.215129 diff=0.00000000
+... (7 features × 3 cenários, MAX DIFF = 0.0000000000 em todos)
+```
+
+**Resultado**: `evidently==0.7.21` removido de `apps/backend/requirements.txt`.
+`pip-audit -r apps/backend/requirements.txt` não resolve mais `nltk` — a
+vulnerabilidade não é mais "ignorada com justificativa", ela **saiu da árvore
+de produção**. Nenhum comportamento de negócio mudou: mesmo threshold `0.25`,
+mesma agregação (`max`), mesmos testes de fronteira, mesma persistência.
 
 #### Validação real (Docker, E2E — sem mocks)
 
-`docker compose build api celery-worker celery-beat` (evidently instalado via `requirements.txt`, não mais um `pip install` ad-hoc) → `docker compose up -d`: migration `0003 -> 0004` aplicada com sucesso contra o Postgres real (log do `api`); `celery-worker` iniciou com `[tasks] . monitoring.daily_drift_analysis . notifications.send_critical_failure` (mesma app, ambas as tasks); `celery-beat` iniciado (`beat: Starting...`).
+`docker compose build api celery-worker celery-beat` → `docker compose up -d`: migration `0003 -> 0004` aplicada com sucesso contra o Postgres real (log do `api`); `celery-worker` iniciou com `[tasks] . monitoring.daily_drift_analysis . notifications.send_critical_failure` (mesma app, ambas as tasks); `celery-beat` iniciado (`beat: Starting...`).
 
-Task disparada manualmente 2x contra o stack real (`daily_drift_analysis_task.delay()`, broker Redis real) — 1ª execução: `current_rows=86270` (predições reais acumuladas por horas de simulador rodando), `psi≈2.70`, `drift_detected=true`, persistido. 2ª execução (mesmo dia real): `psi≈2.71` (dados mudaram levemente entre as duas chamadas), **mesma linha (`id=1`) atualizada, não duplicada** — idempotência confirmada contra Postgres real. `GET /api/monitoring/drift` (através do Nginx real, `/api/` → `api:8000`, mesmo padrão de todos os outros endpoints REST) devolveu o histórico correto.
+Task disparada manualmente 2x contra o stack real (`daily_drift_analysis_task.delay()`, broker Redis real) — 1ª execução: `current_rows=86270` (predições reais acumuladas por horas de simulador rodando), `psi≈2.70`, `drift_detected=true`, persistido. 2ª execução (mesmo dia real): `psi≈2.71` (dados mudaram levemente entre as duas chamadas), **mesma linha (`id=1`) atualizada, não duplicada** — idempotência confirmada contra Postgres real. `GET /api/monitoring/drift` (através do Nginx real, `/api/` → `api:8000`, mesmo padrão de todos os outros endpoints REST) devolveu o histórico correto. (Validação original, com `evidently`; o algoritmo de PSI é bit-a-bit idêntico após a RNF-62 — ver subseção acima.)
 
-**Não observado em tempo real**: o Beat disparando autonomamente às 03:00 UTC (exigiria esperar até esse horário — ver PENDENCIAS.md). Validado via inspeção do `beat_schedule` real carregado + disparo manual da MESMA task contra a infraestrutura real (broker/worker/Postgres reais) — o caminho `task → DriftMonitor → Evidently → Postgres → endpoint` é idêntico ao que o Beat dispararia; só o gatilho (cron vs. manual) difere.
+**Não observado em tempo real**: o Beat disparando autonomamente às 03:00 UTC (exigiria esperar até esse horário — ver PENDENCIAS.md). Validado via inspeção do `beat_schedule` real carregado + disparo manual da MESMA task contra a infraestrutura real (broker/worker/Postgres reais) — o caminho `task → DriftMonitor → PSI → Postgres → endpoint` é idêntico ao que o Beat dispararia; só o gatilho (cron vs. manual) difere.
 
 #### Como executar manualmente para teste
 
@@ -1551,7 +1605,7 @@ cp apps/frontend/.env.local.example apps/frontend/.env.local
 | `MCP_SERVER_URL` | Não | `http://mcp-server:8100` | RF-19/RNF-43 — declarada, ainda não consumida por nenhum código (ver §4.6) |
 | `EMBEDDING_MODEL` | Não | `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2` | RF-20/RNF-44 — modelo usado por `apps/mcp-server/index_manuals.py` (ver §4.7). Trocar exige reindexar (o `embedding_model` fica registrado nos metadados de cada chunk, mas embeddings antigos e novos não são comparáveis entre modelos diferentes) |
 | `MANUALS_DIR` | Não | `data/manuals` | RF-20 — diretório dos PDFs de entrada, relativo a `apps/mcp-server/` |
-| `CHROMA_DB_PATH` | Não | `data/chroma` | RF-20 — diretório persistente do ChromaDB, relativo a `apps/mcp-server/` |
+| `CHROMA_DB_PATH` | Não | `data/chroma` | RF-20 — diretório persistente do vector store (`vector_store.py`), relativo a `apps/mcp-server/`. Nome da env mantido por compat. |
 | `CHUNK_SIZE` / `CHUNK_OVERLAP` | Não | `1000` / `150` | RF-20 — tamanho do chunk e overlap (caracteres) usados pelo chunking determinístico |
 | `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` | Não* | _(vazio)_ | RF-24/RNF-48 — credenciais do Bot (ver §4.10). *Sem elas, notificação crítica fica desativada (não é erro) |
 | `TELEGRAM_API_BASE_URL` | Não | `https://api.telegram.org` | RF-24 — só para testes/mock |
@@ -2381,12 +2435,6 @@ docker compose restart frontend
 
 **Solução**: aumente o limite em `docker-compose.yml` (`deploy.resources.limits.memory`) ou suba o Docker Desktop para 8+ GB em **Settings → Resources**.
 
-### `index_manuals.py` loga `Failed to send telemetry event ... capture() takes 1 positional argument but 3 were given`
-
-**Causa**: incompatibilidade entre a versão de `chromadb==0.5.23` e a API do `posthog` (dependência transitiva) instalada — a telemetria anônima do ChromaDB tenta chamar `capture()` com uma assinatura que essa versão do `posthog` não aceita mais.
-
-**Impacto**: nenhum. É só logging de uma tentativa de telemetria (que já falha silenciosamente dentro do próprio ChromaDB) — indexação, busca e persistência funcionam normalmente (validado em `docker compose exec mcp-server python index_manuals.py`, ver §4.7). Se incomodar, `CHROMA_ANONYMIZED_TELEMETRY=false` no ambiente do container desativa a tentativa.
-
 ### Known Issues (não corrigidos nesta task — fora do escopo)
 
 Divergências/observações reais encontradas na auditoria (RNF-41/RNF-42), documentadas em vez de corrigidas porque esta é uma task de documentação, não de mudança de comportamento:
@@ -2394,9 +2442,9 @@ Divergências/observações reais encontradas na auditoria (RNF-41/RNF-42), docu
 - **`proxy_buffering` não está explicitamente desativado no bloco `/api/stream/`** de `infra/nginx/nginx.conf`. Funciona porque `chunked_transfer_encoding off` + `X-Accel-Buffering: no` já bastam nesta versão do Nginx, mas a diretiva "canônica" para SSE (`proxy_buffering off;`) não está presente. Se o comportamento de streaming mudar em uma atualização do Nginx, este é o primeiro lugar a checar.
 - **`/api/` (bloco REST genérico) herda `proxy_read_timeout 3600s`**, o mesmo valor usado para SSE/WS — nenhuma rota REST precisa de uma conexão de 1 hora; não é um bug funcional, mas é uma configuração mais permissiva do que o necessário para esse bloco.
 - **`ALLOWED_ORIGINS` inclui `http://localhost:8000`** no `.env` atual — não há nenhum serviço exposto diretamente nessa porta neste `docker-compose.yml` (a API só é alcançável via Nginx em `:80`), então essa origem parece vestigial de uma configuração anterior sem proxy.
-- **Imagem do `mcp-server` cresceu para ~10 GB (RF-20/RNF-44)**: `pip install sentence-transformers` puxa `torch` da PyPI padrão, que inclui dependências CUDA (`nvidia-*`) mesmo num container CPU-only sem GPU. Funciona (PyTorch cai para CPU automaticamente — `Use pytorch device_name: cpu` no log), mas a imagem fica bem maior que o necessário. Otimização futura: instalar `torch` a partir do índice CPU-only da PyTorch (`--index-url https://download.pytorch.org/whl/cpu`) no `Dockerfile`.
+- **Imagem do `mcp-server` grande (~6–7 GB) (RF-20/RNF-44/RNF-62)**: `pip install torch` da PyPI padrão inclui dependências CUDA (`nvidia-*`, ~2 GB) mesmo num container CPU-only sem GPU. Funciona (PyTorch cai para CPU automaticamente — `Use pytorch device_name: cpu` no log). A remoção do `chromadb` na RNF-62 já tirou ~40 pacotes transitivos (`onnxruntime`, `kubernetes`, `grpcio`, `opentelemetry-*`, `posthog`, …), mas `torch`+CUDA continuam dominando. Otimização futura: instalar `torch` a partir do índice CPU-only da PyTorch (`--index-url https://download.pytorch.org/whl/cpu`) no `Dockerfile` — não feito nesta task para não re-validar toda a stack (o `pip-audit` já está limpo com o `torch` padrão).
 - **PDF sem texto extraível é reprocessado a cada execução** (RF-20): como nenhum `file_hash` é gravado para um arquivo que gerou zero chunks, ele nunca é marcado como "já visto" — cada run tenta extrair de novo (custo: só a extração via pypdf, nenhum embedding é gerado). Decisão deliberada: se o PDF ganhar texto extraível depois (ex.: substituído por uma versão não-escaneada), a próxima execução já pega automaticamente, sem precisar de nenhuma ação manual.
-- **Trocar `EMBEDDING_MODEL` não invalida embeddings antigos automaticamente**: cada chunk registra `embedding_model` nos metadados, mas a lógica de skip/reindex compara só `file_hash` — se você trocar de modelo sem tocar nos PDFs, os embeddings antigos (gerados pelo modelo anterior) continuam no ChromaDB, agora "misturados" com um `embedding_model` diferente do `EMBEDDING_MODEL` atual. Fora do escopo desta task (RF-20 pede consistência do modelo *dentro* de uma mesma indexação, não migração entre modelos); se for trocar de modelo, apague `data/chroma/` antes de reindexar.
+- **Trocar `EMBEDDING_MODEL` não invalida embeddings antigos automaticamente**: cada chunk registra `embedding_model` nos metadados, mas a lógica de skip/reindex compara só `file_hash` — se você trocar de modelo sem tocar nos PDFs, os embeddings antigos (gerados pelo modelo anterior) continuam no vector store, agora "misturados" com um `embedding_model` diferente do `EMBEDDING_MODEL` atual. Fora do escopo desta task (RF-20 pede consistência do modelo *dentro* de uma mesma indexação, não migração entre modelos); se for trocar de modelo, apague `data/chroma/` antes de reindexar.
 - **`tests/test_simulator.py` (backend) falha na coleta** com `IndexError: 3` em `Path(__file__).resolve().parents[3]` — pré-existente, não introduzido nem corrigido pela RF-22 (confirmado via `git stash` antes desta task). Contorno usado para rodar a suíte: `pytest --ignore=tests/test_simulator.py`.
 - **Llama 3.2 3B nem sempre segue a instrução de branch "Limitações" do System Prompt (RF-22)**: quando o MCP não retorna nenhum trecho relevante, o modelo às vezes mantém a estrutura completa do template (preenchendo "Não especificado nos trechos recuperados" nas seções, o que é seguro) em vez de trocar para a seção alternativa "## Limitações" exatamente como instruído — e uma vez chegou a citar a própria query do usuário como se fosse uma referência de manual. Validado que o modelo **nunca inventa** procedimento/peça/valor técnico nesses casos (a regra de segurança central se mantém), mas o *formato* exato da branch não é 100% determinístico com um modelo de 3B rodando localmente — limitação conhecida de modelos pequenos, não um bug de código.
 - **`apps/backend/requirements.txt` puxa `nvidia-nccl-cu12` (~340 MB) como dependência transitiva de `mcp` (RF-22)**, mesmo o backend sendo só um *cliente* MCP (nunca roda modelos de ML locais via essa lib). Não foi investigado a fundo qual extra do `mcp`/`opentelemetry` trafega isso — funciona normalmente (a lib nunca é importada em runtime), mas infla a imagem sem necessidade real. Mesma classe de problema do torch/CUDA no mcp-server (RF-20).
@@ -2409,7 +2457,245 @@ Divergências/observações reais encontradas na auditoria (RNF-41/RNF-42), docu
 
 ---
 
-## 17. Autores & Licença
+## 17. Segurança (RNF-62 / RNF-63)
+
+### 17.1. Dependency Security
+
+**Ferramentas** — `pip-audit` (Python) e `pnpm audit` (Node). A base de
+dados de vulnerabilidades vem da PyPI Advisory / OSV e do GitHub Advisory.
+
+```bash
+# Backend — auditar EXATAMENTE o que vai para a imagem de produção.
+# (rode numa imagem python:3.11-slim limpa; requirements.txt agora é UTF-8)
+pip install pip-audit
+pip-audit -r apps/backend/requirements.txt
+
+# mcp-server
+pip-audit -r apps/mcp-server/requirements.txt
+
+# Frontend — só as dependências de produção (ignora jsdom/storybook/vitest/
+# eslint/shadcn, que são devDependencies e não entram no bundle).
+cd apps/frontend && pnpm audit --prod --audit-level high
+```
+
+**Periodicidade recomendada** — a cada release e, no mínimo, mensalmente
+(CVEs novas aparecem o tempo todo). O CI (`security-audit`, ver §17.5) roda
+em todo push/PR para `main`.
+
+**Processo de correção**
+
+1. `pip-audit` / `pnpm audit` → identificar pacote, versão, CVE, severidade,
+   e se é dependência **direta** ou **transitiva** e de **produção** ou de
+   **desenvolvimento**.
+2. Para cada High/Critical de produção: verificar compatibilidade da versão
+   corrigida, atualizar `requirements.txt` / `package.json` (+ lockfile),
+   **rodar a suíte de testes e o build**, e re-auditar.
+3. Nunca fazer downgrade/pin artificial só para esconder o achado.
+4. Se a correção não for possível de imediato (sem release, ou exige
+   upgrade em cascata que quebra outra coisa): documentar tecnicamente o
+   motivo e por que o caminho vulnerável **não é alcançável** — em
+   `PENDENCIAS.md` e como `--ignore-vuln <ID>` explícito no CI (assim
+   qualquer achado **novo** ainda quebra o build).
+
+**Distinção produção vs. desenvolvimento**
+
+| Onde | O que conta como "produção" |
+| --- | --- |
+| `apps/backend` | só `requirements.txt` (o Dockerfile instala só ele). `pytest`/`pytest-asyncio`/`pytest-cov` foram movidos para `requirements-dev.txt`. |
+| `apps/frontend` | só `dependencies` do `package.json`. `shadcn` é um CLI de scaffold (`pnpm dlx shadcn …`) — nada em `app/`/`components/`/`lib/` o importa — e foi movido para `devDependencies`. |
+| `apps/mcp-server` | `requirements.txt` inteiro (o Dockerfile instala só ele). `pytest` foi movido para `requirements-dev.txt`. |
+| build-time do Next | `postcss`/`@babel/core`/`browserslist`/`baseline-browser-mapping` são deps de produção do `next` mas só rodam no `next build`, não no runtime servido — tratados com `pnpm.overrides`. |
+
+**mcp-server — remoção do `chromadb` + upgrade do stack de embeddings (RNF-62)**
+
+Auditado com `pip-audit -r apps/mcp-server/requirements.txt` numa imagem
+`python:3.11-slim` limpa (igual ao Dockerfile). Árvore de produção resolvida:
+**82 dependências, 0 vulnerabilidades** (`No known vulnerabilities found`).
+
+| Pacote | Antes | Depois | Vulnerabilidade | Ação |
+| --- | --- | --- | --- | --- |
+| `chromadb` | `0.5.23` | **removido** | `CVE-2026-45833` (Critical), `CVE-2026-45830` / `CVE-2026-45831` (High 8.8) — code injection / RBAC no **componente servidor HTTP** do chromadb. `patched: None` em **toda** versão publicada (faixa afetada `>= 0.4.17, <= 1.5.9`). Subir para a última (`1.5.9`) só adiciona `CVE-2026-45829` (Critical, pré-autenticação). Nenhuma versão do chromadb passa no `pip-audit`. | Substituído por [`vector_store.py`](apps/mcp-server/vector_store.py) — `sqlite3` (stdlib) + `numpy` (já presente via `sentence-transformers`), zero dependência nova. Mesmo contrato do mcp-server (`PersistentClient` / `get_or_create_collection` / `add` / `upsert` / `query(include=["…","embeddings"])` / `get(where=…)` / `count` / `delete`), mesma dimensão de embedding (384), mesma distância L2 para pré-selecionar candidatos — o score final continua sendo a cosine similarity calculada em `semantic_search.py`. O corpus real (3 manuais → 9 chunks) torna a busca por força bruta em `numpy` instantânea. Reindexação explícita e validada (9 chunks, 384-dim, busca coerente por tema, idempotência). |
+| `sentence-transformers` | `3.3.1` | `6.0.1` | (fixava `transformers==4.46.3`) | upgrade em cascata |
+| `transformers` | `4.46.3` | `5.17.0` | 26 CVEs — RCE via arquivo de modelo malicioso (High), ReDoS no tokenizer (Medium), etc.; `4.46.3` já tinha 8 sem correção publicada. | `5.17.0` = 0 CVEs. O conflito antigo (`chromadb 0.5.x` limitava `tokenizers<=0.20.3`; `transformers>=4.53` exige `tokenizers>=0.21`) **deixou de existir** com a saída do chromadb. |
+| `tokenizers` | `0.20.3` | `0.23.2` | — | acompanha `transformers` 5.x |
+| `torch` | transitivo (`2.x`) | `2.14.0` | versões `< 2.14` tinham CVEs High | pin explícito (0 CVEs) |
+| `pypdf` | `5.1.0` | `6.18.0` | 2 High (loop infinito em imagem inline não terminada) + ~39 DoS Medium/Low | upgrade (0 CVEs) |
+
+O **modelo de embeddings não mudou** — `paraphrase-multilingual-MiniLM-L12-v2`
+(384 dimensões, CPU-only, `trust_remote_code` nunca ligado, nenhum modelo
+vindo de entrada de usuário). A env `CHROMA_DB_PATH` e o diretório `data/chroma`
+foram mantidos (compatibilidade com deploys/compose existentes); o diretório
+agora guarda `vector_store.sqlite3`.
+
+### 17.2. Log Security
+
+**Dados que NUNCA devem ser registrados** — e-mail, telefone, nome de
+pessoa, endereço, IP tratado como dado pessoal, tokens, API keys,
+`Authorization`, cookies, credenciais, Telegram `chat_id`, IDs pessoais,
+payloads com dados pessoais, stack traces com secrets, URLs com credenciais.
+
+**Sanitização centralizada** — `apps/backend/src/core/log_sanitizer.py` é um
+único `structlog` processor (`redact_sensitive`) ligado no fim da cadeia em
+`src/core/logging.py` (antes do renderer). Nenhuma chamada `log.*` espalhada
+pelo código precisa sanitizar nada manualmente:
+
+```
+Application → structlog (contextvars, level, timestamp)
+            → [prod] ExceptionRenderer
+            → redact_sensitive   ← RNF-63
+            → JSONRenderer / ConsoleRenderer → stdout
+```
+
+O que ele faz, recursivamente em dicts/listas:
+
+- **Por nome de chave** (`authorization`, `*token*`, `api_key`, `secret`,
+  `password`, `cookie`, `chat_id`, `*_email`, `phone`, `*_name` de pessoa,
+  `address`, …) → valor vira `"***"`.
+- **Por formato do valor** → `Bearer <x>`, URL de Bot API do Telegram
+  (`/bot<id>:<token>/`), credenciais em DSN (`postgres://user:senha@`,
+  `redis://:senha@`), e-mail → substring trocada por marcador.
+- **IP do cliente** (`client`, `peer`, `remote_addr`, repr de
+  `starlette…Address`) → `ip#<8 hex>` (hash estável — ainda dá para dizer
+  "mesmo cliente ou não" no diagnóstico, sem gravar o IP).
+
+O sanitizer **não altera os dados usados pela aplicação** — só a
+representação destinada ao log. Contexto útil não sensível (`equipment_id`,
+`probability`, `latency_ms`, nome do evento, tipo da exceção…) é preservado.
+
+**Testes de regressão** — `apps/backend/tests/test_log_privacy.py` (17
+casos) emite eventos REAIS pelo `structlog` já configurado e inspeciona a
+**linha JSON efetivamente escrita** (não `sanitize(x) == y` isolado). Se o
+processor sair da cadeia, os testes quebram.
+
+### 17.3. API Security
+
+**OWASP ZAP** — scan `baseline` (passivo: spider + regras passivas, sem
+ataque ativo) via container oficial.
+
+```bash
+# 1. Subir só o necessário (a stack expõe a porta 80 no nginx)
+docker compose up -d db redis api nginx
+
+# 2. Baseline contra o nginx (cobre frontend + proxy + headers)
+docker run --rm --add-host=host.docker.internal:host-gateway \
+  -v "$PWD/apps/backend/.audit_tmp/zap:/zap/wrk:rw" \
+  ghcr.io/zaproxy/zaproxy:stable \
+  zap-baseline.py -t http://host.docker.internal/ \
+  -J zap.json -r zap.html -I
+
+# 3. (opcional) API por spec — só com DEBUG=true, quando /openapi.json existe
+#    zap-api-scan.py -t http://host.docker.internal/openapi.json -f openapi -I
+```
+
+**Onde o relatório é gerado** — nos formatos passados em `-J`/`-r`/`-w`
+(JSON / HTML / Markdown) dentro do volume montado. Não versionar os
+relatórios (são artefatos de execução).
+
+**Limitações do scan**
+
+- É `baseline` (passivo). O scan `ativo` (`zap-api-scan.py`) injeta
+  payloads e **trava nos endpoints SSE** (`/stream/sensors`,
+  `/v1/maintenance/suggest/stream`) — que nunca fecham a conexão. Excluir
+  esses paths antes de um scan ativo.
+- Endpoints que exigem `X-Admin-Token` (`/models*`, `/v1/settings/*`) não
+  são exercidos autenticados (não colocar token real no repo). Cobertura
+  autenticada fica como scan manual documentado.
+- ZAP não roda no CI (imagem ~1.5 GB, precisa da stack de pé) — o
+  procedimento acima é reproduzível localmente; ver relatório da task.
+
+**Resultado mais recente** (2026-09-18, baseline contra `nginx` real —
+frontend + api + mcp-server de pé, `-t http://host.docker.internal/`, 64
+URLs rastreadas):
+
+```
+FAIL-NEW: 0   WARN-NEW: 7   PASS: 60
+Por risco (ZAP): High 0 · Critical 0 · Medium 12 · Low 11 · Informational 30
+```
+
+**0 High/Critical** — critério do RNF-62 atendido. Os 12 Medium são as 4
+variantes da mesma limitação de CSP já documentada em §17.4 (`unsafe-inline`/
+`unsafe-eval`/wildcard, `next dev`). Os 11 Low: `Cross-Origin-Embedder-Policy`
+ausente (não adicionado — pode quebrar carregamento de recursos cross-origin
+sem CORP correspondente no lado servido; fora do escopo desta correção),
+"Dangerous JS Functions" e "Timestamp Disclosure" — ambos dentro de chunks
+minificados do runtime do Next.js/Turbopack (`_next/static/...`), não código
+da aplicação. Os 30 Informational são comentários/hashes/cache-headers em
+assets estáticos do build — nenhum segredo real (validado manualmente).
+Nenhum falso positivo classificado como "corrigido" apenas para zerar a
+contagem — cada um está listado com o motivo de ser aceitável.
+
+### 17.4. Headers e HTTPS
+
+Headers de segurança são aplicados no **nginx** (`infra/nginx/nginx.conf`,
+nível `server` → herdado por todos os `location`):
+`X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`,
+`Referrer-Policy`, `Permissions-Policy`, `Cross-Origin-Opener-Policy`,
+`Cross-Origin-Resource-Policy`, `Content-Security-Policy: frame-ancestors
+'none'`, `server_tokens off`, e `proxy_hide_header X-Powered-By`.
+
+**Não incluídos, de propósito:**
+
+- **HSTS** (`Strict-Transport-Security`) — este nginx escuta só em `:80`.
+  HSTS só faz sentido quando o **TLS termina no reverse proxy** — nesse
+  ambiente, adicionar no bloco `listen 443 ssl`. É responsabilidade do
+  reverse proxy / load balancer de produção, **não** do FastAPI.
+- **CSP completa** (`script-src`/`style-src` com nonce) — o frontend roda em
+  `next dev` (Turbopack/HMR usam `eval` + inline script). Uma CSP restritiva
+  exige `next build` de produção com nonces via `next.config`. Fica só a
+  diretiva anti-clickjacking, segura em dev.
+
+**CORS** — `CORSMiddleware` com lista explícita (`ALLOWED_ORIGINS`), nunca
+`*` com `allow_credentials=True`. Uma origem não listada não recebe
+`Access-Control-Allow-Origin`.
+
+**Docs do OpenAPI** — `/docs`, `/redoc` e `/openapi.json` só ficam expostos
+com `DEBUG=true` (dev). Em produção retornam 404.
+
+**Auth admin (RF-11 / RNF-62)** — o bypass "modo dev" das rotas admin agora
+exige `DEBUG=true` **e** o `ADMIN_API_TOKEN` ainda no placeholder. Produção
+(`DEBUG` off) sem um token real → rotas admin retornam **401** (fail-closed),
+em vez de ficarem abertas.
+
+### 17.5. CI
+
+O job `security-audit` (`.github/workflows/ci.yml`) roda em todo push/PR:
+
+- `pip-audit -r apps/backend/requirements.txt` — **falha** o build em
+  qualquer High/Critical, **sem nenhum `--ignore-vuln`**. Até 2026-09-18
+  `nltk` (via `evidently`, RF-27/RNF-55) era ignorado aqui — `evidently`
+  foi removido de produção e o cálculo de PSI reimplementado com
+  `numpy`/`pandas` (ver §4.15 "PSI sem evidently" e `PENDENCIAS.md`), então
+  `nltk` não entra mais na árvore resolvida — nada para ignorar.
+- `pip-audit -r apps/mcp-server/requirements.txt` — **falha** o build em
+  qualquer High/Critical (sem `--ignore-vuln`, sem `continue-on-error`).
+  `chromadb` foi removido (`CVE-2026-45829/45830/45831/45833`, sem correção
+  em nenhuma versão) e substituído por `vector_store.py`; `transformers`
+  subiu para 5.x (cascata `sentence-transformers`/`tokenizers`/`torch`).
+  Ver §17.1.
+- `pnpm audit --prod --audit-level high` — **falha** em High/Critical nas
+  dependências de produção do frontend.
+
+### 17.6. Secrets
+
+- **`.env` NUNCA é commitado** (`.gitignore` linha 2). Só `.env.example`
+  (placeholders) e `apps/frontend/.env.local.example` entram no Git.
+- Secrets vêm de variável de ambiente / secret manager — **nunca**
+  hard-coded no código, no `docker-compose.yml` (usa `${VAR:-default}`),
+  no `.dvc/config`, nem em relatório.
+- `.env.example` só contém placeholders (`change-me-in-production`,
+  `minioadmin`, `seu_usuario_aqui`, …).
+- Tokens reais nunca aparecem em logs (sanitizer, §17.2) nem em relatórios
+  de auditoria (a varredura `git grep` reporta arquivo:linha, nunca o
+  valor).
+- **`.dockerignore`** em `apps/backend` e `apps/frontend` (RNF-62) — impede
+  que `.venv`/`node_modules`/`.env`/`.env*.local`/`*.db` locais entrem no
+  contexto de build enviado ao daemon Docker (achado ao auditar o build:
+  o contexto do `api` chegava a ~1.3 GB por incluir o `.venv` local).
+  Reduz superfície de vazamento de artefato/segredo local e acelera o build.
+
+---
+
+## 18. Autores & Licença
 
 ### Autores
 

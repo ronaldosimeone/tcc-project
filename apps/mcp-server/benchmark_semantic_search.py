@@ -7,10 +7,10 @@ não uma função isolada:
     search_maintenance_manual(query)   # server.py, RF-19/RF-21
         -> SemanticSearchService.search(query)   # semantic_search.py
             -> model.encode(query)               # embedding da query
-            -> collection.query(...)             # ChromaDB real
+            -> collection.query(...)             # vector store real
             -> cosine_similarity + filtro + top 5
 
-Roda contra o ChromaDB REAL (`CHROMA_DB_PATH`) populado por
+Roda contra o vector store REAL (`CHROMA_DB_PATH`) populado por
 `apps/mcp-server/index_manuals.py` (RF-20) — não usa mocks. O carregamento
 do modelo de embeddings (rede/disco, ~segundos a dezenas de segundos na
 primeira vez) acontece uma única vez, ANTES do cronômetro começar, e não
@@ -92,12 +92,12 @@ def run_benchmark() -> dict[str, Any]:
     chunk_count = collection.count()
     if chunk_count == 0:
         raise RuntimeError(
-            "ChromaDB vazio (0 chunks) em "
+            "Vector store vazio (0 chunks) em "
             f"{CHROMA_DB_PATH} — rode `python index_manuals.py` antes do benchmark "
             "(RF-20). Não faz sentido medir latência de busca sem dados reais."
         )
 
-    print(f"ChromaDB real: {chunk_count} chunks em {CHROMA_DB_PATH}")
+    print(f"Vector store real: {chunk_count} chunks em {CHROMA_DB_PATH}")
     print(f"Modelo de embeddings: {EMBEDDING_MODEL}")
 
     # Warm-up — carrega o modelo (lazy singleton em server._get_service) e

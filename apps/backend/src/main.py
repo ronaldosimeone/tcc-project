@@ -113,11 +113,18 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 def create_app() -> FastAPI:
     """Construct and fully configure the FastAPI application."""
 
+    # RNF-62 — a UI interativa do OpenAPI (`/docs`, `/redoc`) e o schema
+    # (`/openapi.json`) só ficam expostos com `DEBUG=true`. Em produção
+    # (`DEBUG` desligado) o ZAP não tem mais o Swagger UI para apontar
+    # (CSP `unsafe-inline`, SRI ausente, JS de CDN externa — inerentes ao
+    # Swagger UI, não à API) e a superfície de enumeração de endpoints some.
+    _docs_enabled = settings.debug
     app: FastAPI = FastAPI(
         title=settings.project_name,
         version=settings.version,
-        docs_url="/docs",
-        redoc_url="/redoc",
+        docs_url="/docs" if _docs_enabled else None,
+        redoc_url="/redoc" if _docs_enabled else None,
+        openapi_url="/openapi.json" if _docs_enabled else None,
         root_path="/api",
         lifespan=lifespan,
     )

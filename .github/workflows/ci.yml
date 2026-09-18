@@ -21,6 +21,68 @@ jobs:
           fi
           echo ".env.example found."
 
+  # 1b. Auditoria de segurança de dependências (RNF-62)
+  #
+  # Política (ver README "Segurança"):
+  #  • Backend / Frontend / mcp-server: o CI FALHA se aparecer QUALQUER
+  #    vulnerabilidade High/Critical nas dependências de PRODUÇÃO. Nenhum
+  #    `--ignore-vuln`/`continue-on-error`/filtro de severidade nos 3 audits
+  #    de produção abaixo — qualquer achado quebra o build de verdade.
+  #
+  #  • `evidently` (RF-27/RNF-55, monitoramento de data drift) foi REMOVIDO
+  #    de apps/backend/requirements.txt nesta task: carregava `nltk`
+  #    (dependência obrigatória e imediata — o próprio `evidently/__init__.py`
+  #    importa um módulo que faz `from nltk.corpus import words`) com uma
+  #    vulnerabilidade High sem correção publicada em nenhuma versão
+  #    (PYSEC-2026-3740/CVE-2026-81726). O cálculo de PSI usado pelo
+  #    drift monitor foi reimplementado com numpy/pandas (já dependências
+  #    existentes) — ver `drift_monitor.py::_population_stability_index` e
+  #    README §4.15 "PSI sem evidently (RNF-62)" para a prova de
+  #    equivalência bit-a-bit com o `evidently` real.
+  security-audit:
+    name: Dependency Security Audit (RNF-62)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install pip-audit
+        run: python -m pip install --upgrade pip pip-audit
+
+      - name: pip-audit — backend (produção)
+        run: pip-audit -r apps/backend/requirements.txt
+
+      # mcp-server: `requirements.txt` inteiro é produção (serviço interno).
+      # chromadb foi removido (CVE-2026-45829/45830/45831/45833 sem correção
+      # em nenhuma versão) e substituído por vector_store.py; transformers
+      # subiu para 5.x (cascata sentence-transformers/tokenizers/torch).
+      - name: pip-audit — mcp-server (produção)
+        run: pip-audit -r apps/mcp-server/requirements.txt
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 8
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+
+      - name: Install frontend deps
+        run: cd apps/frontend && pnpm install --frozen-lockfile
+
+      # --prod: ignora devDependencies (jsdom/storybook/vitest/eslint/shadcn
+      # — shadcn é CLI, foi movido p/ devDependencies nesta task pois nada
+      # em app/ o importa). --audit-level high: só High/Critical quebram.
+      - name: pnpm audit — frontend (produção, High/Critical)
+        run: cd apps/frontend && pnpm audit --prod --audit-level high
+
   # 2. Lint Python (Ruff, Black, Mypy)
   lint-python:
     name: Lint Python
@@ -39,7 +101,10 @@ jobs:
           python -m pip install --upgrade pip
           pip install ruff black mypy
           # Instala as dependências do backend para o mypy não reclamar de imports
+          # (+ requirements-dev.txt — RNF-62 tirou o pytest do requirements.txt,
+          # e os arquivos em tests/ importam pytest)
           if [ -f apps/backend/requirements.txt ]; then pip install -r apps/backend/requirements.txt; fi
+          if [ -f apps/backend/requirements-dev.txt ]; then pip install -r apps/backend/requirements-dev.txt; fi
           if [ -f apps/ml/requirements.txt ]; then pip install -r apps/ml/requirements.txt; fi
 
       - name: Run Ruff (Linting)
@@ -67,8 +132,11 @@ jobs:
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip pytest httpx pytest-cov import-linter
+          python -m pip install --upgrade pip import-linter
           if [ -f apps/backend/requirements.txt ]; then pip install -r apps/backend/requirements.txt; fi
+          # RNF-62 — pytest / pytest-asyncio / pytest-cov saíram do
+          # requirements.txt de produção; vêm daqui.
+          if [ -f apps/backend/requirements-dev.txt ]; then pip install -r apps/backend/requirements-dev.txt; fi
           if [ -f apps/ml/requirements.txt ]; then pip install -r apps/ml/requirements.txt; fi
 
       # RNF-56/57 — o step geral de pytest estava desabilitado há tempos

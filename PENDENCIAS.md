@@ -167,6 +167,43 @@ corrigido na origem).
   Reservoirs, Oil_temperature, Motor_current), nunca **degradação de
   performance do modelo** (que exigiria rótulos verdadeiros/ground truth
   de falhas reais, não coletados em produção) — ver README §4.15.
+- **`nltk`/`evidently` (RNF-62) — RESOLVIDO em 2026-09-18, `evidently`
+  removido de produção.** Histórico: `evidently` (única dependência de
+  produção que puxava `nltk`, usado só por este RF-27/RNF-55) carregava
+  `PYSEC-2026-3740`/`GHSA-8mgp-746c-j5xp`/`CVE-2026-81726` — High (CVSS
+  3.1 7.0 / 4.0 8.3), sem correção publicada em nenhuma versão do `nltk`
+  (`3.10.3`, a mais recente do PyPI, seguia afetada; `patched: None`).
+  Investigado se o pacote poderia ser mantido com `nltk` desinstalado do
+  runtime (`evidently` só usa as 4 APIs vulneráveis — `TransitionParser`,
+  `AveragedPerceptron`, `PerceptronTagger.save_to_json`,
+  `save_maxent_params` — em features de TEXTO nunca exercitadas por este
+  serviço, cujo `DataDefinition` só declara `numerical_columns`) — mas
+  confirmado empiricamente que **isso não é viável**: `evidently/__init__.py`
+  importa `nltk` de forma incondicional e imediata (`from
+  evidently import Dataset` já falha com `ModuleNotFoundError: No module
+  named 'nltk'` se `nltk` for desinstalado), então mesmo o não-uso das
+  features de texto não evita a dependência de instalação.
+  **Solução adotada**: a única funcionalidade do `evidently` de fato usada
+  em produção era o cálculo de PSI (Population Stability Index) —
+  reimplementada em `apps/backend/src/services/drift_monitor.py::
+  _population_stability_index` com `numpy`/`pandas` (dependências já
+  existentes, zero pacote novo), réplica fiel de
+  `evidently.legacy.calculations.stattests.psi._psi()` (binagem por
+  `numpy.histogram_bin_edges(..., bins="sturges")`, mesmo preenchimento de
+  bins vazios por epsilon). **Validado bit-a-bit** contra o `evidently`
+  real em 3 cenários sintéticos (distribuições iguais, deslocadas, e
+  assimétricas tipo gama) — diff `< 1e-9` em todas as 7 features × 3
+  cenários. `evidently==0.7.21` removido de
+  `apps/backend/requirements.txt`. Resultado: `nltk` **ausente** do
+  ambiente instalado (`pip show nltk` → "Package(s) not found") e da
+  árvore resolvida por `pip-audit -r apps/backend/requirements.txt`
+  (`No known vulnerabilities found`, **sem `--ignore-vuln`**) — a
+  vulnerabilidade não está mais "documentada e ignorada", ela **saiu da
+  produção**. 19/20 testes de `test_drift_monitor.py` passam (o 20º,
+  `test_task_runs_directly_without_http`, é uma falha pré-existente
+  sem relação — reproduz idêntica no HEAD anterior a esta mudança). Ver
+  README §4.15 "PSI sem evidently (RNF-62)" para a prova completa de
+  equivalência.
 
 ## RNF-60 / RNF-61 — DVC (Data Version Control)
 

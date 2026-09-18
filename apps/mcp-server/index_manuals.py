@@ -2,19 +2,20 @@
 PredictIQ — Pipeline de ingestão de manuais de manutenção (RF-20 / RNF-44).
 
 Lê PDFs de `MANUALS_DIR`, extrai texto (pypdf), divide em chunks com overlap,
-gera embeddings localmente (sentence-transformers) e persiste tudo em um
-ChromaDB local (`CHROMA_DB_PATH`), na collection `maintenance_manuals`.
+gera embeddings localmente (sentence-transformers) e persiste tudo no vector
+store local (`CHROMA_DB_PATH`, `vector_store.py` — sqlite3 + numpy), na
+collection `maintenance_manuals`.
 
 Esta pipeline SÓ prepara a base de conhecimento. A ferramenta MCP
 `search_maintenance_manual` (server.py, RF-19) continua stub nesta task —
-ainda não consulta este ChromaDB. A próxima task implementa
-query -> embedding -> ChromaDB -> resultados. Ver README "RF-20 — Ingestão
+ainda não consulta este vector store. A próxima task implementa
+query -> embedding -> vector store -> resultados. Ver README "RF-20 — Ingestão
 de manuais" para o diagrama completo.
 
 Indexação incremental (RF-20)
 ------------------------------
 Não existe arquivo de estado separado. A fonte de verdade é o próprio
-ChromaDB: cada chunk carrega `file_hash` (SHA-256 do conteúdo do PDF) nos
+vector store: cada chunk carrega `file_hash` (SHA-256 do conteúdo do PDF) nos
 metadados. Antes de reprocessar um arquivo, a pipeline consulta os chunks
 já indexados para aquele `file_name`:
 
@@ -23,9 +24,9 @@ já indexados para aquele `file_name`:
     arquivo nunca visto           -> indexa
 
 Isso evita um segundo mecanismo de estado (ex.: JSON solto) que precisaria
-ficar sincronizado com o ChromaDB — e que, se não estivesse em um volume
+ficar sincronizado com o vector store — e que, se não estivesse em um volume
 persistente, seria perdido a cada restart do container (o que a task
-explicitamente pede para evitar). O ChromaDB já é o dado persistente único.
+explicitamente pede para evitar). O vector store já é o dado persistente único.
 
 Segurança
 ---------
@@ -51,7 +52,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-import chromadb
+import vector_store
 from pypdf import PdfReader
 from sentence_transformers import SentenceTransformer
 
@@ -87,7 +88,9 @@ def _resolve_dir(value: str) -> Path:
 # host já enxerga este diretório diretamente.
 MANUALS_DIR: Path = _resolve_dir(os.environ.get("MANUALS_DIR", "data/manuals"))
 
-# ChromaDB persistente (PersistentClient) — mesma lógica de volume acima.
+# Vector store persistente (vector_store.PersistentClient) — mesma lógica de
+# volume acima. Nome da env mantido (`CHROMA_DB_PATH`) para não quebrar
+# deploys/compose existentes; o diretório agora guarda um sqlite próprio.
 CHROMA_DB_PATH: Path = _resolve_dir(os.environ.get("CHROMA_DB_PATH", "data/chroma"))
 
 COLLECTION_NAME = "maintenance_manuals"
@@ -97,8 +100,8 @@ COLLECTION_NAME = "maintenance_manuals"
 # das queries) escolhido após checar as dependências do projeto: não havia
 # uso prévio de sentence-transformers no repo (grep em todo o projeto), e
 # este é o modelo MiniLM multilíngue mais leve/estável da família — CPU-only,
-# sem chave/API externa, compatível com o `sentence-transformers==3.3.1`
-# fixado em requirements.txt.
+# sem chave/API externa, compatível com o `sentence-transformers` fixado em
+# requirements.txt. Embeddings de 384 dimensões.
 EMBEDDING_MODEL: str = os.environ.get(
     "EMBEDDING_MODEL", "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
 )
@@ -233,13 +236,13 @@ def embed_texts(model: SentenceTransformer, texts: list[str]) -> list[list[float
 
 
 # ---------------------------------------------------------------------------
-# ChromaDB — persistente, collection dedicada.
+# Vector store — persistente (vector_store.py), collection dedicada.
 # ---------------------------------------------------------------------------
 
 
 def get_collection(chroma_path: Path) -> Any:
     chroma_path.mkdir(parents=True, exist_ok=True)
-    client = chromadb.PersistentClient(path=str(chroma_path))
+    client = vector_store.PersistentClient(path=str(chroma_path))
     return client.get_or_create_collection(
         name=COLLECTION_NAME,
         metadata={"description": "Chunks de manuais técnicos de manutenção (RF-20)."},
@@ -279,7 +282,7 @@ def _build_chunks_for_pdf(
     embedding_model_name: str,
 ) -> tuple[list[str], list[str], list[dict[str, Any]]]:
     """Extrai + gera (ids, documents, metadatas) para todos os chunks do
-    PDF. Não toca o ChromaDB — só monta os dados em memória, para que um
+    PDF. Não toca o vector store — só monta os dados em memória, para que um
     erro aqui nunca deixe a base em estado parcial/inconsistente."""
     pages = extract_pdf_pages(path)
     source = path.relative_to(manuals_dir).as_posix()
@@ -349,7 +352,7 @@ def index_manual(
 
         embeddings = embed_texts(model, documents)
     except Exception as exc:
-        # Falha na extração/chunking/embedding: NÃO mexe no ChromaDB. Se já
+        # Falha na extração/chunking/embedding: NÃO mexe no vector store. Se já
         # havia uma versão anterior indexada, ela permanece válida — o
         # documento simplesmente não é marcado como indexado com sucesso.
         log.error(

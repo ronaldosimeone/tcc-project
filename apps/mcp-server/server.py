@@ -76,7 +76,7 @@ mcp = MCPServer(
 
 # ---------------------------------------------------------------------------
 # Singleton de processo — RNF-45. Modelo de embeddings e collection do
-# ChromaDB carregados UMA vez (no primeiro uso da ferramenta), reaproveitados
+# vector store carregados UMA vez (no primeiro uso da ferramenta), reaproveitados
 # em todas as chamadas seguintes. Nunca recarregar por query.
 # ---------------------------------------------------------------------------
 
@@ -106,7 +106,7 @@ def search_maintenance_manual(query: str) -> dict[str, Any]:
     Interface pública estável desde o stub original (RF-19): recebe `query`
     (string) e devolve uma estrutura de resultados. Delega a busca real para
     `SemanticSearchService` (semantic_search.py), que consulta a collection
-    ChromaDB `maintenance_manuals` preparada por `index_manuals.py` (RF-20).
+    (`maintenance_manuals`) do vector store, preparada por `index_manuals.py` (RF-20).
 
     Parameters
     ----------

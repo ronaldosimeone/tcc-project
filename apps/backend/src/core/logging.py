@@ -25,11 +25,14 @@ from __future__ import annotations
 
 import logging
 import sys
+from typing import TextIO
 
 import structlog
 
+from src.core.log_sanitizer import redact_sensitive
 
-def configure_logging(*, debug: bool = False) -> None:
+
+def configure_logging(*, debug: bool = False, stream: TextIO | None = None) -> None:
     """
     Configure structlog and the stdlib logging bridge.
 
@@ -38,7 +41,14 @@ def configure_logging(*, debug: bool = False) -> None:
     debug:
         True  → ConsoleRenderer with colours (development).
         False → JSONRenderer — machine-readable ndjson (production).
+    stream:
+        Destino da saída de log. ``None`` (padrão de produção) → ``sys.stdout``.
+        Os testes de privacidade (RNF-63, ``tests/test_log_privacy.py``)
+        passam um buffer aqui para inspecionar a linha REAL emitida pelo
+        logger — provando que o sanitizer está no caminho, não só testando
+        a função isolada.
     """
+    out_stream: TextIO = stream if stream is not None else sys.stdout
     level = logging.DEBUG if debug else logging.INFO
 
     # ── Processors shared by both modes ──────────────────────────────────
@@ -58,14 +68,23 @@ def configure_logging(*, debug: bool = False) -> None:
 
     if debug:
         # ── Development: pretty, colour-coded output ──────────────────────
+        # RNF-63 — o sanitizer roda logo antes do ConsoleRenderer: redige
+        # todos os kwargs do evento. O traceback (exc_info) continua sendo
+        # formatado bonito pelo ConsoleRenderer (dev), fora do alcance do
+        # sanitizer — aceitável só em modo debug local.
         processors: list[structlog.types.Processor] = shared_processors + [
+            redact_sensitive,
             structlog.dev.ConsoleRenderer(colors=True),
         ]
     else:
         # ── Production: structured JSON ───────────────────────────────────
         processors = shared_processors + [
-            # Format exc_info as a structured "exception" dict
+            # Format exc_info as a structured "exception" dict FIRST, so o
+            # sanitizer da RNF-63 logo abaixo também varre o texto do
+            # traceback renderizado (um secret que tenha ido parar numa
+            # mensagem de exceção é redigido antes de virar JSON).
             structlog.processors.ExceptionRenderer(),
+            redact_sensitive,
             structlog.processors.JSONRenderer(),
         ]
 
@@ -73,9 +92,11 @@ def configure_logging(*, debug: bool = False) -> None:
         processors=processors,
         wrapper_class=structlog.make_filtering_bound_logger(level),
         context_class=dict,
-        logger_factory=structlog.PrintLoggerFactory(file=sys.stdout),
-        # Cache the bound logger per module for zero-overhead repeated calls
-        cache_logger_on_first_use=True,
+        logger_factory=structlog.PrintLoggerFactory(file=out_stream),
+        # Cache the bound logger per module for zero-overhead repeated calls.
+        # Desligado quando um stream de teste é injetado — senão o logger
+        # cacheado apontaria para o buffer do teste anterior.
+        cache_logger_on_first_use=stream is None,
     )
 
     # ── Bridge stdlib logging → structlog ─────────────────────────────────
@@ -83,7 +104,7 @@ def configure_logging(*, debug: bool = False) -> None:
     # force=True resets any previous root-logger configuration.
     logging.basicConfig(
         format="%(message)s",
-        stream=sys.stdout,
+        stream=out_stream,
         level=level,
         force=True,
     )
