@@ -173,6 +173,52 @@ async def test_registry_lock_serialises_concurrent_swaps() -> None:
     assert registry.active_name == completion_order[-1]
 
 
+async def test_list_summaries_marks_only_the_active_model_as_active() -> None:
+    """RNF-64: `active=(name == active)` — antes de qualquer `swap()`,
+    NENHUM nome deve bater com `active_name == ""`; um mutante `!=`
+    inverteria isso (todos ficariam `active=True` exceto o nome vazio, que
+    nunca existe em KNOWN_MODELS)."""
+    registry = ModelRegistry()
+    summaries = registry.list_summaries()
+
+    assert len(summaries) == len(KNOWN_MODELS)
+    assert all(s.active is False for s in summaries)
+
+
+async def test_list_summaries_marks_the_swapped_model_as_active_after_swap() -> None:
+    with patch(
+        "src.services.model_registry.asyncio.to_thread",
+        return_value=_mock_service(),
+    ):
+        registry = ModelRegistry()
+        await registry.swap("random_forest")
+
+    summaries = registry.list_summaries()
+    active_names = {s.name for s in summaries if s.active}
+    assert active_names == {"random_forest"}
+
+
+# ---------------------------------------------------------------------------
+# get_model_registry — dependency FastAPI (RNF-64)
+# ---------------------------------------------------------------------------
+
+
+def test_get_model_registry_raises_runtime_error_when_state_has_no_registry() -> None:
+    fake_request = MagicMock()
+    fake_request.app.state = MagicMock(spec=[])  # sem atributo model_registry
+
+    with pytest.raises(RuntimeError, match="not initialised"):
+        get_model_registry(fake_request)
+
+
+def test_get_model_registry_returns_the_registry_from_app_state() -> None:
+    registry = ModelRegistry()
+    fake_request = MagicMock()
+    fake_request.app.state.model_registry = registry
+
+    assert get_model_registry(fake_request) is registry
+
+
 # ---------------------------------------------------------------------------
 # require_admin_token — unit tests
 # ---------------------------------------------------------------------------

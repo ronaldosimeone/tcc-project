@@ -10,6 +10,7 @@ feita à parte (ver README "RF-22 — Validação real" e
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
+from typing import Any
 from unittest.mock import AsyncMock
 
 import pytest
@@ -22,7 +23,9 @@ from src.core.exceptions import (
 from src.schemas.maintenance import MaintenanceSuggestionRequest
 from src.services.maintenance_suggestion_service import (
     MAINTENANCE_SUGGESTION_THRESHOLD,
+    ManualContext,
     MaintenanceSuggestionService,
+    SuggestionStreamEvent,
 )
 from src.services.ollama_client import OllamaClient
 
@@ -458,3 +461,197 @@ async def test_stream_empty_context_marks_prompt_explicitly() -> None:
     assert done.references == []
     _, user_prompt = ollama_client.calls[0]
     assert "nenhum trecho" in user_prompt.lower()
+
+
+# ---------------------------------------------------------------------------
+# _build_query / _extract_contexts / _build_prompt / _validate_markdown —
+# RNF-64: testados diretamente com asserts de valor EXATO (não substring),
+# porque o mutador de string do mutmut embrulha o literal inteiro em
+# "XX...XX" — um `in`/`match=` parcial não percebe a mudança quando o
+# trecho procurado sobrevive dentro do wrapper. Os testes de `suggest()`/
+# `suggest_stream()` acima já cobrem o fluxo ponta-a-ponta; estes cobrem os
+# 4 métodos estáticos isoladamente, com granularidade que a integração não
+# alcança (RF-22 pede explicitamente que cada um seja "testável
+# isoladamente" — ver docstring da classe).
+# ---------------------------------------------------------------------------
+
+
+def test_build_query_combines_equipment_and_symptom_when_both_present() -> None:
+    query = MaintenanceSuggestionService._build_query(  # noqa: SLF001
+        _request(0.9, equipment_name="Bomba X", symptom_description="vazamento")
+    )
+    assert query == "Bomba X: vazamento"
+
+
+def test_build_query_uses_only_equipment_name_when_symptom_absent() -> None:
+    query = MaintenanceSuggestionService._build_query(  # noqa: SLF001
+        _request(0.9, equipment_name="Bomba X", symptom_description=None)
+    )
+    assert query == "Bomba X"
+
+
+def test_extract_contexts_uses_exact_fallback_defaults_when_metadata_missing() -> None:
+    raw_results: dict[str, Any] = {"results": [{}]}
+    contexts = MaintenanceSuggestionService._extract_contexts(
+        raw_results
+    )  # noqa: SLF001
+
+    assert len(contexts) == 1
+    ctx = contexts[0]
+    assert ctx.text == ""
+    assert ctx.file_name == "desconhecido"
+    assert ctx.page == 0
+    assert ctx.chunk_index == 0
+    assert ctx.source == "desconhecido"
+    assert ctx.score == 0.0
+
+
+def test_extract_contexts_source_falls_back_to_file_name_before_desconhecido() -> None:
+    """Fronteira de dois níveis: `source` -> `file_name` -> "desconhecido" —
+    testa o nível do MEIO isoladamente (item tem `file_name` mas não
+    `source`)."""
+    raw_results = {"results": [{"metadata": {"file_name": "manual-x.pdf"}}]}
+    contexts = MaintenanceSuggestionService._extract_contexts(
+        raw_results
+    )  # noqa: SLF001
+    assert contexts[0].source == "manual-x.pdf"
+    assert contexts[0].file_name == "manual-x.pdf"
+
+
+def test_extract_contexts_preserves_every_real_field_exactly() -> None:
+    raw_results = {
+        "results": [
+            {
+                "text": "conteudo real",
+                "score": 0.42,
+                "metadata": {
+                    "file_name": "f.pdf",
+                    "page": 7,
+                    "chunk_index": 3,
+                    "source": "s.pdf",
+                },
+            }
+        ]
+    }
+    ctx = MaintenanceSuggestionService._extract_contexts(raw_results)[0]  # noqa: SLF001
+    assert ctx.text == "conteudo real"
+    assert ctx.file_name == "f.pdf"
+    assert ctx.page == 7
+    assert ctx.chunk_index == 3
+    assert ctx.source == "s.pdf"
+    assert ctx.score == pytest.approx(0.42)
+
+
+def test_build_prompt_exact_output_with_context_and_symptom() -> None:
+    request = _request(0.75, equipment_name="Bomba X", symptom_description="ruído")
+    contexts = [
+        ManualContext(
+            text="troque a vedação",
+            file_name="m.pdf",
+            page=2,
+            chunk_index=0,
+            source="m.pdf",
+            score=0.9,
+        )
+    ]
+    prompt = MaintenanceSuggestionService._build_prompt(  # noqa: SLF001
+        request, "Bomba X: ruído", contexts
+    )
+    assert prompt == (
+        "Equipamento: Bomba X\n"
+        "Probabilidade de falha estimada pelo modelo preditivo: 75%\n"
+        "Sintoma relatado: ruído\n"
+        'Consulta realizada aos manuais: "Bomba X: ruído"\n\n'
+        "Contexto recuperado dos manuais técnicos (use SOMENTE estas informações):\n\n"
+        "[MANUAL 1]\n"
+        "Arquivo: m.pdf\n"
+        "Página: 2\n"
+        "Score: 0.90\n"
+        "Conteúdo:\ntroque a vedação\n\n"
+        "Com base exclusivamente no contexto acima, gere o plano de manutenção "
+        "seguindo rigorosamente a estrutura e as regras do seu System Prompt."
+    )
+
+
+def test_build_prompt_exact_output_without_symptom_or_context() -> None:
+    request = _request(0.75, equipment_name="Bomba X", symptom_description=None)
+    prompt = MaintenanceSuggestionService._build_prompt(
+        request, "Bomba X", []
+    )  # noqa: SLF001
+    assert prompt == (
+        "Equipamento: Bomba X\n"
+        "Probabilidade de falha estimada pelo modelo preditivo: 75%\n"
+        'Consulta realizada aos manuais: "Bomba X"\n\n'
+        "Contexto recuperado dos manuais técnicos (use SOMENTE estas informações):\n\n"
+        "(Nenhum trecho de manual relevante foi recuperado para esta consulta.)\n\n"
+        "Com base exclusivamente no contexto acima, gere o plano de manutenção "
+        "seguindo rigorosamente a estrutura e as regras do seu System Prompt."
+    )
+
+
+def test_build_prompt_numbers_manuals_starting_at_1_not_0() -> None:
+    contexts = [
+        ManualContext(
+            text="a",
+            file_name="a.pdf",
+            page=1,
+            chunk_index=0,
+            source="a.pdf",
+            score=0.1,
+        ),
+        ManualContext(
+            text="b",
+            file_name="b.pdf",
+            page=1,
+            chunk_index=1,
+            source="b.pdf",
+            score=0.2,
+        ),
+    ]
+    prompt = MaintenanceSuggestionService._build_prompt(  # noqa: SLF001
+        _request(0.9, symptom_description=None), "q", contexts
+    )
+    assert "[MANUAL 1]" in prompt
+    assert "[MANUAL 2]" in prompt
+    assert "[MANUAL 0]" not in prompt
+    assert "[MANUAL 3]" not in prompt
+
+
+@pytest.mark.parametrize(
+    ("markdown", "expected_message"),
+    [
+        ("", "Resposta do Ollama está vazia."),
+        ("   ", "Resposta do Ollama está vazia."),
+        ('{"a": 1}', "Resposta do Ollama parece ser JSON, não Markdown."),
+        ("[1, 2]", "Resposta do Ollama parece ser JSON, não Markdown."),
+        (
+            "<!DOCTYPE html><p>x</p>",
+            "Resposta do Ollama parece ser HTML, não Markdown.",
+        ),
+        (
+            "<html><body>x</body></html>",
+            "Resposta do Ollama parece ser HTML, não Markdown.",
+        ),
+        (
+            "texto qualquer sem cabecalho nenhum",
+            "Resposta do Ollama não contém cabeçalhos Markdown — formato inesperado.",
+        ),
+    ],
+)
+def test_validate_markdown_raises_the_exact_message_for_each_rejection_reason(
+    markdown: str, expected_message: str
+) -> None:
+    with pytest.raises(OllamaResponseError) as exc_info:
+        MaintenanceSuggestionService._validate_markdown(markdown)  # noqa: SLF001
+    assert str(exc_info.value) == expected_message
+
+
+def test_validate_markdown_accepts_text_with_a_header_and_does_not_raise() -> None:
+    MaintenanceSuggestionService._validate_markdown("# Plano\nconteúdo")  # noqa: SLF001
+
+
+def test_suggestion_stream_event_defaults_references_to_an_empty_list() -> None:
+    """RNF-64: `field(default_factory=list)` — o default não é `None`, é uma
+    lista vazia NOVA a cada instância (não uma lista compartilhada mutável)."""
+    event = SuggestionStreamEvent(type="searching")
+    assert event.references == []

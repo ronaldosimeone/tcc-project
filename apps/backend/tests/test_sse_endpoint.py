@@ -36,9 +36,11 @@ from fastapi.responses import StreamingResponse
 
 from src.core.config import settings
 from src.schemas.stream import SensorReading
+import src.services.sensor_stream_service as sensor_stream_service_module
 from src.services.sensor_stream_service import (
     BROADCAST_INTERVAL,
     SensorStreamService,
+    get_sensor_stream_service,
 )
 
 # RNF-56/57 — este arquivo constrói um `SensorSimulator` REAL por design
@@ -281,6 +283,39 @@ class TestSensorStreamService:
 
     def test_broadcast_interval_is_one_second(self) -> None:
         assert BROADCAST_INTERVAL == 1.0
+
+    @pytest.mark.asyncio
+    async def test_queue_max_size_is_exactly_10(
+        self, service: SensorStreamService
+    ) -> None:
+        q = service.subscribe()
+        assert q.maxsize == 10
+        service.unsubscribe(q)
+
+
+# ===========================================================================
+# get_sensor_stream_service() — singleton lazy (RNF-64, mesmo padrão de
+# get_simulator())
+# ===========================================================================
+
+
+class TestGetSensorStreamServiceSingleton:
+    @pytest.fixture(autouse=True)
+    def _reset_singleton(self):
+        original = sensor_stream_service_module._service
+        sensor_stream_service_module._service = None
+        yield
+        sensor_stream_service_module._service = original
+
+    def test_first_call_creates_a_real_instance_not_none(self) -> None:
+        instance = get_sensor_stream_service()
+        assert instance is not None
+        assert isinstance(instance, SensorStreamService)
+
+    def test_second_call_returns_the_same_instance_not_a_new_one(self) -> None:
+        first = get_sensor_stream_service()
+        second = get_sensor_stream_service()
+        assert first is second
 
 
 # ===========================================================================

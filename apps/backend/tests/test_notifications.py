@@ -43,6 +43,7 @@ from src.core.exceptions import TelegramNotificationError
 # import de telegram_alert_rate_limiter abaixo — não precisa de import
 # próprio aqui.
 from src.services.critical_failure_notification_service import (
+    _RF24_DEFAULT_SNAPSHOT,
     CRITICAL_FAILURE_THRESHOLD,
     CriticalFailureNotificationService,
 )
@@ -494,3 +495,116 @@ async def test_dashboard_url_built_from_equipment_id_route() -> None:
         adapter.send_critical_failure.await_args.args[0]
     )
     assert sent_notification.dashboard_url == "http://localhost/sensors/bomba-01"
+
+
+# ---------------------------------------------------------------------------
+# _RF24_DEFAULT_SNAPSHOT / dashboard_url normalization / dispatch_channels
+# fan-out (RNF-64)
+# ---------------------------------------------------------------------------
+
+
+def test_rf24_default_snapshot_has_email_disabled() -> None:
+    """RF-25: sem configuração salva, o comportamento é EXATAMENTE o RF-24
+    original — Telegram ligado, e-mail desligado."""
+    assert _RF24_DEFAULT_SNAPSHOT.telegram_enabled is True
+    assert _RF24_DEFAULT_SNAPSHOT.email_enabled is False
+    assert _RF24_DEFAULT_SNAPSHOT.alert_threshold == CRITICAL_FAILURE_THRESHOLD
+
+
+def test_dashboard_url_constructor_strips_trailing_slashes() -> None:
+    """`rstrip("/")` no construtor — normaliza barra(s) final(is)."""
+    adapter = AsyncMock()
+    rate_limiter = AsyncMock()
+    service = CriticalFailureNotificationService(
+        adapter=adapter, rate_limiter=rate_limiter, dashboard_url="http://localhost///"
+    )
+    assert service._dashboard_url == "http://localhost"  # noqa: SLF001
+
+
+async def test_dashboard_url_construction_does_not_strip_non_slash_trailing_chars() -> (
+    None
+):
+    """RNF-64: `rstrip("/")` deve remover SÓ barras — uma URL terminando
+    em outro caractere (aqui, a letra "x") nunca deveria ser afetada. Um
+    mutante que troca o conjunto de caracteres (`rstrip("XX/XX")`) passaria
+    a remover também "X"/"x" do fim, o que este teste detecta."""
+    adapter = AsyncMock()
+    adapter.send_critical_failure = AsyncMock(return_value=None)
+    rate_limiter = AsyncMock()
+    rate_limiter.try_acquire = AsyncMock(return_value=True)
+    service = CriticalFailureNotificationService(
+        adapter=adapter,
+        rate_limiter=rate_limiter,
+        dashboard_url="http://localhost/x",
+    )
+    assert service._dashboard_url == "http://localhost/x"  # noqa: SLF001
+
+
+async def test_dispatch_channels_skips_email_when_enabled_but_no_address_configured() -> (
+    None
+):
+    """RNF-64 — fronteira `and`/`or`: com `email_enabled=True` mas
+    `alert_email=None`, a condição real (`and`) nunca deve tentar enviar;
+    um mutante `or` tentaria mesmo sem endereço."""
+    adapter = AsyncMock()
+    adapter.send_critical_failure = AsyncMock(return_value=None)
+    rate_limiter = AsyncMock()
+    rate_limiter.try_acquire = AsyncMock(return_value=True)
+    rate_limiter.release = AsyncMock(return_value=None)
+    email_adapter = AsyncMock()
+    email_adapter.send_critical_failure_email = AsyncMock(return_value=None)
+
+    service = CriticalFailureNotificationService(
+        adapter=adapter,
+        rate_limiter=rate_limiter,
+        dashboard_url="http://localhost",
+        email_adapter=email_adapter,
+    )
+
+    await service.dispatch_channels(
+        equipment_id="eq-1",
+        equipment_name="Eq 1",
+        probability=0.9,
+        timestamp="t",
+        dashboard_url="http://localhost/sensors/eq-1",
+        telegram_enabled=False,
+        email_enabled=True,
+        alert_email=None,
+    )
+
+    email_adapter.send_critical_failure_email.assert_not_awaited()
+    # Nem Telegram nem e-mail enviados de verdade -> libera o rate limit.
+    rate_limiter.release.assert_awaited_once_with("eq-1")
+
+
+async def test_dispatch_channels_sends_email_when_enabled_with_address_and_adapter() -> (
+    None
+):
+    adapter = AsyncMock()
+    adapter.send_critical_failure = AsyncMock(return_value=None)
+    rate_limiter = AsyncMock()
+    rate_limiter.try_acquire = AsyncMock(return_value=True)
+    rate_limiter.release = AsyncMock(return_value=None)
+    email_adapter = AsyncMock()
+    email_adapter.send_critical_failure_email = AsyncMock(return_value=None)
+
+    service = CriticalFailureNotificationService(
+        adapter=adapter,
+        rate_limiter=rate_limiter,
+        dashboard_url="http://localhost",
+        email_adapter=email_adapter,
+    )
+
+    await service.dispatch_channels(
+        equipment_id="eq-1",
+        equipment_name="Eq 1",
+        probability=0.9,
+        timestamp="t",
+        dashboard_url="http://localhost/sensors/eq-1",
+        telegram_enabled=False,
+        email_enabled=True,
+        alert_email="ops@example.com",
+    )
+
+    email_adapter.send_critical_failure_email.assert_awaited_once()
+    rate_limiter.release.assert_not_awaited()

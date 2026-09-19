@@ -63,9 +63,7 @@ class MetroPTPreprocessor(BaseEstimator, TransformerMixin):
         self.lag_long = lag_long
         self.window_minmax = window_minmax
 
-    def fit(
-        self, X: pd.DataFrame, y: pd.Series | None = None
-    ) -> "MetroPTPreprocessor":
+    def fit(self, X: pd.DataFrame, y: pd.Series | None = None) -> "MetroPTPreprocessor":
         return self
 
     def transform(self, X: pd.DataFrame, y: pd.Series | None = None) -> pd.DataFrame:
@@ -112,10 +110,7 @@ class MetroPTPreprocessor(BaseEstimator, TransformerMixin):
     def _add_rolling_std(self, df: pd.DataFrame) -> pd.DataFrame:
         for col in self._resolve_sensor_cols(df):
             df[f"{col}_std_{self.window_std}"] = (
-                df[col]
-                .rolling(window=self.window_std, min_periods=1)
-                .std()
-                .fillna(0.0)
+                df[col].rolling(window=self.window_std, min_periods=1).std().fillna(0.0)
             )
         return df
 
@@ -144,11 +139,39 @@ class MetroPTPreprocessor(BaseEstimator, TransformerMixin):
         return df
 
     def _add_lags(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        RNF-64/RNF-65 — achado real desta task: `shift(n).bfill()` sozinho
+        assume que existe pelo menos UM valor não-nulo na série para o
+        `bfill` propagar. Isso é verdade quando `len(df) > n` (histórico
+        parcial — `bfill` usa a linha mais antiga disponível, comportamento
+        documentado/esperado), mas é FALSO quando `len(df) <= n`: `shift(n)`
+        empurra TODAS as linhas para fora da janela visível, produz uma
+        coluna inteiramente NaN, e não sobra nenhum valor para o `bfill`
+        propagar — a coluna continua inteira NaN.
+
+        Isso não é hipotético: `SensorBuffer` (feature_buffer.py) fica
+        "warm" (primeira vez que `InferencePipelineService` chama
+        `transform()`) com exatamente `warmup_size=15` linhas por padrão —
+        o MESMO valor do `lag_long=15` padrão. Nesse instante exato,
+        `df[col].shift(15)` sobre um DataFrame de 15 linhas é inteiramente
+        NaN, e sem o `.fillna(0.0)` abaixo, `TP2_lag_15`/`TP3_lag_15`/etc. —
+        e por consequência `..._roc_15` — chegariam como NaN na primeira
+        inferência feita logo após o buffer aquecer, e o ONNX Runtime não
+        rejeita NaN (propaga silenciosamente para probabilidades sem
+        sentido). O próprio docstring de `feature_buffer.py` já documentava
+        a intenção correta ("0 for lag" quando não há histórico) — o
+        `.fillna(0.0)` abaixo completa esse contrato, consistente com o
+        fallback "neutro" já usado por `_add_pressure_delta`/
+        `_add_rolling_std` (ambos `.fillna(0.0)`) e pelo próprio `roc` logo
+        abaixo. Não muda nada no caso normal (`len(df) > n`): ali o `bfill`
+        já resolve todo NaN, e `fillna(0.0)` não encontra mais nada pra
+        preencher.
+        """
         for col in self._resolve_sensor_cols(df):
             lag_short_col = f"{col}_lag_{self.lag_short}"
             lag_long_col = f"{col}_lag_{self.lag_long}"
-            df[lag_short_col] = df[col].shift(self.lag_short).bfill()
-            df[lag_long_col] = df[col].shift(self.lag_long).bfill()
+            df[lag_short_col] = df[col].shift(self.lag_short).bfill().fillna(0.0)
+            df[lag_long_col] = df[col].shift(self.lag_long).bfill().fillna(0.0)
             df[f"{col}_roc_{self.lag_long}"] = (
                 (df[col] - df[lag_long_col]) / float(self.lag_long)
             ).fillna(0.0)

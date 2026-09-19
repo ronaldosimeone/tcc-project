@@ -22,16 +22,24 @@ and schema tests run unconditionally.
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+import src.services.simulator as simulator_module
+from src.core.config import settings
 from src.routers.simulator import router as simulator_router
 from src.schemas.stream import SensorReading
 from src.services.simulator import (
+    _DEGRADATION_HORIZON,
+    _build_failure_mask_from_timestamps,
+    _load_and_split,
+    _row_to_reading,
     SimulatorMode,
     SensorSimulator,
     get_simulator,
@@ -41,17 +49,21 @@ from src.services.simulator import (
 # Fixtures
 # ---------------------------------------------------------------------------
 
-_PARQUET = (
-    Path(__file__).resolve().parents[3]
-    / "ml" / "data" / "processed" / "metropt3.parquet"
-)
 
-
+# RNF-65 — usa a MESMA fonte de verdade que a aplicação real
+# (`settings.simulator_parquet_path`, apps/backend/src/core/config.py) em vez
+# de recalcular o caminho a partir de `__file__`: um `Path(__file__).resolve()
+# .parents[N]` hand-rolled aqui já teve o offset errado (contava a partir de
+# `tests/`, não de `src/core/`, apontando um nível ACIMA da raiz do repo —
+# `.../metropt3.parquet` em vez de `.../apps/ml/data/processed/metropt3.parquet`)
+# e fazia as 40 classes de teste dependentes de dado real SEMPRE pular, mesmo
+# com o parquet presente. Reusar `settings` elimina essa classe de bug.
 @pytest.fixture(scope="session")
 def parquet_path() -> Path:
-    if not _PARQUET.exists():
+    path = settings.simulator_parquet_path
+    if not path.exists():
         pytest.skip("metropt3.parquet not found — skipping data-dependent tests")
-    return _PARQUET
+    return path
 
 
 @pytest.fixture()
@@ -156,9 +168,18 @@ class TestSensorSimulator:
     def test_all_12_sensor_fields_present(self, sim: SensorSimulator) -> None:
         reading = sim.generate_reading()
         expected = {
-            "TP2", "TP3", "H1", "DV_pressure", "Reservoirs",
-            "Motor_current", "Oil_temperature",
-            "COMP", "DV_eletric", "Towers", "MPG", "Oil_level",
+            "TP2",
+            "TP3",
+            "H1",
+            "DV_pressure",
+            "Reservoirs",
+            "Motor_current",
+            "Oil_temperature",
+            "COMP",
+            "DV_eletric",
+            "Towers",
+            "MPG",
+            "Oil_level",
         }
         assert expected.issubset(reading.model_dump().keys())
 
@@ -178,10 +199,23 @@ class TestSensorSimulator:
 
     # ── NORMAL mode — physical range checks (real data) ───────────────────
 
-    def test_normal_tp2_positive(self, sim: SensorSimulator) -> None:
-        """Downstream pressure must be non-negative in healthy operation."""
+    def test_normal_tp2_within_plausible_sensor_range(
+        self, sim: SensorSimulator
+    ) -> None:
+        """
+        TP2 (pressão a jusante) fica dentro da faixa plausível do sensor.
+
+        Achado real desta task (RNF-65): a asserção original exigia
+        `TP2 >= 0.0` sempre — falsa sobre o dataset MetroPT-3 real, onde
+        1.275.474 das 1.516.948 linhas (84%) têm `TP2` levemente negativo
+        (mín. -0.032), ruído normal de um sensor de pressão operando perto
+        de zero/vácuo, não uma anomalia. O simulador repassa o dado real
+        verbatim (RF-13) — o bug era a expectativa do teste, não o
+        simulador. Faixa abaixo cobre o mín./máx. reais do dataset com
+        folga (nunca visto fora de [-1, 12] nas 1.5M linhas).
+        """
         readings = [sim.generate_reading().TP2 for _ in range(50)]
-        assert all(v >= 0.0 for v in readings)
+        assert all(-1.0 <= v <= 12.0 for v in readings)
 
     def test_normal_oil_temperature_plausible(self, sim: SensorSimulator) -> None:
         """Oil temperature in healthy operation stays within 20–120 °C."""
@@ -202,8 +236,12 @@ class TestSensorSimulator:
         The means must differ by at least 0.5 A (conservative — avoids fragility
         from dataset-specific absolute values).
         """
-        normal_mean = np.mean([sim.generate_reading().Motor_current for _ in range(200)])
-        fail_mean = np.mean([sim_failure.generate_reading().Motor_current for _ in range(200)])
+        normal_mean = np.mean(
+            [sim.generate_reading().Motor_current for _ in range(200)]
+        )
+        fail_mean = np.mean(
+            [sim_failure.generate_reading().Motor_current for _ in range(200)]
+        )
         assert abs(fail_mean - normal_mean) > 0.5
 
     def test_failure_tp2_differs_from_normal(
@@ -245,8 +283,12 @@ class TestSensorSimulator:
         """
         At drift=1.0 (step=300), the reading equals the failure-partition row.
         """
-        fail_sim = SensorSimulator(mode=SimulatorMode.FAILURE, parquet_path=parquet_path)
-        deg_sim = SensorSimulator(mode=SimulatorMode.DEGRADATION, parquet_path=parquet_path)
+        fail_sim = SensorSimulator(
+            mode=SimulatorMode.FAILURE, parquet_path=parquet_path
+        )
+        deg_sim = SensorSimulator(
+            mode=SimulatorMode.DEGRADATION, parquet_path=parquet_path
+        )
         deg_sim._step = 299  # next generate_reading → step=300, drift=1.0
 
         # Both pointers start at 0 → first row must match exactly at drift=1.
@@ -254,34 +296,69 @@ class TestSensorSimulator:
         deg_val = deg_sim.generate_reading().Motor_current
         assert abs(deg_val - fail_val) < 1e-4
 
-    def test_degradation_blend_is_monotonic_over_time(
-        self, parquet_path: Path
-    ) -> None:
+    def test_degradation_blend_is_monotonic_over_time(self, parquet_path: Path) -> None:
         """
-        Summing 50 early (low-drift) and 50 late (high-drift) Motor_current
-        readings: the late mean must be closer to the failure mean than the
-        early mean (demonstrates the drift is working in the right direction).
+        Compara o MESMO par (normal_row, failure_row) blendado em dois
+        valores de drift diferentes — o único jeito determinístico de provar
+        que o blend se aproxima da falha conforme o drift cresce, sem
+        depender da variação natural do dado real de um sensor cíclico
+        (Motor_current liga/desliga com o compressor: uma janela de 50
+        leituras SEQUENCIAIS pode cair inteira num pico ou num vale,
+        mascarando o efeito do drift — não é o blend que seria testado, e
+        sim a sorte de qual trecho do dataset caiu na janela).
+
+        Achado real desta task (RNF-65): a versão anterior deste teste
+        setava `deg_sim._step` diretamente para pular pra "tarde" (drift
+        alto) SEM avançar `_idx_normal`/`_idx_failure` junto — os ponteiros
+        de linha continuavam onde as primeiras 50 chamadas os deixaram
+        (~linha 50), então o "late" lia linhas bem mais cedo do dataset que
+        seu próprio drift alto sugeria, e por coincidência do dado real
+        (`Motor_current` tem um pico de operação entre as linhas ~50-100 do
+        MetroPT-3) o teste falhava — não porque o blend estivesse errado
+        (`test_degradation_at_drift_zero_close_to_normal`/
+        `..._at_full_drift_close_to_failure`, que testam os EXTREMOS do
+        mesmo jeito determinístico abaixo, sempre passaram), mas porque a
+        comparação em si media coisas de linhas diferentes do dataset.
+        Corrigido consumindo `generate_reading()` de verdade até o step
+        desejado (avança step E ponteiros juntos, do jeito real) em vez de
+        sobrescrever `_step` isoladamente no meio de uma sequência de leituras.
         """
-        deg_sim = SensorSimulator(mode=SimulatorMode.DEGRADATION, parquet_path=parquet_path)
-        fail_sim = SensorSimulator(mode=SimulatorMode.FAILURE, parquet_path=parquet_path)
+        deg_sim = SensorSimulator(
+            mode=SimulatorMode.DEGRADATION, parquet_path=parquet_path
+        )
 
-        fail_mean = np.mean([fail_sim.generate_reading().Motor_current for _ in range(50)])
+        # step=1 (drift≈1/300≈0.003): blend praticamente = normal_row puro.
+        low_drift_val = deg_sim.generate_reading().Motor_current
 
-        # Early drift (step 1→50)
-        early_mean = np.mean([deg_sim.generate_reading().Motor_current for _ in range(50)])
+        # Avança step E ponteiros JUNTOS (consumindo leituras de verdade,
+        # nunca sobrescrevendo `_step` isolado) até restar 1 tick para
+        # step=300 (drift=1.0) — pega o MESMO par (normal_row, failure_row)
+        # que seria lido em drift=1.0 a partir daqui.
+        for _ in range(_DEGRADATION_HORIZON - 2):
+            deg_sim.generate_reading()
+        high_drift_val = deg_sim.generate_reading().Motor_current  # step=300, drift=1.0
 
-        # Late drift (step 250→299 → drift≈0.83–1.0)
-        deg_sim._step = 249
-        late_mean = np.mean([deg_sim.generate_reading().Motor_current for _ in range(50)])
+        # Ponteiros consistentes com o próprio avanço acima — lê a MESMA
+        # posição de failure_row que o `deg_sim` acabou de consumir via
+        # blend, para comparar contra o valor puro de failure naquela linha.
+        fail_sim = SensorSimulator(
+            mode=SimulatorMode.FAILURE, parquet_path=parquet_path
+        )
+        for _ in range(_DEGRADATION_HORIZON - 1):
+            fail_sim.generate_reading()
+        pure_failure_at_same_row = fail_sim.generate_reading().Motor_current
 
-        # Distance from failure: late readings must be closer to failure than early ones.
-        assert abs(late_mean - fail_mean) < abs(early_mean - fail_mean)
+        # A leitura de alto drift deve estar MUITO mais perto da falha pura
+        # (mesma linha) do que a leitura de drift quase zero estava —
+        # provando que o blend converge para failure_row conforme step→300,
+        # sem depender de médias sobre um sinal real cíclico.
+        assert abs(high_drift_val - pure_failure_at_same_row) < abs(
+            low_drift_val - pure_failure_at_same_row
+        )
 
     # ── Mode transitions ──────────────────────────────────────────────────
 
-    def test_transition_normal_to_failure_then_back(
-        self, sim: SensorSimulator
-    ) -> None:
+    def test_transition_normal_to_failure_then_back(self, sim: SensorSimulator) -> None:
         sim.mode = SimulatorMode.FAILURE
         assert sim.mode == SimulatorMode.FAILURE
         assert sim._step == 0
@@ -304,9 +381,11 @@ class TestSensorSimulator:
         """Streaming more rows than the partition size must wrap silently."""
         n_rows = len(sim._normal) + 5
         for _ in range(n_rows):
-            sim.generate_reading()   # must not raise
+            sim.generate_reading()  # must not raise
 
-    def test_failure_loops_without_index_error(self, sim_failure: SensorSimulator) -> None:
+    def test_failure_loops_without_index_error(
+        self, sim_failure: SensorSimulator
+    ) -> None:
         n_rows = len(sim_failure._failure) + 5
         for _ in range(n_rows):
             sim_failure.generate_reading()
@@ -319,6 +398,243 @@ class TestSensorSimulator:
         sim.mode = SimulatorMode.FAILURE
         failure_readings = [sim.generate_reading().Motor_current for _ in range(200)]
         assert abs(np.mean(failure_readings) - np.mean(normal_readings)) > 0.5
+
+    # ── Índices de linha — inicialização e avanço exato ─────────────────────
+
+    def test_idx_normal_and_idx_failure_start_at_zero(
+        self, sim: SensorSimulator
+    ) -> None:
+        assert sim._idx_normal == 0
+        assert sim._idx_failure == 0
+
+    def test_idx_normal_advances_by_exactly_1_per_reading_with_wraparound(
+        self, sim: SensorSimulator
+    ) -> None:
+        n = len(sim._normal)
+        assert sim._idx_normal == 0
+        sim.generate_reading()
+        assert sim._idx_normal == 1
+        sim.generate_reading()
+        assert sim._idx_normal == 2
+        # Avança exatamente até o fim da partição — o próximo dá a volta pra 0.
+        for _ in range(n - 3):
+            sim.generate_reading()
+        assert sim._idx_normal == n - 1
+        sim.generate_reading()
+        assert sim._idx_normal == 0
+
+    def test_idx_failure_advances_by_exactly_1_per_reading_with_wraparound(
+        self, sim_failure: SensorSimulator
+    ) -> None:
+        n = len(sim_failure._failure)
+        sim_failure.generate_reading()
+        assert sim_failure._idx_failure == 1
+        for _ in range(n - 2):
+            sim_failure.generate_reading()
+        assert sim_failure._idx_failure == n - 1
+        sim_failure.generate_reading()
+        assert sim_failure._idx_failure == 0
+
+    # ── Fórmula de drift (DEGRADATION) ───────────────────────────────────────
+
+    def test_drift_formula_is_step_divided_by_horizon_capped_at_1(
+        self, parquet_path: Path
+    ) -> None:
+        """RNF-64: `drift = min(step / HORIZON, 1.0)` — testa um step
+        intermediário exato (não só os extremos 0 e 1.0 já cobertos pelos
+        testes acima), mata `*` no lugar de `/` e o cap `2.0` no lugar de
+        `1.0`."""
+        deg_sim = SensorSimulator(
+            mode=SimulatorMode.DEGRADATION, parquet_path=parquet_path
+        )
+        fail_sim = SensorSimulator(
+            mode=SimulatorMode.FAILURE, parquet_path=parquet_path
+        )
+        normal_sim = SensorSimulator(
+            mode=SimulatorMode.NORMAL, parquet_path=parquet_path
+        )
+
+        half_horizon = _DEGRADATION_HORIZON // 2
+        for _ in range(half_horizon - 1):
+            deg_sim.generate_reading()
+            fail_sim.generate_reading()
+            normal_sim.generate_reading()
+        blended = deg_sim.generate_reading().Motor_current
+        pure_normal = normal_sim.generate_reading().Motor_current
+        pure_failure = fail_sim.generate_reading().Motor_current
+
+        expected_drift = half_horizon / _DEGRADATION_HORIZON  # == 0.5
+        expected = pure_normal + expected_drift * (pure_failure - pure_normal)
+        assert blended == pytest.approx(expected, rel=1e-5)
+
+
+# ===========================================================================
+# _row_to_reading — mapeamento exato coluna -> campo (RNF-64)
+# ===========================================================================
+
+
+class TestRowToReading:
+    def test_every_field_maps_to_its_exact_column_index(self) -> None:
+        """Array com 12 valores DISTINTOS (0..11) — qualquer troca de índice
+        entre campos faz a asserção correspondente falhar."""
+        row = np.array([float(i) for i in range(12)], dtype=np.float32)
+        ts = datetime(2024, 1, 1, tzinfo=timezone.utc)
+
+        reading = _row_to_reading(row, ts)
+
+        assert reading.TP2 == 0.0
+        assert reading.TP3 == 1.0
+        assert reading.H1 == 2.0
+        assert reading.DV_pressure == 3.0
+        assert reading.Reservoirs == 4.0
+        assert reading.Motor_current == 5.0
+        assert reading.Oil_temperature == 6.0
+        assert reading.COMP == 7.0
+        assert reading.DV_eletric == 8.0
+        assert reading.Towers == 9.0
+        assert reading.MPG == 10.0
+        assert reading.Oil_level == 11.0
+        assert reading.timestamp == ts
+
+
+# ===========================================================================
+# _build_failure_mask_from_timestamps — fronteiras exatas de janela (RNF-64)
+# ===========================================================================
+
+
+class TestBuildFailureMaskFromTimestamps:
+    # Janela de falha real conhecida (mesma usada pelo simulador/PSI).
+    _WINDOW_START = "2020-04-18 00:00:00"
+    _WINDOW_END = "2020-04-18 23:59:00"
+
+    def test_timestamp_exactly_at_window_start_is_inside_the_failure_window(
+        self,
+    ) -> None:
+        """Fronteira: início da janela é INCLUSIVO (`>=`, não `>`)."""
+        ts = pd.Series([pd.Timestamp(self._WINDOW_START)])
+        mask = _build_failure_mask_from_timestamps(ts)
+        assert mask[0] is np.True_ or bool(mask[0]) is True
+
+    def test_timestamp_exactly_at_window_end_is_inside_the_failure_window(self) -> None:
+        """Fronteira: fim da janela é INCLUSIVO (`<=`, não `<`)."""
+        ts = pd.Series([pd.Timestamp(self._WINDOW_END)])
+        mask = _build_failure_mask_from_timestamps(ts)
+        assert bool(mask[0]) is True
+
+    def test_timestamp_one_minute_before_window_start_is_outside(self) -> None:
+        ts = pd.Series([pd.Timestamp(self._WINDOW_START) - pd.Timedelta(minutes=1)])
+        mask = _build_failure_mask_from_timestamps(ts)
+        assert bool(mask[0]) is False
+
+    def test_timestamp_one_minute_after_window_end_is_outside(self) -> None:
+        ts = pd.Series([pd.Timestamp(self._WINDOW_END) + pd.Timedelta(minutes=1)])
+        mask = _build_failure_mask_from_timestamps(ts)
+        assert bool(mask[0]) is False
+
+    def test_timezone_aware_timestamps_are_stripped_before_comparison(self) -> None:
+        """`hasattr(dtype, "tz")` + `.tz is not None` -> converte para naive
+        antes de comparar contra as janelas (naive, paper MetroPT-3)."""
+        ts = pd.Series([pd.Timestamp(self._WINDOW_START, tz="UTC")])
+        mask = _build_failure_mask_from_timestamps(ts)
+        assert bool(mask[0]) is True
+
+
+# ===========================================================================
+# _load_and_split — detecção de coluna timestamp/anomaly + fallback (RNF-64)
+# ===========================================================================
+
+
+class TestLoadAndSplit:
+    _COLS = simulator_module._SENSOR_COLS  # noqa: SLF001
+
+    def _write_parquet(self, tmp_path: Path, df: pd.DataFrame) -> Path:
+        path = tmp_path / "synthetic.parquet"
+        df.to_parquet(path, engine="pyarrow")
+        return path
+
+    def test_uses_timestamp_column_when_present_even_if_anomaly_also_present(
+        self, tmp_path: Path
+    ) -> None:
+        n = 10
+        data = {c: [float(i) for i in range(n)] for c in self._COLS}
+        data["timestamp"] = [
+            (
+                pd.Timestamp("2020-04-18 00:30:00")
+                if i < 3
+                else pd.Timestamp(f"2019-01-{i+1:02d}")
+            )
+            for i in range(n)
+        ]
+        data["anomaly"] = [False] * n  # nunca deveria ser usado aqui
+        path = self._write_parquet(tmp_path, pd.DataFrame(data))
+
+        normal_rows, failure_rows = _load_and_split(path)
+        assert len(failure_rows) == 3  # só as 3 dentro da janela de falha real
+        assert len(normal_rows) == n - 3
+
+    def test_falls_back_to_anomaly_column_when_no_timestamp_column(
+        self, tmp_path: Path
+    ) -> None:
+        n = 10
+        data = {c: [float(i) for i in range(n)] for c in self._COLS}
+        data["anomaly"] = [i < 4 for i in range(n)]
+        path = self._write_parquet(tmp_path, pd.DataFrame(data))
+
+        normal_rows, failure_rows = _load_and_split(path)
+        assert len(failure_rows) == 4
+        assert len(normal_rows) == n - 4
+
+    def test_treats_everything_as_normal_when_neither_column_present(
+        self, tmp_path: Path
+    ) -> None:
+        n = 6
+        data = {c: [float(i) for i in range(n)] for c in self._COLS}
+        path = self._write_parquet(tmp_path, pd.DataFrame(data))
+
+        normal_rows, failure_rows = _load_and_split(path)
+        assert len(normal_rows) == n
+        # Sem linhas de falha reais -> fallback: failure_rows == normal_rows.
+        np.testing.assert_array_equal(failure_rows, normal_rows)
+
+    def test_falls_back_to_normal_rows_when_anomaly_column_has_no_true_values(
+        self, tmp_path: Path
+    ) -> None:
+        """Fronteira: `len(failure_rows) == 0` (não `== 1`) — coluna
+        `anomaly` existe mas está inteira `False`."""
+        n = 6
+        data = {c: [float(i) for i in range(n)] for c in self._COLS}
+        data["anomaly"] = [False] * n
+        path = self._write_parquet(tmp_path, pd.DataFrame(data))
+
+        normal_rows, failure_rows = _load_and_split(path)
+        assert len(normal_rows) == n
+        np.testing.assert_array_equal(failure_rows, normal_rows)
+
+
+# ===========================================================================
+# get_simulator() — singleton lazy (RNF-64)
+# ===========================================================================
+
+
+class TestGetSimulatorSingleton:
+    @pytest.fixture(autouse=True)
+    def _reset_singleton(self, parquet_path: Path):
+        """Isola cada teste do estado global `_simulator` — nunca deixa um
+        teste anterior/posterior enxergar o singleton criado aqui."""
+        original = simulator_module._simulator
+        simulator_module._simulator = None
+        yield
+        simulator_module._simulator = original
+
+    def test_first_call_creates_a_real_instance_not_none(self) -> None:
+        instance = get_simulator()
+        assert instance is not None
+        assert isinstance(instance, SensorSimulator)
+
+    def test_second_call_returns_the_same_instance_not_a_new_one(self) -> None:
+        first = get_simulator()
+        second = get_simulator()
+        assert first is second
 
 
 # ===========================================================================
@@ -404,9 +720,7 @@ class TestGetSimulatorMode:
 
 class TestModeIntegration:
 
-    def test_stream_service_uses_simulator_mode(
-        self, sim: SensorSimulator
-    ) -> None:
+    def test_stream_service_uses_simulator_mode(self, sim: SensorSimulator) -> None:
         """
         Switching the simulator to FAILURE must produce readings that are
         statistically different from NORMAL (200-sample means differ by > 0.5 A).

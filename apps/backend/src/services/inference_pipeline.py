@@ -160,7 +160,16 @@ class InferencePipelineService:
         self._stream = stream_service
         self._registry = registry
         self._alert = alert_service
-        self._buffer: SensorBuffer = sensor_buffer or get_sensor_buffer()
+        # RNF-64 — achado real desta task: `sensor_buffer or get_sensor_buffer()`
+        # usa truthiness, mas `SensorBuffer.__len__` faz um buffer RECÉM-CRIADO
+        # (o caso comum de quem injeta um buffer isolado, ex. em testes) ser
+        # falsy — o `or` descartava silenciosamente o buffer explícito e caía
+        # no singleton global de produção, quebrando o isolamento que a
+        # injeção existe pra garantir. `is None` distingue "não foi passado"
+        # de "foi passado mas está vazio".
+        self._buffer: SensorBuffer = (
+            sensor_buffer if sensor_buffer is not None else get_sensor_buffer()
+        )
         self._preprocessor: MetroPTPreprocessor = preprocessor or MetroPTPreprocessor()
         self._task: asyncio.Task[None] | None = None
         # Loga só uma vez quando o buffer aquece — evita spam por leitura.

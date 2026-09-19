@@ -47,7 +47,10 @@ from src.routers.settings import (
     get_alert_settings_service,
     get_notification_test_service,
 )
-from src.services.alert_settings_service import AlertSettingsService
+from src.services.alert_settings_service import (
+    AlertSettingsService,
+    AlertSettingsSnapshot,
+)
 from src.services.critical_failure_notification_service import (
     CriticalFailureNotificationService,
 )
@@ -890,3 +893,18 @@ async def test_endpoint_test_notification_all_channels_failed_returns_502() -> N
     assert "TELEGRAM_BOT_TOKEN" not in str(body)
     assert "RESEND_API_KEY" not in str(body)
     assert "token" not in body["detail"].lower()
+
+
+def test_alert_settings_snapshot_is_immutable() -> None:
+    """RNF-64: `@dataclass(frozen=True)` — uma tentativa de mutar um campo
+    depois de criado deve levantar, não silenciosamente aceitar (o
+    snapshot é lido/logado em vários pontos assumindo que não muda por
+    baixo)."""
+    snapshot = AlertSettingsSnapshot(
+        alert_threshold=0.85,
+        telegram_enabled=True,
+        email_enabled=False,
+        alert_email=None,
+    )
+    with pytest.raises(AttributeError):
+        snapshot.alert_threshold = 0.5  # type: ignore[misc]

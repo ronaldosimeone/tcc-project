@@ -53,10 +53,14 @@ from src.main import create_app
 from src.models.drift_report import DriftReport
 from src.models.prediction import Prediction
 from src.services.drift_monitor import (
+    CURRENT_WINDOW_HOURS,
     DRIFT_PSI_THRESHOLD,
     MIN_CURRENT_ROWS,
     MONITORED_FEATURES,
+    REFERENCE_SAMPLE_SEED,
     DriftMonitor,
+    _fill_zero_bins,
+    list_drift_reports,
 )
 from src.tasks.drift_tasks import TASK_NAME, daily_drift_analysis_task
 
@@ -417,6 +421,20 @@ def test_task_runs_directly_without_http(
     `dispose()` destruiria o próprio banco antes da verificação abaixo
     poder ler de volta; um arquivo persiste normalmente através do dispose,
     igual a um Postgres real.
+
+    RNF-64/RNF-65 — achado real desta task: este é o ÚNICO teste do arquivo
+    que semeia dados usando `_NOW` (fixo em 2026-09-09) mas NÃO injeta um
+    `now=` na chamada real (`daily_drift_analysis_task()` não aceita esse
+    parâmetro — ao contrário de `run_daily_analysis`, usado por todos os
+    outros testes, ela sempre usa `datetime.now(timezone.utc)` real,
+    exatamente como em produção via Celery Beat). Isso tornava o teste uma
+    bomba-relógio: passado tempo suficiente desde que `_NOW` foi escrito, a
+    janela "últimas 24h" da task real (ancorada no relógio de verdade) para
+    de conter as linhas semeadas perto de `_NOW`, e `current_rows` cai pra 0
+    (confirmado: falhava com `insufficient_data` ao rodar a suíte completa
+    nesta task, bloqueando o baseline limpo exigido pelo mutation testing).
+    Corrigido semeando relativo ao relógio real (`datetime.now(timezone.utc)`)
+    — não recria o mesmo bug com uma nova data fixa.
     """
     import src.tasks.drift_tasks as drift_tasks_module
 
@@ -429,7 +447,9 @@ def test_task_runs_directly_without_http(
     async def _prepare() -> None:
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
-        await _seed_predictions(session_factory, MIN_CURRENT_ROWS, now=_NOW)
+        await _seed_predictions(
+            session_factory, MIN_CURRENT_ROWS, now=datetime.now(timezone.utc)
+        )
 
     import asyncio
 
@@ -639,3 +659,151 @@ def test_reference_data_loads_real_baseline_excluding_failure_windows() -> None:
     # (mesma seed) — RF-27 §Fase 4 "janela deve ser determinística".
     reference_df_2 = monitor.load_reference_data()
     pd.testing.assert_frame_equal(reference_df, reference_df_2)
+
+
+# ---------------------------------------------------------------------------
+# Constantes de módulo (RNF-64)
+# ---------------------------------------------------------------------------
+
+
+def test_reference_sample_seed_is_42() -> None:
+    """Determinismo depende do valor EXATO da seed — não só de "ter" uma."""
+    assert REFERENCE_SAMPLE_SEED == 42
+
+
+def test_current_window_hours_is_24() -> None:
+    assert CURRENT_WINDOW_HOURS == 24
+
+
+# ---------------------------------------------------------------------------
+# _fill_zero_bins — a fronteira exata do fallback documentado no docstring
+# ---------------------------------------------------------------------------
+
+
+def test_fill_zero_bins_returns_all_zero_array_unchanged_when_everything_is_zero() -> (
+    None
+):
+    """Fronteira: `len(nonzero) == 0` — SEM esse ramo, `nonzero.min()`
+    lançaria `ValueError` num array vazio."""
+    result = _fill_zero_bins(np.array([0.0, 0.0, 0.0]))
+    np.testing.assert_array_equal(result, [0.0, 0.0, 0.0])
+
+
+def test_fill_zero_bins_uses_smallest_over_1e6_when_smallest_is_at_or_below_0_0001() -> (
+    None
+):
+    result = _fill_zero_bins(np.array([0.0, 0.00005, 0.5]))
+    assert result[0] == pytest.approx(0.00005 / 1e6, rel=1e-9)
+    assert result[1] == 0.00005
+    assert result[2] == 0.5
+
+
+def test_fill_zero_bins_boundary_at_exactly_0_0001_still_uses_the_over_1e6_branch() -> (
+    None
+):
+    """Fronteira: `smallest <= 0.0001` inclui exatamente 0.0001 — usa
+    `smallest/1e6`, NÃO o piso fixo 0.0001 (que só vale para `> 0.0001`)."""
+    result = _fill_zero_bins(np.array([0.0, 0.0001]))
+    assert result[0] == pytest.approx(0.0001 / 1e6, rel=1e-9)
+
+
+def test_fill_zero_bins_uses_flat_0_0001_floor_when_smallest_is_above_0_0001() -> None:
+    result = _fill_zero_bins(np.array([0.0, 0.5]))
+    assert result[0] == 0.0001
+
+
+# ---------------------------------------------------------------------------
+# load_reference_data — exclusão real das janelas de falha conhecidas
+# ---------------------------------------------------------------------------
+
+
+def test_load_reference_data_excludes_rows_inside_a_known_failure_window(
+    tmp_path: Path,
+) -> None:
+    """RNF-64 — achado real: nenhum teste anterior verificava que
+    `~failure_mask` (NÃO `failure_mask`) é de fato usado para selecionar as
+    linhas "normais". Constrói um parquet sintético com timestamps dentro e
+    fora de uma das 4 janelas de falha REAIS conhecidas (mesma fonte usada
+    pelo simulador RF-13) e confirma que só as linhas de FORA aparecem na
+    amostra de referência."""
+    columns = [*MONITORED_FEATURES, "timestamp"]
+    rows = []
+    # Dentro da janela de falha real "2020-04-18 00:00:00" a "23:59:00".
+    for hour in (1, 12, 23):
+        row = {c: 999.0 for c in MONITORED_FEATURES}
+        row["timestamp"] = pd.Timestamp(f"2020-04-18 {hour:02d}:00:00")
+        rows.append(row)
+    # Fora de qualquer janela de falha conhecida.
+    for day in (1, 2, 3, 4, 5):
+        row = {c: 1.0 for c in MONITORED_FEATURES}
+        row["timestamp"] = pd.Timestamp(f"2020-01-{day:02d} 00:00:00")
+        rows.append(row)
+
+    df = pd.DataFrame(rows, columns=columns)
+    parquet_path = tmp_path / "synthetic.parquet"
+    df.to_parquet(parquet_path, engine="pyarrow")
+
+    monitor = DriftMonitor(parquet_path=parquet_path)
+    reference_df = monitor.load_reference_data()
+
+    assert len(reference_df) == 5  # só as linhas "fora" (999.0 excluídas)
+    assert (reference_df["TP2"] == 1.0).all()
+    assert 999.0 not in reference_df["TP2"].values
+
+
+# ---------------------------------------------------------------------------
+# list_drift_reports — offset de paginação exato (RNF-64)
+# ---------------------------------------------------------------------------
+
+
+async def _seed_drift_reports(
+    factory: async_sessionmaker[AsyncSession], count: int
+) -> None:
+    async with factory() as db:
+        for i in range(count):
+            db.add(
+                DriftReport(
+                    analysis_date=(_NOW - timedelta(days=i)).date(),
+                    analyzed_at=_NOW - timedelta(minutes=i),
+                    reference_period="synthetic",
+                    current_period_start=_NOW - timedelta(hours=24),
+                    current_period_end=_NOW,
+                    psi=0.1,
+                    drift_detected=False,
+                    features={"TP2": 0.1},
+                    status="ok",
+                    created_at=_NOW,
+                )
+            )
+        await db.commit()
+
+
+async def test_list_drift_reports_computes_offset_from_page_and_size(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    await _seed_drift_reports(session_factory, 10)
+    async with session_factory() as db:
+        page1 = await list_drift_reports(db, page=1, size=4)
+        page2 = await list_drift_reports(db, page=2, size=4)
+        page3 = await list_drift_reports(db, page=3, size=4)
+
+    assert page1.total == 10
+    assert len(page1.items) == 4
+    assert len(page2.items) == 4
+    assert len(page3.items) == 2  # offset=8, resta só 2 registros
+    ids_p1 = {item.id for item in page1.items}
+    ids_p2 = {item.id for item in page2.items}
+    ids_p3 = {item.id for item in page3.items}
+    assert ids_p1.isdisjoint(ids_p2)
+    assert ids_p2.isdisjoint(ids_p3)
+
+
+async def test_list_drift_reports_page_beyond_total_returns_empty_items_not_error(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    await _seed_drift_reports(session_factory, 3)
+    async with session_factory() as db:
+        page = await list_drift_reports(db, page=99, size=10)
+
+    assert page.total == 3
+    assert page.items == []

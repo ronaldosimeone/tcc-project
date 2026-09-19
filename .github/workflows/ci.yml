@@ -150,24 +150,29 @@ jobs:
       # quebrando a coleta de QUALQUER teste que importasse `src.main`
       # sem o parquet disponível; corrigido para lazy, mesmo padrão já
       # documentado em `services/simulator.py::get_simulator()`).
-      # `--ignore=tests/test_simulator.py`: falha de coleta pré-existente
-      # e não relacionada (`IndexError: 3`, confirmado via `git stash`
-      # antes da RF-22) — mesmo contorno já usado em toda validação local.
-      # Os ~34 testes que ainda dependem do parquet real
-      # (`test_sse_endpoint.py`, 2 testes de `test_drift_monitor.py`) têm
-      # guarda `skipif` própria e são pulados de forma limpa SE o arquivo
-      # não existir — mas ele agora É commitado (ver .gitignore), então em
-      # CI eles rodam normalmente também.
+      #
+      # RNF-64/RNF-65 — o `--ignore=tests/test_simulator.py` que existia
+      # aqui foi REMOVIDO nesta task: era um contorno para um
+      # `IndexError: 3` de coleta pré-existente e não relacionado (anterior
+      # à RF-22, já corrigido pela mudança acima) que nunca foi revertido
+      # depois do fix. Auditoria confirmou: `test_simulator.py` tinha
+      # ADICIONALMENTE um bug próprio de path (`Path(__file__).parents[3]`
+      # apontava pra raiz do repo, não `apps/`) que fazia 40 dos 44 testes
+      # do arquivo serem pulados silenciosamente em QUALQUER ambiente —
+      # ou seja, o CI nunca executou essa suíte de verdade. Corrigido para
+      # usar `settings.simulator_parquet_path` (o mesmo path canônico já
+      # usado em produção e por `test_drift_monitor.py`); os 44 testes
+      # agora rodam e passam aqui também.
       #
       # `--cov=src --cov-report=term-missing`: config de cobertura real em
       # `apps/backend/pyproject.toml` (`[tool.coverage.report]`,
-      # `fail_under = 80`) — o comando FALHA (exit != 0) se a cobertura
-      # total ficar abaixo de 80% (RNF-57), sem precisar de um step
-      # separado só para checar o número.
-      - name: Run Pytest (Backend, com cobertura — RNF-57)
+      # `fail_under = 85` — elevado de 80% nesta task, RNF-65) — o comando
+      # FALHA (exit != 0) se a cobertura total ficar abaixo do piso, sem
+      # precisar de um step separado só para checar o número.
+      - name: Run Pytest (Backend, com cobertura — RNF-57/RNF-65)
         run: |
           cd apps/backend
-          pytest --ignore=tests/test_simulator.py --cov=src --cov-report=term-missing -v
+          pytest --cov=src --cov-report=term-missing -v
 
       # RNF-56 — garante que a fronteira routers -> infraestrutura
       # (MCP/Ollama/Telegram/e-mail/Celery, ver
@@ -202,7 +207,113 @@ jobs:
           dvc dag
           dvc status
 
-  # 4. Lint TypeScript (ESLint, Prettier)
+  # 4. Mutation Testing (RNF-64) — valida que a suíte de testes do backend
+  # de fato MATA mutações no código "core" (regra de negócio/inferência
+  # ML/processamento de sensores/alertas/sugestão de manutenção — escopo e
+  # justificativa completos em apps/backend/pyproject.toml
+  # [tool.mutmut]), não só cobre linhas (isso é RNF-57/RNF-65, job acima).
+  #
+  # mutmut fixado em 2.5.1 (não a série 3.x): a série 3.x quebra de forma
+  # reprodutível neste projeto porque seu mecanismo de "trampoline" rejeita
+  # qualquer função cujo `__module__` comece com "src." (assert hardcoded
+  # em mutmut/stats.py), e este projeto usa "src" como o nome real do
+  # pacote top-level em todo import — ver comentário completo em
+  # apps/backend/requirements-dev.txt.
+  #
+  # Por que matrix (4 grupos) em vez de um job único: mutation testing é
+  # ORDENS DE MAGNITUDE mais lento que pytest — cada um dos ~1400 mutantes
+  # do escopo core dispara sua PRÓPRIA subprocess de pytest; um job único
+  # rodaria os 18 arquivos sequencialmente (~1h de parede). Dividir por
+  # arquivo em grupos que rodam EM PARALELO corta o tempo proporcionalmente
+  # sem tirar nenhum arquivo do escopo real: os 4 grupos juntos cobrem
+  # exatamente os mesmos 18 arquivos de `[tool.mutmut] paths_to_mutate` —
+  # nenhum subconjunto menor, nunca um grupo "fácil" isolado escondendo um
+  # grupo maior/mais fraco (o gate abaixo agrega os 4 antes de decidir).
+  mutation-testing:
+    name: Mutation Testing (RNF-64) — grupo ${{ matrix.group }}
+    runs-on: ubuntu-latest
+    needs: lint-python
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - group: 1
+            paths: "src/services/alert_service.py:src/services/alert_settings_service.py:src/services/critical_failure_notification_service.py:src/services/drift_monitor.py:src/services/feature_buffer.py"
+          - group: 2
+            paths: "src/services/inference_pipeline.py:src/services/maintenance_suggestion_service.py:src/services/mlp_adapter.py:src/services/model_registry.py"
+          - group: 3
+            paths: "src/services/model_service.py:src/services/onnx_autoencoder_adapter.py:src/services/onnx_sequence_adapter.py:src/services/onnx_tree_adapter.py"
+          - group: 4
+            paths: "src/services/prediction_service.py:src/services/preprocessing.py:src/services/sensor_stream_service.py:src/services/simulator.py:src/services/telegram_alert_rate_limiter.py"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r apps/backend/requirements.txt
+          pip install -r apps/backend/requirements-dev.txt
+
+      # `--paths-to-mutate` sobrescreve, só para este job, o subconjunto de
+      # `[tool.mutmut] paths_to_mutate` do pyproject.toml (que continua
+      # sendo a fonte de verdade do escopo CORE completo, usada também na
+      # execução local via `mutmut run`) — cada grupo do matrix cobre uma
+      # fatia DISJUNTA dos mesmos 18 arquivos.
+      #
+      # `|| true`: o exit code de `mutmut run --CI` reflete se sobrou
+      # mutante vivo NESTE grupo isolado — o job não deve falhar aqui; quem
+      # decide pass/fail é o `mutation-score-gate` sobre o AGREGADO dos 4
+      # grupos (ver comentário acima do job `mutation-testing`).
+      - name: Run mutmut (grupo ${{ matrix.group }})
+        working-directory: apps/backend
+        run: |
+          mutmut run --paths-to-mutate="${{ matrix.paths }}" --CI 2>&1 | tee /tmp/mutmut-run.log || true
+
+      - name: Parse mutation summary
+        working-directory: apps/backend
+        run: |
+          python scripts/parse_mutmut_summary.py /tmp/mutmut-run.log "mutmut-summary-group-${{ matrix.group }}.json"
+
+      - name: Upload mutation summary
+        uses: actions/upload-artifact@v4
+        with:
+          name: mutmut-summary-group-${{ matrix.group }}
+          path: apps/backend/mutmut-summary-group-${{ matrix.group }}.json
+
+  # 5. Gate do Mutation Score (RNF-64) — agrega os 4 grupos acima e FALHA
+  # o build de verdade (exit != 0) se o score combinado ficar abaixo de
+  # 70%. Roda separado do job de matrix pra dar um resultado único e claro
+  # no PR, em vez de 4 checks parciais que ninguém interpreta sozinho.
+  mutation-score-gate:
+    name: Mutation Score Gate (RNF-64, piso 70%)
+    runs-on: ubuntu-latest
+    needs: mutation-testing
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Download all mutation summaries
+        uses: actions/download-artifact@v4
+        with:
+          pattern: mutmut-summary-group-*
+          path: /tmp/summaries
+          merge-multiple: true
+
+      - name: Check aggregated mutation score (RNF-64, >= 70%)
+        run: |
+          python apps/backend/scripts/check_mutation_score.py 70 /tmp/summaries/*.json
+
+  # 6. Lint TypeScript (ESLint, Prettier)
   lint-typescript:
     name: Lint TypeScript
     runs-on: ubuntu-latest
@@ -237,7 +348,7 @@ jobs:
       - name: Check component size (RNF-58, max 200 lines)
         run: cd apps/frontend && pnpm check:component-size
 
-  # 5. Testes TypeScript (Vitest)
+  # 7. Testes TypeScript (Vitest)
   test-typescript:
     name: Test TypeScript
     runs-on: ubuntu-latest
@@ -276,7 +387,7 @@ jobs:
           cd apps/frontend
           pnpm exec storybook build
 
-  # 6. Testes E2E com Playwright + MSW (RNF-16 / RNF-17)
+  # 8. Testes E2E com Playwright + MSW (RNF-16 / RNF-17)
   test-e2e:
     name: E2E Tests (Playwright + MSW)
     runs-on: ubuntu-latest

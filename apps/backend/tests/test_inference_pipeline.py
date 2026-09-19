@@ -29,11 +29,16 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+import pandas as pd
+
 from src.core.exceptions import ModelNotAvailableError
 from src.schemas.predict import PredictRequest, PredictResponse
 from src.schemas.stream import SensorReading
 from src.services.inference_pipeline import (
+    _QUEUE_TIMEOUT,
     InferencePipelineService,
+    _infer_with_history,
+    _reading_to_dict,
     _reading_to_request,
 )
 
@@ -125,6 +130,62 @@ def _make_alert_service() -> MagicMock:
 # ---------------------------------------------------------------------------
 # _reading_to_request
 # ---------------------------------------------------------------------------
+
+
+def test_queue_timeout_is_5_seconds() -> None:
+    assert _QUEUE_TIMEOUT == 5.0
+
+
+def test_reading_to_dict_extracts_the_exact_12_sensor_keys() -> None:
+    """RNF-64: comparação de dict EXATA (não campo a campo) — mata qualquer
+    typo de chave introduzido em qualquer um dos 12 sensores de uma vez."""
+    assert _reading_to_dict(FAILURE_READING) == {
+        "TP2": FAILURE_READING.TP2,
+        "TP3": FAILURE_READING.TP3,
+        "H1": FAILURE_READING.H1,
+        "DV_pressure": FAILURE_READING.DV_pressure,
+        "Reservoirs": FAILURE_READING.Reservoirs,
+        "Motor_current": FAILURE_READING.Motor_current,
+        "Oil_temperature": FAILURE_READING.Oil_temperature,
+        "COMP": FAILURE_READING.COMP,
+        "DV_eletric": FAILURE_READING.DV_eletric,
+        "Towers": FAILURE_READING.Towers,
+        "MPG": FAILURE_READING.MPG,
+        "Oil_level": FAILURE_READING.Oil_level,
+    }
+
+
+class _FakePreprocessor:
+    def transform(self, df: pd.DataFrame) -> pd.DataFrame:
+        out = df.copy()
+        out["engineered_marker"] = out["TP2"] * 100
+        return out
+
+
+class _SpyModelService:
+    def __init__(self) -> None:
+        self.received_row: pd.DataFrame | None = None
+
+    def predict_from_features(self, X: pd.DataFrame) -> str:
+        self.received_row = X
+        return "sentinel-response"
+
+
+def test_infer_with_history_feeds_the_model_only_the_last_engineered_row() -> None:
+    """RNF-64: `_infer_with_history` deve pegar a ÚLTIMA linha (mais
+    recente) do DataFrame, com o índice resetado — não a primeira nem uma
+    linha do meio, e não a Series de `iloc[-1]` escalar."""
+    buffer_df = pd.DataFrame({"TP2": [1.0, 2.0, 3.0]})
+    model_service = _SpyModelService()
+
+    result = _infer_with_history(model_service, buffer_df, _FakePreprocessor())  # type: ignore[arg-type]
+
+    assert result == "sentinel-response"
+    assert model_service.received_row is not None
+    assert len(model_service.received_row) == 1
+    assert model_service.received_row["TP2"].iloc[0] == 3.0
+    assert model_service.received_row["engineered_marker"].iloc[0] == 300.0
+    assert list(model_service.received_row.index) == [0]  # reset_index(drop=True)
 
 
 class TestReadingToRequest:
@@ -428,3 +489,86 @@ class TestAlertThreshold:
         alert.process_prediction.assert_awaited_once()
         payload = alert.process_prediction.call_args[0][0]
         assert payload["probability"] == 0.10
+
+    @pytest.mark.asyncio
+    async def test_process_prediction_payload_has_exactly_the_4_expected_keys(
+        self,
+    ) -> None:
+        """RNF-64: as 4 chaves do payload comparadas como CONJUNTO — mata
+        qualquer typo isolado em qualquer uma delas (`predicted_class`,
+        `timestamp`, `inference_latency_ms`), não só `probability`."""
+        registry = _make_registry(0.90)
+        alert = _make_alert_service()
+        stream = _make_stream_service([FAILURE_READING])
+
+        with (
+            patch(
+                "src.services.inference_pipeline.save_prediction",
+                new_callable=AsyncMock,
+            ),
+            patch(
+                "src.services.inference_pipeline.AsyncSessionFactory"
+            ) as mock_factory,
+        ):
+            mock_ctx = AsyncMock()
+            mock_ctx.__aenter__ = AsyncMock(
+                return_value=MagicMock(commit=AsyncMock(), rollback=AsyncMock())
+            )
+            mock_ctx.__aexit__ = AsyncMock(return_value=False)
+            mock_factory.return_value = mock_ctx
+
+            svc = InferencePipelineService(stream, registry, alert)
+            await svc._process(FAILURE_READING)
+
+        payload = alert.process_prediction.call_args[0][0]
+        assert set(payload.keys()) == {
+            "probability",
+            "predicted_class",
+            "timestamp",
+            "inference_latency_ms",
+        }
+
+
+class TestSensorBufferInjection:
+    def test_explicitly_injected_empty_buffer_is_used_not_the_global_singleton(
+        self,
+    ) -> None:
+        """Bug real achado nesta task (RNF-64): `sensor_buffer or
+        get_sensor_buffer()` descartava um buffer recém-criado (vazio, logo
+        falsy via `__len__`) e usava o singleton global em seu lugar —
+        quebrando o isolamento que passar `sensor_buffer=` deveria garantir."""
+        from src.services.feature_buffer import SensorBuffer, get_sensor_buffer
+
+        fresh_buffer = SensorBuffer(window_size=5, warmup_size=1)
+        stream = _make_stream_service([])
+        registry = _make_registry(0.1)
+        alert = _make_alert_service()
+
+        svc = InferencePipelineService(
+            stream, registry, alert, sensor_buffer=fresh_buffer
+        )
+
+        assert svc._buffer is fresh_buffer
+        assert svc._buffer is not get_sensor_buffer()
+
+
+class TestWarmLoggedFlag:
+    @pytest.mark.asyncio
+    async def test_warm_logged_flips_to_true_once_buffer_is_warm(self) -> None:
+        """RNF-64: `_warm_logged` deve virar `True` (não `False`/`None`)
+        assim que o buffer aquece, e é lido depois pra evitar log duplicado."""
+        from src.services.feature_buffer import SensorBuffer
+
+        registry = _make_registry(0.10)
+        alert = _make_alert_service()
+        stream = _make_stream_service([NORMAL_READING])
+        tiny_buffer = SensorBuffer(window_size=1, warmup_size=1)
+
+        svc = InferencePipelineService(
+            stream, registry, alert, sensor_buffer=tiny_buffer
+        )
+        assert svc._warm_logged is False
+
+        await svc._process(NORMAL_READING)
+
+        assert svc._warm_logged is True

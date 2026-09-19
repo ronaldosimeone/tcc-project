@@ -8,3 +8,24 @@
 pytest>=9.0.3
 pytest-asyncio>=1.0.0
 pytest-cov>=7.0.0
+
+# RNF-64 - mutation testing (validacao real da qualidade da suite, nao so
+# cobertura de linha). Configuracao em pyproject.toml [tool.mutmut].
+#
+# Fixado em 2.5.1 (nao a serie 3.x mais recente) por incompatibilidade real
+# confirmada nesta task: a serie 3.x reescreveu o mecanismo interno para
+# "trampolines" que registram cada chamada mutada usando o `__module__`
+# real da funcao em runtime, e tem um assert hardcoded proibindo esse nome
+# de comecar com "src." (mutmut/stats.py::record_trampoline_hit). Este
+# projeto usa "src" como o nome real do pacote Python top-level em TODO
+# import (`from src.core.config import settings`, etc.) - nao um layout
+# "src/" que e descartado por empacotamento - entao QUALQUER funcao deste
+# projeto dispara o assert assim que a fase de coleta de stats do mutmut 3.x
+# a chama (confirmado com dois arquivos-teste isolados: feature_buffer.py
+# quebra na importacao por causa do singleton de modulo, e preprocessing.py
+# quebra na primeira chamada real de teste - o mesmo assert nos dois casos).
+# A serie 2.x usa uma arquitetura mais simples (mutacao de AST + reexecucao
+# do `runner` configurado, sem essa checagem de `__module__`) e roda sem
+# problemas neste projeto - confirmado empiricamente.
+mutmut==2.5.1
+toml>=0.10.2
