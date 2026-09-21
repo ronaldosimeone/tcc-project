@@ -532,7 +532,20 @@ jobs:
 
       # RNF-58: garante que o catálogo de componentes builda de verdade —
       # falha de build do Storybook quebra o CI, não só um "parece ok".
+      #
+      # `if: always()` (RNF-69, achado real): sem isso, quando o step do
+      # Vitest falha antes deste (ex.: as falhas pré-existentes documentadas
+      # em loading-states.test.tsx/connection-resilience.test.tsx), este
+      # step nunca roda — Storybook, sendo uma preocupação independente do
+      # Vitest, deixava de ser validado E o artifact `storybook-build`
+      # sumia silenciosamente (confirmado via annotation real do GitHub
+      # Actions: "No files were found with the provided path:
+      # apps/frontend/storybook-static/"). Com `always()`, o build do
+      # Storybook roda e continua sendo capaz de falhar o job por conta
+      # própria (sem continue-on-error) — só deixa de depender do resultado
+      # de um step anterior não relacionado.
       - name: Build Storybook (RNF-58)
+        if: always()
         run: |
           cd apps/frontend
           pnpm exec storybook build
