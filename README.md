@@ -2309,14 +2309,14 @@ Pull Request / Push
      ├── Dependency Security Audit ────┤
      ├── Lint Python (ruff/black/mypy) ┤
      ├── Test Python (pytest+cov) ─────┤  ← todos em paralelo,
-     ├── Mutation Testing (9 grupos) ──┤    sem dependência real
+     ├── Mutation Testing (18 grupos) ─┤    sem dependência real
      ├── Lint TypeScript ──────────────┤    entre si
      ├── Test TypeScript (vitest+cov) ─┤
      ├── E2E (Playwright+MSW) ─────────┤
      └── Load Smoke Test (Locust) ─────┘
               │
               ▼
-      Mutation Score Gate (agrega os 9 grupos)
+      Mutation Score Gate (agrega os 18 grupos)
               │
               ▼
          Quality Gate (agrega TODOS os jobs acima)
@@ -2333,25 +2333,74 @@ tenham passado antes (só precisa das mesmas dependências instaladas, que
 cada job já instala por conta própria); o E2E sobe seu próprio `next dev` e
 usa MSW, não depende da suíte Vitest ter passado antes. Removido todo
 `needs` que não refletia uma dependência de dado/artefato real — o único
-`needs` que sobrou onde faz sentido é `mutation-score-gate` (precisa dos 9
+`needs` que sobrou onde faz sentido é `mutation-score-gate` (precisa dos 18
 grupos de mutation testing terem terminado para agregar) e o `quality-gate`
 final (precisa de todos, de propósito).
 
-**Mutation Testing — 9 grupos (antes 4):** é a etapa mais lenta de longe
-(25-90 min sequencial para os 1401 mutantes/18 arquivos, ver
-`RELATORIO-RNF-64-RNF-65.md`) — dobrar a granularidade do matrix reduz o
-pior caso de wall-clock por grupo, que é o fator que decide se o pipeline
-inteiro fica sob 15 minutos.
+**RNF-68 — status real, medido no GitHub Actions (não estimado):** a meta
+de <15 min **não foi atingida**. Timeline honesta de 4 execuções reais e
+limpas (mesmo branch, `concurrency` já em vigor, sem contaminação entre
+runs):
+
+| Run | Configuração | Pipeline total | Gargalo (job mais lento) |
+|---|---|---|---|
+| 35638962074 | 9 grupos, sem `-n auto` | 1h08min | `preprocessing.py+simulator.py` — 67min |
+| 35648496340 | 18 grupos, com `-n auto` | 50min | `model_service.py` sozinho — 50min |
+| 35654114583 | 18 grupos, sem `-n auto` | 46min | `simulator.py` sozinho — 46min |
+| 35659010834 | 18 grupos, sem `-n auto` (final) | 48min | `simulator.py` sozinho — 47min |
+
+Causa raiz real (lida em `mutmut/__init__.py`, não suposta): mutmut decide
+sobrevivência de um mutante só pelo exit code do `runner` configurado — um
+mutante SOBREVIVENTE não tem "primeiro teste que falha" pra cortar em `-x`,
+então reroda a suíte inteira (708 testes) até o fim. Isso, multiplicado
+pelo número de mutantes de cada arquivo, é o gargalo — não o número de
+grupos do matrix. Duas correções tentadas:
+
+1. **Matrix de 9 → 18 grupos (1 arquivo por grupo)** — paralelismo real
+   adicional (verificado programaticamente: cobre exatamente os mesmos 18
+   arquivos de `[tool.mutmut] paths_to_mutate`, sem duplicata nem omissão).
+   **Funcionou de verdade**: 1h08min → ~46-48min.
+2. **`-n auto` (pytest-xdist) no runner do mutmut** — media localmente ~77s
+   serial → ~30-35s com workers (16 núcleos da máquina de desenvolvimento).
+   **Não funcionou no runner real do GitHub Actions**: o único par
+   antes/depois limpo (`model_service.py` isolado nas duas runs) foi de
+   38min sem `-n auto` para 50min com — mais lento, não mais rápido (menos
+   núcleos disponíveis no runner hospedado do que na máquina de teste).
+   Revertido — prova real do GitHub Actions prevalece sobre benchmark
+   local quando os dois discordam (ver comentário completo em
+   `apps/backend/pyproject.toml [tool.mutmut]`).
+
+Com o teto real de paralelismo por arquivo já esgotado (18 grupos = o
+máximo que dá pra dividir sem fatiar mutantes de um mesmo arquivo entre
+jobs), o gargalo estabilizou em `simulator.py` sozinho (~46-47min,
+reproduzido em 2 execuções consecutivas). Fechar o gap até <15min exigiria
+uma alavanca que este trabalho não implementou: sharding dos mutantes de UM
+MESMO arquivo por ID entre múltiplos jobs (mutmut permite rodar um
+subconjunto de IDs de mutante) — engenharia real adicional, com risco de
+regressão na agregação do score entre shards, fora do escopo de RNF-68/69
+(arquitetura do pipeline existente) e registrada aqui como recomendação de
+trabalho futuro, não como algo simulado ou escondido.
+
+**Mutation Testing — 18 grupos (1 arquivo cada; antes 4, depois 9):** é a
+etapa mais lenta de longe (25-90 min sequencial para os 1401 mutantes/18
+arquivos, ver `RELATORIO-RNF-64-RNF-65.md`) — granularidade máxima por
+arquivo é o teto real de paralelismo disponível sem fatiar mutantes de um
+mesmo arquivo entre jobs (ver tabela de RNF-68 acima).
 
 **Load Smoke Test (novo, RNF-68/69):** sobe uma stack Docker isolada
-(`db`+`redis`+`api`+`nginx`, própria deste job, destruída ao final) e roda
-uma versão REDUZIDA de [`locust_streaming.py`](locust_streaming.py) (RNF-37)
-— 15 usuários/25s via `SSE_MIN_CONNECTIONS=15`, não os 100 usuários/75s do
-benchmark completo (esse continua documentado em §14.5 para execução manual
-— pesado demais para o orçamento de 15 min do CI). Mesma SLA de latência
-(p95 < 200ms) do RNF-37, só com concorrência menor — detecta regressão
-grosseira (erro HTTP, conexão recusada, latência anormal), não substitui o
-benchmark completo.
+(`db`+`redis`+`api`, própria deste job, destruída ao final) via
+[`docker-compose.ci-load-smoke.yml`](docker-compose.ci-load-smoke.yml) —
+publica a porta 8000 da `api` direto no host e **não** sobe `nginx`/
+`frontend` (subir `nginx` forçaria o build completo do Next.js só para o
+smoke alcançar a API por trás do proxy, sem necessidade: o smoke mede a
+API, não o Nginx). Roda uma versão REDUZIDA de
+[`locust_streaming.py`](locust_streaming.py) (RNF-37) — 15 usuários/25s via
+`SSE_MIN_CONNECTIONS=15`, não os 100 usuários/75s do benchmark completo
+(esse continua documentado em §14.5 para execução manual — pesado demais
+para o orçamento de 15 min do CI). Mesma SLA de latência (p95 < 200ms) do
+RNF-37, só com concorrência menor — detecta regressão grosseira (erro
+HTTP, conexão recusada, latência anormal), não substitui o benchmark
+completo.
 
 **Accessibility (RNF-66/67):** os testes de acessibilidade
 (`__tests__/a11y.test.tsx`, axe + simulação real de teclado via
@@ -2367,7 +2416,7 @@ fácil de achar (`accessibility-report`), sem duplicar a suíte inteira.
 | Gate | Piso | Job |
 |---|---|---|
 | Cobertura Python | ≥ 85% | `test-python` (`pytest --cov`, `fail_under` em `pyproject.toml`) |
-| Mutation Score | ≥ 70% | `mutation-score-gate` (agrega os 9 grupos) |
+| Mutation Score | ≥ 70% | `mutation-score-gate` (agrega os 18 grupos) |
 | Cobertura Frontend | ≥ 75% | `test-typescript` (`vitest run --coverage`, `thresholds` em `vitest.config.ts`) |
 | Acessibilidade | axe Critical/Serious = 0 | `test-typescript` (`__tests__/a11y.test.tsx`) |
 | Segurança | 0 vulnerabilidades High/Critical em produção | `security-audit` |
@@ -2380,7 +2429,7 @@ do teste ainda é o cenário mais importante para investigar:
 | Artifact | Job | Conteúdo |
 |---|---|---|
 | `coverage-python` | `test-python` | `htmlcov/`, `coverage.xml`, `pytest-report.xml` (JUnit) |
-| `mutmut-summary-group-N` | `mutation-testing` (×9) | JSON por grupo — score/killed/survived |
+| `mutmut-summary-group-N` | `mutation-testing` (×18) | JSON por grupo — score/killed/survived |
 | `coverage-frontend` | `test-typescript` | `coverage/` (HTML navegável + `lcov.info`) |
 | `accessibility-report` | `test-typescript` | `a11y-report.json` (JSON reporter do Vitest) |
 | `storybook-build` | `test-typescript` | `storybook-static/` — catálogo de componentes navegável |
