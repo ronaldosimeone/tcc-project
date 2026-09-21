@@ -126,7 +126,7 @@ exclude_lines = [
 # 98-100%) antes mesmo do mutmut rodar, então isso não infla a contagem
 # de sobreviventes de forma relevante.
 #
-# `runner="python -m pytest -x -q"`: `-x` para no primeiro teste que
+# `runner="python -m pytest -x -q -n auto"`: `-x` para no primeiro teste que
 # falhar — o suficiente pra "matar" o mutante, e mais rápido pra maioria
 # dos casos (mutante morto cedo não precisa rodar o resto da suíte).
 # Baseline (sem nenhuma mutação) precisa passar 100% limpo para o mutmut
@@ -134,8 +134,18 @@ exclude_lines = [
 # `test_drift_monitor.py::test_task_runs_directly_without_http` (ver
 # comentário no próprio teste) era um bloqueador real para a RNF-64, não
 # só um nice-to-have de qualidade.
+#
+# `-n auto` (RNF-68/69): mutante SOBREVIVENTE não tem "primeiro teste que
+# falha" pra cortar em `-x` — roda a suíte inteira (708 testes) até o fim.
+# Medido no GitHub Actions real: isso é o gargalo dominante do pipeline
+# (grupos de mutation testing de 12 a 68 minutos cada, contra a meta de
+# <15min do pipeline inteiro). `-n auto` paraleliza a suíte nos núcleos do
+# runner sem mudar nenhum teste nem a nota de mutação — só o tempo de
+# parede de cada reexecução (medido localmente: ~77s serial → ~30-35s com
+# workers, 707 passed + 1 xfailed idênticos e determinísticos em 3
+# execuções seguidas).
 [tool.mutmut]
 paths_to_mutate = "src/services/alert_service.py:src/services/alert_settings_service.py:src/services/critical_failure_notification_service.py:src/services/drift_monitor.py:src/services/feature_buffer.py:src/services/inference_pipeline.py:src/services/maintenance_suggestion_service.py:src/services/mlp_adapter.py:src/services/model_registry.py:src/services/model_service.py:src/services/onnx_autoencoder_adapter.py:src/services/onnx_sequence_adapter.py:src/services/onnx_tree_adapter.py:src/services/prediction_service.py:src/services/preprocessing.py:src/services/sensor_stream_service.py:src/services/simulator.py:src/services/telegram_alert_rate_limiter.py"
 backup = false
-runner = "python -m pytest -x -q"
+runner = "python -m pytest -x -q -n auto"
 tests_dir = "tests/"

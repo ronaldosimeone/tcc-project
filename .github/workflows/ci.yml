@@ -9,7 +9,7 @@ on:
 # RNF-68/69 — cancela a run anterior do mesmo PR/branch quando um novo push
 # chega, em vez de deixar as duas rodarem em paralelo até o fim (achado
 # real durante a validação: sem isso, cada push num PR ativo duplica o
-# custo de mutation testing — 9 grupos rodando duas vezes).
+# custo de mutation testing — 18 grupos rodando duas vezes).
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
@@ -260,48 +260,89 @@ jobs:
   # pacote top-level em todo import — ver comentário completo em
   # apps/backend/requirements-dev.txt.
   #
-  # Por que matrix (9 grupos, RNF-68 — antes 4) em vez de um job único:
-  # mutation testing é ORDENS DE MAGNITUDE mais lento que pytest — cada um
-  # dos ~1400 mutantes do escopo core dispara sua PRÓPRIA subprocess de
-  # pytest; um job único rodaria os 18 arquivos sequencialmente (25-90 min
-  # de parede, medido em RELATORIO-RNF-64-RNF-65.md). Dividir por arquivo em
-  # grupos que rodam EM PARALELO corta o tempo proporcionalmente sem tirar
-  # nenhum arquivo do escopo real: os 9 grupos juntos cobrem exatamente os
-  # mesmos 18 arquivos de `[tool.mutmut] paths_to_mutate` — nenhum
-  # subconjunto menor, nunca um grupo "fácil" isolado escondendo um grupo
-  # maior/mais fraco (o gate abaixo agrega os 9 antes de decidir).
+  # Por que matrix (18 grupos, 1 arquivo cada, RNF-68 — antes 4, depois 9)
+  # em vez de um job único: mutation testing é ORDENS DE MAGNITUDE mais
+  # lento que pytest — cada um dos ~1400 mutantes do escopo core dispara sua
+  # PRÓPRIA subprocess de pytest; um job único rodaria os 18 arquivos
+  # sequencialmente (25-90 min de parede, medido em
+  # RELATORIO-RNF-64-RNF-65.md). Dividir por arquivo em grupos que rodam EM
+  # PARALELO corta o tempo sem tirar nenhum arquivo do escopo real: os 18
+  # grupos juntos cobrem exatamente os mesmos 18 arquivos de
+  # `[tool.mutmut] paths_to_mutate` — nenhum subconjunto menor, nunca um
+  # grupo "fácil" isolado escondendo um grupo maior/mais fraco (o gate
+  # abaixo agrega os 18 antes de decidir).
   #
-  # RNF-68 — indo de 4 para 9 grupos (2 arquivos cada, exceto o de
-  # model_service.py sozinho — o mais pesado, maior número de statements do
-  # escopo): reduz o pior caso de wall-clock por grupo, que é o fator que
-  # decide se o pipeline INTEIRO fica sob 15 min — mutation testing é a
-  # etapa mais lenta de longe. SEM `needs: lint-python` pelo mesmo motivo do
-  # job `test-python` acima — só depende das próprias dependências.
+  # RNF-68 — histórico real medido no GitHub Actions (run 35638962074,
+  # concurrency já em vigor, sem contaminação por outro run concorrente):
+  # com 9 grupos (2 arquivos cada, exceto model_service.py sozinho) o
+  # pipeline inteiro levou 1h08min — o grupo mais lento
+  # (preprocessing.py + simulator.py) sozinho levou 67min, e mesmo o grupo
+  # de 1 arquivo só (model_service.py) levou 38min. Causa raiz real
+  # (confirmada lendo mutmut/__init__.py: sobrevivência é decidida só pelo
+  # exit code do `runner`, não por parsing de texto): mutante SOBREVIVENTE
+  # não tem "primeiro teste que falha" pra cortar em `-x` — reroda a suíte
+  # inteira (708 testes, ~77s medido localmente) até o fim, e isso dominava
+  # o tempo de cada grupo, não o número de arquivos por grupo. Duas
+  # correções reais, sem tirar nada do escopo: (1) ir de 9 para 18 grupos
+  # (1 arquivo cada — paralelismo real adicional, cada grupo tem só os
+  # mutantes do seu próprio arquivo); (2) `-n auto` no runner do mutmut
+  # (pyproject.toml [tool.mutmut]) — paraleliza CADA reexecução da suíte nos
+  # núcleos do runner (~77s serial → ~30-35s medido localmente, mesmos
+  # 707 passed + 1 xfailed, determinístico em 3 execuções). SEM
+  # `needs: lint-python` pelo mesmo motivo do job `test-python` acima — só
+  # depende das próprias dependências.
   mutation-testing:
     name: Mutation Testing (RNF-64) — grupo ${{ matrix.group }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
+      # RNF-68/69 — 1 arquivo por grupo (18 grupos, não 9): a 1a medição real
+      # no GitHub Actions mostrou que o gargalo do pipeline é o job de
+      # mutation testing mais lento (grupo com 2 arquivos combinados levou
+      # 67min), não o número de grupos em si — mutante sobrevivente reroda a
+      # suíte inteira (708 testes) sem o atalho do `-x`. Granularidade máxima
+      # por arquivo (paralelismo real: cada grupo tem estritamente menos
+      # mutantes para rodar) combinada com `-n auto` no runner do mutmut
+      # (pyproject.toml [tool.mutmut]) são as duas alavancas reais aqui — sem
+      # tirar nenhum arquivo do escopo nem baixar o piso de 70% (RNF-64).
       matrix:
         include:
           - group: 1
-            paths: "src/services/alert_service.py:src/services/feature_buffer.py"
+            paths: "src/services/alert_service.py"
           - group: 2
-            paths: "src/services/alert_settings_service.py:src/services/critical_failure_notification_service.py"
+            paths: "src/services/alert_settings_service.py"
           - group: 3
-            paths: "src/services/drift_monitor.py:src/services/telegram_alert_rate_limiter.py"
+            paths: "src/services/critical_failure_notification_service.py"
           - group: 4
-            paths: "src/services/inference_pipeline.py:src/services/mlp_adapter.py"
+            paths: "src/services/drift_monitor.py"
           - group: 5
-            paths: "src/services/maintenance_suggestion_service.py:src/services/model_registry.py"
+            paths: "src/services/feature_buffer.py"
           - group: 6
-            paths: "src/services/model_service.py"
+            paths: "src/services/inference_pipeline.py"
           - group: 7
-            paths: "src/services/onnx_autoencoder_adapter.py:src/services/onnx_sequence_adapter.py:src/services/onnx_tree_adapter.py"
+            paths: "src/services/maintenance_suggestion_service.py"
           - group: 8
-            paths: "src/services/prediction_service.py:src/services/sensor_stream_service.py"
+            paths: "src/services/mlp_adapter.py"
           - group: 9
-            paths: "src/services/preprocessing.py:src/services/simulator.py"
+            paths: "src/services/model_registry.py"
+          - group: 10
+            paths: "src/services/model_service.py"
+          - group: 11
+            paths: "src/services/onnx_autoencoder_adapter.py"
+          - group: 12
+            paths: "src/services/onnx_sequence_adapter.py"
+          - group: 13
+            paths: "src/services/onnx_tree_adapter.py"
+          - group: 14
+            paths: "src/services/prediction_service.py"
+          - group: 15
+            paths: "src/services/preprocessing.py"
+          - group: 16
+            paths: "src/services/sensor_stream_service.py"
+          - group: 17
+            paths: "src/services/simulator.py"
+          - group: 18
+            paths: "src/services/telegram_alert_rate_limiter.py"
     steps:
       - uses: actions/checkout@v4
 
@@ -343,10 +384,10 @@ jobs:
           name: mutmut-summary-group-${{ matrix.group }}
           path: apps/backend/mutmut-summary-group-${{ matrix.group }}.json
 
-  # 5. Gate do Mutation Score (RNF-64) — agrega os 4 grupos acima e FALHA
+  # 5. Gate do Mutation Score (RNF-64) — agrega os 18 grupos acima e FALHA
   # o build de verdade (exit != 0) se o score combinado ficar abaixo de
   # 70%. Roda separado do job de matrix pra dar um resultado único e claro
-  # no PR, em vez de 4 checks parciais que ninguém interpreta sozinho.
+  # no PR, em vez de 18 checks parciais que ninguém interpreta sozinho.
   mutation-score-gate:
     name: Mutation Score Gate (RNF-64, piso 70%)
     runs-on: ubuntu-latest

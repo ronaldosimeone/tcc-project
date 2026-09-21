@@ -9,6 +9,15 @@ pytest>=9.0.3
 pytest-asyncio>=1.0.0
 pytest-cov>=7.0.0
 
+# RNF-68/69 - roda a suite em paralelo (workers = nucleos do runner) dentro
+# do `runner` do mutmut (ver abaixo): cada mutante reexecuta a suite inteira
+# (708 testes) e essa reexecucao serial e o gargalo real do job de mutation
+# testing (medido no GitHub Actions: ~77s/execucao serial vs ~30-35s com
+# -n auto, mesmos 707 passed + 1 xfailed nas duas formas - determinismo
+# confirmado em 3 execucoes locais seguidas). Nao muda o que e testado nem
+# a nota de mutacao, so acelera cada reexecucao.
+pytest-xdist>=3.6.1
+
 # RNF-64 - mutation testing (validacao real da qualidade da suite, nao so
 # cobertura de linha). Configuracao em pyproject.toml [tool.mutmut].
 #
