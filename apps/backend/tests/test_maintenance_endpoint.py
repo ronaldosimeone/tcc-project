@@ -85,13 +85,13 @@ async def test_endpoint_returns_200_with_markdown_plan_above_threshold() -> None
             failure_probability=0.9,
             markdown="# Plano de Manutenção\n\n## Diagnóstico provável\nX",
             references=[
-                {
-                    "file_name": "manual-bomba-centrifuga.pdf",
-                    "page": 3,
-                    "chunk_index": 0,
-                    "source": "manual-bomba-centrifuga.pdf",
-                    "score": 0.71,
-                }
+                ManualReference(
+                    file_name="manual-bomba-centrifuga.pdf",
+                    page=3,
+                    chunk_index=0,
+                    source="manual-bomba-centrifuga.pdf",
+                    score=0.71,
+                )
             ],
             model="llama3.2:3b",
             message=None,

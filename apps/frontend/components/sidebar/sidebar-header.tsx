@@ -16,7 +16,7 @@ export function SidebarHeader({ isOpen, onToggle }: SidebarHeaderProps) {
         <div className="flex w-full items-center justify-between gap-2">
           <Link
             href="/"
-            className="flex min-w-0 items-center gap-2 transition-opacity hover:opacity-80"
+            className="flex min-w-0 items-center gap-2 rounded-sm outline-none transition-opacity hover:opacity-80 focus-visible:ring-3 focus-visible:ring-ring/50"
           >
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 ring-1 ring-primary/30">
               <Cpu className="h-4 w-4 text-primary" />

@@ -50,8 +50,12 @@ _MODELS_DIR: Path = _ROOT / "models"
 _DATA_DIR: Path = _ROOT / "data" / "processed"
 sys.path.insert(0, str(_SRC))
 
-from datamodule_unsupervised import MetroPTUnsupervisedDataModule, UnsupervisedConfig
-from models.autoencoder import Conv1DAutoencoder
+# noqa: E402 — os 2 imports abaixo dependem do sys.path.insert acima.
+from datamodule_unsupervised import (  # noqa: E402
+    MetroPTUnsupervisedDataModule,
+    UnsupervisedConfig,
+)
+from models.autoencoder import Conv1DAutoencoder  # noqa: E402
 
 logging.basicConfig(
     level=logging.INFO,

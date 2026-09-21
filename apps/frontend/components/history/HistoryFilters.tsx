@@ -66,6 +66,7 @@ export default function HistoryFilters({
         <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
         <input
           type="text"
+          aria-label="Buscar eventos ou equipamentos"
           placeholder="Buscar eventos ou equipamentos…"
           value={filters.search}
           onChange={(e) => update("search", e.target.value)}
@@ -81,6 +82,7 @@ export default function HistoryFilters({
       {/* Period */}
       <div className="relative">
         <select
+          aria-label="Filtrar por período"
           value={filters.period}
           onChange={(e) => update("period", e.target.value)}
           className={selectBase}
@@ -99,6 +101,7 @@ export default function HistoryFilters({
       {/* Severity */}
       <div className="relative">
         <select
+          aria-label="Filtrar por severidade"
           value={filters.severity}
           onChange={(e) =>
             update("severity", e.target.value as Severity | "all")
@@ -118,6 +121,7 @@ export default function HistoryFilters({
       {/* Equipment */}
       <div className="relative">
         <select
+          aria-label="Filtrar por equipamento"
           value={filters.equipment}
           onChange={(e) => update("equipment", e.target.value)}
           className={cn(selectBase, "font-mono")}

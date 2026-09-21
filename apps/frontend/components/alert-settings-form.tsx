@@ -71,8 +71,11 @@ export function AlertSettingsForm() {
   if (loadError) {
     return (
       <div className="flex max-w-lg flex-col gap-3 rounded-lg border border-destructive/30 bg-destructive/5 p-4">
-        <p className="flex items-start gap-2 text-sm text-destructive">
-          <CircleAlert className="mt-0.5 h-4 w-4 shrink-0" />
+        <p
+          role="alert"
+          className="flex items-start gap-2 text-sm text-destructive"
+        >
+          <CircleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
           {loadError}
         </p>
         <Button

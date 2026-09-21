@@ -20,6 +20,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+from _pytest.mark.structures import ParameterSet
 
 from src.core.config import settings
 from src.schemas.predict import PredictRequest, PredictResponse
@@ -39,7 +40,7 @@ from src.services.model_service import ModelService, load_model, load_model_by_n
 # no startup HOJE, em produção real. Não corrigido aqui (exigiria
 # re-treinar/re-exportar o artefato — fora do escopo de RNF-56/57, que
 # proíbe alterar o modelo preditivo); documentado em PENDENCIAS.md.
-_ALL_MODEL_NAMES: list[str] = [
+_ALL_MODEL_NAMES: list[str | ParameterSet] = [
     "random_forest",
     pytest.param(
         "xgboost",

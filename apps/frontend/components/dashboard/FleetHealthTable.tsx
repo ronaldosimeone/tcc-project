@@ -76,13 +76,21 @@ const FleetHealthTable = memo(function FleetHealthTable({
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-200">
-                  <th className={cn(COL_HEAD, "pl-5 text-left")}>
+                  <th scope="col" className={cn(COL_HEAD, "pl-5 text-left")}>
                     ID do Ativo
                   </th>
-                  <th className={cn(COL_HEAD, "text-left")}>Status</th>
-                  <th className={cn(COL_HEAD, "text-left")}>Saúde</th>
-                  <th className={cn(COL_HEAD, "text-right")}>Risco</th>
-                  <th className={cn(COL_HEAD, "pr-3 text-right")}>Ação</th>
+                  <th scope="col" className={cn(COL_HEAD, "text-left")}>
+                    Status
+                  </th>
+                  <th scope="col" className={cn(COL_HEAD, "text-left")}>
+                    Saúde
+                  </th>
+                  <th scope="col" className={cn(COL_HEAD, "text-right")}>
+                    Risco
+                  </th>
+                  <th scope="col" className={cn(COL_HEAD, "pr-3 text-right")}>
+                    Ação
+                  </th>
                 </tr>
               </thead>
 

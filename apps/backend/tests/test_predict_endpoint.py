@@ -131,7 +131,7 @@ def app_with_mock_model(mock_service: ModelService) -> object:
 
 
 @pytest_asyncio.fixture()
-async def async_client(app_with_mock_model) -> AsyncClient:
+async def async_client(app_with_mock_model) -> AsyncGenerator[AsyncClient, None]:
     """Async HTTP client bound to the test app."""
     transport = ASGITransport(app=app_with_mock_model)
     async with AsyncClient(transport=transport, base_url="http://testserver") as client:

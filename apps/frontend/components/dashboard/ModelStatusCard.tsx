@@ -119,23 +119,25 @@ const ModelStatusCard = memo(function ModelStatusCard({
         {/* ── Donut: distribuição de saúde ── */}
         <div className="mt-3 flex items-center gap-4">
           <div className="relative h-24 w-24 shrink-0">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={pieData}
-                  innerRadius={28}
-                  outerRadius={44}
-                  paddingAngle={2}
-                  dataKey="value"
-                  stroke="none"
-                  isAnimationActive={false}
-                >
-                  {pieData.map((entry, i) => (
-                    <Cell key={i} fill={entry.color} />
-                  ))}
-                </Pie>
-              </PieChart>
-            </ResponsiveContainer>
+            <div aria-hidden="true" className="contents">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart accessibilityLayer={false}>
+                  <Pie
+                    data={pieData}
+                    innerRadius={28}
+                    outerRadius={44}
+                    paddingAngle={2}
+                    dataKey="value"
+                    stroke="none"
+                    isAnimationActive={false}
+                  >
+                    {pieData.map((entry, i) => (
+                      <Cell key={i} fill={entry.color} />
+                    ))}
+                  </Pie>
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
             <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
               <span className="font-mono text-lg font-bold tabular-nums leading-none text-slate-900">
                 {total}

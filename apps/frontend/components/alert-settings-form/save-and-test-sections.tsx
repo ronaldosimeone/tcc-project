@@ -32,14 +32,20 @@ export function SaveSection({
       </Button>
 
       {saveState === "saved" && (
-        <p className="flex items-center gap-1.5 text-xs text-emerald-600">
-          <CircleCheck className="h-3.5 w-3.5" />
+        <p
+          role="status"
+          className="flex items-center gap-1.5 text-xs text-emerald-600"
+        >
+          <CircleCheck className="h-3.5 w-3.5" aria-hidden="true" />
           Configuração salva.
         </p>
       )}
       {saveState === "error" && saveError && (
-        <p className="flex items-center gap-1.5 text-xs text-destructive">
-          <CircleAlert className="h-3.5 w-3.5" />
+        <p
+          role="alert"
+          className="flex items-center gap-1.5 text-xs text-destructive"
+        >
+          <CircleAlert className="h-3.5 w-3.5" aria-hidden="true" />
           {saveError}
         </p>
       )}
@@ -93,14 +99,20 @@ export function TestNotificationSection({
         </Button>
 
         {testState === "success" && (
-          <p className="flex items-center gap-1.5 text-xs text-emerald-600">
-            <CircleCheck className="h-3.5 w-3.5" />
+          <p
+            role="status"
+            className="flex items-center gap-1.5 text-xs text-emerald-600"
+          >
+            <CircleCheck className="h-3.5 w-3.5" aria-hidden="true" />
             {testResultMessage ?? "Notificação de teste enviada."}
           </p>
         )}
         {testState === "error" && testError && (
-          <p className="flex items-center gap-1.5 text-xs text-destructive">
-            <CircleAlert className="h-3.5 w-3.5" />
+          <p
+            role="alert"
+            className="flex items-center gap-1.5 text-xs text-destructive"
+          >
+            <CircleAlert className="h-3.5 w-3.5" aria-hidden="true" />
             {testError}
           </p>
         )}

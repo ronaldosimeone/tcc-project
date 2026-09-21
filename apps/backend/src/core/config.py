@@ -54,7 +54,9 @@ class Settings(BaseSettings):
     # ── Database ──────────────────────────────────────────────────────────
     # Expected format: postgresql+asyncpg://user:password@host:port/dbname
     postgres_url: PostgresDsn = Field(
-        default="postgresql+asyncpg://postgres:postgres@localhost:5432/tcc_db",
+        default=PostgresDsn(
+            "postgresql+asyncpg://postgres:postgres@localhost:5432/tcc_db"
+        ),
         alias="DATABASE_URL",
     )
 

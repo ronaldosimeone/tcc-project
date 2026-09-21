@@ -119,7 +119,7 @@ describe("HistoryDashboard", () => {
       screen.queryByText(/Ciclo de compressão com frequência anômala/),
     ).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "2" }));
+    fireEvent.click(screen.getByRole("button", { name: "Página 2" }));
 
     expect(
       screen.getByText(/Ciclo de compressão com frequência anômala/),

@@ -70,8 +70,8 @@ def _make_service(
     return service, mcp_client, ollama_client
 
 
-def _request(probability: float, **overrides) -> MaintenanceSuggestionRequest:
-    kwargs = dict(
+def _request(probability: float, **overrides: Any) -> MaintenanceSuggestionRequest:
+    kwargs: dict[str, Any] = dict(
         failure_probability=probability,
         equipment_name="Bomba centrifuga",
         symptom_description="vazamento",

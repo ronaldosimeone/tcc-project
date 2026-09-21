@@ -69,9 +69,7 @@ from torchmetrics.classification import BinaryAUROC, BinaryF1Score
 # Resolve MLflow tracking URI por env-var.
 # Default: 'mlflow:5000' (DNS interno da rede Docker app-network).
 # Para rodar fora do Docker, basta exportar MLFLOW_TRACKING_URI=http://localhost:5000.
-_MLFLOW_TRACKING_URI: str = os.environ.get(
-    "MLFLOW_TRACKING_URI", "http://mlflow:5000"
-)
+_MLFLOW_TRACKING_URI: str = os.environ.get("MLFLOW_TRACKING_URI", "http://mlflow:5000")
 mlflow.set_tracking_uri(_MLFLOW_TRACKING_URI)
 
 # ── resolve paths from this file's location ───────────────────────────────────

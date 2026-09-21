@@ -66,7 +66,7 @@ jobs:
       - name: Install pnpm
         uses: pnpm/action-setup@v3
         with:
-          version: 8
+          version: 10
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -99,7 +99,14 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install ruff black mypy
+          # RNF-68/69 — versões travadas, IDÊNTICAS às do .pre-commit-config.yaml.
+          # Sem isso, `pip install ruff black mypy` resolve sempre a última
+          # release do PyPI: como o CI nunca fixava versão, ele divergia do
+          # que o pre-commit (que roda local antes do commit) valida — a causa
+          # raiz real de o CI nunca ter fechado verde neste projeto (auditoria
+          # RNF-68/69: `black` mais novo reformatava 8 arquivos que a versão
+          # travada considera corretos).
+          pip install ruff==0.4.0 black==24.3.0 mypy==1.10.0
           # Instala as dependências do backend para o mypy não reclamar de imports
           # (+ requirements-dev.txt — RNF-62 tirou o pytest do requirements.txt,
           # e os arquivos em tests/ importam pytest)
@@ -117,10 +124,15 @@ jobs:
         run: mypy apps/backend apps/ml --ignore-missing-imports
 
   # 3. Testes Python (Pytest)
+  #
+  # RNF-68 — SEM `needs: lint-python`: pytest não depende de ruff/black/mypy
+  # terem passado, só das MESMAS dependências instaladas (que este job já
+  # instala por conta própria). Rodar em paralelo com lint-python em vez de
+  # depois corta ~1-2 min de wall-clock sem perder nenhuma validação — os
+  # dois continuam bloqueantes, só deixam de ser sequenciais sem motivo real.
   test-python:
     name: Test Python (Backend & ML)
     runs-on: ubuntu-latest
-    needs: lint-python # Só roda se o lint passar
     steps:
       - uses: actions/checkout@v4
       
@@ -172,7 +184,20 @@ jobs:
       - name: Run Pytest (Backend, com cobertura — RNF-57/RNF-65)
         run: |
           cd apps/backend
-          pytest --cov=src --cov-report=term-missing -v
+          pytest --cov=src --cov-report=term-missing --cov-report=html --cov-report=xml -v --junitxml=pytest-report.xml
+
+      # RNF-69 — relatórios disponíveis mesmo se o pytest acima falhar
+      # (`if: always()`): é exatamente quando o dev mais precisa investigar.
+      - name: Upload pytest + coverage report (RNF-69)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-python
+          path: |
+            apps/backend/htmlcov/
+            apps/backend/coverage.xml
+            apps/backend/pytest-report.xml
+          retention-days: 7
 
       # RNF-56 — garante que a fronteira routers -> infraestrutura
       # (MCP/Ollama/Telegram/e-mail/Celery, ver
@@ -220,31 +245,48 @@ jobs:
   # pacote top-level em todo import — ver comentário completo em
   # apps/backend/requirements-dev.txt.
   #
-  # Por que matrix (4 grupos) em vez de um job único: mutation testing é
-  # ORDENS DE MAGNITUDE mais lento que pytest — cada um dos ~1400 mutantes
-  # do escopo core dispara sua PRÓPRIA subprocess de pytest; um job único
-  # rodaria os 18 arquivos sequencialmente (~1h de parede). Dividir por
-  # arquivo em grupos que rodam EM PARALELO corta o tempo proporcionalmente
-  # sem tirar nenhum arquivo do escopo real: os 4 grupos juntos cobrem
-  # exatamente os mesmos 18 arquivos de `[tool.mutmut] paths_to_mutate` —
-  # nenhum subconjunto menor, nunca um grupo "fácil" isolado escondendo um
-  # grupo maior/mais fraco (o gate abaixo agrega os 4 antes de decidir).
+  # Por que matrix (9 grupos, RNF-68 — antes 4) em vez de um job único:
+  # mutation testing é ORDENS DE MAGNITUDE mais lento que pytest — cada um
+  # dos ~1400 mutantes do escopo core dispara sua PRÓPRIA subprocess de
+  # pytest; um job único rodaria os 18 arquivos sequencialmente (25-90 min
+  # de parede, medido em RELATORIO-RNF-64-RNF-65.md). Dividir por arquivo em
+  # grupos que rodam EM PARALELO corta o tempo proporcionalmente sem tirar
+  # nenhum arquivo do escopo real: os 9 grupos juntos cobrem exatamente os
+  # mesmos 18 arquivos de `[tool.mutmut] paths_to_mutate` — nenhum
+  # subconjunto menor, nunca um grupo "fácil" isolado escondendo um grupo
+  # maior/mais fraco (o gate abaixo agrega os 9 antes de decidir).
+  #
+  # RNF-68 — indo de 4 para 9 grupos (2 arquivos cada, exceto o de
+  # model_service.py sozinho — o mais pesado, maior número de statements do
+  # escopo): reduz o pior caso de wall-clock por grupo, que é o fator que
+  # decide se o pipeline INTEIRO fica sob 15 min — mutation testing é a
+  # etapa mais lenta de longe. SEM `needs: lint-python` pelo mesmo motivo do
+  # job `test-python` acima — só depende das próprias dependências.
   mutation-testing:
     name: Mutation Testing (RNF-64) — grupo ${{ matrix.group }}
     runs-on: ubuntu-latest
-    needs: lint-python
     strategy:
       fail-fast: false
       matrix:
         include:
           - group: 1
-            paths: "src/services/alert_service.py:src/services/alert_settings_service.py:src/services/critical_failure_notification_service.py:src/services/drift_monitor.py:src/services/feature_buffer.py"
+            paths: "src/services/alert_service.py:src/services/feature_buffer.py"
           - group: 2
-            paths: "src/services/inference_pipeline.py:src/services/maintenance_suggestion_service.py:src/services/mlp_adapter.py:src/services/model_registry.py"
+            paths: "src/services/alert_settings_service.py:src/services/critical_failure_notification_service.py"
           - group: 3
-            paths: "src/services/model_service.py:src/services/onnx_autoencoder_adapter.py:src/services/onnx_sequence_adapter.py:src/services/onnx_tree_adapter.py"
+            paths: "src/services/drift_monitor.py:src/services/telegram_alert_rate_limiter.py"
           - group: 4
-            paths: "src/services/prediction_service.py:src/services/preprocessing.py:src/services/sensor_stream_service.py:src/services/simulator.py:src/services/telegram_alert_rate_limiter.py"
+            paths: "src/services/inference_pipeline.py:src/services/mlp_adapter.py"
+          - group: 5
+            paths: "src/services/maintenance_suggestion_service.py:src/services/model_registry.py"
+          - group: 6
+            paths: "src/services/model_service.py"
+          - group: 7
+            paths: "src/services/onnx_autoencoder_adapter.py:src/services/onnx_sequence_adapter.py:src/services/onnx_tree_adapter.py"
+          - group: 8
+            paths: "src/services/prediction_service.py:src/services/sensor_stream_service.py"
+          - group: 9
+            paths: "src/services/preprocessing.py:src/services/simulator.py"
     steps:
       - uses: actions/checkout@v4
 
@@ -323,7 +365,7 @@ jobs:
       - name: Install pnpm
         uses: pnpm/action-setup@v3
         with:
-          version: 8
+          version: 10
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -331,8 +373,11 @@ jobs:
           node-version: "20"
           cache: "pnpm" # Ativa o cache do pnpm para acelerar
 
+      # RNF-68 — faltava `cd apps/frontend`: não existe package.json na raiz
+      # do repo, então este step falhava ANTES mesmo de instalar qualquer
+      # coisa ("ERR_PNPM_NO_PKG_MANIFEST"), independente da versão do pnpm.
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: cd apps/frontend && pnpm install --frozen-lockfile
 
       - name: Run ESLint
         run: cd apps/frontend && pnpm eslint .
@@ -349,17 +394,19 @@ jobs:
         run: cd apps/frontend && pnpm check:component-size
 
   # 7. Testes TypeScript (Vitest)
+  #
+  # RNF-68 — SEM `needs: lint-typescript`: mesmo raciocínio de test-python
+  # acima — vitest não depende de eslint/prettier terem passado.
   test-typescript:
     name: Test TypeScript
     runs-on: ubuntu-latest
-    needs: lint-typescript # Só roda se o lint passar
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Install pnpm
         uses: pnpm/action-setup@v3
         with:
-          version: 8
+          version: 10
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -367,8 +414,9 @@ jobs:
           node-version: "20"
           cache: "pnpm"
 
+      # RNF-68 — mesmo bug do lint-typescript: faltava `cd apps/frontend`.
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: cd apps/frontend && pnpm install --frozen-lockfile
 
       # RNF-59: cobertura mínima de 70% (statements/branches/functions/lines)
       # — gate real via `coverage.thresholds` em vitest.config.ts (mesmo
@@ -380,6 +428,35 @@ jobs:
           cd apps/frontend
           pnpm exec vitest run --coverage
 
+      - name: Upload Vitest coverage report (RNF-69)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-frontend
+          path: apps/frontend/coverage/
+          retention-days: 7
+
+      # RNF-66/RNF-67/RNF-69 — roda de novo SÓ a suíte de acessibilidade
+      # (já incluída na suíte geral acima — este step não adiciona cobertura
+      # nova, só produz um relatório JSON dedicado e nomeado, fácil de achar
+      # entre os artifacts do PR sem precisar abrir o log inteiro do Vitest).
+      # `--reporter=default` no terminal (falha visível no job) +
+      # `--reporter=json` no arquivo — os dois no mesmo comando, sem rodar a
+      # suíte duas vezes.
+      - name: Gerar relatório de acessibilidade (axe) — RNF-66/69
+        if: always()
+        run: |
+          cd apps/frontend
+          pnpm exec vitest run __tests__/a11y.test.tsx --reporter=default --reporter=json --outputFile=a11y-report.json
+
+      - name: Upload accessibility report (RNF-69)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: accessibility-report
+          path: apps/frontend/a11y-report.json
+          retention-days: 7
+
       # RNF-58: garante que o catálogo de componentes builda de verdade —
       # falha de build do Storybook quebra o CI, não só um "parece ok".
       - name: Build Storybook (RNF-58)
@@ -387,18 +464,33 @@ jobs:
           cd apps/frontend
           pnpm exec storybook build
 
+      - name: Upload Storybook build (RNF-69)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: storybook-build
+          path: apps/frontend/storybook-static/
+          retention-days: 7
+
   # 8. Testes E2E com Playwright + MSW (RNF-16 / RNF-17)
+  #
+  # RNF-68 — SEM `needs: test-typescript`: o E2E sobe seu PRÓPRIO servidor
+  # (`next dev` via webServer do Playwright, ver playwright.config.ts) e usa
+  # MSW para mockar a API — não depende da suíte Vitest ter passado, só do
+  # build/dev server funcionar (o que este job já valida por conta própria
+  # ao subir o webServer). Antes disso, test-e2e só começava depois de
+  # lint-typescript → test-typescript terem passado em sequência — 2 jobs
+  # inteiros de espera para um step que não precisa de nenhum dos dois.
   test-e2e:
     name: E2E Tests (Playwright + MSW)
     runs-on: ubuntu-latest
-    needs: test-typescript # Só roda após os testes unitários passarem
     steps:
       - uses: actions/checkout@v4
 
       - name: Install pnpm
         uses: pnpm/action-setup@v3
         with:
-          version: 9
+          version: 10
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -412,10 +504,30 @@ jobs:
           cd apps/frontend
           pnpm install --frozen-lockfile
 
+      # RNF-68 — cache do binário do Chromium (não muda a menos que a versão
+      # do Playwright mude): sem isso, todo run baixa e instala o browser do
+      # zero. Chave inclui a versão resolvida do playwright no lockfile —
+      # invalida sozinha quando o pacote for atualizado.
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ runner.os }}-${{ hashFiles('apps/frontend/pnpm-lock.yaml') }}
+
       - name: Install Playwright browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: |
           cd apps/frontend
           pnpm exec playwright install chromium --with-deps
+
+      # Mesmo com cache-hit, as dependências de SO do Chromium (libs apt)
+      # precisam ser garantidas — `install-deps` sem baixar o browser de novo.
+      - name: Install Playwright OS dependencies
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: |
+          cd apps/frontend
+          pnpm exec playwright install-deps chromium
 
       - name: Generate MSW Service Worker
         # Cria public/mockServiceWorker.js que o MswProvider carrega no browser.
@@ -450,3 +562,173 @@ jobs:
           name: e2e-results
           path: apps/frontend/e2e-results/
           retention-days: 7
+
+  # 9. Load Smoke Test — Locust (RNF-68/69)
+  #
+  # Isolamento: stack Docker PRÓPRIA (db+redis+api+nginx, subida e destruída
+  # só dentro deste job) — não compartilha Postgres/porta com nenhum outro
+  # job. test-python usa SQLite em memória (nunca sobe Postgres real);
+  # test-e2e usa MSW (nunca toca a API real); executar em paralelo com os
+  # dois não pode gerar falso positivo/negativo em nenhum lado, e nenhum
+  # dado gravado aqui sobrevive além do job (`docker compose down -v` no
+  # final, `if: always()`).
+  #
+  # Reaproveita locust_streaming.py (RNF-37) — MESMO script/MESMA SLA de
+  # latência (p95 < 200ms via _P95_SLA_MS, inalterada) — só com
+  # concorrência bem menor via SSE_MIN_CONNECTIONS (ver comentário no
+  # próprio arquivo). NÃO é o benchmark completo de 100 usuários/75s (esse
+  # continua documentado no README §14.5 para execução manual/dedicada,
+  # pesado demais para o orçamento de 15 min do pipeline); o objetivo aqui é
+  # só detectar regressão grosseira — erro HTTP, conexão recusada, latência
+  # anormal — numa carga pequena e rápida.
+  load-smoke:
+    name: Load Smoke Test (Locust, RNF-68/69)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Valores concretos (não os placeholders de .env.example) — POSTGRES_USER
+      # e POSTGRES_DB precisam bater exatamente com o healthcheck hardcoded
+      # do serviço `db` em docker-compose.yml (`pg_isready -U user -d tcc_db`).
+      # Nenhum segredo real — mesma senha de exemplo usada só neste job efêmero.
+      - name: Preparar .env mínimo para o smoke test
+        run: |
+          cat > .env << 'EOF'
+          POSTGRES_USER=user
+          POSTGRES_PASSWORD=smoke_test_only
+          POSTGRES_DB=tcc_db
+          DATABASE_URL=postgresql+asyncpg://user:smoke_test_only@db:5432/tcc_db
+          ACTIVE_MODEL=random_forest_v2
+          SMOTE_SAMPLING_STRATEGY=auto
+          UVICORN_WORKERS=1
+          DB_POOL_SIZE=10
+          DB_MAX_OVERFLOW=20
+          PROJECT_NAME="TCC Manutencao Preditiva"
+          VERSION="1.0.0"
+          ALLOWED_ORIGINS=["http://localhost"]
+          DEBUG=true
+          ADMIN_API_TOKEN=change-me-in-production
+          OLLAMA_BASE_URL=http://host.docker.internal:11434
+          OLLAMA_MODEL=llama3.2:3b
+          OLLAMA_CLIENT_TIMEOUT_SECONDS=5.0
+          MCP_CLIENT_TIMEOUT_SECONDS=5.0
+          TELEGRAM_BOT_TOKEN=
+          TELEGRAM_CHAT_ID=
+          TELEGRAM_API_BASE_URL=https://api.telegram.org
+          TELEGRAM_CLIENT_TIMEOUT_SECONDS=10.0
+          DASHBOARD_URL=http://localhost
+          CRITICAL_FAILURE_RATE_LIMIT_SECONDS=900
+          DEFAULT_EQUIPMENT_ID=APU-Trem-042
+          DEFAULT_EQUIPMENT_NAME="Compressor de Ar Industrial (MetroPT-3)"
+          RESEND_API_KEY=
+          RESEND_FROM_EMAIL="PredictIQ <alerts@predictiq.dev>"
+          RESEND_API_BASE_URL=https://api.resend.com
+          RESEND_CLIENT_TIMEOUT_SECONDS=10.0
+          CELERY_BROKER_URL=redis://redis:6379/0
+          MCP_SERVER_PORT=8100
+          MCP_SERVER_URL=http://mcp-server:8100
+          EOF
+
+      # Só os 4 serviços necessários para o endpoint SSE via Nginx — nenhum
+      # mcp-server/celery/frontend/minio/mlflow sobe aqui (não são exercitados
+      # por este smoke test e só custariam tempo de build).
+      - name: Subir stack mínima (db + redis + api + nginx)
+        run: docker compose up -d --build db redis api nginx
+
+      - name: Aguardar API ficar saudável
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost/api/health >/dev/null 2>&1; then
+              echo "API respondendo após $i tentativa(s)."
+              exit 0
+            fi
+            echo "Aguardando API... ($i/30)"
+            sleep 5
+          done
+          echo "API não respondeu a tempo — logs:"
+          docker compose logs api
+          exit 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar Locust
+        run: pip install locust==2.46.5
+
+      # Concorrência de smoke (15, não 100) — ver comentário no topo do job
+      # e em locust_streaming.py. SSE_HOLD_SECONDS reduzido (8s, não 45s):
+      # cada usuário virtual só precisa ficar conectado tempo suficiente
+      # para receber pelo menos 1 evento (cadência de 1/s) e confirmar que o
+      # stream está saudável — não para validar a métrica RF-12 completa
+      # (isso é responsabilidade de locust_sse.py, fora do CI).
+      - name: Rodar Locust smoke (SSE, concorrência reduzida)
+        env:
+          SSE_MIN_CONNECTIONS: "15"
+          SSE_HOLD_SECONDS: "8"
+        run: |
+          locust -f locust_streaming.py --host http://localhost \
+                 --headless -u 15 -r 5 --run-time 25s \
+                 --csv=loadtest-smoke --html=loadtest-smoke.html
+
+      - name: Dump de logs da API em caso de falha
+        if: failure()
+        run: docker compose logs api nginx db redis
+
+      # RNF-69 — relatório disponível mesmo se o smoke falhar.
+      - name: Upload Locust report (RNF-69)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: locust-report
+          path: |
+            loadtest-smoke*.csv
+            loadtest-smoke.html
+          retention-days: 7
+          if-no-files-found: warn
+
+      - name: Encerrar stack
+        if: always()
+        run: docker compose down -v
+
+  # 10. Quality Gate final (RNF-68/69) — consolida todos os jobs
+  # obrigatórios num único check bloqueante. `needs` lista TODOS os jobs
+  # que precisam ter sucesso; `if: always()` no job (não nos steps) garante
+  # que ele RODA mesmo se algum `needs` falhar — sem isso, GitHub Actions
+  # pularia o gate inteiro (`skipped`) em vez de reportar `failure`, o que
+  # apareceria como "neutro" no PR em vez de bloquear o merge.
+  # NENHUM `continue-on-error` em nenhum job acima: uma falha real em
+  # qualquer um deles é uma falha real aqui.
+  quality-gate:
+    name: Quality Gate
+    runs-on: ubuntu-latest
+    if: always()
+    needs:
+      - env-check
+      - security-audit
+      - lint-python
+      - test-python
+      - mutation-score-gate
+      - lint-typescript
+      - test-typescript
+      - test-e2e
+      - load-smoke
+    steps:
+      - name: Verificar resultado de todos os jobs obrigatórios
+        run: |
+          echo "env-check:          ${{ needs.env-check.result }}"
+          echo "security-audit:      ${{ needs.security-audit.result }}"
+          echo "lint-python:         ${{ needs.lint-python.result }}"
+          echo "test-python:         ${{ needs.test-python.result }}"
+          echo "mutation-score-gate: ${{ needs.mutation-score-gate.result }}"
+          echo "lint-typescript:     ${{ needs.lint-typescript.result }}"
+          echo "test-typescript:     ${{ needs.test-typescript.result }}"
+          echo "test-e2e:            ${{ needs.test-e2e.result }}"
+          echo "load-smoke:          ${{ needs.load-smoke.result }}"
+          if [ "${{ contains(needs.*.result, 'failure') }}" = "true" ] || \
+             [ "${{ contains(needs.*.result, 'cancelled') }}" = "true" ]; then
+            echo "FALHOU: pelo menos um job obrigatório não passou."
+            exit 1
+          fi
+          echo "Todos os jobs obrigatórios passaram."

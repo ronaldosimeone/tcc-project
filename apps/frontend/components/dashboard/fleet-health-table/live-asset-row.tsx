@@ -54,8 +54,16 @@ export function LiveAssetRow({
       )}
     >
       <td className="py-3 pl-5 pr-4">
-        <div className="flex items-center gap-2">
-          <span className="relative flex h-2 w-2 shrink-0">
+        <button
+          type="button"
+          aria-pressed={isSelected}
+          onClick={(e) => {
+            e.stopPropagation();
+            onSelect(LIVE_ASSET_ID);
+          }}
+          className="flex items-center gap-2 rounded-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+        >
+          <span className="relative flex h-2 w-2 shrink-0" aria-hidden="true">
             {/* Dot tonal: vermelho em CRÍTICO, âmbar em ALERTA, azul "LIVE"
                 discreto em operação normal. */}
             <span
@@ -95,7 +103,7 @@ export function LiveAssetRow({
           >
             LIVE
           </Badge>
-        </div>
+        </button>
       </td>
 
       <td className="py-3 pr-4">

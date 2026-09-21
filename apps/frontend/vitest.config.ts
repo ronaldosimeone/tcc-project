@@ -23,18 +23,18 @@ export default defineConfig({
       // pré-existentes e não relacionadas (ver PENDENCIAS.md). A cobertura
       // real precisa ser medível mesmo com essas falhas presentes.
       reportOnFailure: true,
-      // RNF-59: piso de 70% — mesmo padrão do backend
-      // (apps/backend/pyproject.toml → [tool.coverage.report] fail_under).
-      // `vitest run --coverage` sai com código != 0 se qualquer métrica
-      // ficar abaixo disto, sem precisar de um step de CI separado só para
-      // checar o número. Cobertura real medida no fechamento da RNF-59:
-      // ~88% stmts / ~76% branch / ~88% funcs / ~91% lines — 70 dá margem
-      // sem travar PRs por flutuações normais.
+      // RNF-66/RNF-67: piso elevado de 70% -> 75% (meta de qualidade da
+      // auditoria de acessibilidade). `vitest run --coverage` sai com
+      // código != 0 se qualquer métrica ficar abaixo disto. Cobertura real
+      // no fechamento da RNF-66/67: ~88% stmts / ~76% branch / ~88% funcs /
+      // ~91% lines — branch fica com pouca margem (~1pp) sobre o piso; se
+      // flutuar abaixo de 75% num PR futuro sem regressão real de teste,
+      // considere lift do piso após adicionar cobertura, não relaxar aqui.
       thresholds: {
-        statements: 70,
-        branches: 70,
-        functions: 70,
-        lines: 70,
+        statements: 75,
+        branches: 75,
+        functions: 75,
+        lines: 75,
       },
     },
   },

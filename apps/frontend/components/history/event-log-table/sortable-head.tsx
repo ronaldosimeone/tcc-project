@@ -33,8 +33,17 @@ export function SortableHead({
   onSort: (col: SortColumn) => void;
   align?: "left" | "right";
 }) {
+  const ariaSort: "ascending" | "descending" | "none" =
+    sort.column !== column
+      ? "none"
+      : sort.direction === "asc"
+      ? "ascending"
+      : "descending";
+
   return (
     <th
+      scope="col"
+      aria-sort={ariaSort}
       className={cn(
         "pb-2.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground",
         align === "right" ? "text-right" : "text-left",

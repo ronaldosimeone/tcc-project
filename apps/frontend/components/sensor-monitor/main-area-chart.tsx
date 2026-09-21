@@ -72,6 +72,7 @@ export const MainAreaChart = memo(function MainAreaChart({
   riskLevel,
 }: MainAreaChartProps) {
   const isEmpty = data.length < 2;
+  const latest = data[data.length - 1];
 
   return (
     <Card
@@ -119,65 +120,76 @@ export const MainAreaChart = memo(function MainAreaChart({
             Coletando dados…
           </div>
         ) : (
-          <ResponsiveContainer width="100%" height={180}>
-            <AreaChart
-              data={data}
-              margin={{ top: 4, right: 8, bottom: 0, left: -10 }}
-            >
-              <defs>
-                <linearGradient id="gradTP2" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={C.tp2} stopOpacity={0.25} />
-                  <stop offset="100%" stopColor={C.tp2} stopOpacity={0} />
-                </linearGradient>
-                <linearGradient id="gradTP3" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={C.tp3} stopOpacity={0.25} />
-                  <stop offset="100%" stopColor={C.tp3} stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid
-                strokeDasharray="3 3"
-                stroke={GRID_STROKE}
-                vertical={false}
-              />
-              <XAxis
-                dataKey="time"
-                tick={AXIS_TICK}
-                tickLine={false}
-                axisLine={false}
-                interval="preserveStartEnd"
-              />
-              <YAxis
-                domain={[0, 12]}
-                tick={AXIS_TICK}
-                tickLine={false}
-                axisLine={false}
-                width={28}
-              />
-              <RechartsTooltip content={AREA_TOOLTIP} />
-              <Area
-                type="monotone"
-                dataKey="TP2"
-                name="TP2"
-                stroke={C.tp2}
-                strokeWidth={2}
-                fill="url(#gradTP2)"
-                dot={false}
-                activeDot={{ r: 4, fill: C.tp2 }}
-                isAnimationActive={false}
-              />
-              <Area
-                type="monotone"
-                dataKey="TP3"
-                name="TP3"
-                stroke={C.tp3}
-                strokeWidth={2}
-                fill="url(#gradTP3)"
-                dot={false}
-                activeDot={{ r: 4, fill: C.tp3 }}
-                isAnimationActive={false}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
+          <>
+            {/* Alternativa textual ao gráfico (RNF-66 §12) — sem aria-live:
+                1Hz seria ruidoso demais para anúncio contínuo (RNF-66 §14). */}
+            <p className="sr-only">
+              Leitura mais recente de pressão: TP2 {latest.TP2.toFixed(1)} bar,
+              TP3 {latest.TP3.toFixed(1)} bar.
+            </p>
+            <div aria-hidden="true" className="contents">
+              <ResponsiveContainer width="100%" height={180}>
+                <AreaChart
+                  accessibilityLayer={false}
+                  data={data}
+                  margin={{ top: 4, right: 8, bottom: 0, left: -10 }}
+                >
+                  <defs>
+                    <linearGradient id="gradTP2" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={C.tp2} stopOpacity={0.25} />
+                      <stop offset="100%" stopColor={C.tp2} stopOpacity={0} />
+                    </linearGradient>
+                    <linearGradient id="gradTP3" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={C.tp3} stopOpacity={0.25} />
+                      <stop offset="100%" stopColor={C.tp3} stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    stroke={GRID_STROKE}
+                    vertical={false}
+                  />
+                  <XAxis
+                    dataKey="time"
+                    tick={AXIS_TICK}
+                    tickLine={false}
+                    axisLine={false}
+                    interval="preserveStartEnd"
+                  />
+                  <YAxis
+                    domain={[0, 12]}
+                    tick={AXIS_TICK}
+                    tickLine={false}
+                    axisLine={false}
+                    width={28}
+                  />
+                  <RechartsTooltip content={AREA_TOOLTIP} />
+                  <Area
+                    type="monotone"
+                    dataKey="TP2"
+                    name="TP2"
+                    stroke={C.tp2}
+                    strokeWidth={2}
+                    fill="url(#gradTP2)"
+                    dot={false}
+                    activeDot={{ r: 4, fill: C.tp2 }}
+                    isAnimationActive={false}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="TP3"
+                    name="TP3"
+                    stroke={C.tp3}
+                    strokeWidth={2}
+                    fill="url(#gradTP3)"
+                    dot={false}
+                    activeDot={{ r: 4, fill: C.tp3 }}
+                    isAnimationActive={false}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </>
         )}
       </CardContent>
     </Card>

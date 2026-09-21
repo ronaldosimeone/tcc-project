@@ -26,7 +26,15 @@ export function MockAssetRow({
       )}
     >
       <td className="py-3 pl-5 pr-4">
-        <div className="flex items-center gap-2">
+        <button
+          type="button"
+          aria-pressed={isSelected}
+          onClick={(e) => {
+            e.stopPropagation();
+            onSelect(asset.id);
+          }}
+          className="flex items-center gap-2 rounded-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+        >
           <span
             className="h-1.5 w-1.5 shrink-0 rounded-full bg-slate-300"
             aria-hidden="true"
@@ -38,7 +46,7 @@ export function MockAssetRow({
           >
             SIMULADO
           </Badge>
-        </div>
+        </button>
       </td>
 
       <td className="py-3 pr-4">

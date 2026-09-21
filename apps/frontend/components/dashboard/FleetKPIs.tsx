@@ -25,9 +25,8 @@ import {
   type LatencyTelemetry,
 } from "@/hooks/use-latency-history";
 import { getRiskLevel, type RiskLevel } from "@/lib/risk-thresholds";
-import { cn } from "@/lib/utils";
+import { AndonBoard } from "./fleet-kpis/andon-board";
 import {
-  ANDON_COLOR,
   LATENCY_HISTORY_SIZE,
   SPARK_ANOMALY,
   SPARK_HEALTH,
@@ -132,25 +131,7 @@ export default function FleetKPIs({
         iconTone={liveIsCritical ? "danger" : liveIsAlert ? "warn" : "ok"}
         isLoading={isLoading}
       >
-        {/* Andon Board: cada bloco = 1 compressor. Status em scan rápido,
-            sem precisar interpretar um número ou ler um label. */}
-        <div
-          className="flex h-10 w-full gap-1.5"
-          role="group"
-          aria-label="Estado da frota — matriz Andon"
-        >
-          {fleetAndon.map((asset) => (
-            <div
-              key={asset.id}
-              title={`${asset.id}: ${asset.status}`}
-              aria-label={`${asset.id}: ${asset.status}`}
-              className={cn(
-                "flex-1 rounded-sm border border-black/5 transition-colors",
-                ANDON_COLOR[asset.status],
-              )}
-            />
-          ))}
-        </div>
+        <AndonBoard assets={fleetAndon} />
       </KpiShell>
 
       <KpiShell

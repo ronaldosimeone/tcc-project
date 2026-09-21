@@ -29,9 +29,27 @@ export function EventRow({ event, onSelectEvent }: EventRowProps) {
     >
       {/* Timestamp */}
       <td className="py-3 pr-5">
-        <span className="whitespace-nowrap font-mono text-xs tabular-nums text-muted-foreground">
-          {formatTimestamp(event.timestamp)}
-        </span>
+        {onSelectEvent ? (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelectEvent(event);
+            }}
+            aria-label={`${formatTimestamp(
+              event.timestamp,
+            )}: ver detalhes do evento de ${event.type} em ${
+              event.equipment
+            }, severidade ${event.severity}`}
+            className="whitespace-nowrap rounded-sm font-mono text-xs tabular-nums text-muted-foreground underline-offset-2 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50"
+          >
+            {formatTimestamp(event.timestamp)}
+          </button>
+        ) : (
+          <span className="whitespace-nowrap font-mono text-xs tabular-nums text-muted-foreground">
+            {formatTimestamp(event.timestamp)}
+          </span>
+        )}
       </td>
 
       {/* Equipment */}

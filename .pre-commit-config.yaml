@@ -30,3 +30,10 @@ repos:
     hooks:
       - id: prettier
         files: ^apps/frontend/
+        # RNF-68/69 — pnpm-lock.yaml tem estrutura exata exigida por
+        # `pnpm install --frozen-lockfile` (usado no CI); reformatar
+        # quebraria esse contrato. Mesma exclusão já feita para
+        # `pnpm prettier` via apps/frontend/.prettierignore — o hook do
+        # pre-commit não lê esse arquivo (roda a partir da raiz do repo),
+        # então precisa da exclusão própria aqui.
+        exclude: ^apps/frontend/pnpm-lock\.yaml$

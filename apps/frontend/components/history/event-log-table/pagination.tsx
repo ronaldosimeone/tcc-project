@@ -20,7 +20,10 @@ export function EventLogPagination({
   onPageSelect,
 }: EventLogPaginationProps) {
   return (
-    <div className="mt-5 flex items-center justify-between border-t border-border pt-4">
+    <nav
+      aria-label="Paginação do log de eventos"
+      className="mt-5 flex items-center justify-between border-t border-border pt-4"
+    >
       <Button
         variant="outline"
         size="sm"
@@ -36,6 +39,7 @@ export function EventLogPagination({
           p === "…" ? (
             <span
               key={`ellipsis-${i}`}
+              aria-hidden="true"
               className="px-1 text-xs text-muted-foreground"
             >
               …
@@ -44,6 +48,8 @@ export function EventLogPagination({
             <Button
               key={p}
               variant={Number(safePage) === Number(p) ? "outline" : "ghost"}
+              aria-current={Number(safePage) === Number(p) ? "page" : undefined}
+              aria-label={`Página ${p}`}
               className={
                 Number(safePage) === Number(p)
                   ? "h-8 w-8 rounded-full border-2 border-primary font-bold text-primary"
@@ -66,6 +72,6 @@ export function EventLogPagination({
       >
         Próxima
       </Button>
-    </div>
+    </nav>
   );
 }

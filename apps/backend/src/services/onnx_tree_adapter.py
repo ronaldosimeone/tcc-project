@@ -81,9 +81,7 @@ class OnnxTreeAdapter:
         self._output_names: list[str] = [o.name for o in self._session.get_outputs()]
 
         # Public sklearn-like contract consumed by ModelService.
-        self.feature_names_in_: np.ndarray = np.array(
-            list(feature_names), dtype=object
-        )
+        self.feature_names_in_: np.ndarray = np.array(list(feature_names), dtype=object)
 
         logger.info(
             "[RF-10] OnnxTreeAdapter loaded | onnx=%s | features=%d | outputs=%s",

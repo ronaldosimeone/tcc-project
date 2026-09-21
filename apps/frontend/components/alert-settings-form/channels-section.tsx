@@ -91,8 +91,11 @@ export function ChannelsSection({
       </div>
 
       {validationMessage && (
-        <p className="flex items-center gap-1.5 text-xs text-destructive">
-          <CircleAlert className="h-3.5 w-3.5 shrink-0" />
+        <p
+          role="alert"
+          className="flex items-center gap-1.5 text-xs text-destructive"
+        >
+          <CircleAlert className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
           {validationMessage}
         </p>
       )}
