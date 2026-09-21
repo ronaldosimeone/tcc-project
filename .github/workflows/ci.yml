@@ -6,6 +6,14 @@ on:
   pull_request:
     branches: [ "main" ]
 
+# RNF-68/69 — cancela a run anterior do mesmo PR/branch quando um novo push
+# chega, em vez de deixar as duas rodarem em paralelo até o fim (achado
+# real durante a validação: sem isso, cada push num PR ativo duplica o
+# custo de mutation testing — 9 grupos rodando duas vezes).
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   # 1. Job de Verificação de Variáveis de Ambiente
   env-check:
@@ -73,6 +81,13 @@ jobs:
         with:
           node-version: "20"
           cache: "pnpm"
+          # RNF-68/69 — sem isso, setup-node procura pnpm-lock.yaml na raiz
+          # do repo (não existe) e falha ANTES de qualquer install rodar:
+          # "Dependencies lock file is not found... Supported file
+          # patterns: pnpm-lock.yaml" — achado real na 1ª execução no
+          # GitHub Actions, invisível localmente (esse cache nem roda fora
+          # do runner).
+          cache-dependency-path: apps/frontend/pnpm-lock.yaml
 
       - name: Install frontend deps
         run: cd apps/frontend && pnpm install --frozen-lockfile
@@ -372,6 +387,7 @@ jobs:
         with:
           node-version: "20"
           cache: "pnpm" # Ativa o cache do pnpm para acelerar
+          cache-dependency-path: apps/frontend/pnpm-lock.yaml
 
       # RNF-68 — faltava `cd apps/frontend`: não existe package.json na raiz
       # do repo, então este step falhava ANTES mesmo de instalar qualquer
@@ -413,6 +429,7 @@ jobs:
         with:
           node-version: "20"
           cache: "pnpm"
+          cache-dependency-path: apps/frontend/pnpm-lock.yaml
 
       # RNF-68 — mesmo bug do lint-typescript: faltava `cd apps/frontend`.
       - name: Install dependencies
