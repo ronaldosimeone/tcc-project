@@ -680,8 +680,11 @@ jobs:
         with:
           python-version: "3.11"
 
+      # httpx: locust_streaming.py importa locust_sse.py, que usa httpx no
+      # seu modo standalone (RNF-28) — dependência real do arquivo
+      # reaproveitado, não usada pelo Locust em si.
       - name: Instalar Locust
-        run: pip install locust==2.46.5
+        run: pip install locust==2.46.5 httpx==0.28.1
 
       # Concorrência de smoke (15, não 100) — ver comentário no topo do job
       # e em locust_streaming.py. SSE_HOLD_SECONDS reduzido (8s, não 45s):
