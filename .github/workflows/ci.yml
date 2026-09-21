@@ -649,13 +649,22 @@ jobs:
       # Só os 4 serviços necessários para o endpoint SSE via Nginx — nenhum
       # mcp-server/celery/frontend/minio/mlflow sobe aqui (não são exercitados
       # por este smoke test e só custariam tempo de build).
-      - name: Subir stack mínima (db + redis + api + nginx)
-        run: docker compose up -d --build db redis api nginx
+      #
+      # SEM nginx: `nginx` depende de `frontend` em docker-compose.yml —
+      # subi-lo forçaria um build completo do Next.js só para alcançar a API
+      # por trás do proxy (achado real: esse build falhava no CI por conta
+      # de ERR_PNPM_IGNORED_BUILDS do pnpm 10, sem relação nenhuma com o que
+      # este smoke test mede). `docker-compose.ci-load-smoke.yml` publica a
+      # porta 8000 do `api` direto no host — Locust bate na API sem Nginx.
+      - name: Subir stack mínima (db + redis + api, sem Nginx/frontend)
+        run: |
+          docker compose -f docker-compose.yml -f docker-compose.ci-load-smoke.yml \
+            up -d --build db redis api
 
       - name: Aguardar API ficar saudável
         run: |
           for i in $(seq 1 30); do
-            if curl -sf http://localhost/api/health >/dev/null 2>&1; then
+            if curl -sf http://localhost:8000/health >/dev/null 2>&1; then
               echo "API respondendo após $i tentativa(s)."
               exit 0
             fi
@@ -679,19 +688,22 @@ jobs:
       # cada usuário virtual só precisa ficar conectado tempo suficiente
       # para receber pelo menos 1 evento (cadência de 1/s) e confirmar que o
       # stream está saudável — não para validar a métrica RF-12 completa
-      # (isso é responsabilidade de locust_sse.py, fora do CI).
+      # (isso é responsabilidade de locust_sse.py, fora do CI). Host/porta
+      # 8000 direto (sem Nginx) — SSE_PATH sem o prefixo /api que só o Nginx
+      # adicionaria.
       - name: Rodar Locust smoke (SSE, concorrência reduzida)
         env:
           SSE_MIN_CONNECTIONS: "15"
           SSE_HOLD_SECONDS: "8"
+          SSE_PATH: "/stream/sensors"
         run: |
-          locust -f locust_streaming.py --host http://localhost \
+          locust -f locust_streaming.py --host http://localhost:8000 \
                  --headless -u 15 -r 5 --run-time 25s \
                  --csv=loadtest-smoke --html=loadtest-smoke.html
 
       - name: Dump de logs da API em caso de falha
         if: failure()
-        run: docker compose logs api nginx db redis
+        run: docker compose logs api db redis
 
       # RNF-69 — relatório disponível mesmo se o smoke falhar.
       - name: Upload Locust report (RNF-69)
@@ -707,7 +719,8 @@ jobs:
 
       - name: Encerrar stack
         if: always()
-        run: docker compose down -v
+        run: |
+          docker compose -f docker-compose.yml -f docker-compose.ci-load-smoke.yml down -v
 
   # 10. Quality Gate final (RNF-68/69) — consolida todos os jobs
   # obrigatórios num único check bloqueante. `needs` lista TODOS os jobs
