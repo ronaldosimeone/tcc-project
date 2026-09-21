@@ -281,16 +281,31 @@ jobs:
   # (confirmada lendo mutmut/__init__.py: sobrevivência é decidida só pelo
   # exit code do `runner`, não por parsing de texto): mutante SOBREVIVENTE
   # não tem "primeiro teste que falha" pra cortar em `-x` — reroda a suíte
-  # inteira (708 testes, ~77s medido localmente) até o fim, e isso dominava
-  # o tempo de cada grupo, não o número de arquivos por grupo. Duas
-  # correções reais, sem tirar nada do escopo: (1) ir de 9 para 18 grupos
-  # (1 arquivo cada — paralelismo real adicional, cada grupo tem só os
-  # mutantes do seu próprio arquivo); (2) `-n auto` no runner do mutmut
-  # (pyproject.toml [tool.mutmut]) — paraleliza CADA reexecução da suíte nos
-  # núcleos do runner (~77s serial → ~30-35s medido localmente, mesmos
-  # 707 passed + 1 xfailed, determinístico em 3 execuções). SEM
-  # `needs: lint-python` pelo mesmo motivo do job `test-python` acima — só
-  # depende das próprias dependências.
+  # inteira (708 testes) até o fim, e isso dominava o tempo de cada grupo,
+  # não o número de arquivos por grupo.
+  #
+  # Duas correções tentadas, só uma sobreviveu à validação real:
+  # (1) ir de 9 para 18 grupos (1 arquivo cada) — paralelismo real, cada
+  # grupo roda só os mutantes do seu próprio arquivo — CONFIRMADO: run
+  # 35648496340 caiu pra 50min de pipeline total.
+  # (2) `-n auto` (pytest-xdist) no runner do mutmut (pyproject.toml
+  # [tool.mutmut]) — media localmente ~77s serial → ~30-35s com workers, mas
+  # REVERTIDO após medir no GitHub Actions real: o único par antes/depois
+  # limpo (model_service.py sozinho, mesmo arquivo isolado nas duas runs)
+  # foi de 38min sem `-n auto` para 50min com `-n auto` — mais lento no
+  # runner real (menos núcleos que a máquina de teste local), não mais
+  # rápido. Ver comentário completo em pyproject.toml [tool.mutmut].
+  #
+  # Resultado honesto: com o teto real de paralelismo por arquivo (18
+  # grupos, o máximo que dá pra dividir sem fatiar mutantes de um mesmo
+  # arquivo entre jobs), o pipeline foi de ~68min para ~50min — real, mas
+  # ainda acima da meta de <15min da RNF-68. O gargalo agora é
+  # model_service.py sozinho (~38-50min conforme a run), que já está no
+  # menor grão possível de arquivo — ver RELATORIO-RNF-68-RNF-69.md pro
+  # status final e a recomendação de próximo passo (sharding de mutantes
+  # por ID dentro de um mesmo arquivo, fora do escopo desta task).
+  # SEM `needs: lint-python` pelo mesmo motivo do job `test-python` acima —
+  # só depende das próprias dependências.
   mutation-testing:
     name: Mutation Testing (RNF-64) — grupo ${{ matrix.group }}
     runs-on: ubuntu-latest
