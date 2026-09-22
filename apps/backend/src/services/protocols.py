@@ -56,6 +56,16 @@ class ModelServiceProtocol(Protocol):
 
 
 @runtime_checkable
+class InferenceCacheProtocol(Protocol):
+    """Fronteira usada por `routers/predict.py` — cache de predição
+    (RNF-70/RNF-71). O router nunca vê o cliente Redis, só get/set."""
+
+    async def get(self, key: str) -> PredictResponse | None: ...
+
+    async def set(self, key: str, value: PredictResponse) -> None: ...
+
+
+@runtime_checkable
 class AlertServiceProtocol(Protocol):
     """Fronteira usada por `routers/predict.py` — decisão de alerta crítico
     (RF-14/RF-24), que por sua vez compõe WS + Postgres + Celery

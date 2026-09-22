@@ -173,6 +173,16 @@ class Settings(BaseSettings):
         default="redis://redis:6379/0", alias="CELERY_BROKER_URL"
     )
 
+    # ── Cache de inferência — Redis (RNF-70 / RNF-71) ───────────────────────
+    # MESMA instância Redis do broker acima (serviço `redis` do
+    # docker-compose.yml já existente) — logicamente isolada num DB Redis
+    # diferente (db=1, broker fica em db=0) para um `FLUSHDB`/eviction do
+    # cache nunca tocar a fila do Celery, e vice-versa. Consumida por
+    # src/services/inference_cache.py — nunca hardcoded no código.
+    redis_cache_url: str = Field(
+        default="redis://redis:6379/1", alias="REDIS_CACHE_URL"
+    )
+
     # ── CORS ──────────────────────────────────────────────────────────────
     allowed_origins: list[str] = Field(
         default=["http://localhost:3000", "http://127.0.0.1:3000"],

@@ -2416,7 +2416,7 @@ fácil de achar (`accessibility-report`), sem duplicar a suíte inteira.
 | Gate | Piso | Job |
 |---|---|---|
 | Cobertura Python | ≥ 85% | `test-python` (`pytest --cov`, `fail_under` em `pyproject.toml`) |
-| Mutation Score | ≥ 70% | `mutation-score-gate` (agrega os 18 grupos) |
+| Mutation Score | ≥ 70% | `mutation-score-gate` (agrega os 19 grupos — grupo 19 = `inference_cache.py`, RNF-70/71) |
 | Cobertura Frontend | ≥ 75% | `test-typescript` (`vitest run --coverage`, `thresholds` em `vitest.config.ts`) |
 | Acessibilidade | axe Critical/Serious = 0 | `test-typescript` (`__tests__/a11y.test.tsx`) |
 | Segurança | 0 vulnerabilidades High/Critical em produção | `security-audit` |
@@ -2429,7 +2429,7 @@ do teste ainda é o cenário mais importante para investigar:
 | Artifact | Job | Conteúdo |
 |---|---|---|
 | `coverage-python` | `test-python` | `htmlcov/`, `coverage.xml`, `pytest-report.xml` (JUnit) |
-| `mutmut-summary-group-N` | `mutation-testing` (×18) | JSON por grupo — score/killed/survived |
+| `mutmut-summary-group-N` | `mutation-testing` (×19) | JSON por grupo — score/killed/survived |
 | `coverage-frontend` | `test-typescript` | `coverage/` (HTML navegável + `lcov.info`) |
 | `accessibility-report` | `test-typescript` | `a11y-report.json` (JSON reporter do Vitest) |
 | `storybook-build` | `test-typescript` | `storybook-static/` — catálogo de componentes navegável |
@@ -2463,6 +2463,10 @@ CI, seção a seção:
 # Backend
 cd apps\backend
 ruff check . ; black --check . ; mypy . --ignore-missing-imports
+# RNF-70/71 — os testes de InferenceCache exigem Redis real (TTL observável,
+# não mock; ver §14.10). `docker compose up -d redis` primeiro, ou aponte
+# TEST_REDIS_URL para qualquer Redis acessível (default: localhost:6379/15).
+$env:TEST_REDIS_URL = "redis://localhost:6379/15"
 pytest --cov=src --cov-report=term-missing
 lint-imports
 
@@ -2482,6 +2486,41 @@ mutmut run
 comprovado no GitHub Actions real (wall-clock entre início e fim do
 workflow) — rodar cada comando localmente valida CORRETUDE, não mede
 paralelismo real de runners.
+
+### 14.10. Cache de Inferência com Redis (RNF-70 / RNF-71)
+
+Relatório completo (auditoria, baseline, `EXPLAIN ANALYZE`, arquitetura do
+`InferenceCache`, testes, benchmark): **[RELATORIO-RNF-70-RNF-71.md](RELATORIO-RNF-70-RNF-71.md)**.
+
+**Resumo:** `POST /predict/` ganhou um cache-aside via Redis (mesma
+instância já usada pelo broker do Celery, RNF-50/51 — isolado num DB Redis
+diferente, sem serviço novo). Chave = hash dos 12 sensores + modelo ativo;
+TTL fixo de 60s (RNF-71). Auditoria mostrou que o caminho de `/predict/` já
+era barato no banco (1 INSERT + 1 SELECT, ambos < 0,15ms via Index/PK scan,
+sem Seq Scan) — nenhum índice novo foi justificado, nenhuma migration foi
+criada.
+
+| Métrica | Antes (sem cache) | Depois (cache hit) |
+|---|---:|---:|
+| p50 | 56 ms | 44 ms |
+| p95 | 68 ms | **47 ms** |
+| p99 | 75 ms | 58 ms |
+
+**RNF-70 (p95 < 50ms em cache hit): PASS** — 177 requisições reais via
+[`locust_predict.py`](locust_predict.py), 0 falhas, medido contra a API
+real (rate limit de 100/min, RNF-19, respeitado — nunca contornado).
+
+**RNF-71 (TTL de 60s observável): PASS** — TTL confirmado contra Redis real
+(`55 <= TTL <= 60`) e expiração real demonstrada (chave expira, próxima
+requisição idêntica é um MISS genuíno, nova inferência).
+
+```bash
+# Reproduzir o benchmark (stack real, mesma do job load-smoke)
+docker compose -f docker-compose.yml -f docker-compose.ci-load-smoke.yml up -d --build db redis api
+PREDICT_MODE=cache_hit PREDICT_WAIT_SECONDS=0.8 \
+locust -f locust_predict.py --host http://localhost:8000 \
+       --headless -u 1 -r 1 --run-time 150s --csv=loadtest_results/predict_cache_hit
+```
 
 ---
 

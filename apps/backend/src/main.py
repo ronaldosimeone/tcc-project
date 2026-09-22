@@ -40,6 +40,7 @@ from src.routers import stream as stream_router
 from src.routers import alerts_ws
 from src.routers import simulator as simulator_router
 from src.services.alert_service import get_alert_service
+from src.services.inference_cache import InferenceCache, create_redis_client
 from src.services.inference_pipeline import InferencePipelineService
 from src.services.model_registry import ModelRegistry
 from src.services.sensor_stream_service import get_sensor_stream_service
@@ -70,6 +71,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """
     # ── Startup ──────────────────────────────────────────────────────────
     app.state.limiter = limiter
+
+    # RNF-70/71 — cliente Redis do InferenceCache, singleton do lifespan
+    # (mesmo padrão do ModelRegistry abaixo). Não bloqueante: redis.asyncio
+    # só conecta de fato no primeiro comando — se o Redis estiver fora do
+    # ar no startup, o app sobe normalmente e InferenceCache degrada para
+    # MISS/no-op (ver services/inference_cache.py).
+    redis_client = create_redis_client(settings.redis_cache_url)
+    app.state.inference_cache = InferenceCache(redis_client)
 
     registry = ModelRegistry()
     app.state.model_registry = registry
@@ -103,6 +112,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     await pipeline.stop()
     await engine.dispose()
     log.info("db_pool_disposed")
+    await app.state.inference_cache.close()
+    log.info("inference_cache_redis_closed")
 
 
 # ---------------------------------------------------------------------------

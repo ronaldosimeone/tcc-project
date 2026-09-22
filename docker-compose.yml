@@ -119,6 +119,12 @@ services:
   # perder; a decisão de negócio (threshold + rate limit) já foi tomada e
   # persistida no Postgres antes do enqueue, então nada de crítico depende
   # da fila sobreviver a um restart.
+  #
+  # RNF-70 / RNF-51 — RNF-70/71 reaproveita esta MESMA instância como cache
+  # de inferência de POST /predict (src/services/inference_cache.py),
+  # logicamente isolado num DB Redis diferente (db=1, `REDIS_CACHE_URL`
+  # — broker do Celery continua em db=0, `CELERY_BROKER_URL`). Nenhum
+  # serviço/container novo — só um segundo uso lógico do que já existia.
   redis:
     image: redis:7-alpine
     container_name: redis

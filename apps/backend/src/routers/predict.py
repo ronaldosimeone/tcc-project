@@ -36,9 +36,18 @@ from src.core.database import get_db
 from src.core.rate_limit import PREDICT_RATE_LIMIT, limiter
 from src.schemas.predict import PredictRequest, PredictResponse
 from src.services.alert_service import get_alert_service
+from src.services.inference_cache import (
+    build_cache_key,
+    get_active_model_name,
+    get_inference_cache,
+)
 from src.services.model_service import get_model_service
 from src.services.prediction_service import save_prediction
-from src.services.protocols import AlertServiceProtocol, ModelServiceProtocol
+from src.services.protocols import (
+    AlertServiceProtocol,
+    InferenceCacheProtocol,
+    ModelServiceProtocol,
+)
 
 router: APIRouter = APIRouter(prefix="/predict", tags=["Predictions"])
 
@@ -68,8 +77,23 @@ async def predict(
     service: ModelServiceProtocol = Depends(get_model_service),
     db: AsyncSession = Depends(get_db),
     alert_service: AlertServiceProtocol = Depends(get_alert_service),
+    cache: InferenceCacheProtocol = Depends(get_inference_cache),
+    active_model_name: str = Depends(get_active_model_name),
 ) -> PredictResponse:
-    """Run fault detection, persist the result (RF-09) and push WS alert (RF-14)."""
+    """
+    Run fault detection, persist the result (RF-09) and push WS alert (RF-14).
+
+    RNF-70/71 — cache-aside: mesmos 12 sensores + mesmo modelo ativo, dentro
+    de 60s, devolve a MESMA PredictResponse já computada, sem reinferir, sem
+    reinserir em `predictions` e sem reprocessar alerta (ver
+    services/inference_cache.py para a justificativa completa da chave e do
+    porquê HIT pula o restante do pipeline).
+    """
+    cache_key = build_cache_key(payload, model_name=active_model_name)
+    cached: PredictResponse | None = await cache.get(cache_key)
+    if cached is not None:
+        return cached
+
     # CPU-bound inference is dispatched to the default threadpool so the
     # event loop remains responsive for other I/O-bound coroutines.
     result: PredictResponse = await asyncio.to_thread(service.predict, payload)
@@ -81,4 +105,5 @@ async def predict(
             "timestamp": result.timestamp,
         }
     )
+    await cache.set(cache_key, result)
     return result

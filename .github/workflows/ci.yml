@@ -148,9 +148,28 @@ jobs:
   test-python:
     name: Test Python (Backend & ML)
     runs-on: ubuntu-latest
+    # RNF-70/71 — Redis real para os testes de InferenceCache
+    # (tests/test_inference_cache.py, tests/test_predict_cache_integration.py).
+    # RNF-71 exige TTL OBSERVÁVEL (§9/§16 do requisito: "não marque testes
+    # como skip", "não use mock do Redis para provar performance/TTL do
+    # Redis") — um mock provaria só que `set(..., ex=60)` foi chamado, não
+    # que o Redis realmente expira a chave. Job roda direto no runner (sem
+    # container), então o service fica em `localhost:6379` — mesmo default
+    # de `TEST_REDIS_URL` nos testes (redis://localhost:6379/15, DB 15,
+    # isolado do db=1/db=0 usados em dev/produção).
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -197,6 +216,8 @@ jobs:
       # FALHA (exit != 0) se a cobertura total ficar abaixo do piso, sem
       # precisar de um step separado só para checar o número.
       - name: Run Pytest (Backend, com cobertura — RNF-57/RNF-65)
+        env:
+          TEST_REDIS_URL: redis://localhost:6379/15
         run: |
           cd apps/backend
           pytest --cov=src --cov-report=term-missing --cov-report=html --cov-report=xml -v --junitxml=pytest-report.xml
@@ -306,6 +327,8 @@ jobs:
   # por ID dentro de um mesmo arquivo, fora do escopo desta task).
   # SEM `needs: lint-python` pelo mesmo motivo do job `test-python` acima —
   # só depende das próprias dependências.
+  # RNF-70/71 — grupo 19 (inference_cache.py) adicionado depois da narrativa
+  # de 18 grupos acima; mesmo padrão (1 arquivo, disjunto dos demais).
   mutation-testing:
     name: Mutation Testing (RNF-64) — grupo ${{ matrix.group }}
     runs-on: ubuntu-latest
@@ -358,6 +381,27 @@ jobs:
             paths: "src/services/simulator.py"
           - group: 18
             paths: "src/services/telegram_alert_rate_limiter.py"
+          # RNF-70/71 — chave/TTL do cache de inferência é regra de
+          # negócio real (ver justificativa em pyproject.toml
+          # [tool.mutmut]), não um adapter de I/O puro.
+          - group: 19
+            paths: "src/services/inference_cache.py"
+    # RNF-70/71 — o `runner` do mutmut (pyproject.toml [tool.mutmut]) roda
+    # `pytest` sem filtro de path, ou seja, a suíte INTEIRA (incluindo
+    # tests/test_inference_cache.py e tests/test_predict_cache_integration.py)
+    # tanto na checagem de baseline quanto por mutante — em QUALQUER grupo,
+    # não só o 19. Sem Redis aqui, o baseline do mutmut falharia (RNF-71 não
+    # permite mockar TTL) e quebraria TODOS os 19 grupos, não só o novo.
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v4
 
@@ -385,6 +429,8 @@ jobs:
       # grupos (ver comentário acima do job `mutation-testing`).
       - name: Run mutmut (grupo ${{ matrix.group }})
         working-directory: apps/backend
+        env:
+          TEST_REDIS_URL: redis://localhost:6379/15
         run: |
           mutmut run --paths-to-mutate="${{ matrix.paths }}" --CI 2>&1 | tee /tmp/mutmut-run.log || true
 
@@ -711,6 +757,7 @@ jobs:
           RESEND_API_BASE_URL=https://api.resend.com
           RESEND_CLIENT_TIMEOUT_SECONDS=10.0
           CELERY_BROKER_URL=redis://redis:6379/0
+          REDIS_CACHE_URL=redis://redis:6379/1
           MCP_SERVER_PORT=8100
           MCP_SERVER_URL=http://mcp-server:8100
           EOF
@@ -773,6 +820,31 @@ jobs:
                  --headless -u 15 -r 5 --run-time 25s \
                  --csv=loadtest-smoke --html=loadtest-smoke.html
 
+      # RNF-70 — smoke reduzido de POST /predict cache-hit, MESMO princípio
+      # do smoke SSE acima ("não é o benchmark completo, só detecta
+      # regressão grosseira"): a evidência OFICIAL de RNF-70 (177 amostras,
+      # p95=47ms) é a run manual documentada em RELATORIO-RNF-70-RNF-71.md
+      # (README §14 tem o comando pra reproduzir). Este step só confirma que
+      # cache HIT continua funcionando fim-a-fim depois de cada mudança.
+      #
+      # PREDICT_WAIT_SECONDS=0.8 (~75/min) respeita o rate limit real de
+      # POST /predict (100/min por IP, RNF-19, src/core/rate_limit.py) — o
+      # Locust bate de um único IP (este runner), então o limite é
+      # compartilhado entre todos os usuários virtuais da run, não
+      # por-usuário; nunca contornado (nenhum IP falso/header spoofing).
+      # O veredito RNF-70 impresso no final é informativo (mesmo padrão do
+      # smoke SSE acima) — quem decide o exit code do Locust é falha de
+      # requisição real, não o p95 medido num runner compartilhado e
+      # ruidoso com amostra pequena.
+      - name: Rodar Locust smoke (POST /predict cache-hit)
+        env:
+          PREDICT_MODE: cache_hit
+          PREDICT_WAIT_SECONDS: "0.8"
+        run: |
+          locust -f locust_predict.py --host http://localhost:8000 \
+                 --headless -u 1 -r 1 --run-time 20s \
+                 --csv=loadtest-predict-cache-hit --html=loadtest-predict-cache-hit.html
+
       - name: Dump de logs da API em caso de falha
         if: failure()
         run: docker compose logs api db redis
@@ -786,6 +858,8 @@ jobs:
           path: |
             loadtest-smoke*.csv
             loadtest-smoke.html
+            loadtest-predict-cache-hit*.csv
+            loadtest-predict-cache-hit.html
           retention-days: 7
           if-no-files-found: warn
 
