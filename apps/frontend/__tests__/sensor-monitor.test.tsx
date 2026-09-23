@@ -141,8 +141,14 @@ describe("SensorMonitor", () => {
       });
     }
 
-    // 1 chamada inicial + 3 por intervalo
-    expect(mockFetch).toHaveBeenCalledTimes(4);
+    // 1 chamada inicial + 3 por intervalo. Filtra por URL — SensorMonitor
+    // também dispara useErrorRateStatus (RNF-77, hooks/use-error-rate.ts),
+    // que faz seu próprio fetch independente para /observability/error-rate;
+    // este teste valida só a cadência do polling de /predictions.
+    const predictionCalls = mockFetch.mock.calls.filter(([url]) =>
+      String(url).includes("/api/v1/predictions"),
+    );
+    expect(predictionCalls).toHaveLength(4);
     expect(mockFetch).toHaveBeenCalledWith(
       expect.stringContaining("/api/v1/predictions"),
       expect.objectContaining({ cache: "no-store" }),

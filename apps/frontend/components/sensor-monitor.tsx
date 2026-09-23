@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { AlertToastQueue } from "@/components/alert-toast-queue";
 import { useSensorData, getRiskLevel } from "@/hooks/use-sensor-data";
 import { useAlertWebSocket } from "@/hooks/use-alert-websocket";
+import { useErrorRateStatus } from "@/hooks/use-error-rate";
 import { isCriticalProb } from "@/lib/risk-thresholds";
 import { C } from "./sensor-monitor/constants";
 import { SensorMonitorHeader } from "./sensor-monitor/header";
@@ -41,6 +42,7 @@ export default function SensorMonitor() {
   } = useSensorData();
 
   const { alerts, status: wsStatus, acknowledge } = useAlertWebSocket();
+  const errorRateStatus = useErrorRateStatus();
 
   // Bug-fix: NÃO misturar a fila de toasts com a telemetria.
   // A fila `alerts` é apenas histórico de notificações pendentes de
@@ -74,6 +76,7 @@ export default function SensorMonitor() {
           isOffline={isOffline}
           sseStatus={sseStatus}
           wsStatus={wsStatus}
+          errorRateStatus={errorRateStatus}
         />
 
         {isDegraded && <DegradedModeBanner attempt={sseReconnectAttempt} />}

@@ -17,6 +17,7 @@ import { ConnectionStatus } from "@/components/connection-status";
 import type { SSEStatus } from "@/hooks/use-sse";
 import type { RiskLevel } from "@/hooks/use-sensor-data";
 import type { WsStatus } from "@/hooks/use-alert-websocket";
+import type { ErrorRateStatus } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
 
 export interface SensorMonitorHeaderProps {
@@ -28,6 +29,9 @@ export interface SensorMonitorHeaderProps {
   isOffline: boolean;
   sseStatus: SSEStatus;
   wsStatus: WsStatus;
+  /** RNF-77 — `null` enquanto o primeiro poll não resolveu (ver
+   * useErrorRateStatus); ConnectionStatus omite o pill nesse caso. */
+  errorRateStatus?: ErrorRateStatus | null;
 }
 
 export function SensorMonitorHeader({
@@ -39,6 +43,7 @@ export function SensorMonitorHeader({
   isOffline,
   sseStatus,
   wsStatus,
+  errorRateStatus,
 }: SensorMonitorHeaderProps) {
   return (
     <div
@@ -85,7 +90,11 @@ export function SensorMonitorHeader({
         </p>
       </div>
       <div className="flex flex-wrap items-center gap-3">
-        <ConnectionStatus sseStatus={sseStatus} wsStatus={wsStatus} />
+        <ConnectionStatus
+          sseStatus={sseStatus}
+          wsStatus={wsStatus}
+          errorRateStatus={errorRateStatus}
+        />
         {isOffline && (
           <Badge
             variant="outline"

@@ -28,11 +28,13 @@ from src.core.exceptions import (
     unhandled_exception_handler,
 )
 from src.core.logging import configure_logging
+from src.core.metrics import setup_http_instrumentation
 from src.core.rate_limit import limiter, rate_limit_exceeded_handler
 from src.routers import health as health_router
 from src.routers import maintenance as maintenance_router
 from src.routers import models as models_router
 from src.routers import monitoring as monitoring_router
+from src.routers import observability as observability_router
 from src.routers import predict as predict_router
 from src.routers import predictions as predictions_router
 from src.routers import settings as settings_router
@@ -148,6 +150,12 @@ def create_app() -> FastAPI:
     app.state.limiter = limiter
     app.add_middleware(SlowAPIMiddleware)
 
+    # ── Observabilidade — RNF-76 ─────────────────────────────────────────
+    # GET /metrics: aparece no Swagger só quando DEBUG=true, mesma regra
+    # de exposição que /docs/redoc/openapi.json acima (RNF-62 §127-132) —
+    # não é uma decisão nova, só aplica o padrão já existente no projeto.
+    setup_http_instrumentation(app, include_in_schema=_docs_enabled)
+
     # ── CORS ─────────────────────────────────────────────────────────────
     app.add_middleware(
         CORSMiddleware,
@@ -178,6 +186,7 @@ def create_app() -> FastAPI:
     app.include_router(maintenance_router.router)
     app.include_router(settings_router.router)
     app.include_router(monitoring_router.router)
+    app.include_router(observability_router.router)
 
     return app
 

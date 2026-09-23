@@ -63,6 +63,14 @@ mcp==2.2.0
 celery==5.4.0
 redis==5.0.8
 
+# RNF-76 / RNF-77 -- observabilidade de producao (GET /metrics, ver
+# src/core/metrics.py). prometheus-client ja vinha transitivo (nenhuma
+# outra lib do projeto expunha essa dependencia diretamente) -- fixado
+# aqui explicitamente, mesmo padrao "toda linha pinada" do resto do
+# arquivo.
+prometheus-client==0.26.0
+prometheus-fastapi-instrumentator==8.1.0
+
 # RF-27 / RNF-55 -- monitoramento de data drift (Celery Beat,
 # src/services/drift_monitor.py, src/tasks/drift_tasks.py). Ate a task de
 # hardening de seguranca (RNF-62) usava `evidently` (Report/Dataset/

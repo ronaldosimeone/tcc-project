@@ -121,6 +121,24 @@ export interface NotificationTestResponse {
   message: string;
 }
 
+// ── Domínio: Observabilidade (RNF-77) ────────────────────────────────────────
+
+/** Os 3 níveis do alerta de taxa de erro — nomes em inglês de propósito:
+ * eixo de "saúde de infraestrutura", distinto do `RiskLevel` do domínio de
+ * negócio (NORMAL/ALERTA/CRÍTICO, ver lib/risk-thresholds.ts), que mede
+ * probabilidade de falha do equipamento, não taxa de erro HTTP. */
+export type ErrorRateStatus = "NORMAL" | "WARNING" | "CRITICAL";
+
+/** Resposta de `GET /observability/error-rate`. */
+export interface ErrorRateResponse {
+  status: ErrorRateStatus;
+  error_rate: number;
+  window: string;
+  threshold_warning: number;
+  threshold_critical: number;
+  prometheus_reachable: boolean;
+}
+
 // ── Helpers internos ─────────────────────────────────────────────────────────
 
 export function resolveBaseUrl(): string {
@@ -306,4 +324,26 @@ export async function testAlertNotification(): Promise<NotificationTestResponse>
   }
 
   return response.json() as Promise<NotificationTestResponse>;
+}
+
+/** GET /observability/error-rate — veredito atual do alerta de taxa de erro
+ * (RNF-77). Sempre 200 mesmo se o Prometheus estiver indisponível (ver
+ * `prometheus_reachable` no corpo) — o backend nunca propaga esse erro como
+ * HTTP 5xx (ver observability_service.py), então o `!response.ok` abaixo só
+ * dispararia numa falha real da própria API/rede. */
+export async function getErrorRateStatus(): Promise<ErrorRateResponse> {
+  const baseUrl = resolveBaseUrl();
+
+  const response = await fetch(`${baseUrl}/observability/error-rate`, {
+    method: "GET",
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error(
+      `[api-client] getErrorRateStatus() falhou — HTTP ${response.status} ${response.statusText}`,
+    );
+  }
+
+  return response.json() as Promise<ErrorRateResponse>;
 }

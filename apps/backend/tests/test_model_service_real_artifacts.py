@@ -92,6 +92,11 @@ def test_load_model_by_name_loads_real_artifact_and_predicts(
     joblib) e produz uma predição válida a partir de um snapshot real."""
     service = load_model_by_name(model_name)
     assert isinstance(service, ModelService)
+    # RNF-76 — label `model` das métricas Prometheus (src/core/metrics.py)
+    # deve refletir o nome REAL carregado, não "unknown" — cobre as 5
+    # ramificações de `load_model_by_name`/`_load_sequential_model`/
+    # `_load_autoencoder_model` que constroem um ModelService.
+    assert service._model_name == model_name  # noqa: SLF001 — teste de integração
 
     response = service.predict(_SAMPLE_REQUEST)
     assert isinstance(response, PredictResponse)
@@ -143,3 +148,6 @@ def test_load_model_falls_back_to_alternate_filename(tmp_path: Path) -> None:
     service = load_model(fake_dir / "nome-que-nao-existe.joblib")
     response = service.predict(_SAMPLE_REQUEST)
     assert response.predicted_class in (0, 1)
+    # RNF-76 — chamador não passou `model_name`; confirma o default real do
+    # parâmetro (mata o mutante de string em `load_model`'s default).
+    assert service._model_name == "unknown"  # noqa: SLF001

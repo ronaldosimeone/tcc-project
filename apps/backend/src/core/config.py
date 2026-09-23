@@ -297,6 +297,29 @@ class Settings(BaseSettings):
         description="Absolute path to the processed MetroPT-3 parquet file.",
     )
 
+    # ── Observabilidade — Prometheus (RNF-76 / RNF-77) ──────────────────────
+    # URL interna do Prometheus (rede Docker — nunca exposta ao browser, ver
+    # RELATORIO-RNF-76-RNF-77.md §Fase 9). Consumida só por
+    # `observability_service.py`, que consulta o PromQL de taxa de erro e
+    # devolve um resumo pequeno (status + números) ao frontend — o Prometheus
+    # em si nunca é alcançável fora da rede Docker interna.
+    prometheus_url: str = Field(
+        default="http://prometheus:9090", alias="PROMETHEUS_URL"
+    )
+    # RNF-77 — limiares de taxa de erro 5xx (rolling window de 5 min, ver
+    # observability_service.py). Não são um número "escolhido pra passar no
+    # teste": 1%/5% é a banda de alerta precoce comum em SRE (referência:
+    # error budget de um SLO de 99% de disponibilidade deixa 1% de folga) —
+    # dá margem de resposta ANTES da folga do SLO se esgotar. Configuráveis
+    # via .env porque são uma decisão operacional, não uma constante de
+    # código.
+    error_rate_warning_threshold: float = Field(
+        default=0.01, alias="ERROR_RATE_WARNING_THRESHOLD"
+    )
+    error_rate_critical_threshold: float = Field(
+        default=0.05, alias="ERROR_RATE_CRITICAL_THRESHOLD"
+    )
+
     # ── Unsupervised Conv1D Autoencoder ───────────────────────────────────
     autoencoder_onnx_path: Path = Field(
         default=_DEFAULT_AUTOENCODER_ONNX_PATH,

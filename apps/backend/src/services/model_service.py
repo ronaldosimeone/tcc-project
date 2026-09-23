@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import json
 import logging
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -41,6 +42,7 @@ from fastapi import Request
 
 from src.core.config import settings
 from src.core.exceptions import ModelNotAvailableError
+from src.core.metrics import record_batch, record_inference
 from src.schemas.predict import PredictRequest, PredictResponse
 
 logger: logging.Logger = logging.getLogger(__name__)
@@ -162,7 +164,9 @@ def _resolve_feature_names(model_name: str) -> list[str]:
 
 
 def load_model(
-    path: Path, decision_threshold: float = _DEFAULT_THRESHOLD
+    path: Path,
+    decision_threshold: float = _DEFAULT_THRESHOLD,
+    model_name: str = "unknown",
 ) -> "ModelService":
     """Carrega o modelo do disco. Se não achar, tenta o nome alternativo."""
     if not path.exists():
@@ -177,7 +181,9 @@ def load_model(
 
     model: Any = joblib.load(path)
     logger.info("[RNF-11] Modelo carregado com sucesso: %s", path)
-    return ModelService(model, decision_threshold=decision_threshold)
+    return ModelService(
+        model, decision_threshold=decision_threshold, model_name=model_name
+    )
 
 
 # RF-10 registry — maps ACTIVE_MODEL values to their artefact paths.
@@ -216,7 +222,9 @@ def load_model_by_name(model_name: str) -> "ModelService":
             onnx_path=settings.mlp_onnx_path,
             scaler_path=settings.mlp_scaler_path,
         )
-        return ModelService(adapter, decision_threshold=threshold)
+        return ModelService(
+            adapter, decision_threshold=threshold, model_name=model_name
+        )
 
     if model_name in {"random_forest_v2", "xgboost_v2"}:
         from src.services.onnx_tree_adapter import OnnxTreeAdapter
@@ -236,6 +244,7 @@ def load_model_by_name(model_name: str) -> "ModelService":
         return ModelService(
             OnnxTreeAdapter(onnx_path=onnx_path, feature_names=feature_names),
             decision_threshold=threshold,
+            model_name=model_name,
         )
 
     if model_name in {"tcn", "bilstm", "patchtst"}:
@@ -246,7 +255,7 @@ def load_model_by_name(model_name: str) -> "ModelService":
 
     path = _MODEL_REGISTRY.get(model_name, settings.model_path)
     logger.info("[RF-10] Loading model '%s' | path = %s", model_name, path)
-    return load_model(path, decision_threshold=threshold)
+    return load_model(path, decision_threshold=threshold, model_name=model_name)
 
 
 def _load_sequential_model(model_name: str, threshold: float) -> "ModelService":
@@ -301,7 +310,7 @@ def _load_sequential_model(model_name: str, threshold: float) -> "ModelService":
         window_size=window_size,
         channel_names=channel_names,
     )
-    return ModelService(adapter, decision_threshold=threshold)
+    return ModelService(adapter, decision_threshold=threshold, model_name=model_name)
 
 
 def _load_autoencoder_model(threshold: float) -> "ModelService":
@@ -348,7 +357,7 @@ def _load_autoencoder_model(threshold: float) -> "ModelService":
         window_size=window_size,
         channel_names=channel_names,
     )
-    return ModelService(adapter, decision_threshold=threshold)
+    return ModelService(adapter, decision_threshold=threshold, model_name="autoencoder")
 
 
 def load_active_model() -> "ModelService":
@@ -382,15 +391,23 @@ class ModelService:
         values above 0.5 favour precision.  Loaded from the model card by
         :func:`load_model_by_name` so the same code path serves V1 and V2
         artefacts.
+    model_name:
+        Nome do modelo em `ModelRegistry.KNOWN_MODELS` (ex. "random_forest").
+        Usado exclusivamente como label de baixa cardinalidade nas métricas
+        Prometheus (RNF-76) — nunca afeta o comportamento de inferência.
+        Default "unknown" cobre apenas chamadas diretas de teste que não
+        passam por `load_model_by_name`.
     """
 
     def __init__(
         self,
         model: Any,
         decision_threshold: float = _DEFAULT_THRESHOLD,
+        model_name: str = "unknown",
     ) -> None:
         self._model = model
         self._threshold: float = decision_threshold
+        self._model_name: str = model_name
         # Mapeia as colunas que o modelo realmente espera para evitar KeyError
         self._expected_features = list(self._model.feature_names_in_)
 
@@ -429,12 +446,13 @@ class ModelService:
             it skips :meth:`_build_feature_row` (which zeroes rolling stats)
             and feeds the model the real time-series features.
         """
+        start = time.perf_counter()
         try:
             X = self._align_columns(X)
             failure_probability: float = float(self._model.predict_proba(X)[0][1])
             predicted_class: int = int(failure_probability >= self._threshold)
 
-            return PredictResponse(
+            response = PredictResponse(
                 predicted_class=predicted_class,
                 failure_probability=round(failure_probability, 6),
                 timestamp=datetime.now(timezone.utc).isoformat(),
@@ -443,7 +461,16 @@ class ModelService:
         except Exception:
             # Bare `raise` preserves the original traceback (PEP 8 / B904).
             logger.exception("Erro na predição")
+            record_inference(self._model_name, "error", time.perf_counter() - start)
             raise
+
+        record_inference(
+            self._model_name,
+            "success",
+            time.perf_counter() - start,
+            predicted_class=predicted_class,
+        )
+        return response
 
     def predict_batch(self, requests: list[PredictRequest]) -> list[PredictResponse]:
         """
@@ -482,6 +509,7 @@ class ModelService:
             probabilities: np.ndarray = np.asarray(self._model.predict_proba(X))
         except Exception:
             logger.exception("Erro na predição em lote")
+            record_batch(self._model_name, "error", len(requests))
             raise
 
         timestamp = datetime.now(timezone.utc).isoformat()
@@ -496,6 +524,7 @@ class ModelService:
                     timestamp=timestamp,
                 )
             )
+        record_batch(self._model_name, "success", len(requests))
         return responses
 
     def _align_columns(self, X: pd.DataFrame) -> pd.DataFrame:

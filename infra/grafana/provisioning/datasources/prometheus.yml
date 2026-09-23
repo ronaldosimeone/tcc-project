@@ -1,0 +1,15 @@
+# RNF-76/77 — provisiona o datasource Prometheus automaticamente no boot
+# do Grafana (RNF-76 Fase 6: "preferir provisioning automatizado para que
+# o ambiente seja reproduzível" — nada de clicar em "Add data source" no
+# navegador). `url` usa o nome do serviço Docker (`prometheus:9090`), rede
+# interna — Grafana nunca fala com o Prometheus via localhost nem via
+# internet.
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: false

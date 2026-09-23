@@ -1,0 +1,18 @@
+# RNF-76/77 — aponta o Grafana para a pasta de dashboards JSON versionados
+# em infra/grafana/dashboards/ (montada em /var/lib/grafana/dashboards no
+# container, ver docker-compose.yml). `allowUiUpdates: false` — dashboard
+# é código versionado no Git; uma edição feita direto no navegador seria
+# perdida no próximo `docker compose up` e criaria divergência silenciosa
+# entre o que está no repo e o que o time vê.
+apiVersion: 1
+
+providers:
+  - name: PredictIQ
+    orgId: 1
+    folder: ""
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: false
+    options:
+      path: /var/lib/grafana/dashboards
