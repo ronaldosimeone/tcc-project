@@ -1,11 +1,24 @@
 // ── Shell de card — RNF-58: extraído de FleetKPIs ────────────────────────────
 
 import type { ComponentType, ReactNode } from "react";
+import dynamic from "next/dynamic";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { TONE_BG, type SparkTone } from "./constants";
-import { KpiSparkline } from "./kpi-sparkline";
+
+// RNF-74/75 — mesmo motivo de ModelStatusCard.tsx: `recharts` sai do First
+// Load JS, vira chunk próprio. `ssr: true` — mesmo achado medido: `ssr:false`
+// tirava sparkline do HTML servido, causava round-trip extra pós-hidratação
+// que o Lighthouse mediu como regressão real de LCP/TTI nos cards acima da
+// dobra. Bundle continua code-split (ganho de RNF-74 preservado).
+const KpiSparkline = dynamic(
+  () => import("./kpi-sparkline").then((m) => m.KpiSparkline),
+  {
+    ssr: true,
+    loading: () => <Skeleton className="h-full w-full" />,
+  },
+);
 
 export interface KpiShellProps {
   title: string;
