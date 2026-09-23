@@ -430,22 +430,7 @@ class ModelService:
             and feeds the model the real time-series features.
         """
         try:
-            X = X.copy()  # never mutate caller's DataFrame
-
-            # Alinhamento Dinâmico: garante que TODAS as colunas esperadas existam.
-            for col in self._expected_features:
-                if col not in X.columns:
-                    # LPS / Caudal / Pressure_switch existem no schema antigo
-                    # com valor lógico "1 = OK"; o resto cai pra zero neutro.
-                    X[col] = (
-                        1.0
-                        if col in {"LPS", "Pressure_switch", "Caudal_impulses"}
-                        else 0.0
-                    )
-
-            # Reordena exatamente como o modelo foi treinado (drop extras).
-            X = X[self._expected_features]
-
+            X = self._align_columns(X)
             failure_probability: float = float(self._model.predict_proba(X)[0][1])
             predicted_class: int = int(failure_probability >= self._threshold)
 
@@ -459,6 +444,77 @@ class ModelService:
             # Bare `raise` preserves the original traceback (PEP 8 / B904).
             logger.exception("Erro na predição")
             raise
+
+    def predict_batch(self, requests: list[PredictRequest]) -> list[PredictResponse]:
+        """
+        Predição em lote — RNF-73.
+
+        Constrói UMA matriz de features [N, features] (concatena a linha
+        stateless de cada request — mesma :meth:`_build_feature_row` usada
+        por :meth:`predict`, preprocessing por amostra é aceitável, ver
+        RNF-73 §"Se alguma etapa do preprocessing exigir processamento
+        individual") e chama ``predict_proba`` **uma única vez** para as N
+        amostras — a MESMA chamada vetorizada que
+        ``OnnxTreeAdapter.predict_proba``/``RandomForestClassifier.predict_proba``
+        já fazem para qualquer número de linhas (nenhuma mudança nos
+        adapters foi necessária). NUNCA um laço chamando :meth:`predict` N
+        vezes — isso reduziria a N chamadas de inferência, exatamente o que
+        RNF-73 pede para evitar.
+
+        Levanta o mesmo tipo de exceção que :meth:`predict` em caso de erro
+        (nenhum tratamento silencioso) — o chamador (router) decide como
+        traduzir para HTTP.
+
+        Lista vazia devolve lista vazia — sem isso, ``pd.concat([])``
+        levanta ``ValueError`` genérico. A rota HTTP já rejeita batch vazio
+        via ``BatchPredictRequest(min_length=1)`` (422 antes de chegar
+        aqui); este guard é para o método continuar correto/testável
+        isoladamente, sem depender do chamador validar primeiro.
+        """
+        if not requests:
+            return []
+
+        rows = [self._build_feature_row(req) for req in requests]
+        X = pd.concat(rows, ignore_index=True)
+        X = self._align_columns(X)
+
+        try:
+            probabilities: np.ndarray = np.asarray(self._model.predict_proba(X))
+        except Exception:
+            logger.exception("Erro na predição em lote")
+            raise
+
+        timestamp = datetime.now(timezone.utc).isoformat()
+        responses: list[PredictResponse] = []
+        for row_probs in probabilities:
+            failure_probability = float(row_probs[1])
+            predicted_class = int(failure_probability >= self._threshold)
+            responses.append(
+                PredictResponse(
+                    predicted_class=predicted_class,
+                    failure_probability=round(failure_probability, 6),
+                    timestamp=timestamp,
+                )
+            )
+        return responses
+
+    def _align_columns(self, X: pd.DataFrame) -> pd.DataFrame:
+        """
+        Garante que TODAS as colunas esperadas pelo modelo existam, na
+        ordem exata do treino (drop extras) — compartilhado por
+        :meth:`predict_from_features` e :meth:`predict_batch` (extraído
+        nesta task, RNF-72/73, para não duplicar a lógica de alinhamento
+        entre o caminho single e o batch).
+        """
+        X = X.copy()  # never mutate caller's DataFrame
+        for col in self._expected_features:
+            if col not in X.columns:
+                # LPS / Caudal / Pressure_switch existem no schema antigo
+                # com valor lógico "1 = OK"; o resto cai pra zero neutro.
+                X[col] = (
+                    1.0 if col in {"LPS", "Pressure_switch", "Caudal_impulses"} else 0.0
+                )
+        return X[self._expected_features]
 
     def _build_feature_row(self, req: PredictRequest) -> pd.DataFrame:
         """

@@ -54,6 +54,10 @@ class ModelServiceProtocol(Protocol):
 
     def predict(self, request: PredictRequest) -> PredictResponse: ...
 
+    def predict_batch(
+        self, requests: list[PredictRequest]
+    ) -> list[PredictResponse]: ...
+
 
 @runtime_checkable
 class InferenceCacheProtocol(Protocol):

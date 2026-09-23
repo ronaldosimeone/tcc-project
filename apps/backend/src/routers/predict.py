@@ -33,8 +33,13 @@ from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.database import get_db
-from src.core.rate_limit import PREDICT_RATE_LIMIT, limiter
-from src.schemas.predict import PredictRequest, PredictResponse
+from src.core.rate_limit import PREDICT_BATCH_RATE_LIMIT, PREDICT_RATE_LIMIT, limiter
+from src.schemas.predict import (
+    BatchPredictRequest,
+    BatchPredictResponse,
+    PredictRequest,
+    PredictResponse,
+)
 from src.services.alert_service import get_alert_service
 from src.services.inference_cache import (
     build_cache_key,
@@ -107,3 +112,37 @@ async def predict(
     )
     await cache.set(cache_key, result)
     return result
+
+
+@router.post(
+    "/batch",
+    response_model=BatchPredictResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Batch fault prediction from multiple sensor snapshots",
+    description=(
+        "**RNF-73** — aceita de 1 a 100 snapshots numa única requisição e "
+        "executa inferência vetorizada (uma única chamada ao modelo para "
+        "todas as amostras, não um loop de N predições). `predictions[i]` "
+        "corresponde a `samples[i]` — mesma ordem, mesma contagem."
+        "\n\nFora do escopo desta rota (decisão deliberada, ver "
+        "RELATORIO-RNF-72-RNF-73.md): não persiste em `predictions` nem "
+        "aciona alertas/cache — RF-09/RF-14/RNF-70 continuam escopados ao "
+        "`POST /predict/` de amostra única."
+    ),
+    responses={
+        422: {"description": "Batch vazio, >100 amostras, ou amostra inválida."},
+        429: {"description": "Rate limit exceeded — slow down and retry."},
+        503: {"description": "Model not loaded — check startup logs."},
+    },
+)
+@limiter.limit(PREDICT_BATCH_RATE_LIMIT)
+async def predict_batch(
+    request: Request,
+    payload: BatchPredictRequest,
+    service: ModelServiceProtocol = Depends(get_model_service),
+) -> BatchPredictResponse:
+    """RNF-73 — inferência vetorizada real (ver ModelService.predict_batch)."""
+    results: list[PredictResponse] = await asyncio.to_thread(
+        service.predict_batch, payload.samples
+    )
+    return BatchPredictResponse(predictions=results, count=len(results))
