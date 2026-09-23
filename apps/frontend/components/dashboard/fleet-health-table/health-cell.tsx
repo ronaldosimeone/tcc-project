@@ -21,6 +21,7 @@ export function HealthCell({ health, trendPp }: HealthCellProps) {
     <div className="flex items-center gap-2">
       <Progress
         value={health}
+        aria-label={`Saúde do ativo: ${health}%`}
         className={cn("h-1.5 w-24 bg-slate-100", healthBarClass(health))}
       />
       <span

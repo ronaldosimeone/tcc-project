@@ -262,9 +262,9 @@ def rate_limited_app() -> FastAPI:
     app = FastAPI()
     app.state.limiter = test_limiter
     app.add_middleware(SlowAPIMiddleware)
-    app.add_exception_handler(  # type: ignore[arg-type]
+    app.add_exception_handler(
         RateLimitExceeded,
-        rate_limit_exceeded_handler,
+        rate_limit_exceeded_handler,  # type: ignore[arg-type]
     )
 
     @app.get("/limited")

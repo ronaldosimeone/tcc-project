@@ -68,23 +68,27 @@ export default function TiposEvento({ events }: TiposEventoProps) {
       <CardContent className="flex flex-1 flex-col items-center justify-center gap-2 px-4 pb-4">
         <div className="relative h-20 w-20 shrink-0">
           {donutSlices.length > 0 ? (
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={donutSlices}
-                  dataKey="value"
-                  innerRadius={24}
-                  outerRadius={38}
-                  paddingAngle={2}
-                  stroke="none"
-                  isAnimationActive={false}
-                >
-                  {donutSlices.map((s) => (
-                    <Cell key={s.name} fill={s.color} />
-                  ))}
-                </Pie>
-              </PieChart>
-            </ResponsiveContainer>
+            // aria-hidden + accessibilityLayer={false} (RNF-66 §12/§13): a
+            // lista abaixo já traz nome + % de cada fatia em texto real.
+            <div aria-hidden="true" className="contents">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart accessibilityLayer={false}>
+                  <Pie
+                    data={donutSlices}
+                    dataKey="value"
+                    innerRadius={24}
+                    outerRadius={38}
+                    paddingAngle={2}
+                    stroke="none"
+                    isAnimationActive={false}
+                  >
+                    {donutSlices.map((s) => (
+                      <Cell key={s.name} fill={s.color} />
+                    ))}
+                  </Pie>
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
           ) : (
             <div className="absolute inset-0 rounded-full bg-slate-100" />
           )}

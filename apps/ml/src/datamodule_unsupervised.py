@@ -282,7 +282,7 @@ class MetroPTUnsupervisedDataModule(pl.LightningDataModule):
             writeable=False,
         )
         # Recall-favouring: any fault sample inside the window flags the window.
-        y_win: np.ndarray = y_strided.any(axis=1).astype(np.int64)
+        y_win: np.ndarray = np.asarray(y_strided.any(axis=1)).astype(np.int64)
 
         return x_win, y_win
 

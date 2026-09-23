@@ -1,0 +1,13 @@
+# RNF-68/69 — override usado SÓ pelo job `load-smoke` do CI (nunca pelo dev
+# local, que continua usando docker-compose.yml puro via Nginx).
+#
+# Motivo: subir o serviço `nginx` do compose principal força o build do
+# serviço `frontend` também (nginx depende dele em docker-compose.yml) — um
+# build inteiro do Next.js só para o smoke test alcançar a API por trás do
+# proxy, sem necessidade nenhuma (o smoke mede a API, não o Nginx). Publica
+# a porta 8000 do serviço `api` direto no host, para o Locust rodar no
+# runner sem precisar de container extra nem de Nginx/frontend na stack.
+services:
+  api:
+    ports:
+      - "8000:8000"

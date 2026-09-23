@@ -74,8 +74,16 @@ _AUTH_TOKEN: str | None = os.environ.get("STREAMING_AUTH_TOKEN")
 _HOLD_SECONDS: float = float(os.environ.get("SSE_HOLD_SECONDS", "45"))
 _SSE_PATH: str = os.environ.get("SSE_PATH", "/api/stream/sensors")
 
-_P95_SLA_MS: float = 200.0  # RNF-37
-_MIN_CONNECTIONS: int = 100  # RNF-37
+_P95_SLA_MS: float = 200.0  # RNF-37 — mesma SLA de latência, smoke ou não.
+# RNF-68/69 — piso de conexões concorrentes configurável via env var.
+# Default 100 preserva o benchmark completo do RNF-37 (uso manual, ver
+# README §14.5). O smoke test do CI (job load-smoke) sobrescreve para um
+# valor bem menor via SSE_MIN_CONNECTIONS: o objetivo ali não é reprovar a
+# escala de 100 usuários (isso o benchmark completo já faz, fora do CI),
+# e sim detectar regressão grosseira (erro HTTP, conexão recusada, latência
+# anormal) numa carga pequena e rápida — não invent a SLA nova, só reduz a
+# escala do MESMO teste.
+_MIN_CONNECTIONS: int = int(os.environ.get("SSE_MIN_CONNECTIONS", "100"))
 
 
 class SSEStreamingUser(HttpUser):
@@ -206,8 +214,17 @@ def _print_rnf37_verdict(environment, **kwargs) -> None:  # type: ignore[no-unty
     concurrent = stats.num_requests - stats.num_failures
     passed = concurrent >= _MIN_CONNECTIONS and p95 < _P95_SLA_MS
 
+    label = (
+        "RNF-37 — SSE: >=100 conexões concorrentes, p95 < 200ms"
+        if _MIN_CONNECTIONS >= 100
+        else (
+            f"Load smoke (CI) — SSE: >={_MIN_CONNECTIONS} conexões concorrentes, "
+            f"p95 < {_P95_SLA_MS:.0f}ms — NÃO é o benchmark completo do RNF-37 "
+            "(ver README §14.5 para a run de 100 usuários)"
+        )
+    )
     print(f"\n{'=' * 60}")
-    print("RNF-37 — SSE: >=100 conexões concorrentes, p95 < 200ms")
+    print(label)
     print(f"{'=' * 60}")
     print(f"  Conexões bem-sucedidas : {concurrent}")
     print(f"  Falhas                 : {stats.num_failures}")

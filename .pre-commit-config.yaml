@@ -14,6 +14,22 @@ repos:
     rev: v1.10.0
     hooks:
       - id: mypy
+        # RNF-70/71 — o hook do mypy roda num venv isolado (só o que estiver
+        # em additional_dependencies fica instalado ali; `redis` não está,
+        # mesmo já sendo dependência de produção via requirements.txt desde
+        # RNF-50/51). `mypy.ini` (`ignore_missing_imports = True`) cobre
+        # módulo AUSENTE; aqui o mypy encontra o pacote mas sem tipos —
+        # categoria diferente (`import-untyped`), que precisa do pacote
+        # instalado nesse venv.
+        #
+        # `redis==5.0.8` (não `types-redis`): achado real — `redis-py`
+        # embute `py.typed` desde a série 4.x (tipos inline próprios,
+        # atualizados); `types-redis` é stub de terceiros desatualizado sem
+        # `Redis.aclose()` (adicionado depois), e SUBSTITUI o tipo real do
+        # pacote — instalá-lo é pior que não instalar nada. A versão aqui
+        # espelha exatamente o pin de requirements.txt (mesma fonte de
+        # verdade, evita divergência de tipos entre hook e CI).
+        additional_dependencies: [redis==5.0.8]
 
  
   - repo: local
@@ -30,3 +46,10 @@ repos:
     hooks:
       - id: prettier
         files: ^apps/frontend/
+        # RNF-68/69 — pnpm-lock.yaml tem estrutura exata exigida por
+        # `pnpm install --frozen-lockfile` (usado no CI); reformatar
+        # quebraria esse contrato. Mesma exclusão já feita para
+        # `pnpm prettier` via apps/frontend/.prettierignore — o hook do
+        # pre-commit não lê esse arquivo (roda a partir da raiz do repo),
+        # então precisa da exclusão própria aqui.
+        exclude: ^apps/frontend/pnpm-lock\.yaml$

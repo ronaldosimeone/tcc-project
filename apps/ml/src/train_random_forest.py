@@ -517,9 +517,7 @@ def save_artefacts(
         "best_cv_f1": round(best_cv_score, 4),
         "class_balancing": "SMOTE + class_weight='balanced_subsample'",
         # V2 — threshold tuning consumed by ModelService at load time
-        "decision_threshold": round(
-            threshold_info.get("threshold", 0.5), 4
-        ),
+        "decision_threshold": round(threshold_info.get("threshold", 0.5), 4),
         "threshold_strategy": "F2-score (recall-favouring)",
         "threshold_metrics": {
             "precision": round(threshold_info.get("precision", 0.0), 4),

@@ -112,7 +112,9 @@ async def _drive_generator(
         chunks: list[str] = []
         async for raw in response.body_iterator:
             if raw:
-                chunks.append(raw.decode() if isinstance(raw, bytes) else raw)
+                chunks.append(
+                    bytes(raw).decode() if isinstance(raw, (bytes, memoryview)) else raw
+                )
         return chunks
 
 

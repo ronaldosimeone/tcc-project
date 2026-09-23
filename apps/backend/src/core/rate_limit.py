@@ -40,6 +40,14 @@ limiter: Limiter = Limiter(
 #: Applied to POST /predict/ (RNF-19).
 PREDICT_RATE_LIMIT: str = "100/minute"
 
+#: Applied to POST /predict/batch (RNF-73). Mais restritivo que o single
+#: (100/min) de propósito: cada requisição de batch pode custar até 100x
+#: mais inferência que uma de /predict/ (até 100 amostras). 20/min no pior
+#: caso (100 amostras) ainda permite até 2000 inferências/min via batch —
+#: proporcional ao orçamento de 100/min do single, não um número arbitrário
+#: menor só para "parecer seguro".
+PREDICT_BATCH_RATE_LIMIT: str = "20/minute"
+
 # ── Custom 429 handler ────────────────────────────────────────────────────
 
 

@@ -96,6 +96,12 @@ class _FakeModelService:
             timestamp=datetime.now(timezone.utc).isoformat(),
         )
 
+    def predict_batch(self, requests: list[PredictRequest]) -> list[PredictResponse]:
+        # RNF-72/73 — ModelServiceProtocol cresceu para incluir predict_batch;
+        # este fake precisa continuar satisfazendo o Protocol estruturalmente.
+        # `self.predict` já registra cada request em `self.calls`.
+        return [self.predict(r) for r in requests]
+
 
 class _FakeAlertService:
     """NÃO herda de `AlertService` — prova que `POST /predict/` nunca

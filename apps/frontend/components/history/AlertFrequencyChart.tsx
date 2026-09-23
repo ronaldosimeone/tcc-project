@@ -77,46 +77,77 @@ export default function AlertFrequencyChart({
           espaço residual do grid (100dvh layout) sem cair abaixo do mínimo
           legível em viewports baixos. */}
       <CardContent className="flex flex-1 min-h-[200px] flex-col px-5 pb-4">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart
-            data={data}
-            margin={{ top: 8, right: 4, bottom: 0, left: -10 }}
-            barSize={14}
-          >
-            <CartesianGrid
-              strokeDasharray="3 3"
-              vertical={false}
-              stroke={GRID_STROKE}
-            />
-            <XAxis
-              dataKey="date"
-              tick={AXIS_TICK}
-              tickLine={false}
-              axisLine={false}
-              interval={1}
-            />
-            <YAxis
-              stroke="#94a3b8"
-              fontSize={11}
-              tickLine={false}
-              axisLine={false}
-              allowDecimals={false}
-              width={28}
-            />
-            <Tooltip
-              content={TOOLTIP_CONTENT}
-              cursor={{ fill: "#f1f5f9", fillOpacity: 0.6 }}
-            />
-            <Bar dataKey="critico" name="Crítico" stackId="a" fill="#ef4444" />
-            <Bar
-              dataKey="alerta"
-              name="Alerta"
-              stackId="a"
-              fill="#f59e0b"
-              radius={[3, 3, 0, 0]}
-            />
-          </BarChart>
-        </ResponsiveContainer>
+        {/* Alternativa textual ao gráfico (RNF-66 §12) — as duas estatísticas
+            do cabeçalho já dão o resumo agregado; a tabela abaixo (oculta
+            visualmente, presente para leitor de tela) dá a série completa
+            por dia que só o SVG do Recharts transmitiria visualmente. */}
+        <table className="sr-only">
+          <caption>Ocorrências por dia — últimos 14 dias</caption>
+          <thead>
+            <tr>
+              <th scope="col">Dia</th>
+              <th scope="col">Alertas</th>
+              <th scope="col">Falhas críticas</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.map((d) => (
+              <tr key={d.iso}>
+                <th scope="row">{d.date}</th>
+                <td>{d.alerta}</td>
+                <td>{d.critico}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <div aria-hidden="true" className="contents">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart
+              accessibilityLayer={false}
+              data={data}
+              margin={{ top: 8, right: 4, bottom: 0, left: -10 }}
+              barSize={14}
+            >
+              <CartesianGrid
+                strokeDasharray="3 3"
+                vertical={false}
+                stroke={GRID_STROKE}
+              />
+              <XAxis
+                dataKey="date"
+                tick={AXIS_TICK}
+                tickLine={false}
+                axisLine={false}
+                interval={1}
+              />
+              <YAxis
+                stroke="#94a3b8"
+                fontSize={11}
+                tickLine={false}
+                axisLine={false}
+                allowDecimals={false}
+                width={28}
+              />
+              <Tooltip
+                content={TOOLTIP_CONTENT}
+                cursor={{ fill: "#f1f5f9", fillOpacity: 0.6 }}
+              />
+              <Bar
+                dataKey="critico"
+                name="Crítico"
+                stackId="a"
+                fill="#ef4444"
+              />
+              <Bar
+                dataKey="alerta"
+                name="Alerta"
+                stackId="a"
+                fill="#f59e0b"
+                radius={[3, 3, 0, 0]}
+              />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
 
         <div className="mt-3 flex items-center justify-end gap-5 border-t border-border pt-3">
           <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">

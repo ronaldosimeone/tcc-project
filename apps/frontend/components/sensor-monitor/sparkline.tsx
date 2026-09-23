@@ -18,17 +18,26 @@ export const Sparkline = memo(function Sparkline({
   color,
 }: SparklineProps) {
   return (
-    <ResponsiveContainer width="100%" height={36}>
-      <LineChart data={data} margin={{ top: 2, right: 2, bottom: 2, left: 2 }}>
-        <Line
-          type="monotone"
-          dataKey={dataKey as string}
-          stroke={color}
-          strokeWidth={1.5}
-          dot={false}
-          isAnimationActive={false}
-        />
-      </LineChart>
-    </ResponsiveContainer>
+    // aria-hidden + accessibilityLayer={false} (RNF-66 §12/§13): puramente
+    // decorativo — o valor real já está em texto no SparkKpiCard. Ver
+    // kpi-sparkline.tsx para o motivo (Recharts 3.x accessibilityLayer).
+    <div aria-hidden="true" className="contents">
+      <ResponsiveContainer width="100%" height={36}>
+        <LineChart
+          accessibilityLayer={false}
+          data={data}
+          margin={{ top: 2, right: 2, bottom: 2, left: 2 }}
+        >
+          <Line
+            type="monotone"
+            dataKey={dataKey as string}
+            stroke={color}
+            strokeWidth={1.5}
+            dot={false}
+            isAnimationActive={false}
+          />
+        </LineChart>
+      </ResponsiveContainer>
+    </div>
   );
 });

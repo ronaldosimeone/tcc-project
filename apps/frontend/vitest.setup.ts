@@ -1,4 +1,5 @@
 import "@testing-library/jest-dom";
+import "jest-axe/extend-expect";
 
 // jsdom não implementa ResizeObserver — necessário pelo Radix Slider
 // (RF-25, `@radix-ui/react-use-size`) e por qualquer outro primitivo Radix

@@ -1,0 +1,23 @@
+{
+  "predict_batch_100_samples": {
+    "n_samples": 30,
+    "mean_ms": 37.3897420667466,
+    "p50_ms": 34.36159049942944,
+    "p95_ms": 57.46828704986902,
+    "p99_ms": 75.36551511020662,
+    "min_ms": 33.28262399918458,
+    "max_ms": 76.98839600016072,
+    "failures": 0
+  },
+  "comparison_100_predictions": {
+    "100x_predict_sequential": {
+      "total_s": 63.61539011000059,
+      "failures": 0
+    },
+    "1x_predict_batch_100": {
+      "total_s": 0.03523876399958681,
+      "failures": 0
+    },
+    "speedup_wall_time": 1805.2673502040682
+  }
+}

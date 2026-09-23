@@ -92,6 +92,14 @@ exclude_lines = [
 #   - Persistência com
 #     lógica própria:        prediction_service (paginação/offset, não é
 #                           um CRUD "thin")
+#   - Cache de inferência:  inference_cache (RNF-70/RNF-71) — composição da
+#                           cache key (QUAIS campos entram, RNF-70 §6) e o
+#                           TTL fixo (RNF-71) são decisão de negócio real:
+#                           uma chave errada serve predição do modelo/
+#                           sensores errados silenciosamente. Diferente dos
+#                           adapters de I/O puro excluídos abaixo — o get/set
+#                           contra o Redis É I/O, mas build_cache_key() e o
+#                           fallback MISS-em-qualquer-erro não são.
 #
 # Ficam FORA do escopo, com justificativa (nunca para esconder mutante
 # sobrevivente — decisão tomada ANTES de qualquer execução do mutmut):
@@ -134,8 +142,17 @@ exclude_lines = [
 # `test_drift_monitor.py::test_task_runs_directly_without_http` (ver
 # comentário no próprio teste) era um bloqueador real para a RNF-64, não
 # só um nice-to-have de qualidade.
+#
+# RNF-68/69 — tentativa registrada e revertida: `-n auto` (pytest-xdist) no
+# runner, testado por medir localmente ~77s serial → ~30-35s com workers
+# (16 núcleos nesta máquina). No GitHub Actions real (runner com muito menos
+# núcleos) o resultado foi o OPOSTO do esperado: o único par antes/depois
+# limpo (model_service.py sozinho, sem mudar de grupo entre as duas runs)
+# foi de 38min SEM `-n auto` para 50min COM `-n auto` — mais lento, não mais
+# rápido (runs 35638962074 e 35648496340). Revertido: prova real do GitHub
+# Actions > benchmark local, quando os dois discordam.
 [tool.mutmut]
-paths_to_mutate = "src/services/alert_service.py:src/services/alert_settings_service.py:src/services/critical_failure_notification_service.py:src/services/drift_monitor.py:src/services/feature_buffer.py:src/services/inference_pipeline.py:src/services/maintenance_suggestion_service.py:src/services/mlp_adapter.py:src/services/model_registry.py:src/services/model_service.py:src/services/onnx_autoencoder_adapter.py:src/services/onnx_sequence_adapter.py:src/services/onnx_tree_adapter.py:src/services/prediction_service.py:src/services/preprocessing.py:src/services/sensor_stream_service.py:src/services/simulator.py:src/services/telegram_alert_rate_limiter.py"
+paths_to_mutate = "src/services/alert_service.py:src/services/alert_settings_service.py:src/services/critical_failure_notification_service.py:src/services/drift_monitor.py:src/services/feature_buffer.py:src/services/inference_cache.py:src/services/inference_pipeline.py:src/services/maintenance_suggestion_service.py:src/services/mlp_adapter.py:src/services/model_registry.py:src/services/model_service.py:src/services/onnx_autoencoder_adapter.py:src/services/onnx_sequence_adapter.py:src/services/onnx_tree_adapter.py:src/services/prediction_service.py:src/services/preprocessing.py:src/services/sensor_stream_service.py:src/services/simulator.py:src/services/telegram_alert_rate_limiter.py"
 backup = false
 runner = "python -m pytest -x -q"
 tests_dir = "tests/"

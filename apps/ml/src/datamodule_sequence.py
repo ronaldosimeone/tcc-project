@@ -323,7 +323,7 @@ class MetroPTSequenceDataModule(pl.LightningDataModule):
         )
         # Recall-favouring window label: any fault sample inside the window
         # flags the entire window as anomalous.
-        y_win: np.ndarray = (y_strided.any(axis=1)).astype(np.int64)
+        y_win: np.ndarray = np.asarray(y_strided.any(axis=1)).astype(np.int64)
 
         return x_win, y_win
 

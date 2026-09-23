@@ -42,6 +42,7 @@ apps/ml/data/raw/*
 *.pyc
 *.pyo
 .pytest_cache/
+.mutmut-cache
 .coverage
 htmlcov/
 dist/

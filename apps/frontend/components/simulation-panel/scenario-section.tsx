@@ -163,15 +163,21 @@ export function ScenarioSection() {
       </RadioGroup>
 
       {pending && (
-        <p className="flex items-center gap-2 text-xs text-muted-foreground">
-          <Loader2 className="h-3 w-3 animate-spin" />
+        <p
+          role="status"
+          className="flex items-center gap-2 text-xs text-muted-foreground"
+        >
+          <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
           Aplicando cenário {pending}…
         </p>
       )}
 
       {error && (
-        <p className="flex items-start gap-2 text-xs text-destructive">
-          <CircleAlert className="h-3.5 w-3.5 shrink-0" />
+        <p
+          role="alert"
+          className="flex items-start gap-2 text-xs text-destructive"
+        >
+          <CircleAlert className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
           {error}
         </p>
       )}

@@ -119,6 +119,12 @@ services:
   # perder; a decisão de negócio (threshold + rate limit) já foi tomada e
   # persistida no Postgres antes do enqueue, então nada de crítico depende
   # da fila sobreviver a um restart.
+  #
+  # RNF-70 / RNF-51 — RNF-70/71 reaproveita esta MESMA instância como cache
+  # de inferência de POST /predict (src/services/inference_cache.py),
+  # logicamente isolado num DB Redis diferente (db=1, `REDIS_CACHE_URL`
+  # — broker do Celery continua em db=0, `CELERY_BROKER_URL`). Nenhum
+  # serviço/container novo — só um segundo uso lógico do que já existia.
   redis:
     image: redis:7-alpine
     container_name: redis
@@ -250,6 +256,82 @@ services:
     networks:
       - app-network
 
+  # RNF-76/77 — observabilidade de produção. Auditado antes desta task:
+  # nenhum Prometheus/Grafana/exportador de métricas existia no projeto
+  # (grep no repo inteiro) — os 3 serviços abaixo são inteiramente novos,
+  # nada duplicado.
+  #
+  # Sem `ports:` (só `expose`) — mesma regra dos demais serviços internos
+  # (`redis`, `mcp-server`): o Prometheus nunca precisa ser alcançável de
+  # fora da rede Docker. O backend consulta via `PROMETHEUS_URL` interna
+  # (src/services/observability_service.py); o navegador NUNCA fala com
+  # o Prometheus diretamente (RNF-77 Fase 9 — evita expor PromQL
+  # arbitrário publicamente, já que o Prometheus não tem autenticação
+  # própria por padrão).
+  prometheus:
+    image: prom/prometheus:v3.0.1
+    container_name: prometheus
+    volumes:
+      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=15d"
+    expose:
+      - "9090"
+    depends_on:
+      - api
+      - cadvisor
+    networks:
+      - app-network
+
+  # cAdvisor — exportador padrão (Google) de métricas de CPU/RAM/rede POR
+  # CONTAINER para o Prometheus (RNF-76 Fase 7 "Infraestrutura": CPU, RAM,
+  # disponibilidade dos containers). Sem ele, o Prometheus só enxerga o
+  # que a própria API expõe em /metrics (HTTP + ML) — nenhum dado de
+  # recurso de container. Montagens somente-leitura, só o necessário para
+  # ler `/proc`/`/sys`/cgroups e listar containers via o socket do
+  # Docker — nenhum acesso de escrita, nenhum dado de aplicação exposto
+  # (só uso de CPU/RAM/rede agregado).
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    container_name: cadvisor
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    expose:
+      - "8080"
+    networks:
+      - app-network
+
+  # Grafana — único serviço de observabilidade com `ports:` (publicado no
+  # host): é a UI que um humano abre no navegador para ver os dashboards
+  # (RNF-76 Fase 16 pede a "URL/rota local"). Porta 3001 — 3000 já é o
+  # `frontend` (que também só usa `expose`, alcançável via nginx). Datasource
+  # e dashboard provisionados automaticamente (ver infra/grafana/provisioning/)
+  # — RNF-76 Fase 6: "preferir provisioning automatizado", sem clicar em
+  # nada no navegador para o ambiente funcionar. Credenciais via variável de
+  # ambiente (.env.example), nunca hardcoded — mesmo padrão do `minio` acima.
+  grafana:
+    image: grafana/grafana:11.4.0
+    container_name: grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-changeme-grafana-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./infra/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "3001:3000"
+    depends_on:
+      - prometheus
+    networks:
+      - app-network
+
 networks:
   app-network:
     driver: bridge
@@ -259,3 +341,5 @@ volumes:
   frontend_node_modules:
   postgres_data:
   minio_data:
+  prometheus_data:
+  grafana_data:

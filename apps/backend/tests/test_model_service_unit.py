@@ -34,6 +34,7 @@ import pandas as pd
 import pytest
 
 import src.services.model_service as model_service_module
+from src.core import metrics as metrics_module
 from src.core.config import settings
 from src.core.exceptions import ModelNotAvailableError
 from src.schemas.predict import PredictRequest
@@ -673,3 +674,266 @@ async def test_get_model_service_raises_when_neither_registry_nor_legacy_service
     request = _FakeRequest(_FakeState(model_registry=None, model_service=None))
     with pytest.raises(ModelNotAvailableError):
         await get_model_service(request)  # type: ignore[arg-type]
+
+
+# ---------------------------------------------------------------------------
+# RNF-76 — métricas de ML (predict_from_features / predict_batch).
+#
+# `_counter_value`/`_histogram_count` leem o valor ATUAL do child de label
+# via a API interna do prometheus_client (`._value.get()`) — os Counters em
+# `src.core.metrics` são singletons de módulo, compartilhados por toda a
+# suíte no mesmo processo; por isso todo teste aqui mede o DELTA
+# antes/depois da chamada, nunca o valor absoluto (evita acoplamento à
+# ordem de execução dos outros testes).
+# ---------------------------------------------------------------------------
+
+
+def _counter_value(counter: Any, **labels: str) -> float:
+    return float(counter.labels(**labels)._value.get())  # noqa: SLF001
+
+
+def _histogram_count(histogram: Any, **labels: str) -> float:
+    return float(histogram.labels(**labels)._sum.get())  # noqa: SLF001
+
+
+class _BatchProbaModel:
+    feature_names_in_ = ["TP2"]
+
+    def predict_proba(self, X: pd.DataFrame) -> np.ndarray:
+        return np.array([[0.9, 0.1]] * len(X))
+
+
+class _BatchRaisingModel:
+    feature_names_in_ = ["TP2"]
+
+    def predict_proba(self, X: pd.DataFrame) -> np.ndarray:
+        raise RuntimeError("batch boom")
+
+
+def _sample_request() -> PredictRequest:
+    return PredictRequest(
+        TP2=1.0,
+        TP3=1.0,
+        H1=1.0,
+        DV_pressure=1.0,
+        Reservoirs=1.0,
+        Motor_current=1.0,
+        Oil_temperature=1.0,
+        COMP=1,
+        DV_eletric=1,
+        Towers=1,
+        MPG=1,
+        Oil_level=1,
+    )
+
+
+def test_predict_from_features_success_records_inference_and_prediction_metrics() -> (
+    None
+):
+    service = ModelService(
+        _ProbaModel(positive_proba=0.9), decision_threshold=0.5, model_name="_test_rf"
+    )
+    before_total = _counter_value(
+        metrics_module.INFERENCE_TOTAL, model="_test_rf", status="success"
+    )
+    before_pred = _counter_value(
+        metrics_module.PREDICTIONS_TOTAL, model="_test_rf", prediction_class="1"
+    )
+    before_error = _counter_value(
+        metrics_module.INFERENCE_TOTAL, model="_test_rf", status="error"
+    )
+
+    service.predict_from_features(pd.DataFrame([{"TP2": 1.0}]))
+
+    assert (
+        _counter_value(
+            metrics_module.INFERENCE_TOTAL, model="_test_rf", status="success"
+        )
+        == before_total + 1
+    )
+    assert (
+        _counter_value(
+            metrics_module.PREDICTIONS_TOTAL,
+            model="_test_rf",
+            prediction_class="1",
+        )
+        == before_pred + 1
+    )
+    # Sucesso NUNCA incrementa o contador de erro — mata o mutante que
+    # trocaria "success"/"error" ou removeria o `except`.
+    assert (
+        _counter_value(metrics_module.INFERENCE_TOTAL, model="_test_rf", status="error")
+        == before_error
+    )
+
+
+def test_predict_from_features_error_records_error_status_and_no_prediction() -> None:
+    service = ModelService(
+        _RaisingModel(), decision_threshold=0.5, model_name="_test_err"
+    )
+    before_error = _counter_value(
+        metrics_module.INFERENCE_TOTAL, model="_test_err", status="error"
+    )
+    before_success = _counter_value(
+        metrics_module.INFERENCE_TOTAL, model="_test_err", status="success"
+    )
+
+    with pytest.raises(RuntimeError, match="boom"):
+        service.predict_from_features(pd.DataFrame([{"TP2": 1.0}]))
+
+    assert (
+        _counter_value(
+            metrics_module.INFERENCE_TOTAL, model="_test_err", status="error"
+        )
+        == before_error + 1
+    )
+    assert (
+        _counter_value(
+            metrics_module.INFERENCE_TOTAL, model="_test_err", status="success"
+        )
+        == before_success
+    )
+
+
+def test_predict_from_features_records_positive_duration() -> None:
+    """Limite superior de 1s (folgado para uma predict_proba fake instantânea)
+    mata o mutante `time.perf_counter() - start` -> `+ start`: a soma de dois
+    `perf_counter()` dá um valor na casa dos milhares/milhões de segundos
+    (tempo de monotonic clock, não epoch), muito acima de qualquer duração
+    real — só a SUBTRAÇÃO produz um delta pequeno e plausível."""
+    service = ModelService(
+        _ProbaModel(positive_proba=0.1), decision_threshold=0.5, model_name="_test_dur"
+    )
+    before = _histogram_count(
+        metrics_module.INFERENCE_DURATION_SECONDS, model="_test_dur", status="success"
+    )
+    service.predict_from_features(pd.DataFrame([{"TP2": 1.0}]))
+    after = _histogram_count(
+        metrics_module.INFERENCE_DURATION_SECONDS, model="_test_dur", status="success"
+    )
+    delta = after - before
+    assert 0.0 < delta < 1.0
+
+
+def test_predict_from_features_error_records_bounded_positive_duration() -> None:
+    """Mesmo racional do teste acima, para o ramo de erro (`except` de
+    predict_from_features) — mata o mutante equivalente na chamada de
+    `record_inference` dentro do `except`."""
+    service = ModelService(
+        _RaisingModel(), decision_threshold=0.5, model_name="_test_err_dur"
+    )
+    before = _histogram_count(
+        metrics_module.INFERENCE_DURATION_SECONDS, model="_test_err_dur", status="error"
+    )
+    with pytest.raises(RuntimeError, match="boom"):
+        service.predict_from_features(pd.DataFrame([{"TP2": 1.0}]))
+    after = _histogram_count(
+        metrics_module.INFERENCE_DURATION_SECONDS, model="_test_err_dur", status="error"
+    )
+    delta = after - before
+    assert 0.0 < delta < 1.0
+
+
+def test_predict_batch_success_records_batch_request_and_sample_counts() -> None:
+    service = ModelService(
+        _BatchProbaModel(), decision_threshold=0.5, model_name="_test_batch"
+    )
+    requests = [_sample_request(), _sample_request(), _sample_request()]
+
+    before_requests = _counter_value(
+        metrics_module.BATCH_REQUESTS_TOTAL, model="_test_batch", status="success"
+    )
+    before_samples = _counter_value(
+        metrics_module.BATCH_SAMPLES_TOTAL, model="_test_batch"
+    )
+
+    service.predict_batch(requests)
+
+    assert (
+        _counter_value(
+            metrics_module.BATCH_REQUESTS_TOTAL, model="_test_batch", status="success"
+        )
+        == before_requests + 1
+    )
+    assert (
+        _counter_value(metrics_module.BATCH_SAMPLES_TOTAL, model="_test_batch")
+        == before_samples + 3
+    )
+
+
+def test_predict_batch_error_records_error_status_and_no_sample_count() -> None:
+    service = ModelService(
+        _BatchRaisingModel(), decision_threshold=0.5, model_name="_test_batch_err"
+    )
+    before_error = _counter_value(
+        metrics_module.BATCH_REQUESTS_TOTAL, model="_test_batch_err", status="error"
+    )
+    before_samples = _counter_value(
+        metrics_module.BATCH_SAMPLES_TOTAL, model="_test_batch_err"
+    )
+
+    with pytest.raises(RuntimeError, match="batch boom"):
+        service.predict_batch([_sample_request(), _sample_request()])
+
+    assert (
+        _counter_value(
+            metrics_module.BATCH_REQUESTS_TOTAL, model="_test_batch_err", status="error"
+        )
+        == before_error + 1
+    )
+    # Amostras de um batch que falhou NUNCA contam como processadas.
+    assert (
+        _counter_value(metrics_module.BATCH_SAMPLES_TOTAL, model="_test_batch_err")
+        == before_samples
+    )
+
+
+class _BatchThresholdModel:
+    """Fake cujo `predict_proba` devolve a probabilidade EXATA do threshold
+    para a 1ª amostra — mata o mutante `>=` -> `>` em `predict_batch` (o
+    equivalente do teste de fronteira já existente para
+    `predict_from_features`, `test_predict_from_features_predicted_class_is_1_exactly_at_the_threshold`,
+    que não cobre o loop de `predict_batch`, lógica duplicada e separada)."""
+
+    feature_names_in_ = ["TP2"]
+
+    def predict_proba(self, X: pd.DataFrame) -> np.ndarray:
+        return np.array([[0.5, 0.5]] * len(X))
+
+
+def test_predict_batch_predicted_class_is_1_exactly_at_the_threshold() -> None:
+    service = ModelService(_BatchThresholdModel(), decision_threshold=0.5)
+    responses = service.predict_batch([_sample_request()])
+    assert responses[0].predicted_class == 1
+
+
+def test_predict_batch_empty_list_records_no_metrics() -> None:
+    service = ModelService(
+        _BatchProbaModel(), decision_threshold=0.5, model_name="_test_batch_empty"
+    )
+    before = _counter_value(
+        metrics_module.BATCH_REQUESTS_TOTAL, model="_test_batch_empty", status="success"
+    )
+    assert service.predict_batch([]) == []
+    assert (
+        _counter_value(
+            metrics_module.BATCH_REQUESTS_TOTAL,
+            model="_test_batch_empty",
+            status="success",
+        )
+        == before
+    )
+
+
+def test_model_service_defaults_to_unknown_model_name_label() -> None:
+    service = ModelService(_ProbaModel(positive_proba=0.1), decision_threshold=0.5)
+    before = _counter_value(
+        metrics_module.INFERENCE_TOTAL, model="unknown", status="success"
+    )
+    service.predict_from_features(pd.DataFrame([{"TP2": 1.0}]))
+    assert (
+        _counter_value(
+            metrics_module.INFERENCE_TOTAL, model="unknown", status="success"
+        )
+        == before + 1
+    )

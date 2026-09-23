@@ -240,9 +240,7 @@ def _export_to_onnx(
         return
 
     initial_type = [("features", FloatTensorType([None, len(feature_names)]))]
-    onnx_model = convert_xgboost(
-        model, initial_types=initial_type, target_opset=15
-    )
+    onnx_model = convert_xgboost(model, initial_types=initial_type, target_opset=15)
     onnx_path.write_bytes(onnx_model.SerializeToString())
     log.info(
         "[V2] ONNX salvo: %s (%.1f MB)",

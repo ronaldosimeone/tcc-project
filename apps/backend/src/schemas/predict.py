@@ -81,3 +81,39 @@ class PredictResponse(BaseModel):
         description="Probability assigned to the fault class (class 1)",
     )
     timestamp: str = Field(description="ISO 8601 UTC timestamp of inference")
+
+
+class BatchPredictRequest(BaseModel):
+    """
+    [RNF-73] Múltiplos snapshots MetroPT-3 numa única chamada — inferência
+    vetorizada (ver ``ModelService.predict_batch``), não N chamadas
+    internas a ``predict()``.
+
+    ``max_length=100`` — o piso exigido pelo RNF-73 ("suportar 100
+    amostras"); não um limite arbitrário menor que impediria testar 100 de
+    verdade, nem maior sem necessidade comprovada (nenhum benchmark desta
+    task mediu acima de 100).
+    """
+
+    samples: list[PredictRequest] = Field(
+        ...,
+        min_length=1,
+        max_length=100,
+        description="1 a 100 snapshots de sensores MetroPT-3, na ordem em que devem ser retornados.",
+    )
+
+
+class BatchPredictResponse(BaseModel):
+    """
+    [RNF-73] ``predictions[i]`` corresponde exatamente a ``samples[i]`` do
+    request — mesma ordem, mesmo tamanho (garantido por
+    ``ModelService.predict_batch`` preservar a ordem da matriz de features
+    construída na mesma ordem de ``requests``).
+    """
+
+    predictions: list[PredictResponse] = Field(
+        description="Uma predição por amostra enviada, na MESMA ordem do request."
+    )
+    count: int = Field(
+        description="len(predictions) — atalho para o cliente, sem recontar."
+    )

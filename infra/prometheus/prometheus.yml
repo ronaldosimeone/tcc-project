@@ -1,0 +1,35 @@
+# RNF-76/77 — configuração de scrape do Prometheus.
+#
+# Alvos:
+#   predictiq-api  — GET /metrics do backend FastAPI (métricas HTTP do
+#                    prometheus-fastapi-instrumentator + ML customizadas de
+#                    src/core/metrics.py). Nome do serviço Docker (`api`),
+#                    nunca `localhost` — Prometheus roda no seu próprio
+#                    container, "localhost" ali seria o container do
+#                    Prometheus, não o da API (achado clássico de rede
+#                    Docker, documentado aqui para não repetir o erro).
+#   cadvisor       — CPU/RAM/rede por container (RNF-76 Fase 7
+#                    "Infraestrutura"). cAdvisor é o exportador padrão de
+#                    métricas de container para Prometheus — não expõe
+#                    nada além de uso de recursos (sem env vars, sem
+#                    conteúdo de volumes).
+#   prometheus     — o próprio Prometheus se automonitorando (padrão da
+#                    ferramenta, `up{job="prometheus"}` confirma que o
+#                    processo está de pé).
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: predictiq-api
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["api:8000"]
+
+  - job_name: cadvisor
+    static_configs:
+      - targets: ["cadvisor:8080"]
+
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]

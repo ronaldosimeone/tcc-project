@@ -42,22 +42,15 @@ import argparse
 import json
 import logging
 import sys
-import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-import joblib
 import numpy as np
 import pandas as pd
 import pytorch_lightning as pl
 import torch
-from sklearn.metrics import (
-    classification_report,
-    f1_score,
-    precision_recall_curve,
-    roc_auc_score,
-)
+from sklearn.metrics import classification_report, f1_score, roc_auc_score
 from sklearn.model_selection import GroupKFold, StratifiedKFold
 from sklearn.preprocessing import StandardScaler
 from torch.utils.data import DataLoader, TensorDataset
@@ -69,13 +62,8 @@ _MODELS_DIR: Path = _ML_ROOT / "models"
 
 sys.path.insert(0, str(_HERE))
 
-from datamodule_sequence import MetroPTSequenceDataModule, SequenceConfig  # noqa: E402
-from models import BiLstmClassifier, PatchTSTClassifier, TcnClassifier  # noqa: E402
-from train_sequential import (
-    _build_model,
-    _find_optimal_threshold,
-    _softmax,
-)  # noqa: E402
+# noqa: E402 — os 2 imports abaixo dependem do sys.path.insert acima.
+from train_sequential import _build_model, _find_optimal_threshold  # noqa: E402
 
 logging.basicConfig(
     level=logging.INFO,
@@ -129,7 +117,7 @@ def _make_windows_with_groups(
         strides=(y.strides[0] * stride, y.strides[0]),
         writeable=False,
     )
-    y_win: np.ndarray = y_strided.any(axis=1).astype(np.int64)
+    y_win: np.ndarray = np.asarray(y_strided.any(axis=1)).astype(np.int64)
 
     g_win: np.ndarray = groups_raw[np.arange(n) * stride]
 

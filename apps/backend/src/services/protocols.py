@@ -54,6 +54,20 @@ class ModelServiceProtocol(Protocol):
 
     def predict(self, request: PredictRequest) -> PredictResponse: ...
 
+    def predict_batch(
+        self, requests: list[PredictRequest]
+    ) -> list[PredictResponse]: ...
+
+
+@runtime_checkable
+class InferenceCacheProtocol(Protocol):
+    """Fronteira usada por `routers/predict.py` — cache de predição
+    (RNF-70/RNF-71). O router nunca vê o cliente Redis, só get/set."""
+
+    async def get(self, key: str) -> PredictResponse | None: ...
+
+    async def set(self, key: str, value: PredictResponse) -> None: ...
+
 
 @runtime_checkable
 class AlertServiceProtocol(Protocol):

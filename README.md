@@ -2196,6 +2196,7 @@ público, sem auth):
 | `STREAMING_AUTH_TOKEN`  | Envia `Authorization: Bearer <token>` se o endpoint exigir  | (nenhum)             |
 | `SSE_HOLD_SECONDS`      | Quanto tempo cada cliente mantém a conexão aberta           | `45`                  |
 | `SSE_PATH`              | Path do endpoint SSE                                        | `/api/stream/sensors` |
+| `SSE_MIN_CONNECTIONS`   | Piso de conexões concorrentes p/ o veredito PASS/FAIL (RNF-68/69 — usado pelo job `load-smoke` do CI para rodar uma versão reduzida/rápida deste mesmo script, ver §14.7) | `100` |
 
 O veredito RNF-37 (conexões, p50/p95/p99, PASS/FAIL) é impresso
 automaticamente ao final da run headless.
@@ -2295,6 +2296,231 @@ Os números absolutos podem não se transferir diretamente para produção,
 mas a CONCLUSÃO relativa (workers=1 > workers=2 para este workload; pool
 de conexões é irrelevante para SSE) depende da arquitetura da aplicação,
 não do hardware, e deve se manter.
+
+### 14.9. CI/CD Pipeline (RNF-68 / RNF-69)
+
+Workflow único: [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
+Dispara em `push`/`pull_request` para `main`.
+
+```text
+Pull Request / Push
+     │
+     ├── Check Environment Variables ──┐
+     ├── Dependency Security Audit ────┤
+     ├── Lint Python (ruff/black/mypy) ┤
+     ├── Test Python (pytest+cov) ─────┤  ← todos em paralelo,
+     ├── Mutation Testing (18 grupos) ─┤    sem dependência real
+     ├── Lint TypeScript ──────────────┤    entre si
+     ├── Test TypeScript (vitest+cov) ─┤
+     ├── E2E (Playwright+MSW) ─────────┤
+     └── Load Smoke Test (Locust) ─────┘
+              │
+              ▼
+      Mutation Score Gate (agrega os 18 grupos)
+              │
+              ▼
+         Quality Gate (agrega TODOS os jobs acima)
+              │
+              ▼
+           SUCCESS / FAILURE
+```
+
+**RNF-68 — por que quase tudo roda em paralelo:** auditoria desta task
+encontrou o pipeline anterior encadeando jobs (`lint → test`, `lint → test →
+e2e`) que não tinham dependência REAL entre si — só compartilhavam runner
+por conveniência de YAML. `pytest` não precisa que `ruff`/`black`/`mypy`
+tenham passado antes (só precisa das mesmas dependências instaladas, que
+cada job já instala por conta própria); o E2E sobe seu próprio `next dev` e
+usa MSW, não depende da suíte Vitest ter passado antes. Removido todo
+`needs` que não refletia uma dependência de dado/artefato real — o único
+`needs` que sobrou onde faz sentido é `mutation-score-gate` (precisa dos 18
+grupos de mutation testing terem terminado para agregar) e o `quality-gate`
+final (precisa de todos, de propósito).
+
+**RNF-68 — status real, medido no GitHub Actions (não estimado):** a meta
+de <15 min **não foi atingida**. Timeline honesta de 4 execuções reais e
+limpas (mesmo branch, `concurrency` já em vigor, sem contaminação entre
+runs):
+
+| Run | Configuração | Pipeline total | Gargalo (job mais lento) |
+|---|---|---|---|
+| 35638962074 | 9 grupos, sem `-n auto` | 1h08min | `preprocessing.py+simulator.py` — 67min |
+| 35648496340 | 18 grupos, com `-n auto` | 50min | `model_service.py` sozinho — 50min |
+| 35654114583 | 18 grupos, sem `-n auto` | 46min | `simulator.py` sozinho — 46min |
+| 35659010834 | 18 grupos, sem `-n auto` (final) | 48min | `simulator.py` sozinho — 47min |
+
+Causa raiz real (lida em `mutmut/__init__.py`, não suposta): mutmut decide
+sobrevivência de um mutante só pelo exit code do `runner` configurado — um
+mutante SOBREVIVENTE não tem "primeiro teste que falha" pra cortar em `-x`,
+então reroda a suíte inteira (708 testes) até o fim. Isso, multiplicado
+pelo número de mutantes de cada arquivo, é o gargalo — não o número de
+grupos do matrix. Duas correções tentadas:
+
+1. **Matrix de 9 → 18 grupos (1 arquivo por grupo)** — paralelismo real
+   adicional (verificado programaticamente: cobre exatamente os mesmos 18
+   arquivos de `[tool.mutmut] paths_to_mutate`, sem duplicata nem omissão).
+   **Funcionou de verdade**: 1h08min → ~46-48min.
+2. **`-n auto` (pytest-xdist) no runner do mutmut** — media localmente ~77s
+   serial → ~30-35s com workers (16 núcleos da máquina de desenvolvimento).
+   **Não funcionou no runner real do GitHub Actions**: o único par
+   antes/depois limpo (`model_service.py` isolado nas duas runs) foi de
+   38min sem `-n auto` para 50min com — mais lento, não mais rápido (menos
+   núcleos disponíveis no runner hospedado do que na máquina de teste).
+   Revertido — prova real do GitHub Actions prevalece sobre benchmark
+   local quando os dois discordam (ver comentário completo em
+   `apps/backend/pyproject.toml [tool.mutmut]`).
+
+Com o teto real de paralelismo por arquivo já esgotado (18 grupos = o
+máximo que dá pra dividir sem fatiar mutantes de um mesmo arquivo entre
+jobs), o gargalo estabilizou em `simulator.py` sozinho (~46-47min,
+reproduzido em 2 execuções consecutivas). Fechar o gap até <15min exigiria
+uma alavanca que este trabalho não implementou: sharding dos mutantes de UM
+MESMO arquivo por ID entre múltiplos jobs (mutmut permite rodar um
+subconjunto de IDs de mutante) — engenharia real adicional, com risco de
+regressão na agregação do score entre shards, fora do escopo de RNF-68/69
+(arquitetura do pipeline existente) e registrada aqui como recomendação de
+trabalho futuro, não como algo simulado ou escondido.
+
+**Mutation Testing — 18 grupos (1 arquivo cada; antes 4, depois 9):** é a
+etapa mais lenta de longe (25-90 min sequencial para os 1401 mutantes/18
+arquivos, ver `RELATORIO-RNF-64-RNF-65.md`) — granularidade máxima por
+arquivo é o teto real de paralelismo disponível sem fatiar mutantes de um
+mesmo arquivo entre jobs (ver tabela de RNF-68 acima).
+
+**Load Smoke Test (novo, RNF-68/69):** sobe uma stack Docker isolada
+(`db`+`redis`+`api`, própria deste job, destruída ao final) via
+[`docker-compose.ci-load-smoke.yml`](docker-compose.ci-load-smoke.yml) —
+publica a porta 8000 da `api` direto no host e **não** sobe `nginx`/
+`frontend` (subir `nginx` forçaria o build completo do Next.js só para o
+smoke alcançar a API por trás do proxy, sem necessidade: o smoke mede a
+API, não o Nginx). Roda uma versão REDUZIDA de
+[`locust_streaming.py`](locust_streaming.py) (RNF-37) — 15 usuários/25s via
+`SSE_MIN_CONNECTIONS=15`, não os 100 usuários/75s do benchmark completo
+(esse continua documentado em §14.5 para execução manual — pesado demais
+para o orçamento de 15 min do CI). Mesma SLA de latência (p95 < 200ms) do
+RNF-37, só com concorrência menor — detecta regressão grosseira (erro
+HTTP, conexão recusada, latência anormal), não substitui o benchmark
+completo.
+
+**Accessibility (RNF-66/67):** os testes de acessibilidade
+(`__tests__/a11y.test.tsx`, axe + simulação real de teclado via
+`userEvent`) já rodam dentro da suíte geral do Vitest no job
+`test-typescript` — o job `test-typescript` FALHA de verdade se qualquer
+violação axe Critical/Serious for detectada (nenhum gate especial
+necessário além do `vitest run` normal). Um segundo step roda só esse
+arquivo de novo com `--reporter=json` para publicar um artifact nomeado e
+fácil de achar (`accessibility-report`), sem duplicar a suíte inteira.
+
+**Quality Gates preservados (nenhum reduzido para "caber" no tempo):**
+
+| Gate | Piso | Job |
+|---|---|---|
+| Cobertura Python | ≥ 85% | `test-python` (`pytest --cov`, `fail_under` em `pyproject.toml`) |
+| Mutation Score | ≥ 70% | `mutation-score-gate` (agrega os 19 grupos — grupo 19 = `inference_cache.py`, RNF-70/71) |
+| Cobertura Frontend | ≥ 75% | `test-typescript` (`vitest run --coverage`, `thresholds` em `vitest.config.ts`) |
+| Acessibilidade | axe Critical/Serious = 0 | `test-typescript` (`__tests__/a11y.test.tsx`) |
+| Segurança | 0 vulnerabilidades High/Critical em produção | `security-audit` |
+| Import boundaries | sem violação | `test-python` (`lint-imports`, RNF-56) |
+| Tamanho de componente | ≤ 200 linhas | `lint-typescript` (RNF-58) |
+
+**Artifacts publicados (RNF-69)** — todos com `if: always()` onde a falha
+do teste ainda é o cenário mais importante para investigar:
+
+| Artifact | Job | Conteúdo |
+|---|---|---|
+| `coverage-python` | `test-python` | `htmlcov/`, `coverage.xml`, `pytest-report.xml` (JUnit) |
+| `mutmut-summary-group-N` | `mutation-testing` (×19) | JSON por grupo — score/killed/survived |
+| `coverage-frontend` | `test-typescript` | `coverage/` (HTML navegável + `lcov.info`) |
+| `accessibility-report` | `test-typescript` | `a11y-report.json` (JSON reporter do Vitest) |
+| `storybook-build` | `test-typescript` | `storybook-static/` — catálogo de componentes navegável |
+| `playwright-report` | `test-e2e` | HTML navegável (`pnpm exec playwright show-report`) |
+| `e2e-results` | `test-e2e` (só em falha) | screenshots + `trace.zip` por teste falho |
+| `locust-report` | `load-smoke` | CSV + HTML do Locust |
+
+Baixe em qualquer execução do workflow: aba **Actions** → run → seção
+**Artifacts** no rodapé da página. Num PR, o link aparece direto no check
+do workflow.
+
+**Investigando uma falha:**
+1. Veja qual job falhou no resumo do PR/Actions.
+2. Baixe o artifact correspondente (tabela acima).
+3. `playwright-report`/`coverage-frontend`: abra `index.html` localmente
+   (navegável, sem servidor — ou `pnpm exec playwright show-report` para o
+   primeiro).
+4. `e2e-results`: `pnpm exec playwright show-trace trace.zip` abre o
+   trace viewer interativo (timeline, DOM snapshots, network).
+5. `mutmut-summary-group-N`: JSON simples (`score`, `killed`, `survived`,
+   `total`) — o log completo do `mutmut run` fica no log do próprio job
+   (não é um artifact, pode crescer muito para grupos com muitos
+   sobreviventes).
+6. `locust-report`: `loadtest-smoke.html` — mesmo formato do benchmark
+   manual de §14.5.
+
+**Rodando localmente antes de abrir o PR** — mesmos comandos usados pelo
+CI, seção a seção:
+
+```powershell
+# Backend
+cd apps\backend
+ruff check . ; black --check . ; mypy . --ignore-missing-imports
+# RNF-70/71 — os testes de InferenceCache exigem Redis real (TTL observável,
+# não mock; ver §14.10). `docker compose up -d redis` primeiro, ou aponte
+# TEST_REDIS_URL para qualquer Redis acessível (default: localhost:6379/15).
+$env:TEST_REDIS_URL = "redis://localhost:6379/15"
+pytest --cov=src --cov-report=term-missing
+lint-imports
+
+# Frontend
+cd apps\frontend
+pnpm eslint . ; pnpm prettier --check . ; pnpm check:component-size
+pnpm exec vitest run --coverage
+pnpm exec playwright test   # requer `pnpm e2e:setup` antes, 1ª vez
+
+# Mutation testing (local, escopo completo — 25-90 min, ver §3 do
+# RELATORIO-RNF-64-RNF-65.md)
+cd apps\backend
+mutmut run
+```
+
+**Limitação conhecida:** o tempo total do pipeline (RNF-68) só pode ser
+comprovado no GitHub Actions real (wall-clock entre início e fim do
+workflow) — rodar cada comando localmente valida CORRETUDE, não mede
+paralelismo real de runners.
+
+### 14.10. Cache de Inferência com Redis (RNF-70 / RNF-71)
+
+Relatório completo (auditoria, baseline, `EXPLAIN ANALYZE`, arquitetura do
+`InferenceCache`, testes, benchmark): **[RELATORIO-RNF-70-RNF-71.md](RELATORIO-RNF-70-RNF-71.md)**.
+
+**Resumo:** `POST /predict/` ganhou um cache-aside via Redis (mesma
+instância já usada pelo broker do Celery, RNF-50/51 — isolado num DB Redis
+diferente, sem serviço novo). Chave = hash dos 12 sensores + modelo ativo;
+TTL fixo de 60s (RNF-71). Auditoria mostrou que o caminho de `/predict/` já
+era barato no banco (1 INSERT + 1 SELECT, ambos < 0,15ms via Index/PK scan,
+sem Seq Scan) — nenhum índice novo foi justificado, nenhuma migration foi
+criada.
+
+| Métrica | Antes (sem cache) | Depois (cache hit) |
+|---|---:|---:|
+| p50 | 56 ms | 44 ms |
+| p95 | 68 ms | **47 ms** |
+| p99 | 75 ms | 58 ms |
+
+**RNF-70 (p95 < 50ms em cache hit): PASS** — 177 requisições reais via
+[`locust_predict.py`](locust_predict.py), 0 falhas, medido contra a API
+real (rate limit de 100/min, RNF-19, respeitado — nunca contornado).
+
+**RNF-71 (TTL de 60s observável): PASS** — TTL confirmado contra Redis real
+(`55 <= TTL <= 60`) e expiração real demonstrada (chave expira, próxima
+requisição idêntica é um MISS genuíno, nova inferência).
+
+```bash
+# Reproduzir o benchmark (stack real, mesma do job load-smoke)
+docker compose -f docker-compose.yml -f docker-compose.ci-load-smoke.yml up -d --build db redis api
+PREDICT_MODE=cache_hit PREDICT_WAIT_SECONDS=0.8 \
+locust -f locust_predict.py --host http://localhost:8000 \
+       --headless -u 1 -r 1 --run-time 150s --csv=loadtest_results/predict_cache_hit
+```
 
 ---
 

@@ -208,7 +208,9 @@ async def test_post_predict_persists_sensor_values(
     async with session_factory() as session:
         from sqlalchemy import select
 
-        row: Prediction = (await session.execute(select(Prediction))).scalars().first()
+        row: Prediction | None = (
+            (await session.execute(select(Prediction))).scalars().first()
+        )
 
     assert row is not None
     assert row.TP2 == pytest.approx(_VALID_PAYLOAD["TP2"])
@@ -230,7 +232,9 @@ async def test_post_predict_persists_ml_outputs(
     async with session_factory() as session:
         from sqlalchemy import select
 
-        row: Prediction = (await session.execute(select(Prediction))).scalars().first()
+        row: Prediction | None = (
+            (await session.execute(select(Prediction))).scalars().first()
+        )
 
     assert row is not None
     assert row.predicted_class == body["predicted_class"]
@@ -251,7 +255,9 @@ async def test_post_predict_persists_timestamp(
     async with session_factory() as session:
         from sqlalchemy import select
 
-        row: Prediction = (await session.execute(select(Prediction))).scalars().first()
+        row: Prediction | None = (
+            (await session.execute(select(Prediction))).scalars().first()
+        )
 
     assert row is not None
     # Compare as UTC-aware — replace tzinfo if stored as naive by SQLite

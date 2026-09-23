@@ -129,9 +129,7 @@ class MetroPTPreprocessor(BaseEstimator, TransformerMixin):
     # sklearn API
     # ------------------------------------------------------------------
 
-    def fit(
-        self, X: pd.DataFrame, y: pd.Series | None = None
-    ) -> "MetroPTPreprocessor":
+    def fit(self, X: pd.DataFrame, y: pd.Series | None = None) -> "MetroPTPreprocessor":
         """No-op fit kept for sklearn Pipeline compatibility."""
         return self
 
@@ -240,10 +238,7 @@ class MetroPTPreprocessor(BaseEstimator, TransformerMixin):
         cols: list[str] = self._resolve_sensor_cols(df)
         for col in cols:
             df[f"{col}_std_{self.window_std}"] = (
-                df[col]
-                .rolling(window=self.window_std, min_periods=1)
-                .std()
-                .fillna(0.0)
+                df[col].rolling(window=self.window_std, min_periods=1).std().fillna(0.0)
             )
         return df
 

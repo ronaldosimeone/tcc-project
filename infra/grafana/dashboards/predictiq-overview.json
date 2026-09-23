@@ -1,0 +1,119 @@
+{
+  "uid": "predictiq-overview",
+  "title": "PredictIQ — API, Infra e ML (RNF-76/77)",
+  "description": "Dashboard autoral (não copiado de um ID público do grafana.com) — cada query abaixo usa exclusivamente métricas reais expostas por GET /metrics (prometheus-fastapi-instrumentator + src/core/metrics.py) e pelo cAdvisor, validadas manualmente contra o Prometheus real desta task antes de serem salvas aqui.",
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "15s",
+  "time": { "from": "now-1h", "to": "now" },
+  "tags": ["predictiq", "rnf-76", "rnf-77"],
+  "panels": [
+    { "id": 100, "type": "row", "title": "API (RNF-76)", "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 } },
+
+    { "id": 1, "type": "timeseries", "title": "Requests/sec por rota",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 1 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "targets": [ { "expr": "sum(rate(http_requests_total[5m])) by (handler)", "legendFormat": "{{handler}}" } ] },
+
+    { "id": 2, "type": "timeseries", "title": "Requests/sec por status code",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 1 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "targets": [ { "expr": "sum(rate(http_requests_total[5m])) by (status)", "legendFormat": "{{status}}" } ] },
+
+    { "id": 3, "type": "stat", "title": "Taxa de erro 5xx (5m) — mesma definição do RNF-77",
+      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 9 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": { "defaults": { "unit": "percentunit",
+        "thresholds": { "mode": "absolute", "steps": [
+          { "color": "green", "value": null },
+          { "color": "orange", "value": 0.01 },
+          { "color": "red", "value": 0.05 }
+        ] } } },
+      "targets": [ { "expr": "sum(rate(http_requests_total{status=~\"5..\"}[5m])) / sum(rate(http_requests_total[5m]))" } ] },
+
+    { "id": 4, "type": "stat", "title": "Taxa de erro 4xx (5m)",
+      "gridPos": { "h": 6, "w": 6, "x": 6, "y": 9 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": { "defaults": { "unit": "percentunit" } },
+      "targets": [ { "expr": "sum(rate(http_requests_total{status=~\"4..\"}[5m])) / sum(rate(http_requests_total[5m]))" } ] },
+
+    { "id": 5, "type": "timeseries", "title": "Latência p95 (highr, todas as rotas)",
+      "gridPos": { "h": 6, "w": 12, "x": 12, "y": 9 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "targets": [ { "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_highr_seconds_bucket[5m])) by (le))", "legendFormat": "p95" },
+                    { "expr": "histogram_quantile(0.50, sum(rate(http_request_duration_highr_seconds_bucket[5m])) by (le))", "legendFormat": "p50" } ] },
+
+    { "id": 101, "type": "row", "title": "Infraestrutura — CPU / RAM / containers (RNF-76 Fase 7)", "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 15 } },
+
+    { "id": 6, "type": "timeseries", "title": "CPU por container (cores) — agregado se cAdvisor não resolver nomes individuais",
+      "description": "Duas séries de propósito: {name!=\"\"} dá a quebra POR container (funciona em host Linux nativo); {id=\"/docker\"} é o agregado de TODOS os containers Docker, usado como piso em hosts onde o cAdvisor não resolve nomes individuais (achado real desta task em Docker Desktop/WSL2 — ver RELATORIO-RNF-76-RNF-77.md).",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "targets": [
+        { "expr": "sum(rate(container_cpu_usage_seconds_total{name!=\"\"}[5m])) by (name)", "legendFormat": "{{name}}" },
+        { "expr": "sum(rate(container_cpu_usage_seconds_total{id=\"/docker\"}[5m]))", "legendFormat": "todos os containers (agregado)" }
+      ] },
+
+    { "id": 7, "type": "timeseries", "title": "RAM por container — agregado se cAdvisor não resolver nomes individuais",
+      "description": "Mesmo par de séries do painel de CPU ao lado — ver descrição ali.",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": { "defaults": { "unit": "bytes" } },
+      "targets": [
+        { "expr": "container_memory_usage_bytes{name!=\"\"}", "legendFormat": "{{name}}" },
+        { "expr": "container_memory_usage_bytes{id=\"/docker\"}", "legendFormat": "todos os containers (agregado)" }
+      ] },
+
+    { "id": 8, "type": "stat", "title": "Disponibilidade dos alvos scrapeados (up)",
+      "gridPos": { "h": 6, "w": 24, "x": 0, "y": 24 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": { "defaults": { "mappings": [
+        { "type": "value", "options": { "1": { "text": "UP", "color": "green" } } },
+        { "type": "value", "options": { "0": { "text": "DOWN", "color": "red" } } }
+      ] } },
+      "targets": [ { "expr": "up", "legendFormat": "{{job}}" } ] },
+
+    { "id": 102, "type": "row", "title": "Machine Learning — inferência e predições (RNF-76 Fase 3)", "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 30 } },
+
+    { "id": 9, "type": "timeseries", "title": "Inferências/sec por modelo e status",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 31 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "targets": [ { "expr": "sum(rate(predictiq_inference_total[5m])) by (model, status)", "legendFormat": "{{model}} — {{status}}" } ] },
+
+    { "id": 10, "type": "timeseries", "title": "Duração da inferência — p95 por modelo",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 31 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "targets": [ { "expr": "histogram_quantile(0.95, sum(rate(predictiq_inference_duration_seconds_bucket[5m])) by (le, model))", "legendFormat": "{{model}}" } ] },
+
+    { "id": 11, "type": "timeseries", "title": "Distribuição de classe prevista (0=normal, 1=falha)",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 39 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "targets": [ { "expr": "sum(rate(predictiq_predictions_total[5m])) by (model, prediction_class)", "legendFormat": "{{model}} — classe {{prediction_class}}" } ] },
+
+    { "id": 12, "type": "timeseries", "title": "Erros de inferência/sec por modelo (não-HTTP — pipeline contínuo incluso)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 39 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "targets": [ { "expr": "sum(rate(predictiq_inference_total{status=\"error\"}[5m])) by (model)", "legendFormat": "{{model}}" } ] },
+
+    { "id": 13, "type": "timeseries", "title": "Batch — amostras/sec processadas por modelo",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 47 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "targets": [ { "expr": "sum(rate(predictiq_batch_samples_total[5m])) by (model)", "legendFormat": "{{model}}" } ] },
+
+    { "id": 14, "type": "timeseries", "title": "Batch — chamadas/sec por modelo e status",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 47 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "targets": [ { "expr": "sum(rate(predictiq_batch_requests_total[5m])) by (model, status)", "legendFormat": "{{model}} — {{status}}" } ] }
+  ],
+  "templating": {
+    "list": [
+      { "name": "DS_PROMETHEUS", "type": "datasource", "query": "prometheus", "current": { "text": "Prometheus", "value": "Prometheus" } }
+    ]
+  }
+}

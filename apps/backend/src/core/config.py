@@ -54,7 +54,9 @@ class Settings(BaseSettings):
     # ── Database ──────────────────────────────────────────────────────────
     # Expected format: postgresql+asyncpg://user:password@host:port/dbname
     postgres_url: PostgresDsn = Field(
-        default="postgresql+asyncpg://postgres:postgres@localhost:5432/tcc_db",
+        default=PostgresDsn(
+            "postgresql+asyncpg://postgres:postgres@localhost:5432/tcc_db"
+        ),
         alias="DATABASE_URL",
     )
 
@@ -171,6 +173,16 @@ class Settings(BaseSettings):
         default="redis://redis:6379/0", alias="CELERY_BROKER_URL"
     )
 
+    # ── Cache de inferência — Redis (RNF-70 / RNF-71) ───────────────────────
+    # MESMA instância Redis do broker acima (serviço `redis` do
+    # docker-compose.yml já existente) — logicamente isolada num DB Redis
+    # diferente (db=1, broker fica em db=0) para um `FLUSHDB`/eviction do
+    # cache nunca tocar a fila do Celery, e vice-versa. Consumida por
+    # src/services/inference_cache.py — nunca hardcoded no código.
+    redis_cache_url: str = Field(
+        default="redis://redis:6379/1", alias="REDIS_CACHE_URL"
+    )
+
     # ── CORS ──────────────────────────────────────────────────────────────
     allowed_origins: list[str] = Field(
         default=["http://localhost:3000", "http://127.0.0.1:3000"],
@@ -283,6 +295,29 @@ class Settings(BaseSettings):
         / "metropt3.parquet",
         alias="SIMULATOR_PARQUET_PATH",
         description="Absolute path to the processed MetroPT-3 parquet file.",
+    )
+
+    # ── Observabilidade — Prometheus (RNF-76 / RNF-77) ──────────────────────
+    # URL interna do Prometheus (rede Docker — nunca exposta ao browser, ver
+    # RELATORIO-RNF-76-RNF-77.md §Fase 9). Consumida só por
+    # `observability_service.py`, que consulta o PromQL de taxa de erro e
+    # devolve um resumo pequeno (status + números) ao frontend — o Prometheus
+    # em si nunca é alcançável fora da rede Docker interna.
+    prometheus_url: str = Field(
+        default="http://prometheus:9090", alias="PROMETHEUS_URL"
+    )
+    # RNF-77 — limiares de taxa de erro 5xx (rolling window de 5 min, ver
+    # observability_service.py). Não são um número "escolhido pra passar no
+    # teste": 1%/5% é a banda de alerta precoce comum em SRE (referência:
+    # error budget de um SLO de 99% de disponibilidade deixa 1% de folga) —
+    # dá margem de resposta ANTES da folga do SLO se esgotar. Configuráveis
+    # via .env porque são uma decisão operacional, não uma constante de
+    # código.
+    error_rate_warning_threshold: float = Field(
+        default=0.01, alias="ERROR_RATE_WARNING_THRESHOLD"
+    )
+    error_rate_critical_threshold: float = Field(
+        default=0.05, alias="ERROR_RATE_CRITICAL_THRESHOLD"
     )
 
     # ── Unsupervised Conv1D Autoencoder ───────────────────────────────────

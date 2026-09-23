@@ -409,9 +409,7 @@ class TestV2LagFeatures:
         df = _make_df(n_rows=30)
         result = MetroPTPreprocessor().transform(df)
         expected = (df["TP2"].iloc[20] - df["TP2"].iloc[5]) / 15.0
-        np.testing.assert_allclose(
-            result["TP2_roc_15"].iloc[20], expected, atol=1e-5
-        )
+        np.testing.assert_allclose(result["TP2_roc_15"].iloc[20], expected, atol=1e-5)
 
 
 # ---------------------------------------------------------------------------

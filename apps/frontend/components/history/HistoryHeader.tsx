@@ -16,7 +16,14 @@ function downloadCsv() {
   const SEP = ";";
   const BOM = "﻿"; // UTF-8 BOM — garante leitura correta no Excel
 
-  const header = ["ID", "Timestamp", "Equipamento", "Tipo", "Severidade", "Duração"].join(SEP);
+  const header = [
+    "ID",
+    "Timestamp",
+    "Equipamento",
+    "Tipo",
+    "Severidade",
+    "Duração",
+  ].join(SEP);
 
   const rows = HISTORY_EVENTS.map((e) =>
     [e.id, e.timestamp, e.equipment, e.type, e.severity, e.duration].join(SEP),
@@ -35,7 +42,10 @@ function downloadCsv() {
   URL.revokeObjectURL(url);
 }
 
-export default function HistoryHeader({ totalEvents, filteredCount }: HistoryHeaderProps) {
+export default function HistoryHeader({
+  totalEvents,
+  filteredCount,
+}: HistoryHeaderProps) {
   const [isExporting, setIsExporting] = useState<ExportState>(null);
   const isFiltered = filteredCount !== totalEvents;
 
@@ -68,15 +78,21 @@ export default function HistoryHeader({ totalEvents, filteredCount }: HistoryHea
           Últimos 30 dias ·{" "}
           {isFiltered ? (
             <>
-              <span className="font-semibold text-foreground">{filteredCount}</span>
-              {" "}de{" "}
-              <span className="font-semibold text-foreground">{totalEvents}</span>
-              {" "}eventos
+              <span className="font-semibold text-foreground">
+                {filteredCount}
+              </span>{" "}
+              de{" "}
+              <span className="font-semibold text-foreground">
+                {totalEvents}
+              </span>{" "}
+              eventos
             </>
           ) : (
             <>
-              <span className="font-semibold text-foreground">{totalEvents}</span>
-              {" "}eventos registrados
+              <span className="font-semibold text-foreground">
+                {totalEvents}
+              </span>{" "}
+              eventos registrados
             </>
           )}
         </p>

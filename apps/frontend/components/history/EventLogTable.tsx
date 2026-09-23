@@ -140,8 +140,12 @@ export default function EventLogTable({
                       sort={sort}
                       onSort={toggleSort}
                     />
-                    <th className={COL_HEAD}>Duração</th>
-                    <th className={COL_HEAD}>Descrição</th>
+                    <th scope="col" className={COL_HEAD}>
+                      Duração
+                    </th>
+                    <th scope="col" className={COL_HEAD}>
+                      Descrição
+                    </th>
                   </tr>
                 </thead>
 

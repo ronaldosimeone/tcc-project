@@ -9,14 +9,33 @@
  */
 
 import { memo, useEffect, useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import { Brain, ShieldCheck } from "lucide-react";
-import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { listModels } from "@/lib/api-client";
 import { formatModelName } from "@/lib/model-name";
+
+// RNF-74/75 — code splitting: `recharts` (~100KB gzip) sai do First Load JS
+// do Dashboard, vira chunk próprio. `ssr: true` (default, mantido
+// explícito) — achado real medido nesta task: com `ssr:false`, o donut só
+// aparece depois de um round-trip extra do chunk DEPOIS da hidratação, e o
+// Lighthouse mediu isso como regressão real de LCP/TTI (~450-650ms pior,
+// reproduzido em 3 execuções) porque o elemento visualmente relevante
+// (o card acima da dobra) só estabiliza depois desse fetch. Com SSR, o
+// HTML já chega com o donut renderizado — o chunk do recharts carrega em
+// paralelo em segundo plano só para hidratar, sem atrasar LCP. O bundle
+// ainda sai do First Load JS do cliente (o ganho de RNF-74 é o mesmo) —
+// só o QUANDO renderiza no servidor que muda.
+const ModelStatusDonut = dynamic(
+  () => import("./model-status-donut").then((m) => m.ModelStatusDonut),
+  {
+    ssr: true,
+    loading: () => <Skeleton className="h-full w-full rounded-full" />,
+  },
+);
 
 interface ModelStatusCardProps {
   /** Distribuição de saúde da frota (precomputada). */
@@ -119,23 +138,7 @@ const ModelStatusCard = memo(function ModelStatusCard({
         {/* ── Donut: distribuição de saúde ── */}
         <div className="mt-3 flex items-center gap-4">
           <div className="relative h-24 w-24 shrink-0">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={pieData}
-                  innerRadius={28}
-                  outerRadius={44}
-                  paddingAngle={2}
-                  dataKey="value"
-                  stroke="none"
-                  isAnimationActive={false}
-                >
-                  {pieData.map((entry, i) => (
-                    <Cell key={i} fill={entry.color} />
-                  ))}
-                </Pie>
-              </PieChart>
-            </ResponsiveContainer>
+            <ModelStatusDonut pieData={pieData} />
             <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
               <span className="font-mono text-lg font-bold tabular-nums leading-none text-slate-900">
                 {total}
