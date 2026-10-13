@@ -1,0 +1,266 @@
+{
+ "Random Forest": {
+  "kind": "tabular",
+  "threshold": 0.6598,
+  "n": 303390,
+  "cm_default": [
+   [
+    297140,
+    259
+   ],
+   [
+    16,
+    5975
+   ]
+  ],
+  "cm_tuned": [
+   [
+    297347,
+    52
+   ],
+   [
+    23,
+    5968
+   ]
+  ],
+  "source": "model card (classification_report)"
+ },
+ "XGBoost": {
+  "kind": "tabular",
+  "threshold": 0.5909,
+  "n": 303390,
+  "cm_default": [
+   [
+    297344,
+    55
+   ],
+   [
+    25,
+    5966
+   ]
+  ],
+  "cm_tuned": [
+   [
+    297350,
+    49
+   ],
+   [
+    25,
+    5966
+   ]
+  ],
+  "source": "model card (classification_report)",
+  "verify_tuned": [
+   [
+    297350,
+    49
+   ],
+   [
+    25,
+    5966
+   ]
+  ],
+  "verify_default": [
+   [
+    297344,
+    55
+   ],
+   [
+    25,
+    5966
+   ]
+  ]
+ },
+ "MLP": {
+  "kind": "tabular",
+  "threshold": 0.8364,
+  "n": 303390,
+  "cm_default": [
+   [
+    295577,
+    1822
+   ],
+   [
+    23,
+    5968
+   ]
+  ],
+  "cm_tuned": [
+   [
+    296876,
+    523
+   ],
+   [
+    88,
+    5903
+   ]
+  ],
+  "source": "model card (classification_report)"
+ },
+ "TCN": {
+  "kind": "janelas",
+  "threshold": 0.9069,
+  "n": 30338,
+  "cm_default": [
+   [
+    29526,
+    208
+   ],
+   [
+    4,
+    600
+   ]
+  ],
+  "cm_tuned": [
+   [
+    29677,
+    57
+   ],
+   [
+    10,
+    594
+   ]
+  ],
+  "source": "model card (classification_report)",
+  "verify_tuned": [
+   [
+    29677,
+    57
+   ],
+   [
+    11,
+    593
+   ]
+  ],
+  "verify_default": [
+   [
+    29526,
+    208
+   ],
+   [
+    4,
+    600
+   ]
+  ]
+ },
+ "BiLSTM": {
+  "kind": "janelas",
+  "threshold": 0.742,
+  "n": 30338,
+  "cm_default": [
+   [
+    29525,
+    209
+   ],
+   [
+    6,
+    598
+   ]
+  ],
+  "cm_tuned": [
+   [
+    29641,
+    93
+   ],
+   [
+    10,
+    594
+   ]
+  ],
+  "source": "model card (classification_report)",
+  "verify_tuned": [
+   [
+    29641,
+    93
+   ],
+   [
+    11,
+    593
+   ]
+  ],
+  "verify_default": [
+   [
+    29525,
+    209
+   ],
+   [
+    6,
+    598
+   ]
+  ]
+ },
+ "PatchTST": {
+  "kind": "janelas",
+  "threshold": 0.9171,
+  "n": 30338,
+  "cm_default": [
+   [
+    29471,
+    263
+   ],
+   [
+    7,
+    597
+   ]
+  ],
+  "cm_tuned": [
+   [
+    29663,
+    71
+   ],
+   [
+    16,
+    588
+   ]
+  ],
+  "source": "model card (classification_report)",
+  "verify_tuned": [
+   [
+    29663,
+    71
+   ],
+   [
+    16,
+    588
+   ]
+  ],
+  "verify_default": [
+   [
+    29471,
+    263
+   ],
+   [
+    7,
+    597
+   ]
+  ]
+ },
+ "Autoencoder": {
+  "kind": "janelas",
+  "threshold": 0.06288089260458939,
+  "n": 30338,
+  "cm_tuned": [
+   [
+    29436,
+    298
+   ],
+   [
+    588,
+    16
+   ]
+  ],
+  "cm_default": [
+   [
+    29436,
+    298
+   ],
+   [
+    588,
+    16
+   ]
+  ],
+  "auc": 0.8710994103568194,
+  "source": "recalculado (ONNX no conjunto de validação)",
+  "ae": true
+ }
+}
