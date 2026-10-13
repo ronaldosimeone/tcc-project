@@ -47,6 +47,11 @@ from celery import Celery
 from celery.schedules import crontab
 
 from src.core.config import settings
+from src.core.logging import silence_http_client_loggers
+
+# O worker não passa por `configure_logging` (lifespan do FastAPI) — sem isto
+# o httpx logaria a URL do Telegram, com o bot token, a cada notificação.
+silence_http_client_loggers()
 
 celery_app: Celery = Celery("predictiq", broker=settings.celery_broker_url)
 

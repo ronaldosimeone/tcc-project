@@ -31,6 +31,19 @@ import structlog
 
 from src.core.log_sanitizer import redact_sensitive
 
+# Clientes HTTP que logam a URL COMPLETA de cada request em INFO. A API do
+# Telegram carrega o bot token no path (`/bot<token>/sendMessage`), então o
+# log padrão do httpx vazaria o segredo para stdout/agregadores de log. Esses
+# loggers passam pelo stdlib (fora do structlog), portanto o `redact_sensitive`
+# da RNF-63 não os alcança — o único controle confiável é o nível.
+_NOISY_HTTP_LOGGERS: tuple[str, ...] = ("httpx", "httpcore")
+
+
+def silence_http_client_loggers() -> None:
+    """Eleva httpx/httpcore para WARNING — erros ainda aparecem, URLs não."""
+    for name in _NOISY_HTTP_LOGGERS:
+        logging.getLogger(name).setLevel(logging.WARNING)
+
 
 def configure_logging(*, debug: bool = False, stream: TextIO | None = None) -> None:
     """
@@ -108,3 +121,7 @@ def configure_logging(*, debug: bool = False, stream: TextIO | None = None) -> N
         level=level,
         force=True,
     )
+
+    # basicConfig(force=True) acima não toca em loggers filhos já criados —
+    # reaplica o silenciamento para o caso de reconfiguração (testes/reload).
+    silence_http_client_loggers()
