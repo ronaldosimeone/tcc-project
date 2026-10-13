@@ -96,29 +96,31 @@ const ModelStatusCard = memo(function ModelStatusCard({
   );
 
   return (
-    <Card className="flex h-full flex-col border border-slate-200 bg-white shadow-sm ring-0">
+    <Card className="flex h-full flex-col border border-border bg-card shadow-sm ring-0">
       <CardHeader className="px-5 pb-3 pt-4">
-        <CardTitle className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-          <Brain className="h-4 w-4 text-slate-500" />
+        <CardTitle className="flex items-center gap-2 text-sm font-semibold text-foreground">
+          <Brain className="h-4 w-4 text-muted-foreground" />
           Status do Modelo
         </CardTitle>
       </CardHeader>
 
       <CardContent className="flex flex-1 flex-col px-5 pb-5">
         {/* ── Cabeçalho: modelo activo + confiança ── */}
-        <div className="flex items-start justify-between gap-3 border-b border-slate-100 pb-3">
+        <div className="flex items-start justify-between gap-3 border-b border-border/60 pb-3">
           <div className="min-w-0 flex-1">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
               Inferência activa
             </p>
             {error ? (
-              <p className="mt-1 text-sm text-slate-400">indisponível</p>
+              <p className="mt-1 text-sm text-muted-foreground/70">
+                indisponível
+              </p>
             ) : activeModel ? (
               <>
-                <p className="mt-1 text-base font-semibold text-slate-900">
+                <p className="mt-1 text-base font-semibold text-foreground">
                   {formatModelName(activeModel)}
                 </p>
-                <p className="font-mono text-[10px] uppercase tracking-wider text-slate-400">
+                <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground/70">
                   {activeModel}
                 </p>
               </>
@@ -128,7 +130,7 @@ const ModelStatusCard = memo(function ModelStatusCard({
           </div>
           <Badge
             variant="outline"
-            className="gap-1 border-emerald-200 bg-emerald-50 text-[10px] font-semibold text-emerald-700"
+            className="gap-1 border-emerald-500/30 bg-emerald-500/10 text-[10px] font-semibold text-emerald-700 dark:text-emerald-400"
           >
             <ShieldCheck className="h-3 w-3" />
             {(confidence * 100).toFixed(1)}% conf.
@@ -140,10 +142,10 @@ const ModelStatusCard = memo(function ModelStatusCard({
           <div className="relative h-24 w-24 shrink-0">
             <ModelStatusDonut pieData={pieData} />
             <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-              <span className="font-mono text-lg font-bold tabular-nums leading-none text-slate-900">
+              <span className="font-mono text-lg font-bold tabular-nums leading-none text-foreground">
                 {total}
               </span>
-              <span className="text-[9px] uppercase tracking-wider text-slate-400">
+              <span className="text-[9px] uppercase tracking-wider text-muted-foreground/70">
                 ativos
               </span>
             </div>
@@ -157,8 +159,8 @@ const ModelStatusCard = memo(function ModelStatusCard({
                   style={{ backgroundColor: slice.color }}
                   aria-hidden="true"
                 />
-                <span className="flex-1 text-slate-700">{slice.name}</span>
-                <span className="font-mono font-semibold tabular-nums text-slate-900">
+                <span className="flex-1 text-foreground/80">{slice.name}</span>
+                <span className="font-mono font-semibold tabular-nums text-foreground">
                   {slice.value}
                 </span>
               </li>

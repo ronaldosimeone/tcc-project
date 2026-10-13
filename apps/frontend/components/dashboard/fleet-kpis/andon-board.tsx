@@ -29,7 +29,7 @@ export function AndonBoard({ assets }: AndonBoardProps) {
           title={`${asset.id}: ${asset.status}`}
           aria-label={`${asset.id}: ${asset.status}`}
           className={cn(
-            "flex-1 rounded-sm border border-black/5 transition-colors",
+            "flex-1 rounded-sm border border-border transition-colors",
             ANDON_COLOR[asset.status],
           )}
         />

@@ -31,10 +31,10 @@ interface KpiTileProps {
 }
 
 const TONE: Record<KpiTileProps["iconTone"], string> = {
-  neutral: "bg-slate-100 text-slate-600",
-  ok: "bg-emerald-50 text-emerald-600",
-  warn: "bg-amber-50 text-amber-600",
-  danger: "bg-rose-50 text-rose-600",
+  neutral: "bg-muted text-muted-foreground",
+  ok: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+  warn: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
+  danger: "bg-rose-500/10 text-rose-600 dark:text-rose-400",
 };
 
 function KpiTile({
@@ -45,17 +45,17 @@ function KpiTile({
   iconTone,
 }: KpiTileProps) {
   return (
-    <Card className="border border-slate-200 bg-white shadow-sm ring-0">
+    <Card className="border border-border bg-card shadow-sm ring-0">
       <CardContent className="p-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
               {title}
             </p>
-            <p className="mt-1 truncate font-mono text-xl font-bold tracking-tight tabular-nums text-slate-900">
+            <p className="mt-1 truncate font-mono text-xl font-bold tracking-tight tabular-nums text-foreground">
               {value}
             </p>
-            <p className="mt-0.5 text-[11px] leading-snug text-slate-500">
+            <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">
               {subtitle}
             </p>
           </div>

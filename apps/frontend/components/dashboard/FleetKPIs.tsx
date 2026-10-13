@@ -107,7 +107,7 @@ export default function FleetKPIs({
         value={
           <span>
             {fleetHealth}
-            <span className="ml-0.5 text-base font-medium text-slate-400">
+            <span className="ml-0.5 text-base font-medium text-muted-foreground/70">
               %
             </span>
           </span>
@@ -124,7 +124,9 @@ export default function FleetKPIs({
         value={
           <span className="flex items-baseline gap-2">
             <span>{inAlert}</span>
-            <span className="text-sm font-medium text-slate-400">/ 5</span>
+            <span className="text-sm font-medium text-muted-foreground/70">
+              / 5
+            </span>
           </span>
         }
         icon={ShieldAlert}
@@ -139,7 +141,7 @@ export default function FleetKPIs({
         value={
           <span>
             {maxAnomalyPct}
-            <span className="ml-0.5 text-base font-medium text-slate-400">
+            <span className="ml-0.5 text-base font-medium text-muted-foreground/70">
               %
             </span>
           </span>
@@ -157,7 +159,7 @@ export default function FleetKPIs({
           currentLatencyMs !== null ? (
             <span>
               {currentLatencyMs}
-              <span className="ml-0.5 text-base font-medium text-slate-400">
+              <span className="ml-0.5 text-base font-medium text-muted-foreground/70">
                 ms
               </span>
             </span>

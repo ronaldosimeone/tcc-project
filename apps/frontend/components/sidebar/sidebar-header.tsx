@@ -11,7 +11,7 @@ interface SidebarHeaderProps {
 
 export function SidebarHeader({ isOpen, onToggle }: SidebarHeaderProps) {
   return (
-    <div className="flex h-14 shrink-0 items-center border-b border-slate-300 px-3">
+    <div className="flex h-14 shrink-0 items-center border-b border-input px-3">
       {isOpen ? (
         <div className="flex w-full items-center justify-between gap-2">
           <Link

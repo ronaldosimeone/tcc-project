@@ -28,7 +28,7 @@ export function ThresholdSection({
         </Label>
         <span
           data-testid="alert-threshold-value"
-          className="font-mono text-lg font-semibold text-slate-900"
+          className="font-mono text-lg font-semibold text-foreground"
         >
           {toPercentLabel(threshold)}
         </span>

@@ -25,7 +25,7 @@ export function FeedEventRow({ evt }: FeedEventRowProps) {
   return (
     <li
       className={cn(
-        "flex items-center gap-2.5 border-b border-l-4 border-slate-100 px-3 py-1.5 text-xs last:border-b-0 hover:bg-slate-50/60",
+        "flex items-center gap-2.5 border-b border-l-4 border-border/60 px-3 py-1.5 text-xs last:border-b-0 hover:bg-muted/60",
         borderTone,
       )}
     >
@@ -36,7 +36,7 @@ export function FeedEventRow({ evt }: FeedEventRowProps) {
           horário local correto. */}
       <span
         suppressHydrationWarning
-        className="shrink-0 font-mono text-[11px] tabular-nums text-slate-500"
+        className="shrink-0 font-mono text-[11px] tabular-nums text-muted-foreground"
       >
         {formatClockTime(evt.ts)}
       </span>
@@ -48,16 +48,16 @@ export function FeedEventRow({ evt }: FeedEventRowProps) {
       />
 
       {/* Asset ID — fixo em mono para alinhamento vertical na coluna. */}
-      <span className="shrink-0 font-mono text-[11px] font-semibold text-slate-700">
+      <span className="shrink-0 font-mono text-[11px] font-semibold text-foreground/80">
         {evt.assetId}
       </span>
 
       {/* Mensagem + explicabilidade inline, ambos truncam se necessário. */}
       <span className="flex min-w-0 flex-1 items-baseline gap-1.5">
-        <span className="truncate text-slate-900">{evt.message}</span>
+        <span className="truncate text-foreground">{evt.message}</span>
         {critical && (
-          <span className="hidden truncate text-[11px] text-slate-500 lg:inline">
-            <span className="text-slate-400">·</span>{" "}
+          <span className="hidden truncate text-[11px] text-muted-foreground lg:inline">
+            <span className="text-muted-foreground/70">·</span>{" "}
             {explanationFor(evt.assetId)}
           </span>
         )}
@@ -69,7 +69,7 @@ export function FeedEventRow({ evt }: FeedEventRowProps) {
           o instante do paint no cliente. */}
       <span
         suppressHydrationWarning
-        className="hidden shrink-0 text-[10px] text-slate-400 sm:inline"
+        className="hidden shrink-0 text-[10px] text-muted-foreground/70 sm:inline"
       >
         {fromNow(evt.ts)}
       </span>

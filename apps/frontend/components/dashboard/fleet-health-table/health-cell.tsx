@@ -16,13 +16,16 @@ export function HealthCell({ health, trendPp }: HealthCellProps) {
   const TrendIcon = trendPp >= 0 ? ArrowUpRight : ArrowDownRight;
   // Seta da tendência: verde se melhorando, vermelho se piorando.
   // Aqui o vermelho é semântico ("piora") e não denota nível CRÍTICO.
-  const trendCls = trendPp >= 0 ? "text-emerald-600" : "text-red-600";
+  const trendCls =
+    trendPp >= 0
+      ? "text-emerald-600 dark:text-emerald-400"
+      : "text-red-600 dark:text-red-400";
   return (
     <div className="flex items-center gap-2">
       <Progress
         value={health}
         aria-label={`Saúde do ativo: ${health}%`}
-        className={cn("h-1.5 w-24 bg-slate-100", healthBarClass(health))}
+        className={cn("h-1.5 w-24 bg-muted", healthBarClass(health))}
       />
       <span
         className={cn(

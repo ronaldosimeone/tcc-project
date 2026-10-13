@@ -7,12 +7,12 @@ export function DegradedModeBanner({ attempt }: { attempt: number }) {
     <div
       role="status"
       aria-live="polite"
-      className="flex items-center gap-3 rounded-xl border border-amber-400/40 bg-amber-400/8 px-4 py-3 text-amber-700"
+      className="flex items-center gap-3 rounded-xl border border-amber-400/40 bg-amber-400/8 px-4 py-3 text-amber-700 dark:text-amber-400"
     >
       <WifiOff className="h-4 w-4 shrink-0" />
       <div className="min-w-0 flex-1">
         <p className="text-sm font-bold">Modo Degradado</p>
-        <p className="text-xs text-amber-600">
+        <p className="text-xs text-amber-600 dark:text-amber-400">
           Exibindo últimos dados conhecidos · Reconexão {attempt} em curso…
         </p>
       </div>

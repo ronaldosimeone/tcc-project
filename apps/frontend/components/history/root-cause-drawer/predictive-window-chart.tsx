@@ -20,10 +20,10 @@ export function PredictiveWindowChart() {
 
   return (
     <section>
-      <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-slate-500">
+      <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
         Janela preditiva · 2 horas antes da falha
       </p>
-      <div className="rounded-lg border border-slate-200 bg-white p-3">
+      <div className="rounded-lg border border-border bg-card p-3">
         {/* Alternativa textual ao gráfico (RNF-66 §12) — série estática (não
             é stream ao vivo), então uma tabela completa é viável sem gerar
             ruído de leitor de tela. */}

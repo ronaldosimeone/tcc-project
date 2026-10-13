@@ -52,10 +52,10 @@ export function SensorMonitorHeader({
       className={cn(
         "flex flex-wrap items-center justify-between gap-3 rounded-lg border px-4 py-3 transition-colors",
         isCriticalState
-          ? "border-red-500 bg-red-50"
+          ? "border-red-500 bg-red-500/10"
           : isAlertState
-          ? "border-amber-500 bg-amber-50"
-          : "border-slate-200 bg-white",
+          ? "border-amber-500 bg-amber-500/10"
+          : "border-border bg-card",
       )}
     >
       <div>
@@ -63,10 +63,10 @@ export function SensorMonitorHeader({
           className={cn(
             "text-xl font-bold tracking-tight",
             isCriticalState
-              ? "text-red-900"
+              ? "text-red-900 dark:text-red-400"
               : isAlertState
-              ? "text-amber-900"
-              : "text-slate-900",
+              ? "text-amber-900 dark:text-amber-400"
+              : "text-foreground",
           )}
         >
           APU-Trem-042
@@ -75,10 +75,10 @@ export function SensorMonitorHeader({
           className={cn(
             "text-sm",
             isCriticalState
-              ? "text-red-700"
+              ? "text-red-700 dark:text-red-400"
               : isAlertState
-              ? "text-amber-700"
-              : "text-slate-500",
+              ? "text-amber-700 dark:text-amber-400"
+              : "text-muted-foreground",
           )}
         >
           Compressor MetroPT-3 ·{" "}
@@ -114,15 +114,15 @@ export function SensorMonitorHeader({
               isCriticalState
                 ? "animate-pulse border-red-500 bg-red-600 text-white"
                 : isAlertState
-                ? "animate-pulse border-amber-400 bg-amber-100 text-amber-800"
-                : "border-emerald-400/40 bg-emerald-50 text-emerald-700",
+                ? "animate-pulse border-amber-400 bg-amber-500/15 text-amber-800 dark:text-amber-400"
+                : "border-emerald-400/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
             )}
           >
             {isCriticalState ? (
               <>
                 <span className="relative flex h-2 w-2">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75" />
-                  <span className="relative inline-flex h-2 w-2 rounded-full bg-white" />
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-card opacity-75" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-card" />
                 </span>
                 FALHA CRÍTICA DETECTADA
               </>

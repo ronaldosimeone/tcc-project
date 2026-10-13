@@ -21,8 +21,8 @@ export function MockAssetRow({
     <tr
       onClick={() => onSelect(asset.id)}
       className={cn(
-        "cursor-pointer border-b border-slate-100 transition-colors",
-        isSelected ? "bg-slate-50" : "hover:bg-slate-50/60",
+        "cursor-pointer border-b border-border/60 transition-colors",
+        isSelected ? "bg-muted/50" : "hover:bg-muted/60",
       )}
     >
       <td className="py-3 pl-5 pr-4">
@@ -36,13 +36,15 @@ export function MockAssetRow({
           className="flex items-center gap-2 rounded-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
         >
           <span
-            className="h-1.5 w-1.5 shrink-0 rounded-full bg-slate-300"
+            className="h-1.5 w-1.5 shrink-0 rounded-full bg-muted-foreground/30"
             aria-hidden="true"
           />
-          <span className="font-mono text-xs text-slate-700">{asset.id}</span>
+          <span className="font-mono text-xs text-foreground/80">
+            {asset.id}
+          </span>
           <Badge
             variant="outline"
-            className="border-slate-200 bg-slate-50 px-1.5 py-0 text-[9px] font-medium tracking-wider text-slate-500"
+            className="border-border bg-muted/50 px-1.5 py-0 text-[9px] font-medium tracking-wider text-muted-foreground"
           >
             SIMULADO
           </Badge>
@@ -57,12 +59,12 @@ export function MockAssetRow({
         <HealthCell health={asset.health} trendPp={asset.trendPp} />
       </td>
 
-      <td className="py-3 pr-4 text-right font-mono text-xs tabular-nums text-slate-700">
+      <td className="py-3 pr-4 text-right font-mono text-xs tabular-nums text-foreground/80">
         {(asset.prob * 100).toFixed(1)}%
       </td>
 
       <td className="py-3 pr-3 text-right">
-        <span className="font-mono text-[10px] italic text-slate-400">
+        <span className="font-mono text-[10px] italic text-muted-foreground/70">
           há {asset.lastSeen}
         </span>
       </td>

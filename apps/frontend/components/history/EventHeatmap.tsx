@@ -46,14 +46,14 @@ export default function EventHeatmap({ events }: EventHeatmapProps) {
   );
 
   return (
-    <Card className="flex h-full flex-col overflow-visible border border-slate-200 bg-white shadow-sm ring-0">
+    <Card className="flex h-full flex-col overflow-visible border border-border bg-card shadow-sm ring-0">
       <CardHeader className="px-5 pb-2 pt-4">
         <div className="flex items-baseline justify-between">
-          <CardTitle className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-            <Activity className="h-4 w-4 text-slate-500" />
+          <CardTitle className="flex items-center gap-2 text-sm font-semibold text-foreground">
+            <Activity className="h-4 w-4 text-muted-foreground" />
             Mapa de Calor de Ocorrências
           </CardTitle>
-          <p className="text-[10px] font-medium uppercase tracking-wider text-slate-400">
+          <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground/70">
             Turno × Dia da semana · {totalEvents} eventos
           </p>
         </div>
@@ -68,7 +68,7 @@ export default function EventHeatmap({ events }: EventHeatmapProps) {
           {DAYS.map((day) => (
             <span
               key={day}
-              className="text-center font-mono text-[10px] uppercase tracking-wider text-slate-400"
+              className="text-center font-mono text-[10px] uppercase tracking-wider text-muted-foreground/70"
             >
               {day}
             </span>
@@ -81,11 +81,11 @@ export default function EventHeatmap({ events }: EventHeatmapProps) {
         </div>
 
         {/* Legenda — escala de intensidade. */}
-        <div className="mt-4 flex items-center gap-3 border-t border-slate-100 pt-3 text-[10px] text-slate-500">
-          <span className="font-medium uppercase tracking-wider text-slate-400">
+        <div className="mt-4 flex items-center gap-3 border-t border-border/60 pt-3 text-[10px] text-muted-foreground">
+          <span className="font-medium uppercase tracking-wider text-muted-foreground/70">
             Intensidade
           </span>
-          <Swatch className="bg-slate-100" label="0" />
+          <Swatch className="bg-muted" label="0" />
           <Swatch className="bg-emerald-500" label="1–2" />
           <Swatch className="bg-amber-500" label="3–5" />
           <Swatch className="bg-red-500" label="≥ 6" />

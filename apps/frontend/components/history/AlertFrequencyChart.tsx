@@ -41,7 +41,7 @@ export default function AlertFrequencyChart({
   );
 
   return (
-    <Card className="flex h-full flex-col border border-slate-200 bg-white shadow-sm ring-0">
+    <Card className="flex h-full flex-col border border-border bg-card shadow-sm ring-0">
       <CardHeader className="px-5 pb-2 pt-4">
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -64,7 +64,7 @@ export default function AlertFrequencyChart({
               </p>
             </div>
             <div>
-              <p className="font-mono text-2xl font-bold tabular-nums tracking-tight text-amber-600 dark:text-amber-400">
+              <p className="font-mono text-2xl font-bold tabular-nums tracking-tight text-amber-600 dark:text-amber-400 dark:text-amber-400">
                 {peakDay}
               </p>
               <p className="text-[10px] text-muted-foreground">pico diário</p>
@@ -130,7 +130,7 @@ export default function AlertFrequencyChart({
               />
               <Tooltip
                 content={TOOLTIP_CONTENT}
-                cursor={{ fill: "#f1f5f9", fillOpacity: 0.6 }}
+                cursor={{ fill: "var(--muted)", fillOpacity: 0.6 }}
               />
               <Bar
                 dataKey="critico"

@@ -33,13 +33,13 @@ export function BoolSignal({
     ? "bg-red-500 shadow-sm shadow-red-400/40 animate-pulse"
     : isSuccess
     ? "bg-emerald-500 shadow-sm shadow-emerald-400/30"
-    : "bg-slate-300";
+    : "bg-muted-foreground/30";
 
   const valueCls = isAlert
-    ? "text-red-700 font-extrabold"
+    ? "text-red-700 dark:text-red-400 font-extrabold"
     : isSuccess
-    ? "text-emerald-600"
-    : "text-slate-400";
+    ? "text-emerald-600 dark:text-emerald-400"
+    : "text-muted-foreground/70";
 
   const displayValue = isCount
     ? value > 0
@@ -53,13 +53,13 @@ export function BoolSignal({
     <div
       className={cn(
         "flex items-center justify-between rounded-md border p-2 transition-colors duration-200",
-        isAlert ? "border-red-300 bg-red-50" : "border-slate-200 bg-white",
+        isAlert ? "border-red-500/30 bg-red-500/10" : "border-border bg-card",
       )}
     >
       <span
         className={cn(
           "truncate text-[10px] font-semibold uppercase tracking-wide",
-          isAlert ? "text-red-700" : "text-slate-500",
+          isAlert ? "text-red-700 dark:text-red-400" : "text-muted-foreground",
         )}
       >
         {label}
@@ -78,7 +78,7 @@ export const BooleanPanel = memo(function BooleanPanel(
   props: BooleanPanelProps,
 ) {
   return (
-    <Card className="flex h-full flex-col border-slate-200">
+    <Card className="flex h-full flex-col border-border">
       <CardHeader className="shrink-0 px-4 pb-2 pt-4">
         <CardTitle className="text-sm font-semibold text-foreground/90">
           Sinais Digitais

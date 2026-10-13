@@ -16,7 +16,7 @@ export function SidebarFooter({ isOpen }: SidebarFooterProps) {
         isOpen ? "max-h-24 opacity-100" : "max-h-0 opacity-0",
       )}
     >
-      <div className="border-t border-slate-300 p-3">
+      <div className="border-t border-input p-3">
         <p className="truncate text-xs text-muted-foreground">
           MetroPT-3 · Compressor Industrial
         </p>

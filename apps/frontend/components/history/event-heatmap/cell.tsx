@@ -41,7 +41,7 @@ export function Cell({ cell, shift, day }: CellProps) {
           "group-hover:block",
         )}
       >
-        <p className="text-[10px] font-medium uppercase tracking-wider text-slate-400">
+        <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground/70">
           {day} · {shift}
         </p>
         <p className="mt-0.5 text-sm font-bold tabular-nums">
@@ -53,7 +53,7 @@ export function Cell({ cell, shift, day }: CellProps) {
               <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
               <span className="tabular-nums">{critical} críticas</span>
             </span>
-            <span className="text-slate-600">|</span>
+            <span className="text-muted-foreground">|</span>
             <span className="inline-flex items-center gap-1">
               <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
               <span className="tabular-nums">{alert} alertas</span>

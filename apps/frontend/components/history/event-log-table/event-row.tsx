@@ -21,9 +21,9 @@ export function EventRow({ event, onSelectEvent }: EventRowProps) {
     <tr
       onClick={() => onSelectEvent?.(event)}
       className={cn(
-        "group/row border-b border-slate-100 transition-colors duration-150 last:border-0",
+        "group/row border-b border-border/60 transition-colors duration-150 last:border-0",
         onSelectEvent
-          ? "cursor-pointer hover:bg-slate-50"
+          ? "cursor-pointer hover:bg-muted/50"
           : "hover:bg-muted/20",
       )}
     >

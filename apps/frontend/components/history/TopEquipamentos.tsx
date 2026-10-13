@@ -44,14 +44,14 @@ const BAR_BG: Record<Tone, string> = {
   red: "bg-red-500",
   amber: "bg-amber-500",
   emerald: "bg-emerald-500",
-  slate: "bg-slate-300",
+  slate: "bg-muted-foreground/30",
 };
 
 const TEXT_TONE: Record<Tone, string> = {
-  red: "text-red-700",
-  amber: "text-amber-700",
-  emerald: "text-emerald-700",
-  slate: "text-slate-400",
+  red: "text-red-700 dark:text-red-400",
+  amber: "text-amber-700 dark:text-amber-400",
+  emerald: "text-emerald-700 dark:text-emerald-400",
+  slate: "text-muted-foreground/70",
 };
 
 function rankEquipments(events: HistoryEvent[]): RankedRow[] {
@@ -107,12 +107,12 @@ export default function TopEquipamentos({ events }: TopEquipamentosProps) {
   const maxCount = rows[0]?.count ?? 0;
 
   return (
-    <Card className="flex h-full flex-col border border-slate-200 bg-white shadow-sm ring-0">
+    <Card className="flex h-full flex-col border border-border bg-card shadow-sm ring-0">
       {/* Cabeçalho fixo (shrink-0) — não rola junto com a lista. */}
       <CardHeader className="shrink-0 px-4 pb-2 pt-3">
-        <CardTitle className="flex items-baseline justify-between text-xs font-semibold uppercase tracking-wider text-slate-500">
+        <CardTitle className="flex items-baseline justify-between text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           <span>Top equipamentos</span>
-          <span className="font-mono text-[10px] normal-case tracking-normal text-slate-400">
+          <span className="font-mono text-[10px] normal-case tracking-normal text-muted-foreground/70">
             {rows.length} ativos
           </span>
         </CardTitle>
@@ -123,7 +123,7 @@ export default function TopEquipamentos({ events }: TopEquipamentosProps) {
           de um flex parent para que `overflow-y-auto` funcione. */}
       <CardContent className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto px-4 pb-3">
         {rows.length === 0 ? (
-          <p className="my-auto text-center text-xs text-slate-400">
+          <p className="my-auto text-center text-xs text-muted-foreground/70">
             Sem ativos no recorte.
           </p>
         ) : (
@@ -136,7 +136,9 @@ export default function TopEquipamentos({ events }: TopEquipamentosProps) {
                   <span
                     className={cn(
                       "truncate font-mono text-[11px] font-semibold",
-                      row.count === 0 ? "text-slate-400" : "text-slate-700",
+                      row.count === 0
+                        ? "text-muted-foreground/70"
+                        : "text-foreground/80",
                     )}
                   >
                     {row.id}
@@ -151,7 +153,7 @@ export default function TopEquipamentos({ events }: TopEquipamentosProps) {
                   </span>
                 </div>
                 <div
-                  className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100"
+                  className="h-1.5 w-full overflow-hidden rounded-full bg-muted"
                   role="presentation"
                 >
                   <div
@@ -160,7 +162,7 @@ export default function TopEquipamentos({ events }: TopEquipamentosProps) {
                       BAR_BG[row.tone],
                     )}
                     // Mín. 4% quando count===0 e roster pede presença visual:
-                    // ainda assim ficamos com 0 — a barra fica vazia (bg-slate-100).
+                    // ainda assim ficamos com 0 — a barra fica vazia (bg-muted).
                     style={{ width: `${pct}%` }}
                   />
                 </div>

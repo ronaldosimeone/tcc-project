@@ -51,7 +51,7 @@ const AssetEfficiencyChart = memo(function AssetEfficiencyChart({
             <BarChart2 className="h-4 w-4 text-primary" />
             Eficiência Semanal
           </CardTitle>
-          <span className="font-mono text-[11px] font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">
+          <span className="font-mono text-[11px] font-semibold tabular-nums text-emerald-600 dark:text-emerald-400 dark:text-emerald-400">
             {avgEfficiency}% avg
           </span>
         </div>

@@ -43,14 +43,14 @@ export function LiveAssetRow({
     <tr
       onClick={() => onSelect(LIVE_ASSET_ID)}
       className={cn(
-        "group/row cursor-pointer border-b border-slate-100 transition-colors",
+        "group/row cursor-pointer border-b border-border/60 transition-colors",
         liveIsCritical
-          ? "bg-red-50 hover:bg-red-100"
+          ? "bg-red-500/10 hover:bg-red-500/15"
           : liveIsAlert
-          ? "bg-amber-50 hover:bg-amber-100"
+          ? "bg-amber-500/10 hover:bg-amber-500/15"
           : isSelected
-          ? "bg-slate-50"
-          : "hover:bg-slate-50/60",
+          ? "bg-muted/50"
+          : "hover:bg-muted/60",
       )}
     >
       <td className="py-3 pl-5 pr-4">
@@ -87,7 +87,7 @@ export function LiveAssetRow({
               )}
             />
           </span>
-          <span className="font-mono text-xs font-semibold text-slate-900">
+          <span className="font-mono text-xs font-semibold text-foreground">
             APU-Trem-042
           </span>
           <Badge
@@ -95,10 +95,10 @@ export function LiveAssetRow({
             className={cn(
               "px-1.5 py-0 text-[9px] font-bold tracking-wider",
               liveIsCritical
-                ? "animate-pulse border-red-300 bg-red-100 text-red-700"
+                ? "animate-pulse border-red-500/30 bg-red-500/15 text-red-700 dark:text-red-400"
                 : liveIsAlert
-                ? "border-amber-300 bg-amber-100 text-amber-700"
-                : "border-blue-200 bg-blue-50 text-blue-700",
+                ? "border-amber-500/30 bg-amber-500/15 text-amber-700 dark:text-amber-400"
+                : "border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-400",
             )}
           >
             LIVE
@@ -114,14 +114,14 @@ export function LiveAssetRow({
         <HealthCell health={liveHealth} trendPp={liveTrendPp} />
       </td>
 
-      <td className="py-3 pr-4 text-right font-mono text-xs tabular-nums text-slate-900">
+      <td className="py-3 pr-4 text-right font-mono text-xs tabular-nums text-foreground">
         {(effectiveProb * 100).toFixed(1)}%
       </td>
 
       <td className="py-3 pr-3 text-right" onClick={(e) => e.stopPropagation()}>
         <Link
           href={`/sensors/${LIVE_ASSET_ID}`}
-          className="inline-flex items-center gap-1 rounded-md border border-slate-200 px-2 py-1 text-[11px] font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+          className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[11px] font-semibold text-foreground/80 transition-colors hover:bg-muted/50"
         >
           Telemetria
           <ArrowRight className="h-3 w-3" />

@@ -30,15 +30,15 @@ const RISK_CFG: Record<
   { cls: string; icon: React.ComponentType<{ className?: string }> }
 > = {
   NORMAL: {
-    cls: "border-emerald-400/40 bg-emerald-400/10 text-emerald-700",
+    cls: "border-emerald-400/40 bg-emerald-400/10 text-emerald-700 dark:text-emerald-400",
     icon: CheckCircle2,
   },
   ALERTA: {
-    cls: "border-amber-400/40 bg-amber-400/10 text-amber-700",
+    cls: "border-amber-400/40 bg-amber-400/10 text-amber-700 dark:text-amber-400",
     icon: AlertTriangle,
   },
   CRÍTICO: {
-    cls: "border-red-400/40 bg-red-400/10 text-red-700",
+    cls: "border-red-400/40 bg-red-400/10 text-red-700 dark:text-red-400",
     icon: XCircle,
   },
 };
@@ -53,9 +53,9 @@ export const EventLog = memo(function EventLog({
     <Card
       data-testid="prediction-history"
       className={cn(
-        "flex flex-col border-slate-200 transition-colors duration-500",
-        riskLevel === "CRÍTICO" && "border-red-300",
-        riskLevel === "ALERTA" && "border-amber-300",
+        "flex flex-col border-border transition-colors duration-500",
+        riskLevel === "CRÍTICO" && "border-red-500/30",
+        riskLevel === "ALERTA" && "border-amber-500/30",
       )}
     >
       <CardHeader className="px-4 pb-2 pt-4">
@@ -107,7 +107,7 @@ export const EventLog = memo(function EventLog({
                   <div
                     key={entry.id}
                     data-risk={entry.riskLevel}
-                    className="flex items-center gap-2 border-b border-slate-100 px-4 py-2 last:border-0"
+                    className="flex items-center gap-2 border-b border-border/60 px-4 py-2 last:border-0"
                   >
                     <span className="w-14 shrink-0 font-mono text-[9px] text-muted-foreground/60">
                       {time}

@@ -30,12 +30,12 @@ export function ChannelsSection({
   onEmailChange,
 }: ChannelsSectionProps) {
   return (
-    <section className="flex flex-col gap-4 border-t border-slate-200 pt-6">
+    <section className="flex flex-col gap-4 border-t border-border pt-6">
       <Label className="text-sm font-medium">Canais de notificação</Label>
 
       <div className="flex items-center justify-between gap-4">
         <div className="flex flex-col">
-          <span className="text-sm text-slate-900">Telegram</span>
+          <span className="text-sm text-foreground">Telegram</span>
           <span className="text-xs text-muted-foreground">
             Notificações críticas serão enviadas para o Telegram configurado no
             servidor.
@@ -52,7 +52,7 @@ export function ChannelsSection({
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between gap-4">
           <div className="flex flex-col">
-            <span className="text-sm text-slate-900">E-mail</span>
+            <span className="text-sm text-foreground">E-mail</span>
             <span className="text-xs text-muted-foreground">
               O endereço configurado abaixo receberá os alertas.
             </span>

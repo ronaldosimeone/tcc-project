@@ -59,7 +59,7 @@ export default function Sidebar() {
       />
       <aside
         className={cn(
-          "flex shrink-0 flex-col border-r border-slate-300 bg-sidebar",
+          "flex shrink-0 flex-col border-r border-input bg-sidebar",
           "overflow-hidden transition-[width] duration-300 ease-in-out",
           isOpen ? "w-64" : "w-16",
         )}

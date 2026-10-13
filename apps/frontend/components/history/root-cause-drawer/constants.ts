@@ -10,9 +10,11 @@ import type { Severity } from "@/lib/history-mock";
 
 // Severity tokens (literais — evita tokens hsl quebrados).
 export const SEVERITY_BADGE: Record<Severity, string> = {
-  CRÍTICO: "border-red-200 bg-red-50 text-red-700",
-  ALERTA: "border-amber-200 bg-amber-50 text-amber-700",
-  NORMAL: "border-emerald-200 bg-emerald-50 text-emerald-700",
+  CRÍTICO: "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-400",
+  ALERTA:
+    "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
+  NORMAL:
+    "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
 };
 
 export const SEVERITY_ICON: Record<Severity, LucideIcon> = {

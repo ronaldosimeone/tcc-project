@@ -20,7 +20,7 @@ export function PredictiveTooltip({
   const isCritical = value >= CRITICAL_THRESHOLD;
   return (
     <div className="rounded-md bg-slate-900 px-2 py-1.5 text-white shadow-lg">
-      <p className="text-[10px] font-medium uppercase tracking-wider text-slate-400">
+      <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground/70">
         {label}
       </p>
       <p

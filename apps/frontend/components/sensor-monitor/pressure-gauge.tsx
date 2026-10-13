@@ -39,7 +39,7 @@ function PressureGauge({ label, value, max, unit, color }: PressureGaugeProps) {
         <path
           d={bg}
           fill="none"
-          stroke="rgb(226 232 240)"
+          stroke="var(--border)"
           strokeWidth={sw}
           strokeLinecap="round"
         />
@@ -56,7 +56,7 @@ function PressureGauge({ label, value, max, unit, color }: PressureGaugeProps) {
           x={cx}
           y={cy - 4}
           textAnchor="middle"
-          fill="rgb(15 23 42)"
+          fill="var(--foreground)"
           fontSize="11"
           fontWeight="700"
           fontFamily="var(--font-geist-sans, sans-serif)"
@@ -68,7 +68,7 @@ function PressureGauge({ label, value, max, unit, color }: PressureGaugeProps) {
           y={cy + 14}
           textAnchor="middle"
           dominantBaseline="middle"
-          fill="rgb(100 116 139)"
+          fill="var(--muted-foreground)"
           fontSize="9"
           fontFamily="var(--font-geist-sans, sans-serif)"
         >
@@ -107,7 +107,7 @@ export const PressureRadials = memo(function PressureRadials({
   isLoading,
 }: PressureRadialsProps) {
   return (
-    <Card className="border-slate-200">
+    <Card className="border-border">
       <CardHeader className="px-4 pb-2 pt-4">
         <CardTitle className="text-sm font-semibold text-foreground/90">
           Pressões Secundárias

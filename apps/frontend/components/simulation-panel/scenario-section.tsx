@@ -55,9 +55,9 @@ const SCENARIOS: readonly ScenarioOption[] = [
 ];
 
 const TONE_ICON: Record<ScenarioOption["tone"], string> = {
-  ok: "text-emerald-600",
-  warn: "text-amber-600",
-  danger: "text-rose-600",
+  ok: "text-emerald-600 dark:text-emerald-400",
+  warn: "text-amber-600 dark:text-amber-400",
+  danger: "text-rose-600 dark:text-rose-400",
 };
 
 export function ScenarioSection() {
@@ -133,27 +133,27 @@ export function ScenarioSection() {
               htmlFor={id}
               data-state={checked ? "checked" : "unchecked"}
               className={cn(
-                "group flex cursor-pointer items-center gap-3 rounded-md border border-slate-200 bg-white px-3 py-2.5 transition-all",
-                "hover:border-slate-300 hover:bg-slate-50",
-                "data-[state=checked]:border-slate-900 data-[state=checked]:bg-white data-[state=checked]:shadow-[0_0_0_1px_rgb(15_23_42)]",
+                "group flex cursor-pointer items-center gap-3 rounded-md border border-border bg-card px-3 py-2.5 transition-all",
+                "hover:border-input hover:bg-muted/50",
+                "data-[state=checked]:border-primary data-[state=checked]:bg-card data-[state=checked]:shadow-[0_0_0_1px_var(--primary)]",
               )}
             >
               <RadioGroupItem
                 id={id}
                 value={scenario.value}
-                className="border-slate-300 data-[state=checked]:border-slate-900"
+                className="border-input data-[state=checked]:border-primary"
               />
               <Icon
                 className={cn(
-                  "h-3.5 w-3.5 shrink-0 text-slate-400 transition-colors",
+                  "h-3.5 w-3.5 shrink-0 text-muted-foreground/70 transition-colors",
                   checked && TONE_ICON[scenario.tone],
                 )}
               />
               <div className="flex min-w-0 flex-1 flex-col">
-                <span className="text-sm font-medium text-slate-900">
+                <span className="text-sm font-medium text-foreground">
                   {scenario.label}
                 </span>
-                <span className="truncate text-xs text-slate-500">
+                <span className="truncate text-xs text-muted-foreground">
                   {scenario.description}
                 </span>
               </div>

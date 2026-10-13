@@ -44,7 +44,7 @@ const AreaChartTooltip = memo(function AreaChartTooltip({
 }: AreaTooltipProps) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-md">
+    <div className="rounded-lg border border-border bg-card px-3 py-2 shadow-md">
       <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
         {label}
       </p>
@@ -77,9 +77,9 @@ export const MainAreaChart = memo(function MainAreaChart({
   return (
     <Card
       className={cn(
-        "border-slate-200 transition-colors duration-700",
-        riskLevel === "ALERTA" && "border-amber-300",
-        riskLevel === "CRÍTICO" && "border-red-300",
+        "border-border transition-colors duration-700",
+        riskLevel === "ALERTA" && "border-amber-500/30",
+        riskLevel === "CRÍTICO" && "border-red-500/30",
       )}
     >
       <CardHeader className="px-5 pb-2 pt-4">
@@ -93,7 +93,7 @@ export const MainAreaChart = memo(function MainAreaChart({
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75" />
                   <span className="relative inline-flex h-2 w-2 rounded-full bg-green-500" />
                 </span>
-                <span className="text-[10px] font-semibold uppercase tracking-wider text-green-600">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-green-600 dark:text-green-400">
                   Live
                 </span>
               </span>

@@ -36,7 +36,7 @@ export const SparkKpiCard = memo(function SparkKpiCard({
   alertColor,
 }: SparkKpiCardProps) {
   return (
-    <Card className="border-slate-200 bg-card">
+    <Card className="border-border bg-card">
       <CardContent className="p-4">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">

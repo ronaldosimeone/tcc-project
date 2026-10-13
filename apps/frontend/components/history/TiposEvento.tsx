@@ -59,9 +59,9 @@ export default function TiposEvento({ events }: TiposEventoProps) {
   const donutSlices = slices.filter((s) => s.value > 0);
 
   return (
-    <Card className="flex h-full flex-col border border-slate-200 bg-white shadow-sm ring-0">
+    <Card className="flex h-full flex-col border border-border bg-card shadow-sm ring-0">
       <CardHeader className="px-4 pb-2 pt-3">
-        <CardTitle className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+        <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           Tipos de evento
         </CardTitle>
       </CardHeader>
@@ -90,13 +90,13 @@ export default function TiposEvento({ events }: TiposEventoProps) {
               </ResponsiveContainer>
             </div>
           ) : (
-            <div className="absolute inset-0 rounded-full bg-slate-100" />
+            <div className="absolute inset-0 rounded-full bg-muted" />
           )}
           <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center leading-none">
-            <span className="font-mono text-sm font-bold tabular-nums text-slate-900">
+            <span className="font-mono text-sm font-bold tabular-nums text-foreground">
               {total}
             </span>
-            <span className="text-[8px] uppercase tracking-wider text-slate-400">
+            <span className="text-[8px] uppercase tracking-wider text-muted-foreground/70">
               eventos
             </span>
           </div>
@@ -106,7 +106,7 @@ export default function TiposEvento({ events }: TiposEventoProps) {
           {slices.map((s) => (
             <li
               key={s.name}
-              className="flex items-center gap-1.5 text-[10px] text-slate-600"
+              className="flex items-center gap-1.5 text-[10px] text-muted-foreground"
             >
               <span
                 className="h-2 w-2 shrink-0 rounded-sm"
@@ -114,7 +114,7 @@ export default function TiposEvento({ events }: TiposEventoProps) {
                 aria-hidden="true"
               />
               <span className="flex-1 truncate">{s.name}</span>
-              <span className="font-mono font-semibold tabular-nums text-slate-900">
+              <span className="font-mono font-semibold tabular-nums text-foreground">
                 {s.pct}%
               </span>
             </li>

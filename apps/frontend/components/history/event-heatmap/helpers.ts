@@ -14,7 +14,7 @@ export type Day = (typeof DAYS)[number];
  * sem comprometer a leitura imediata da intensidade.
  */
 export function intensityClass(count: number): string {
-  if (count === 0) return "bg-slate-100 ring-1 ring-inset ring-black/[0.03]";
+  if (count === 0) return "bg-muted ring-1 ring-inset ring-black/[0.03]";
   if (count <= 2)
     return "bg-emerald-500 shadow-inner shadow-emerald-700/30 ring-1 ring-inset ring-emerald-600/30";
   if (count <= 5)

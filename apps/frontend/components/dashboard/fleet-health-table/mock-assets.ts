@@ -77,7 +77,7 @@ export function healthBarClass(health: number): string {
 /** Cor do texto do percentual por nível de risco. */
 export function healthTextClass(health: number): string {
   const level = healthToRiskLevel(health);
-  if (level === "NORMAL") return "text-emerald-600";
-  if (level === "ALERTA") return "text-amber-700";
-  return "text-red-700";
+  if (level === "NORMAL") return "text-emerald-600 dark:text-emerald-400";
+  if (level === "ALERTA") return "text-amber-700 dark:text-amber-400";
+  return "text-red-700 dark:text-red-400";
 }

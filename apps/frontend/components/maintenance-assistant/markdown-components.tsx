@@ -64,10 +64,7 @@ export const markdownComponents: Components = {
     </ol>
   ),
   code: ({ children, ...props }) => (
-    <code
-      className="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs"
-      {...props}
-    >
+    <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs" {...props}>
       {children}
     </code>
   ),

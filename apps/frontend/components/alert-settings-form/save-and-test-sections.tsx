@@ -67,7 +67,7 @@ export function TestNotificationSection({
   onTest,
 }: TestNotificationSectionProps) {
   return (
-    <section className="flex flex-col gap-3 border-t border-slate-200 pt-6">
+    <section className="flex flex-col gap-3 border-t border-border pt-6">
       <div className="flex items-center gap-2">
         <Bell className="h-4 w-4 text-muted-foreground" />
         <Label className="text-sm font-medium">Testar notificação</Label>

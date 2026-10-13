@@ -76,7 +76,7 @@ export function NavLink({ item, active, isOpen, onAction }: NavLinkProps) {
         <TooltipContent side="right">
           {item.label}
           {item.hint && (
-            <span className="ml-1 text-[10px] text-slate-400">
+            <span className="ml-1 text-[10px] text-muted-foreground/70">
               · {item.hint}
             </span>
           )}

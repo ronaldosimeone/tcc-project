@@ -46,8 +46,8 @@ export function AssistantBody({
 
   if (status === "skipped") {
     return (
-      <div className="flex items-start gap-2 rounded-md border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
-        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+      <div className="flex items-start gap-2 rounded-md border border-border bg-muted/50 p-3 text-sm text-foreground/80">
+        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground/70" />
         <span>{message ?? "Sugestão automática não acionada."}</span>
       </div>
     );
@@ -107,8 +107,8 @@ export function AssistantBody({
       </div>
 
       {status === "done" && (
-        <div className="flex flex-col gap-2 border-t border-slate-200 pt-3">
-          <span className="text-xs font-medium text-slate-500">
+        <div className="flex flex-col gap-2 border-t border-border pt-3">
+          <span className="text-xs font-medium text-muted-foreground">
             Manuais consultados
           </span>
           <ReferencesList references={references} />

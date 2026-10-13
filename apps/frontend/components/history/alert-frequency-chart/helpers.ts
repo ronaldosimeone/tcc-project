@@ -5,7 +5,7 @@ import type { HistoryEvent } from "@/lib/history-mock";
 // Literais slate — evita tokens hsl(var(--...)) que renderizam transparente
 // pelo problema conhecido de mistura oklch/hsl no tema.
 export const AXIS_TICK = { fontSize: 11, fill: "#94a3b8" } as const;
-export const GRID_STROKE = "#e2e8f0";
+export const GRID_STROKE = "var(--border)";
 
 export interface DayBucket {
   /** Rótulo "DD/MM" exibido no eixo X. */

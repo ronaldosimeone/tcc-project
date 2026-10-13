@@ -30,7 +30,7 @@ export const OperationalDonut = memo(function OperationalDonut({
   const donutFormatter = useMemo(() => makeDonutFormatter(total), [total]);
 
   return (
-    <Card className="border-slate-200">
+    <Card className="border-border">
       <CardHeader className="px-4 pb-2 pt-4">
         <CardTitle className="text-sm font-semibold text-foreground/90">
           Estado Operacional

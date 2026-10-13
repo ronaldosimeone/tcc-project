@@ -76,17 +76,17 @@ export default function FleetDashboard() {
       {/* ── Cabeçalho ── */}
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
             PredictIQ · MetroPT-3
           </p>
-          <h1 className="mt-0.5 text-xl font-bold tracking-tight text-slate-900">
+          <h1 className="mt-0.5 text-xl font-bold tracking-tight text-foreground">
             Cockpit Operacional
           </h1>
-          <p className="mt-0.5 text-sm text-slate-500">
+          <p className="mt-0.5 text-sm text-muted-foreground">
             Manutenção preditiva e MLOps em tempo real
           </p>
         </div>
-        <div className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 shadow-sm">
+        <div className="flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 shadow-sm">
           <span
             className={
               sseStatus === "connected"
@@ -95,7 +95,7 @@ export default function FleetDashboard() {
             }
             aria-hidden="true"
           />
-          <span className="text-[11px] font-medium text-slate-500">
+          <span className="text-[11px] font-medium text-muted-foreground">
             {sseStatus === "connected" ? "Telemetria ao vivo" : "Reconectando…"}
           </span>
         </div>

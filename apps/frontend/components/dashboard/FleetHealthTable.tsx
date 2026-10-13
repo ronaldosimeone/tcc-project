@@ -46,7 +46,7 @@ interface FleetHealthTableProps {
 }
 
 const COL_HEAD =
-  "pb-2.5 text-[10px] font-semibold uppercase tracking-widest text-slate-500";
+  "pb-2.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground";
 
 const FleetHealthTable = memo(function FleetHealthTable({
   effectiveRiskLevel,
@@ -56,13 +56,13 @@ const FleetHealthTable = memo(function FleetHealthTable({
   onSelect,
 }: FleetHealthTableProps) {
   return (
-    <Card className="flex h-full flex-col border border-slate-200 bg-white shadow-sm ring-0">
+    <Card className="flex h-full flex-col border border-border bg-card shadow-sm ring-0">
       <CardHeader className="px-5 pb-3 pt-4">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-sm font-semibold text-slate-900">
+          <CardTitle className="text-sm font-semibold text-foreground">
             Saúde da Frota
           </CardTitle>
-          <span className="text-[11px] text-slate-500">
+          <span className="text-[11px] text-muted-foreground">
             5 ativos · 1 em tempo real
           </span>
         </div>
@@ -75,7 +75,7 @@ const FleetHealthTable = memo(function FleetHealthTable({
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-slate-200">
+                <tr className="border-b border-border">
                   <th scope="col" className={cn(COL_HEAD, "pl-5 text-left")}>
                     ID do Ativo
                   </th>

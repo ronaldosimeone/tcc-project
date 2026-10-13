@@ -69,17 +69,17 @@ export const TONE_ICON: Record<
 };
 
 export const TONE_COLOR: Record<EventTone, string> = {
-  warn: "text-amber-600",
-  ok: "text-emerald-600",
-  info: "text-slate-500",
-  wrench: "text-blue-600",
+  warn: "text-amber-600 dark:text-amber-400",
+  ok: "text-emerald-600 dark:text-emerald-400",
+  info: "text-muted-foreground",
+  wrench: "text-blue-600 dark:text-blue-400",
 };
 
 export const TONE_BG: Record<EventTone, string> = {
-  warn: "bg-amber-50",
-  ok: "bg-emerald-50",
-  info: "bg-slate-100",
-  wrench: "bg-blue-50",
+  warn: "bg-amber-500/10",
+  ok: "bg-emerald-500/10",
+  info: "bg-muted",
+  wrench: "bg-blue-500/10",
 };
 
 // Borda esquerda colorida — padrão visual SCADA para sinalizar severidade

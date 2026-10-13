@@ -60,22 +60,22 @@ export function KpiShell({
     </div>
   ) : null;
   return (
-    <Card className="border border-slate-200 bg-white shadow-sm ring-0">
+    <Card className="border border-border bg-card shadow-sm ring-0">
       <CardContent className="p-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
               {title}
             </p>
             {isLoading ? (
               <Skeleton className="mt-2 h-7 w-20" />
             ) : (
               <>
-                <div className="mt-1 font-mono text-2xl font-bold tracking-tight tabular-nums text-slate-900">
+                <div className="mt-1 font-mono text-2xl font-bold tracking-tight tabular-nums text-foreground">
                   {value}
                 </div>
                 {subtitle && (
-                  <p className="mt-0.5 text-[10px] text-slate-500">
+                  <p className="mt-0.5 text-[10px] text-muted-foreground">
                     {subtitle}
                   </p>
                 )}

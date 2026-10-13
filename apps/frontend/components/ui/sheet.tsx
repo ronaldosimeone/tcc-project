@@ -65,7 +65,7 @@ function SheetContent({
         data-slot="sheet-content"
         className={cn(
           sheetVariants({ side }),
-          "bg-white border-l border-slate-200",
+          "bg-card border-l border-border",
           className,
         )}
         {...props}

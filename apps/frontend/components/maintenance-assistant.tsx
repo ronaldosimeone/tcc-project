@@ -91,7 +91,7 @@ export function MaintenanceAssistant({
                 status === "error" || status === "offline"
                   ? "border-destructive/40 text-destructive"
                   : status === "done"
-                  ? "border-emerald-400/40 text-emerald-600"
+                  ? "border-emerald-400/40 text-emerald-600 dark:text-emerald-400"
                   : "",
               )}
             >
@@ -99,7 +99,7 @@ export function MaintenanceAssistant({
             </Badge>
           </div>
 
-          <ScrollArea className="flex-1 rounded-md border border-slate-200 bg-white">
+          <ScrollArea className="flex-1 rounded-md border border-border bg-card">
             <div className="p-4">
               <AssistantBody
                 status={status}

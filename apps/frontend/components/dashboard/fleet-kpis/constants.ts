@@ -12,10 +12,10 @@ export const SPARK_COLOR: Record<SparkTone, string> = {
 };
 
 export const TONE_BG: Record<SparkTone, string> = {
-  neutral: "bg-slate-100 text-slate-600",
-  ok: "bg-emerald-50 text-emerald-600",
-  warn: "bg-amber-50 text-amber-600",
-  danger: "bg-rose-50 text-rose-600",
+  neutral: "bg-muted text-muted-foreground",
+  ok: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+  warn: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
+  danger: "bg-rose-500/10 text-rose-600 dark:text-rose-400",
 };
 
 /** Tamanho da janela deslizante da sparkline de latência. */
