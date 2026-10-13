@@ -28,7 +28,7 @@ def test_critical_email_contains_core_facts() -> None:
     assert "APU-Trem-042" in html
     assert ">96<" in html  # probabilidade arredondada, sem casas decimais
     assert "CRÍTICO" in html
-    assert "13/10/2026 · 15:14:44 UTC" in html
+    assert "13/10/2026 às 12:14:44 (UTC-3)" in html
     assert 'href="http://localhost/sensors/APU-Trem-042"' in html
 
 

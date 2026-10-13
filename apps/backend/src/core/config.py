@@ -125,6 +125,11 @@ class Settings(BaseSettings):
     # URL absoluta e oficial do Dashboard — nunca aceita de payload/predição/LLM
     # (RF-24 §4, evita open redirect). Default aponta para o Nginx local.
     dashboard_url: str = Field(default="http://localhost", alias="DASHBOARD_URL")
+    # Fuso (IANA) usado para exibir o horário nas mensagens de alerta
+    # (Telegram/e-mail). O pipeline continua em UTC — só a apresentação muda.
+    notification_timezone: str = Field(
+        default="America/Sao_Paulo", alias="NOTIFICATION_TIMEZONE"
+    )
     # 15 minutos — RF-24, TTL do rate limit por equipamento (não confundir
     # com MAINTENANCE_SUGGESTION_THRESHOLD/CRITICAL_FAILURE_THRESHOLD, que
     # são constantes de código, não configuráveis por env).

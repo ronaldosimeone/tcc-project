@@ -25,8 +25,9 @@ NORMAL < 0,30 ≤ ALERTA < 0,65 ≤ CRÍTICO.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timezone
 from html import escape
+
+from src.core.time_format import format_local_timestamp
 
 _FONT = (
     "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,"
@@ -79,18 +80,6 @@ def _risk_for(probability: float) -> _Risk:
             "Programe uma inspeção o quanto antes.",
         )
     return _Risk("NORMAL", "#059669", "#d1fae5", "Operação dentro do esperado.")
-
-
-def _format_timestamp(timestamp: str) -> str:
-    """ISO-8601 → `13/10/2026 · 15:14:44 UTC`; texto livre passa intacto."""
-    try:
-        parsed = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
-    except ValueError:
-        return timestamp
-    if parsed.tzinfo is None:
-        parsed = parsed.replace(tzinfo=timezone.utc)
-    utc = parsed.astimezone(timezone.utc)
-    return utc.strftime("%d/%m/%Y · %H:%M:%S UTC")
 
 
 def _safe_url(url: str) -> str:
@@ -361,7 +350,7 @@ def render_critical_failure_email_html(
            border="0" style="padding-top:22px;">
       {_detail_row("Equipamento", f'<span style="font-family:{_MONO};">{equipment}</span>')}
       {_detail_row("Nível de risco", f'<span style="color:{risk.color};">{risk.label}</span> &mdash; {escape(risk.message)}')}
-      {_detail_row("Detectado em", escape(_format_timestamp(timestamp)))}
+      {_detail_row("Detectado em", escape(format_local_timestamp(timestamp)))}
       {_detail_row("Origem", "Modelo preditivo &middot; MetroPT-3", last=True)}
     </table>
 

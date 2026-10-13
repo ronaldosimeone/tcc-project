@@ -608,3 +608,12 @@ async def test_dispatch_channels_sends_email_when_enabled_with_address_and_adapt
 
     email_adapter.send_critical_failure_email.assert_awaited_once()
     rate_limiter.release.assert_not_awaited()
+
+
+def test_message_shows_local_readable_timestamp_not_raw_iso() -> None:
+    message = build_critical_failure_message(
+        _notification(timestamp="2026-09-08T12:00:00+00:00")
+    )
+
+    assert "Detectado em: 08/09/2026 às 09:00:00 (UTC-3)" in message
+    assert "2026-09-08T12:00:00" not in message

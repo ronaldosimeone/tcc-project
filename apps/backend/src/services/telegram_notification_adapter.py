@@ -22,6 +22,7 @@ import httpx
 import structlog
 
 from src.core.exceptions import TelegramNotificationError
+from src.core.time_format import format_local_timestamp
 
 log = structlog.get_logger(__name__)
 
@@ -61,7 +62,7 @@ def build_critical_failure_message(notification: CriticalFailureNotification) ->
         "🚨 FALHA CRÍTICA DETECTADA\n\n"
         f"Equipamento: {notification.equipment_name}\n"
         f"Probabilidade de falha: {notification.probability:.0%}\n"
-        f"Timestamp: {notification.timestamp}\n\n"
+        f"Detectado em: {format_local_timestamp(notification.timestamp)}\n\n"
         "Uma falha crítica foi detectada pelo modelo preditivo.\n\n"
         f"Acesse o Dashboard: {notification.dashboard_url}"
     )
