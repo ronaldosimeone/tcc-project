@@ -21,6 +21,10 @@ import httpx
 import structlog
 
 from src.core.exceptions import EmailNotificationError
+from src.services.email_templates import (
+    render_critical_failure_email_html,
+    render_test_email_html,
+)
 
 log = structlog.get_logger(__name__)
 
@@ -32,8 +36,8 @@ def build_critical_failure_email_text(
     timestamp: str,
     dashboard_url: str,
 ) -> str:
-    """Texto simples — mesmo raciocínio do Telegram (RF-24): sem HTML,
-    elimina qualquer superfície de injeção de markup no corpo do e-mail."""
+    """Corpo em texto simples — enviado junto do HTML (multipart) como
+    fallback para clientes que bloqueiam HTML, e lido por leitores de tela."""
     return (
         "FALHA CRÍTICA DETECTADA\n\n"
         f"Equipamento: {equipment_name}\n"
@@ -82,10 +86,17 @@ class EmailNotificationAdapter:
             timestamp=timestamp,
             dashboard_url=dashboard_url,
         )
+        html = render_critical_failure_email_html(
+            equipment_name=equipment_name,
+            probability=probability,
+            timestamp=timestamp,
+            dashboard_url=dashboard_url,
+        )
         await self._send(
             to=to,
             subject="PredictIQ — Falha crítica detectada",
             text=text,
+            html=html,
             log_context={"purpose": "critical_failure"},
         )
 
@@ -96,11 +107,18 @@ class EmailNotificationAdapter:
             to=to,
             subject=_TEST_EMAIL_SUBJECT,
             text=_TEST_EMAIL_TEXT,
+            html=render_test_email_html(),
             log_context={"purpose": "test"},
         )
 
     async def _send(
-        self, *, to: str, subject: str, text: str, log_context: dict[str, Any]
+        self,
+        *,
+        to: str,
+        subject: str,
+        text: str,
+        html: str,
+        log_context: dict[str, Any],
     ) -> None:
         """
         Levanta `EmailNotificationError` para qualquer falha — configuração
@@ -122,6 +140,7 @@ class EmailNotificationAdapter:
             "to": [to],
             "subject": subject,
             "text": text,
+            "html": html,
         }
 
         try:

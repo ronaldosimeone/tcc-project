@@ -196,3 +196,37 @@ async def test_api_base_url_trailing_slash_is_stripped(monkeypatch) -> None:
     assert mock_post.await_args is not None
     url = mock_post.await_args.args[0]
     assert url == f"{API_BASE}/emails"  # nunca "...//emails"
+
+
+async def test_critical_email_payload_includes_html_and_text_fallback(
+    monkeypatch,
+) -> None:
+    mock_post = AsyncMock(return_value=_response(200))
+    monkeypatch.setattr(httpx.AsyncClient, "post", mock_post)
+
+    await _adapter().send_critical_failure_email(
+        to="ops@empresa.com",
+        equipment_name="Compressor A",
+        probability=0.9,
+        timestamp="2026-09-18T12:00:00+00:00",
+        dashboard_url="http://localhost/sensors/A",
+    )
+
+    assert mock_post.await_args is not None
+    payload = mock_post.await_args.kwargs["json"]
+    assert payload["html"].startswith("<!DOCTYPE html>")
+    assert "Compressor A" in payload["html"]
+    assert "Compressor A" in payload["text"]  # fallback texto preservado
+
+
+async def test_test_email_payload_html_is_never_the_failure_template(
+    monkeypatch,
+) -> None:
+    mock_post = AsyncMock(return_value=_response(200))
+    monkeypatch.setattr(httpx.AsyncClient, "post", mock_post)
+
+    await _adapter().send_test_email(to="ops@empresa.com")
+
+    assert mock_post.await_args is not None
+    html = mock_post.await_args.kwargs["json"]["html"]
+    assert "falha crítica" not in html.lower()
