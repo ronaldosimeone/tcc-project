@@ -57,7 +57,7 @@ import pandas as pd
 _ML_ROOT: Path = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(_ML_ROOT))
 
-from src import evaluate_cross_dataset as xd  # noqa: E402
+import src.evaluate_cross_dataset as xd  # noqa: E402
 from src.digital_twin import TWIN_FEATURES, PhysicsTwin  # noqa: E402
 from src.evaluate_temporal import (  # noqa: E402
     EMBARGO_S,

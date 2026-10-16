@@ -137,5 +137,14 @@
       "reason": "Not significant (p = 0.4375) or no median improvement (+0.0000)."
     }
   },
-  "promotion": "not promoted: RN-05 gate requires p < 0.05 over the pooled folds; serve as CHALLENGER (shadow + canary)."
+  "promotion": "not promoted: RN-05 gate requires p < 0.05 over the pooled folds; serve as CHALLENGER (shadow + canary).",
+  "serving": {
+    "adapter": "tree",
+    "onnx": "xgboost_v3.onnx"
+  },
+  "validation": {
+    "leakage_free": true,
+    "protocol": "purged walk-forward by failure event (RF-28), pooled MetroPT-3 + MetroPT 2022",
+    "threshold_selection": "training out-of-fold only"
+  }
 }

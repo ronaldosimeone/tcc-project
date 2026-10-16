@@ -1,0 +1,72 @@
+{
+  "schema_version": "2.0",
+  "model_name": "bilstm_v2",
+  "status": "candidate",
+  "trained_at": "2026-10-16T19:00:38.859339+00:00",
+  "architecture": "bilstm",
+  "validation": {
+    "leakage_free": true,
+    "protocol": "purged walk-forward by failure event (RF-28), pooled MetroPT-3 + MetroPT 2022",
+    "threshold_selection": "temporal validation on the most recent training failure"
+  },
+  "dropped_sensors": [
+    "Reservoirs",
+    "Oil_level"
+  ],
+  "training": {
+    "window": 60,
+    "epochs": 8,
+    "batch": 512,
+    "lr": 0.001,
+    "train_windows": "every 2nd positive + every 20th negative",
+    "mlp_rows": "all positives + every 5th negative",
+    "labels": "row-level: window ending at row r has the label of row r",
+    "threshold": "cost-optimal on temporal validation (most recent training failure); fallback 0.5 / AE 99th pct healthy MSE when <2 failures",
+    "device": "cpu"
+  },
+  "seed": 0,
+  "decision_threshold": 0.35,
+  "onnx_parity_max_abs_diff": 3.337860107421875e-06,
+  "feature_count": 10,
+  "feature_names": [
+    "TP2",
+    "TP3",
+    "H1",
+    "DV_pressure",
+    "Motor_current",
+    "Oil_temperature",
+    "COMP",
+    "DV_eletric",
+    "Towers",
+    "MPG"
+  ],
+  "serving": {
+    "adapter": "sequence",
+    "onnx": "bilstm_v2.onnx",
+    "scaler": "bilstm_v2_scaler.joblib",
+    "window_size": 60
+  },
+  "evidence": {
+    "source": "models/eval_all_models.json",
+    "protocol": "pooled purged walk-forward, 6 folds, out-of-time",
+    "events": {
+      "failures": 6,
+      "detected": 3,
+      "missed": 3,
+      "false_alarm_episodes": 12
+    },
+    "confusion_alarms": {
+      "tn": 1834075,
+      "fp": 13526,
+      "fn": 38787,
+      "tp": 3726
+    },
+    "metrics_alarms": {
+      "precision": 0.2159749594249942,
+      "recall": 0.08764377954978478,
+      "f1": 0.1246883627541203,
+      "specificity": 0.9926791552938107
+    },
+    "expected_cost_mean": 52.0
+  }
+}
