@@ -1,0 +1,993 @@
+{
+  "embedding_model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+  "chunk_size": 1000,
+  "chunk_overlap": 150,
+  "base_manuals": [
+    "manual-bomba-centrifuga.pdf",
+    "manual-compressor-cx500.pdf",
+    "manual-motor-eletrico.pdf"
+  ],
+  "wap5_profile": {
+    "pages": [
+      170,
+      177
+    ],
+    "strip_cross_references": true,
+    "min_chunk_chars": 120,
+    "metadata": {
+      "domain": "locomotive",
+      "doc_type": "scheduled_maintenance",
+      "equipment": "air_supply_pneumatic",
+      "source_title": "Indian Railways WAP-5 Scheduled Maintenance Manual Vol. B, sec. 6.6"
+    }
+  },
+  "corpora": {
+    "A_baseline": {
+      "n_chunks": 9,
+      "indexing": "indexed=3 skipped=0 empty=0 errors=0 chunks_added=9 chunks_removed=0",
+      "summary": {
+        "queries_with_zero_results": 8,
+        "total_results": 0,
+        "wap5_results": 0,
+        "wap5_off_section_results": 0,
+        "reference_only_results": 0,
+        "mean_top1_score_no_threshold": 0.4846,
+        "mean_top1_score": 0.0
+      },
+      "queries": [
+        {
+          "query": "Compressor de ar: vazamento de ar e queda de pressão no reservatório",
+          "n_results": 0,
+          "results": [],
+          "top5_no_threshold": [
+            {
+              "file": "manual-bomba-centrifuga.pdf",
+              "page": 3,
+              "score": 0.5075,
+              "preview": "Trocar a vedacao mecanica do eixo da bomba sempre que houver vazamento visivel de agua ou fluido pela carcaca do equipam"
+            },
+            {
+              "file": "manual-bomba-centrifuga.pdf",
+              "page": 2,
+              "score": 0.3484,
+              "preview": "Em caso de cavitacao ou ruido excessivo na sucao, verificar imediatamente a pressao de entrada e o filtro de admissao da"
+            },
+            {
+              "file": "manual-bomba-centrifuga.pdf",
+              "page": 1,
+              "score": 0.2819,
+              "preview": "Manual de manutencao da bomba centrifuga modelo BC-200. Verificar o alinhamento do eixo e o estado dos rolamentos a cada"
+            },
+            {
+              "file": "manual-compressor-cx500.pdf",
+              "page": 3,
+              "score": 0.2126,
+              "preview": "Pagina extra: verificar filtro de ar semanalmente."
+            },
+            {
+              "file": "manual-motor-eletrico.pdf",
+              "page": 3,
+              "score": 0.2068,
+              "preview": "A limpeza das aletas de ventilacao do motor eletrico deve ser feita a cada seis meses para evitar superaquecimento do en"
+            }
+          ]
+        },
+        {
+          "query": "Compressor de ar: temperatura do óleo elevada",
+          "n_results": 0,
+          "results": [],
+          "top5_no_threshold": [
+            {
+              "file": "manual-motor-eletrico.pdf",
+              "page": 1,
+              "score": 0.5319,
+              "preview": "Manual de manutencao do motor eletrico trifasico industrial modelo ME-750. Medir a temperatura do enrolamento do estator"
+            },
+            {
+              "file": "manual-motor-eletrico.pdf",
+              "page": 3,
+              "score": 0.4015,
+              "preview": "A limpeza das aletas de ventilacao do motor eletrico deve ser feita a cada seis meses para evitar superaquecimento do en"
+            },
+            {
+              "file": "manual-bomba-centrifuga.pdf",
+              "page": 3,
+              "score": 0.3829,
+              "preview": "Trocar a vedacao mecanica do eixo da bomba sempre que houver vazamento visivel de agua ou fluido pela carcaca do equipam"
+            },
+            {
+              "file": "manual-compressor-cx500.pdf",
+              "page": 2,
+              "score": 0.3562,
+              "preview": "Trocar o oleo a cada 400 horas apos a revisao tecnica de 2026."
+            },
+            {
+              "file": "manual-bomba-centrifuga.pdf",
+              "page": 2,
+              "score": 0.3518,
+              "preview": "Em caso de cavitacao ou ruido excessivo na sucao, verificar imediatamente a pressao de entrada e o filtro de admissao da"
+            }
+          ]
+        },
+        {
+          "query": "Compressor de ar: nível de óleo baixo",
+          "n_results": 0,
+          "results": [],
+          "top5_no_threshold": [
+            {
+              "file": "manual-motor-eletrico.pdf",
+              "page": 1,
+              "score": 0.4291,
+              "preview": "Manual de manutencao do motor eletrico trifasico industrial modelo ME-750. Medir a temperatura do enrolamento do estator"
+            },
+            {
+              "file": "manual-motor-eletrico.pdf",
+              "page": 3,
+              "score": 0.3918,
+              "preview": "A limpeza das aletas de ventilacao do motor eletrico deve ser feita a cada seis meses para evitar superaquecimento do en"
+            },
+            {
+              "file": "manual-bomba-centrifuga.pdf",
+              "page": 3,
+              "score": 0.3744,
+              "preview": "Trocar a vedacao mecanica do eixo da bomba sempre que houver vazamento visivel de agua ou fluido pela carcaca do equipam"
+            },
+            {
+              "file": "manual-compressor-cx500.pdf",
+              "page": 1,
+              "score": 0.3522,
+              "preview": "Manual REVISADO do compressor CX-500. Nova secao de seguranca adicionada."
+            },
+            {
+              "file": "manual-bomba-centrifuga.pdf",
+              "page": 2,
+              "score": 0.3442,
+              "preview": "Em caso de cavitacao ou ruido excessivo na sucao, verificar imediatamente a pressao de entrada e o filtro de admissao da"
+            }
+          ]
+        },
+        {
+          "query": "Compressor de ar: corrente do motor acima do normal",
+          "n_results": 0,
+          "results": [],
+          "top5_no_threshold": [
+            {
+              "file": "manual-motor-eletrico.pdf",
+              "page": 1,
+              "score": 0.5471,
+              "preview": "Manual de manutencao do motor eletrico trifasico industrial modelo ME-750. Medir a temperatura do enrolamento do estator"
+            },
+            {
+              "file": "manual-motor-eletrico.pdf",
+              "page": 2,
+              "score": 0.5033,
+              "preview": "Se o motor eletrico apresentar vibracao anormal, desligar o equipamento e verificar o balanceamento do rotor e o estado "
+            },
+            {
+              "file": "manual-compressor-cx500.pdf",
+              "page": 1,
+              "score": 0.4778,
+              "preview": "Manual REVISADO do compressor CX-500. Nova secao de seguranca adicionada."
+            },
+            {
+              "file": "manual-bomba-centrifuga.pdf",
+              "page": 2,
+              "score": 0.4273,
+              "preview": "Em caso de cavitacao ou ruido excessivo na sucao, verificar imediatamente a pressao de entrada e o filtro de admissao da"
+            },
+            {
+              "file": "manual-bomba-centrifuga.pdf",
+              "page": 3,
+              "score": 0.4248,
+              "preview": "Trocar a vedacao mecanica do eixo da bomba sempre que houver vazamento visivel de agua ou fluido pela carcaca do equipam"
+            }
+          ]
+        },
+        {
+          "query": "Secador de ar: dessecante das torres contaminado, umidade no ar comprimido",
+          "n_results": 0,
+          "results": [],
+          "top5_no_threshold": [
+            {
+              "file": "manual-bomba-centrifuga.pdf",
+              "page": 3,
+              "score": 0.5191,
+              "preview": "Trocar a vedacao mecanica do eixo da bomba sempre que houver vazamento visivel de agua ou fluido pela carcaca do equipam"
+            },
+            {
+              "file": "manual-bomba-centrifuga.pdf",
+              "page": 2,
+              "score": 0.4149,
+              "preview": "Em caso de cavitacao ou ruido excessivo na sucao, verificar imediatamente a pressao de entrada e o filtro de admissao da"
+            },
+            {
+              "file": "manual-bomba-centrifuga.pdf",
+              "page": 1,
+              "score": 0.4014,
+              "preview": "Manual de manutencao da bomba centrifuga modelo BC-200. Verificar o alinhamento do eixo e o estado dos rolamentos a cada"
+            },
+            {
+              "file": "manual-motor-eletrico.pdf",
+              "page": 3,
+              "score": 0.3606,
+              "preview": "A limpeza das aletas de ventilacao do motor eletrico deve ser feita a cada seis meses para evitar superaquecimento do en"
+            },
+            {
+              "file": "manual-compressor-cx500.pdf",
+              "page": 3,
+              "score": 0.3405,
+              "preview": "Pagina extra: verificar filtro de ar semanalmente."
+            }
+          ]
+        },
+        {
+          "query": "Air compressor: air leak, main reservoir pressure drop",
+          "n_results": 0,
+          "results": [],
+          "top5_no_threshold": [
+            {
+              "file": "manual-bomba-centrifuga.pdf",
+              "page": 3,
+              "score": 0.4682,
+              "preview": "Trocar a vedacao mecanica do eixo da bomba sempre que houver vazamento visivel de agua ou fluido pela carcaca do equipam"
+            },
+            {
+              "file": "manual-bomba-centrifuga.pdf",
+              "page": 2,
+              "score": 0.3604,
+              "preview": "Em caso de cavitacao ou ruido excessivo na sucao, verificar imediatamente a pressao de entrada e o filtro de admissao da"
+            },
+            {
+              "file": "manual-compressor-cx500.pdf",
+              "page": 1,
+              "score": 0.3297,
+              "preview": "Manual REVISADO do compressor CX-500. Nova secao de seguranca adicionada."
+            },
+            {
+              "file": "manual-motor-eletrico.pdf",
+              "page": 1,
+              "score": 0.3238,
+              "preview": "Manual de manutencao do motor eletrico trifasico industrial modelo ME-750. Medir a temperatura do enrolamento do estator"
+            },
+            {
+              "file": "manual-motor-eletrico.pdf",
+              "page": 3,
+              "score": 0.322,
+              "preview": "A limpeza das aletas de ventilacao do motor eletrico deve ser feita a cada seis meses para evitar superaquecimento do en"
+            }
+          ]
+        },
+        {
+          "query": "Air dryer twin tower desiccant contaminated with oil or water",
+          "n_results": 0,
+          "results": [],
+          "top5_no_threshold": [
+            {
+              "file": "manual-bomba-centrifuga.pdf",
+              "page": 3,
+              "score": 0.4473,
+              "preview": "Trocar a vedacao mecanica do eixo da bomba sempre que houver vazamento visivel de agua ou fluido pela carcaca do equipam"
+            },
+            {
+              "file": "manual-bomba-centrifuga.pdf",
+              "page": 1,
+              "score": 0.3749,
+              "preview": "Manual de manutencao da bomba centrifuga modelo BC-200. Verificar o alinhamento do eixo e o estado dos rolamentos a cada"
+            },
+            {
+              "file": "manual-motor-eletrico.pdf",
+              "page": 1,
+              "score": 0.2922,
+              "preview": "Manual de manutencao do motor eletrico trifasico industrial modelo ME-750. Medir a temperatura do enrolamento do estator"
+            },
+            {
+              "file": "manual-bomba-centrifuga.pdf",
+              "page": 2,
+              "score": 0.2662,
+              "preview": "Em caso de cavitacao ou ruido excessivo na sucao, verificar imediatamente a pressao de entrada e o filtro de admissao da"
+            },
+            {
+              "file": "manual-motor-eletrico.pdf",
+              "page": 3,
+              "score": 0.2578,
+              "preview": "A limpeza das aletas de ventilacao do motor eletrico deve ser feita a cada seis meses para evitar superaquecimento do en"
+            }
+          ]
+        },
+        {
+          "query": "Compressor safety valve and drain valve test",
+          "n_results": 0,
+          "results": [],
+          "top5_no_threshold": [
+            {
+              "file": "manual-bomba-centrifuga.pdf",
+              "page": 3,
+              "score": 0.4269,
+              "preview": "Trocar a vedacao mecanica do eixo da bomba sempre que houver vazamento visivel de agua ou fluido pela carcaca do equipam"
+            },
+            {
+              "file": "manual-bomba-centrifuga.pdf",
+              "page": 2,
+              "score": 0.4091,
+              "preview": "Em caso de cavitacao ou ruido excessivo na sucao, verificar imediatamente a pressao de entrada e o filtro de admissao da"
+            },
+            {
+              "file": "manual-motor-eletrico.pdf",
+              "page": 1,
+              "score": 0.3461,
+              "preview": "Manual de manutencao do motor eletrico trifasico industrial modelo ME-750. Medir a temperatura do enrolamento do estator"
+            },
+            {
+              "file": "manual-compressor-cx500.pdf",
+              "page": 1,
+              "score": 0.3456,
+              "preview": "Manual REVISADO do compressor CX-500. Nova secao de seguranca adicionada."
+            },
+            {
+              "file": "manual-bomba-centrifuga.pdf",
+              "page": 1,
+              "score": 0.3088,
+              "preview": "Manual de manutencao da bomba centrifuga modelo BC-200. Verificar o alinhamento do eixo e o estado dos rolamentos a cada"
+            }
+          ]
+        }
+      ]
+    },
+    "B_wap5_raw": {
+      "n_chunks": 524,
+      "indexing": "indexed=4 skipped=0 empty=0 errors=0 chunks_added=524 chunks_removed=0",
+      "summary": {
+        "queries_with_zero_results": 7,
+        "total_results": 3,
+        "wap5_results": 3,
+        "wap5_off_section_results": 3,
+        "reference_only_results": 0,
+        "mean_top1_score_no_threshold": 0.5795,
+        "mean_top1_score": 0.6969
+      },
+      "queries": [
+        {
+          "query": "Compressor de ar: vazamento de ar e queda de pressão no reservatório",
+          "n_results": 0,
+          "results": [],
+          "top5_no_threshold": [
+            {
+              "file": "wap5-scheduled-maintenance-vol-b.pdf",
+              "page": 38,
+              "score": 0.5573,
+              "preview": "ing, before closing the main reservoir isolating cock, venting all air from the main reservoirs and isolating the compre"
+            },
+            {
+              "file": "manual-bomba-centrifuga.pdf",
+              "page": 3,
+              "score": 0.5075,
+              "preview": "Trocar a vedacao mecanica do eixo da bomba sempre que houver vazamento visivel de agua ou fluido pela carcaca do equipam"
+            },
+            {
+              "file": "wap5-scheduled-maintenance-vol-b.pdf",
+              "page": 209,
+              "score": 0.492,
+              "preview": "surer Suitable extinpJishing medla: Water spray, foam, dry powder. camr dioxide GO,) Unsuilabie extxlguishlng media: Hig"
+            },
+            {
+              "file": "wap5-scheduled-maintenance-vol-b.pdf",
+              "page": 176,
+              "score": 0.4689,
+              "preview": "reservoir isolating cocks as part of the main reservoirs overhaul. Refer to Suppliers Documentation Volume F11, Section "
+            },
+            {
+              "file": "wap5-scheduled-maintenance-vol-b.pdf",
+              "page": 174,
+              "score": 0.468,
+              "preview": "he electrical conduit between the underframe and air drier. Refer to volume^, Maintenance and Repair Manual, Chapter 6.2"
+            }
+          ]
+        },
+        {
+          "query": "Compressor de ar: temperatura do óleo elevada",
+          "n_results": 0,
+          "results": [],
+          "top5_no_threshold": [
+            {
+              "file": "wap5-scheduled-maintenance-vol-b.pdf",
+              "page": 136,
+              "score": 0.5512,
+              "preview": "l, Chapter 3.6, Transformer Cooling. (9 8 01 306.6M.01 Main transformer oil pumps -Check m Check the security of the mai"
+            },
+            {
+              "file": "wap5-scheduled-maintenance-vol-b.pdf",
+              "page": 147,
+              "score": 0.5486,
+              "preview": "Oil Circulating Pump (698.035-FDEI). Replace the O-rings in the oil cooling piping as part of the converter oil Cooling "
+            },
+            {
+              "file": "wap5-scheduled-maintenance-vol-b.pdf",
+              "page": 215,
+              "score": 0.5391,
+              "preview": "have a severe effocl onthe peflomnce Of an air compressor. Depositstormed on tne line clearances ot compressor vaWs case"
+            },
+            {
+              "file": "manual-motor-eletrico.pdf",
+              "page": 1,
+              "score": 0.5319,
+              "preview": "Manual de manutencao do motor eletrico trifasico industrial modelo ME-750. Medir a temperatura do enrolamento do estator"
+            },
+            {
+              "file": "wap5-scheduled-maintenance-vol-b.pdf",
+              "page": 135,
+              "score": 0.5253,
+              "preview": "icing, Maintenance (3EHN 420227). section 2.2.2 306.3M.01 Main transformer expansion tank -Clean Drain any water from th"
+            }
+          ]
+        },
+        {
+          "query": "Compressor de ar: nível de óleo baixo",
+          "n_results": 0,
+          "results": [],
+          "top5_no_threshold": [
+            {
+              "file": "wap5-scheduled-maintenance-vol-b.pdf",
+              "page": 215,
+              "score": 0.5597,
+              "preview": "is also available in other IS0 Vbc%i?y j Grades, as Shell Corena 3il P6B and Shell CoreruP150. Reduction in carbonaceous"
+            },
+            {
+              "file": "wap5-scheduled-maintenance-vol-b.pdf",
+              "page": 215,
+              "score": 0.5531,
+              "preview": "have a severe effocl onthe peflomnce Of an air compressor. Depositstormed on tne line clearances ot compressor vaWs case"
+            },
+            {
+              "file": "wap5-scheduled-maintenance-vol-b.pdf",
+              "page": 159,
+              "score": 0.5404,
+              "preview": "from inside the oil blower casing and impeller using a vacuum cleaner and soft, non-metallic brush. Remove all dirt, dus"
+            },
+            {
+              "file": "wap5-scheduled-maintenance-vol-b.pdf",
+              "page": 147,
+              "score": 0.5096,
+              "preview": "Oil Circulating Pump (698.035-FDEI). Replace the O-rings in the oil cooling piping as part of the converter oil Cooling "
+            },
+            {
+              "file": "wap5-scheduled-maintenance-vol-b.pdf",
+              "page": 135,
+              "score": 0.5033,
+              "preview": "icing, Maintenance (3EHN 420227). section 2.2.2 306.3M.01 Main transformer expansion tank -Clean Drain any water from th"
+            }
+          ]
+        },
+        {
+          "query": "Compressor de ar: corrente do motor acima do normal",
+          "n_results": 0,
+          "results": [],
+          "top5_no_threshold": [
+            {
+              "file": "wap5-scheduled-maintenance-vol-b.pdf",
+              "page": 38,
+              "score": 0.5732,
+              "preview": "h the air will be vented and ensure that the blast of compressed air cannot cause injury or damage. 2. When using compre"
+            },
+            {
+              "file": "manual-motor-eletrico.pdf",
+              "page": 1,
+              "score": 0.5471,
+              "preview": "Manual de manutencao do motor eletrico trifasico industrial modelo ME-750. Medir a temperatura do enrolamento do estator"
+            },
+            {
+              "file": "wap5-scheduled-maintenance-vol-b.pdf",
+              "page": 177,
+              "score": 0.5211,
+              "preview": "r to Suppliers Documentation Volume F12, Section 5, Auxiliary Air Compressor Maintenance lnstructions (A364). 604.5Y.02 "
+            },
+            {
+              "file": "wap5-scheduled-maintenance-vol-b.pdf",
+              "page": 215,
+              "score": 0.4895,
+              "preview": "have a severe effocl onthe peflomnce Of an air compressor. Depositstormed on tne line clearances ot compressor vaWs case"
+            },
+            {
+              "file": "wap5-scheduled-maintenance-vol-b.pdf",
+              "page": 172,
+              "score": 0.4843,
+              "preview": "ain Valve Maintenance lnstructions (A165). 601.18M.01 Main compressor motor bearings -Lubricate Lubricate the main compr"
+            }
+          ]
+        },
+        {
+          "query": "Secador de ar: dessecante das torres contaminado, umidade no ar comprimido",
+          "n_results": 0,
+          "results": [],
+          "top5_no_threshold": [
+            {
+              "file": "wap5-scheduled-maintenance-vol-b.pdf",
+              "page": 209,
+              "score": 0.5656,
+              "preview": "surer Suitable extinpJishing medla: Water spray, foam, dry powder. camr dioxide GO,) Unsuilabie extxlguishlng media: Hig"
+            },
+            {
+              "file": "wap5-scheduled-maintenance-vol-b.pdf",
+              "page": 40,
+              "score": 0.535,
+              "preview": "ferent equipment is decribed in the following paragraphs. This sequence is also illustrated in Fig. 3.1 a) Turn off the "
+            },
+            {
+              "file": "wap5-scheduled-maintenance-vol-b.pdf",
+              "page": 174,
+              "score": 0.5305,
+              "preview": "cks. Replace the cocks if defective. Refer to Volume D, Maintenance and Repair Manual, Chapter 6.2, Air Drier. 602.2Y.01"
+            },
+            {
+              "file": "wap5-scheduled-maintenance-vol-b.pdf",
+              "page": 163,
+              "score": 0.5301,
+              "preview": "r screen, then steam clean it. Ensure that all dirt, dust and debris is removed. Inspect the screen for damage or defect"
+            },
+            {
+              "file": "manual-bomba-centrifuga.pdf",
+              "page": 3,
+              "score": 0.5191,
+              "preview": "Trocar a vedacao mecanica do eixo da bomba sempre que houver vazamento visivel de agua ou fluido pela carcaca do equipam"
+            }
+          ]
+        },
+        {
+          "query": "Air compressor: air leak, main reservoir pressure drop",
+          "n_results": 0,
+          "results": [],
+          "top5_no_threshold": [
+            {
+              "file": "wap5-scheduled-maintenance-vol-b.pdf",
+              "page": 135,
+              "score": 0.5742,
+              "preview": "icing, Maintenance (3EHN 420227). section 2.2.2 306.3M.01 Main transformer expansion tank -Clean Drain any water from th"
+            },
+            {
+              "file": "wap5-scheduled-maintenance-vol-b.pdf",
+              "page": 177,
+              "score": 0.5411,
+              "preview": "r to Suppliers Documentation Volume F12, Section 5, Auxiliary Air Compressor Maintenance lnstructions (A364). 604.5Y.02 "
+            },
+            {
+              "file": "wap5-scheduled-maintenance-vol-b.pdf",
+              "page": 174,
+              "score": 0.5311,
+              "preview": "he electrical conduit between the underframe and air drier. Refer to volume^, Maintenance and Repair Manual, Chapter 6.2"
+            },
+            {
+              "file": "wap5-scheduled-maintenance-vol-b.pdf",
+              "page": 176,
+              "score": 0.5242,
+              "preview": "aul. ~ef@o Suppliers Documentation Volume F14, Section 7, Control Reservoir Retaining Valve Maintenance lnstructions (A1"
+            },
+            {
+              "file": "wap5-scheduled-maintenance-vol-b.pdf",
+              "page": 38,
+              "score": 0.5168,
+              "preview": "ing, before closing the main reservoir isolating cock, venting all air from the main reservoirs and isolating the compre"
+            }
+          ]
+        },
+        {
+          "query": "Air dryer twin tower desiccant contaminated with oil or water",
+          "n_results": 0,
+          "results": [],
+          "top5_no_threshold": [
+            {
+              "file": "wap5-scheduled-maintenance-vol-b.pdf",
+              "page": 174,
+              "score": 0.5575,
+              "preview": "cks. Replace the cocks if defective. Refer to Volume D, Maintenance and Repair Manual, Chapter 6.2, Air Drier. 602.2Y.01"
+            },
+            {
+              "file": "wap5-scheduled-maintenance-vol-b.pdf",
+              "page": 135,
+              "score": 0.5321,
+              "preview": "icing, Maintenance (3EHN 420227). section 2.2.2 306.3M.01 Main transformer expansion tank -Clean Drain any water from th"
+            },
+            {
+              "file": "wap5-scheduled-maintenance-vol-b.pdf",
+              "page": 159,
+              "score": 0.5092,
+              "preview": "from inside the oil blower casing and impeller using a vacuum cleaner and soft, non-metallic brush. Remove all dirt, dus"
+            },
+            {
+              "file": "wap5-scheduled-maintenance-vol-b.pdf",
+              "page": 160,
+              "score": 0.5005,
+              "preview": "e and clean the oil blower filter panel. Remove all dirt, debris and obstructions. Refer to Volume D, Maintenance and Re"
+            },
+            {
+              "file": "wap5-scheduled-maintenance-vol-b.pdf",
+              "page": 209,
+              "score": 0.4961,
+              "preview": "surer Suitable extinpJishing medla: Water spray, foam, dry powder. camr dioxide GO,) Unsuilabie extxlguishlng media: Hig"
+            }
+          ]
+        },
+        {
+          "query": "Compressor safety valve and drain valve test",
+          "n_results": 3,
+          "results": [
+            {
+              "file": "wap5-scheduled-maintenance-vol-b.pdf",
+              "page": 179,
+              "score": 0.6969,
+              "wap5_off_section": true,
+              "reference_only": false,
+              "preview": "Valve Maintenance lnstructions (A452). 605.2Y.05 Pressure control valve -Test Test the operation of the pressure control valve. The valve performance should be "
+            },
+            {
+              "file": "wap5-scheduled-maintenance-vol-b.pdf",
+              "page": 178,
+              "score": 0.6299,
+              "wap5_off_section": true,
+              "reference_only": false,
+              "preview": "alve -Test Test the operation of the emergency exhaust valve. The valve performance should be checked as part of the brake equipment module. Replace the valve i"
+            },
+            {
+              "file": "wap5-scheduled-maintenance-vol-b.pdf",
+              "page": 85,
+              "score": 0.6268,
+              "wap5_off_section": true,
+              "reference_only": false,
+              "preview": "heck valve -Test Air relay valve-Test Latched solenoid valve -Test Pressure control valve -Test Sanding equipment -Test Safety valve -Test Brake pipe control un"
+            }
+          ],
+          "top5_no_threshold": [
+            {
+              "file": "wap5-scheduled-maintenance-vol-b.pdf",
+              "page": 179,
+              "score": 0.6969,
+              "preview": "Valve Maintenance lnstructions (A452). 605.2Y.05 Pressure control valve -Test Test the operation of the pressure control"
+            },
+            {
+              "file": "wap5-scheduled-maintenance-vol-b.pdf",
+              "page": 178,
+              "score": 0.6299,
+              "preview": "alve -Test Test the operation of the emergency exhaust valve. The valve performance should be checked as part of the bra"
+            },
+            {
+              "file": "wap5-scheduled-maintenance-vol-b.pdf",
+              "page": 85,
+              "score": 0.6268,
+              "preview": "heck valve -Test Air relay valve-Test Latched solenoid valve -Test Pressure control valve -Test Sanding equipment -Test "
+            },
+            {
+              "file": "wap5-scheduled-maintenance-vol-b.pdf",
+              "page": 187,
+              "score": 0.5726,
+              "preview": "tation Volume F11, Section 8, Anti-Slip Valve ASVl Maintenance Instructions (A69). 607.1Y.03 Brake activators - Hoses-In"
+            },
+            {
+              "file": "wap5-scheduled-maintenance-vol-b.pdf",
+              "page": 179,
+              "score": 0.5699,
+              "preview": "Protection Valve Maintenance lnstructions (A425). 605.2Y.02 Duplex check valve -Test Test the duplex check valve. Replac"
+            }
+          ]
+        }
+      ]
+    },
+    "C_wap5_curated": {
+      "n_chunks": 25,
+      "indexing": "indexed=4 skipped=0 empty=0 errors=0 chunks_added=25 chunks_removed=0",
+      "summary": {
+        "queries_with_zero_results": 7,
+        "total_results": 1,
+        "wap5_results": 1,
+        "wap5_off_section_results": 0,
+        "reference_only_results": 0,
+        "mean_top1_score_no_threshold": 0.5409,
+        "mean_top1_score": 0.6293
+      },
+      "queries": [
+        {
+          "query": "Compressor de ar: vazamento de ar e queda de pressão no reservatório",
+          "n_results": 0,
+          "results": [],
+          "top5_no_threshold": [
+            {
+              "file": "manual-bomba-centrifuga.pdf",
+              "page": 3,
+              "score": 0.5075,
+              "preview": "Trocar a vedacao mecanica do eixo da bomba sempre que houver vazamento visivel de agua ou fluido pela carcaca do equipam"
+            },
+            {
+              "file": "wap5-scheduled-maintenance-vol-b.pdf",
+              "page": 176,
+              "score": 0.4757,
+              "preview": "control reservoir retaining valve as part of the main reservoirs overhaul. ~ef@o Suppliers Documentation Volume F14, Sec"
+            },
+            {
+              "file": "wap5-scheduled-maintenance-vol-b.pdf",
+              "page": 175,
+              "score": 0.3596,
+              "preview": "Task Description Indian Railways WAPQ Scheduled Maintenance Manual 603.3M.03 Main Reservoir isolating cocks -Inspect Vis"
+            },
+            {
+              "file": "manual-bomba-centrifuga.pdf",
+              "page": 2,
+              "score": 0.3484,
+              "preview": "Em caso de cavitacao ou ruido excessivo na sucao, verificar imediatamente a pressao de entrada e o filtro de admissao da"
+            },
+            {
+              "file": "wap5-scheduled-maintenance-vol-b.pdf",
+              "page": 177,
+              "score": 0.3322,
+              "preview": "ntenance and Repair Manual, Chapter 6.4, Auxiliary Compressor. 604.4Y.01 Auxiliary compressor -Overhaul Overhaul the aux"
+            }
+          ]
+        },
+        {
+          "query": "Compressor de ar: temperatura do óleo elevada",
+          "n_results": 0,
+          "results": [],
+          "top5_no_threshold": [
+            {
+              "file": "manual-motor-eletrico.pdf",
+              "page": 1,
+              "score": 0.5319,
+              "preview": "Manual de manutencao do motor eletrico trifasico industrial modelo ME-750. Medir a temperatura do enrolamento do estator"
+            },
+            {
+              "file": "wap5-scheduled-maintenance-vol-b.pdf",
+              "page": 170,
+              "score": 0.4575,
+              "preview": "sor oil pressure. Adjust the oil pressure if not within specification. - r- V) 601.1M.03 Main compressor-Check ch ci cx "
+            },
+            {
+              "file": "wap5-scheduled-maintenance-vol-b.pdf",
+              "page": 171,
+              "score": 0.4277,
+              "preview": "p cup filter -Clean Clean the drip cup filter. 601.1Y.01 Main compressor -Inspect Visually inspect the compressor motor,"
+            },
+            {
+              "file": "manual-motor-eletrico.pdf",
+              "page": 3,
+              "score": 0.4015,
+              "preview": "A limpeza das aletas de ventilacao do motor eletrico deve ser feita a cada seis meses para evitar superaquecimento do en"
+            },
+            {
+              "file": "wap5-scheduled-maintenance-vol-b.pdf",
+              "page": 176,
+              "score": 0.3962,
+              "preview": "control reservoir retaining valve as part of the main reservoirs overhaul. ~ef@o Suppliers Documentation Volume F14, Sec"
+            }
+          ]
+        },
+        {
+          "query": "Compressor de ar: nível de óleo baixo",
+          "n_results": 0,
+          "results": [],
+          "top5_no_threshold": [
+            {
+              "file": "manual-motor-eletrico.pdf",
+              "page": 1,
+              "score": 0.4291,
+              "preview": "Manual de manutencao do motor eletrico trifasico industrial modelo ME-750. Medir a temperatura do enrolamento do estator"
+            },
+            {
+              "file": "wap5-scheduled-maintenance-vol-b.pdf",
+              "page": 170,
+              "score": 0.4219,
+              "preview": "sor oil pressure. Adjust the oil pressure if not within specification. - r- V) 601.1M.03 Main compressor-Check ch ci cx "
+            },
+            {
+              "file": "wap5-scheduled-maintenance-vol-b.pdf",
+              "page": 171,
+              "score": 0.4101,
+              "preview": "p cup filter -Clean Clean the drip cup filter. 601.1Y.01 Main compressor -Inspect Visually inspect the compressor motor,"
+            },
+            {
+              "file": "wap5-scheduled-maintenance-vol-b.pdf",
+              "page": 176,
+              "score": 0.4086,
+              "preview": "control reservoir retaining valve as part of the main reservoirs overhaul. ~ef@o Suppliers Documentation Volume F14, Sec"
+            },
+            {
+              "file": "wap5-scheduled-maintenance-vol-b.pdf",
+              "page": 177,
+              "score": 0.4028,
+              "preview": "ntenance and Repair Manual, Chapter 6.4, Auxiliary Compressor. 604.4Y.01 Auxiliary compressor -Overhaul Overhaul the aux"
+            }
+          ]
+        },
+        {
+          "query": "Compressor de ar: corrente do motor acima do normal",
+          "n_results": 0,
+          "results": [],
+          "top5_no_threshold": [
+            {
+              "file": "manual-motor-eletrico.pdf",
+              "page": 1,
+              "score": 0.5471,
+              "preview": "Manual de manutencao do motor eletrico trifasico industrial modelo ME-750. Medir a temperatura do enrolamento do estator"
+            },
+            {
+              "file": "wap5-scheduled-maintenance-vol-b.pdf",
+              "page": 177,
+              "score": 0.5319,
+              "preview": "ntenance and Repair Manual, Chapter 6.4, Auxiliary Compressor. 604.4Y.01 Auxiliary compressor -Overhaul Overhaul the aux"
+            },
+            {
+              "file": "manual-motor-eletrico.pdf",
+              "page": 2,
+              "score": 0.5033,
+              "preview": "Se o motor eletrico apresentar vibracao anormal, desligar o equipamento e verificar o balanceamento do rotor e o estado "
+            },
+            {
+              "file": "manual-compressor-cx500.pdf",
+              "page": 1,
+              "score": 0.4778,
+              "preview": "Manual REVISADO do compressor CX-500. Nova secao de seguranca adicionada."
+            },
+            {
+              "file": "wap5-scheduled-maintenance-vol-b.pdf",
+              "page": 171,
+              "score": 0.461,
+              "preview": "Task Description Indian Railways WAP-5 Scheduled Maintenance Manual 601.3M.03 Main compressor air flow path -Clean Clean"
+            }
+          ]
+        },
+        {
+          "query": "Secador de ar: dessecante das torres contaminado, umidade no ar comprimido",
+          "n_results": 0,
+          "results": [],
+          "top5_no_threshold": [
+            {
+              "file": "wap5-scheduled-maintenance-vol-b.pdf",
+              "page": 174,
+              "score": 0.5372,
+              "preview": "drier -Overhaul Overhaul the twin tower air drier. 602.4Y.02 Air drier isolating cocks -Replace Replace the air drier is"
+            },
+            {
+              "file": "manual-bomba-centrifuga.pdf",
+              "page": 3,
+              "score": 0.5191,
+              "preview": "Trocar a vedacao mecanica do eixo da bomba sempre que houver vazamento visivel de agua ou fluido pela carcaca do equipam"
+            },
+            {
+              "file": "wap5-scheduled-maintenance-vol-b.pdf",
+              "page": 173,
+              "score": 0.4457,
+              "preview": "ressor operating, check the operation of the air drier. Rectify any faults found. 602.3M.01 Air drier -Check Check the p"
+            },
+            {
+              "file": "manual-bomba-centrifuga.pdf",
+              "page": 2,
+              "score": 0.4149,
+              "preview": "Em caso de cavitacao ou ruido excessivo na sucao, verificar imediatamente a pressao de entrada e o filtro de admissao da"
+            },
+            {
+              "file": "manual-bomba-centrifuga.pdf",
+              "page": 1,
+              "score": 0.4014,
+              "preview": "Manual de manutencao da bomba centrifuga modelo BC-200. Verificar o alinhamento do eixo e o estado dos rolamentos a cada"
+            }
+          ]
+        },
+        {
+          "query": "Air compressor: air leak, main reservoir pressure drop",
+          "n_results": 0,
+          "results": [],
+          "top5_no_threshold": [
+            {
+              "file": "wap5-scheduled-maintenance-vol-b.pdf",
+              "page": 176,
+              "score": 0.5816,
+              "preview": "control reservoir retaining valve as part of the main reservoirs overhaul. ~ef@o Suppliers Documentation Volume F14, Sec"
+            },
+            {
+              "file": "wap5-scheduled-maintenance-vol-b.pdf",
+              "page": 177,
+              "score": 0.536,
+              "preview": "ntenance and Repair Manual, Chapter 6.4, Auxiliary Compressor. 604.4Y.01 Auxiliary compressor -Overhaul Overhaul the aux"
+            },
+            {
+              "file": "wap5-scheduled-maintenance-vol-b.pdf",
+              "page": 170,
+              "score": 0.4692,
+              "preview": "sor oil pressure. Adjust the oil pressure if not within specification. - r- V) 601.1M.03 Main compressor-Check ch ci cx "
+            },
+            {
+              "file": "manual-bomba-centrifuga.pdf",
+              "page": 3,
+              "score": 0.4682,
+              "preview": "Trocar a vedacao mecanica do eixo da bomba sempre que houver vazamento visivel de agua ou fluido pela carcaca do equipam"
+            },
+            {
+              "file": "wap5-scheduled-maintenance-vol-b.pdf",
+              "page": 171,
+              "score": 0.4568,
+              "preview": "Task Description Indian Railways WAP-5 Scheduled Maintenance Manual 601.3M.03 Main compressor air flow path -Clean Clean"
+            }
+          ]
+        },
+        {
+          "query": "Air dryer twin tower desiccant contaminated with oil or water",
+          "n_results": 0,
+          "results": [],
+          "top5_no_threshold": [
+            {
+              "file": "wap5-scheduled-maintenance-vol-b.pdf",
+              "page": 174,
+              "score": 0.5635,
+              "preview": "drier -Overhaul Overhaul the twin tower air drier. 602.4Y.02 Air drier isolating cocks -Replace Replace the air drier is"
+            },
+            {
+              "file": "manual-bomba-centrifuga.pdf",
+              "page": 3,
+              "score": 0.4473,
+              "preview": "Trocar a vedacao mecanica do eixo da bomba sempre que houver vazamento visivel de agua ou fluido pela carcaca do equipam"
+            },
+            {
+              "file": "wap5-scheduled-maintenance-vol-b.pdf",
+              "page": 176,
+              "score": 0.4254,
+              "preview": "control reservoir retaining valve as part of the main reservoirs overhaul. ~ef@o Suppliers Documentation Volume F14, Sec"
+            },
+            {
+              "file": "wap5-scheduled-maintenance-vol-b.pdf",
+              "page": 174,
+              "score": 0.3909,
+              "preview": "Indian Railways WAPQ Task Description Scheduled Maintenance Manual 602.1Y.02 Air drier electrical conduit -Inspect Visua"
+            },
+            {
+              "file": "wap5-scheduled-maintenance-vol-b.pdf",
+              "page": 175,
+              "score": 0.3851,
+              "preview": "Task Description Indian Railways WAPQ Scheduled Maintenance Manual 603.3M.03 Main Reservoir isolating cocks -Inspect Vis"
+            }
+          ]
+        },
+        {
+          "query": "Compressor safety valve and drain valve test",
+          "n_results": 1,
+          "results": [
+            {
+              "file": "wap5-scheduled-maintenance-vol-b.pdf",
+              "page": 175,
+              "score": 0.6293,
+              "wap5_off_section": false,
+              "reference_only": false,
+              "preview": "valves -Test Test the automatic drain valves. Replace if faulty or defective. 603.1Y.01 Compressor check valves -Test Test the compressor check valves. Replace "
+            }
+          ],
+          "top5_no_threshold": [
+            {
+              "file": "wap5-scheduled-maintenance-vol-b.pdf",
+              "page": 175,
+              "score": 0.6293,
+              "preview": "valves -Test Test the automatic drain valves. Replace if faulty or defective. 603.1Y.01 Compressor check valves -Test Te"
+            },
+            {
+              "file": "wap5-scheduled-maintenance-vol-b.pdf",
+              "page": 172,
+              "score": 0.5281,
+              "preview": "sor drive motor bearing. 601.4Y.01 Pressure switches -Test Test the pressure switches. The pressure switches should be t"
+            },
+            {
+              "file": "wap5-scheduled-maintenance-vol-b.pdf",
+              "page": 176,
+              "score": 0.487,
+              "preview": "control reservoir retaining valve as part of the main reservoirs overhaul. ~ef@o Suppliers Documentation Volume F14, Sec"
+            },
+            {
+              "file": "wap5-scheduled-maintenance-vol-b.pdf",
+              "page": 173,
+              "score": 0.4638,
+              "preview": "Task Description Indian Railways WAPd Scheduled Maintenance Manual 601.4Y.04 Low pressure automatic drain valves -Overha"
+            },
+            {
+              "file": "wap5-scheduled-maintenance-vol-b.pdf",
+              "page": 172,
+              "score": 0.4608,
+              "preview": "Indian Railways WAPd Scheduled Maintenance Manual Task Description F13, Section 8, Metcalfe Compressor Type 2A320D Maint"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

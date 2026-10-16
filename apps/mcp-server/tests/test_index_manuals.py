@@ -12,6 +12,7 @@ os testes.
 
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 from typing import Any
@@ -350,3 +351,137 @@ def test_pdf_without_text_does_not_break_pipeline(tmp_path: Path) -> None:
     assert stats.indexed == 1  # normal.pdf processado normalmente
     assert "normal.pdf" not in stats.empty
     assert stats.errors == []  # sem texto não é erro, execução não quebra
+
+
+# ---------------------------------------------------------------------------
+# 10. Perfil por manual (sidecar <nome>.meta.json) — curadoria do corpus
+# ---------------------------------------------------------------------------
+
+
+def _write_profile(pdf_path: Path, profile: dict[str, Any]) -> None:
+    im.profile_path_for(pdf_path).write_text(json.dumps(profile), encoding="utf-8")
+
+
+def test_profile_restricts_page_range_and_keeps_original_page_numbers(
+    tmp_path: Path,
+) -> None:
+    manuals_dir = tmp_path / "manuals"
+    manuals_dir.mkdir()
+    chroma_dir = tmp_path / "chroma"
+    pdf = manuals_dir / "loco.pdf"
+    _write_pdf(
+        pdf, ["Cabine e portas. " * 4, "Compressor principal. " * 4, "Pantografo. " * 4]
+    )
+    _write_profile(pdf, {"pages": [2, 2]})
+
+    _index(manuals_dir, chroma_dir)
+
+    result = im.get_collection(chroma_dir).get(include=["metadatas", "documents"])
+    assert {m["page"] for m in result["metadatas"]} == {2}
+    assert all("Cabine" not in d and "Pantografo" not in d for d in result["documents"])
+
+
+def test_profile_adds_scalar_metadata_without_overriding_core_fields(
+    tmp_path: Path,
+) -> None:
+    manuals_dir = tmp_path / "manuals"
+    manuals_dir.mkdir()
+    chroma_dir = tmp_path / "chroma"
+    pdf = manuals_dir / "loco.pdf"
+    _write_pdf(pdf, ["Compressor principal inspecao. " * 4])
+    _write_profile(
+        pdf,
+        {"metadata": {"domain": "locomotive", "doc_type": "scheduled", "page": 999}},
+    )
+
+    _index(manuals_dir, chroma_dir)
+
+    for meta in im.get_collection(chroma_dir).get(include=["metadatas"])["metadatas"]:
+        assert meta["domain"] == "locomotive"
+        assert meta["doc_type"] == "scheduled"
+        assert meta["page"] == 1  # campo do núcleo nunca é sobrescrito pelo sidecar
+
+
+def test_strip_cross_references_keeps_task_description() -> None:
+    text = (
+        "601.1W.02 Main compressor oil -Check Check the oil level in the compressor. "
+        "Refer to Suppliers Documentation Volume F13, Section 8, Metcalfe Compressor "
+        "Type 2A320D Maintenance lnstructions (A666). Section 7.4 "
+        "603.4Y.03 Drain cock -Replace Replace the drain cocks. Refer to Suppliers "
+        "Documentation Volume F11, Section 7, Isolating and Drain Cocks Instructions. (A34). "
+        "602.1Y.04 Air drier cocks -Check Replace the cocks if defective. Refer to Volume D, "
+        "Maintenance and Repair Manual, Chapter 6.2, Air Drier. 602.2Y.01 Desiccant"
+    )
+    cleaned = " ".join(im.strip_cross_references(text).split())
+    assert "Refer to" not in cleaned
+    assert "(A666)" not in cleaned and "(A34)" not in cleaned
+    assert "Section 7.4" not in cleaned
+    assert "Check the oil level in the compressor." in cleaned
+    assert "Replace the cocks if defective." in cleaned
+    assert cleaned.endswith("602.2Y.01 Desiccant")
+
+
+def test_profile_drops_reference_only_chunks(tmp_path: Path) -> None:
+    manuals_dir = tmp_path / "manuals"
+    manuals_dir.mkdir()
+    chroma_dir = tmp_path / "chroma"
+    pdf = manuals_dir / "loco.pdf"
+    _write_pdf(
+        pdf,
+        [
+            "Refer to Suppliers Documentation Volume F13, Section 8, Compressor (A666).",
+            "Check the oil level in the compressor and top up with the specified lubricant.",
+        ],
+    )
+    _write_profile(pdf, {"strip_cross_references": True, "min_chunk_chars": 20})
+
+    _index(manuals_dir, chroma_dir, chunk_size=500, chunk_overlap=50)
+
+    result = im.get_collection(chroma_dir).get(include=["metadatas", "documents"])
+    assert {m["page"] for m in result["metadatas"]} == {2}
+    assert all("Refer to" not in d for d in result["documents"])
+
+
+def test_profile_change_triggers_reindex(tmp_path: Path) -> None:
+    manuals_dir = tmp_path / "manuals"
+    manuals_dir.mkdir()
+    chroma_dir = tmp_path / "chroma"
+    pdf = manuals_dir / "loco.pdf"
+    _write_pdf(pdf, ["Pagina um. " * 4, "Pagina dois. " * 4])
+
+    first = _index(manuals_dir, chroma_dir)
+    again = _index(manuals_dir, chroma_dir)
+    _write_profile(pdf, {"pages": [2, 2]})
+    changed = _index(manuals_dir, chroma_dir)
+
+    assert first.indexed == 1 and again.skipped == 1
+    assert changed.indexed == 1 and changed.chunks_removed > 0
+    pages = {
+        m["page"]
+        for m in im.get_collection(chroma_dir).get(include=["metadatas"])["metadatas"]
+    }
+    assert pages == {2}
+
+
+@pytest.mark.parametrize(
+    "bad",
+    [
+        {"pages": [5, 2]},
+        {"pages": [0, 3]},
+        {"pages": "1-3"},
+        {"metadata": {"nested": {"a": 1}}},
+        {"min_chunk_chars": -1},
+        [1, 2],
+    ],
+)
+def test_invalid_profile_is_an_error_and_not_indexed(tmp_path: Path, bad: Any) -> None:
+    manuals_dir = tmp_path / "manuals"
+    manuals_dir.mkdir()
+    chroma_dir = tmp_path / "chroma"
+    pdf = manuals_dir / "loco.pdf"
+    _write_pdf(pdf, ["Compressor. " * 5])
+    im.profile_path_for(pdf).write_text(json.dumps(bad), encoding="utf-8")
+
+    stats = _index(manuals_dir, chroma_dir)
+
+    assert stats.errors == ["loco.pdf"] and stats.indexed == 0

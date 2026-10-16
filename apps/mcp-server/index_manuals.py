@@ -46,8 +46,10 @@ Uso
 from __future__ import annotations
 
 import hashlib
+import json
 import logging
 import os
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -146,6 +148,119 @@ def compute_file_hash(path: Path) -> str:
         for block in iter(lambda: fh.read(1024 * 1024), b""):
             digest.update(block)
     return digest.hexdigest()
+
+
+# ---------------------------------------------------------------------------
+# Perfil por manual (sidecar `<nome>.meta.json`) — curadoria do corpus RAG.
+#
+# Manuais reais raramente são 100% relevantes: o Scheduled Maintenance
+# Manual da WAP-5, por exemplo, tem 224 páginas mas só a seção 6.6 (Air
+# Supply and Pneumatic System, p. 170-177) trata de compressor/secador/
+# reservatórios, e ~41% dos seus chunks são só remissões ("Refer to
+# Suppliers Documentation Volume F13 ...") sem procedimento. Indexar tudo
+# dilui o top-k com cabine, portas e pantógrafo. O sidecar permite, sem
+# alterar o PDF original:
+#   pages                    [primeira, última] (1-based, inclusive)
+#   strip_cross_references   remove frases "Refer to Volume/Suppliers ..."
+#   min_chunk_chars          descarta chunk com menos letras que isso depois
+#                            da limpeza (ruído de OCR/cabeçalho). Default 0
+#   metadata                 pares escalares extras gravados em cada chunk
+#                            (ex.: domain, doc_type, equipment)
+# O conteúdo do sidecar entra no hash do arquivo: mudar o perfil reindexa.
+# ---------------------------------------------------------------------------
+
+_CROSS_REF_RE = re.compile(
+    r"Refer\s+to\s+(?:Suppliers\s+Documentation|Volume)\b.*?"
+    r"(?:\([A-Z]{1,2}\s?\d[\w\- ]*\)\.?(?:\s*Section\s+[\d.]+)?"
+    r"|\.(?=\s|$)(?:\s*\([A-Z]{1,2}\s?\d[\w\- ]*\)\.?)?)",
+    re.IGNORECASE | re.DOTALL,
+)
+
+_ALLOWED_META_TYPES = (str, int, float, bool)
+
+
+@dataclass(frozen=True)
+class ManualProfile:
+    first_page: int | None = None
+    last_page: int | None = None
+    strip_cross_references: bool = False
+    min_chunk_chars: int = 0
+    metadata: dict[str, Any] = field(default_factory=dict)
+    raw: str = ""  # JSON canônico — entra no hash efetivo
+
+    def includes_page(self, page_number: int) -> bool:
+        if self.first_page is not None and page_number < self.first_page:
+            return False
+        if self.last_page is not None and page_number > self.last_page:
+            return False
+        return True
+
+
+def profile_path_for(pdf_path: Path) -> Path:
+    return pdf_path.with_name(f"{pdf_path.stem}.meta.json")
+
+
+def load_manual_profile(pdf_path: Path) -> ManualProfile:
+    """Lê o sidecar do PDF, se existir. Sidecar inválido levanta ValueError
+    (o PDF entra em `stats.errors`, nunca é indexado com perfil errado)."""
+    path = profile_path_for(pdf_path)
+    if not path.is_file():
+        return ManualProfile()
+
+    data = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(data, dict):
+        raise ValueError(f"{path.name}: o sidecar deve ser um objeto JSON")
+
+    first: int | None = None
+    last: int | None = None
+    pages = data.get("pages")
+    if pages is not None:
+        if (
+            not isinstance(pages, list)
+            or len(pages) != 2
+            or not all(isinstance(p, int) and p >= 1 for p in pages)
+            or pages[0] > pages[1]
+        ):
+            raise ValueError(
+                f"{path.name}: 'pages' deve ser [primeira, última], 1-based"
+            )
+        first, last = pages
+
+    metadata = data.get("metadata") or {}
+    if not isinstance(metadata, dict) or not all(
+        isinstance(k, str) and isinstance(v, _ALLOWED_META_TYPES)
+        for k, v in metadata.items()
+    ):
+        raise ValueError(f"{path.name}: 'metadata' deve ter só valores escalares")
+
+    min_chars = data.get("min_chunk_chars", 0)
+    if not isinstance(min_chars, int) or min_chars < 0:
+        raise ValueError(f"{path.name}: 'min_chunk_chars' deve ser inteiro >= 0")
+
+    return ManualProfile(
+        first_page=first,
+        last_page=last,
+        strip_cross_references=bool(data.get("strip_cross_references", False)),
+        min_chunk_chars=min_chars,
+        metadata=dict(metadata),
+        raw=json.dumps(data, sort_keys=True, ensure_ascii=False),
+    )
+
+
+def strip_cross_references(text: str) -> str:
+    """Remove frases de remissão a outros volumes, mantendo a descrição da
+    tarefa (o procedimento acionável) intacta."""
+    return _CROSS_REF_RE.sub(" ", text)
+
+
+def effective_hash(file_hash: str, profile: ManualProfile) -> str:
+    if not profile.raw:
+        return file_hash
+    return hashlib.sha256(f"{file_hash}:{profile.raw}".encode("utf-8")).hexdigest()
+
+
+def _useful_chars(text: str) -> int:
+    return len(re.findall(r"[A-Za-zÀ-ÿ]", text))
 
 
 # ---------------------------------------------------------------------------
@@ -280,10 +395,12 @@ def _build_chunks_for_pdf(
     chunk_size: int,
     chunk_overlap: int,
     embedding_model_name: str,
+    profile: ManualProfile | None = None,
 ) -> tuple[list[str], list[str], list[dict[str, Any]]]:
     """Extrai + gera (ids, documents, metadatas) para todos os chunks do
     PDF. Não toca o vector store — só monta os dados em memória, para que um
     erro aqui nunca deixe a base em estado parcial/inconsistente."""
+    profile = profile or ManualProfile()
     pages = extract_pdf_pages(path)
     source = path.relative_to(manuals_dir).as_posix()
 
@@ -292,12 +409,19 @@ def _build_chunks_for_pdf(
     metadatas: list[dict[str, Any]] = []
 
     for page_number, page_text in enumerate(pages, start=1):
+        if not profile.includes_page(page_number):
+            continue
+        if profile.strip_cross_references:
+            page_text = " ".join(strip_cross_references(page_text).split())
         page_chunks = chunk_text(page_text, chunk_size, chunk_overlap)
         for chunk_index, chunk in enumerate(page_chunks):
+            if _useful_chars(chunk) < profile.min_chunk_chars:
+                continue
             ids.append(build_chunk_id(file_hash, page_number, chunk_index))
             documents.append(chunk)
             metadatas.append(
                 {
+                    **profile.metadata,
                     "source": source,
                     "file_name": path.name,
                     "file_hash": file_hash,
@@ -322,9 +446,10 @@ def index_manual(
 ) -> None:
     file_name = path.name
     try:
-        file_hash = compute_file_hash(path)
-    except OSError as exc:
-        log.error("Não foi possível ler %s: %s", file_name, exc)
+        profile = load_manual_profile(path)
+        file_hash = effective_hash(compute_file_hash(path), profile)
+    except (OSError, ValueError) as exc:
+        log.error("Não foi possível ler %s (ou seu sidecar): %s", file_name, exc)
         stats.errors.append(file_name)
         return
 
@@ -342,6 +467,7 @@ def index_manual(
             chunk_size,
             chunk_overlap,
             embedding_model_name,
+            profile,
         )
         if not documents:
             log.warning(
