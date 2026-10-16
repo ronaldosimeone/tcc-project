@@ -32,7 +32,9 @@
 > Resultados: [`docs/temporal_evaluation.md`](docs/temporal_evaluation.md),
 > [`docs/rag_benchmark.md`](docs/rag_benchmark.md),
 > [`docs/cross_dataset_evaluation.md`](docs/cross_dataset_evaluation.md)
-> (MetroPT-3 + MetroPT 2022). Reproduzir tudo:
+> (MetroPT-3 + MetroPT 2022),
+> [`docs/model_evaluation_leakfree.md`](docs/model_evaluation_leakfree.md)
+> (todos os modelos retreinados sem vazamento, com matrizes de confusão fora do tempo). Reproduzir tudo:
 > `bash scripts/reproduce-thesis.sh`.
 >
 > **Operação.** Telemetria por MQTT ou OPC UA (`TELEMETRY_TRANSPORT`),

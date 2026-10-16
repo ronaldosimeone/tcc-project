@@ -70,6 +70,16 @@ versões e hashes: [`reproducibility_manifest.json`](../reproducibility_manifest
 | OPC UA (IEC 62541) | `services/opcua_telemetry.py`: gateway simulado (variáveis tipadas por sensor + nó `Sequence` como gatilho) e ingestor por *subscription* que lê a amostra inteira num único `Read`; `TELEMETRY_TRANSPORT=opcua` | 🟡 | `tests/test_opcua_telemetry.py` com servidor e cliente reais (amostra completa, ativo não cadastrado ignorado, `Sequence` repetido descartado, senha errada recusada). Sem criptografia: Basic256Sha256 + certificados fica como lacuna (IEC 62443 FR4) |
 | Painel Grafana dos sinais novos | `infra/grafana/dashboards/predictiq-reliability.json` + 7 contadores novos em `core/metrics.py` (RN-04, RNF-84, RF-38, eventos, telemetria, shadow) | ✅ | `tests/test_metrics_second_round.py` garante que o painel só consulta métricas existentes e sem label de alta cardinalidade |
 
+## Auditoria de vazamento e de serving (terceira rodada)
+
+| Achado | Onde | Correção | Evidência |
+|---|---|---|---|
+| Os 7 modelos legados (RF, XGB, MLP, TCN, BiLSTM, PatchTST, AE) usavam split aleatório estratificado e escolhiam o limiar por F2 **no próprio teste**; RF ainda com SMOTE | `train_*.py`, cards `*_v1` | Todos retreinados pela mesma receita sem vazamento: `train_leakfree.py` (árvores → `random_forest_v3`, `xgboost_v3`) e `train_deep_leakfree.py` (redes → `*_v2`); champion passa a ser `random_forest_v3` | [`model_evaluation_leakfree.md`](../model_evaluation_leakfree.md) |
+| Limiar de evento fixo em 0,7 para qualquer modelo | `EVENT_THRESHOLD` | Evento = alarme persistido **no limiar do próprio modelo** (card); `EVENT_THRESHOLD` vira override opcional | `tests/test_history.py` |
+| Modelos de sequência recebiam **uma única linha** e o adapter repetia essa linha 60 vezes: viam uma janela constante | `inference_pipeline._infer_with_history` | Modelos com janela recebem o buffer inteiro | `tests/test_inference_pipeline.py` |
+| Buffer de 30 leituras para modelos treinados com janelas de 60 | `feature_buffer.SensorBuffer` | Buffer de 60 (as features das árvores olham no máximo 15 para trás) | `tests/test_feature_buffer.py` |
+| Seletor de modelos escondia só a versão base quando havia `_v2` | `frontend/lib/model-name.ts` | Mostra só a maior versão de cada modelo | `__tests__/model-name.test.ts` |
+
 ## Itens refeitos
 
 | Item | O que mudou |
