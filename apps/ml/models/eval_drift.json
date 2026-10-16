@@ -1,0 +1,653 @@
+{
+ "schema_version": "3.0",
+ "evaluated_at": "2026-10-15T01:10:33.308177+00:00",
+ "requirements": [
+  "RF-34"
+ ],
+ "config": {
+  "trials_per_cell": 30,
+  "calibration_trials": 30,
+  "seed": 0,
+  "reference_days": 30,
+  "rolling_gap_days": 7,
+  "stretch_days": 20,
+  "ramp_hours": 72.0,
+  "detection_window_hours": 168,
+  "false_alarm_budget_per_30d": 1.0,
+  "sensors": [
+   "TP2",
+   "TP3",
+   "H1",
+   "DV_pressure",
+   "Reservoirs",
+   "Oil_temperature",
+   "Motor_current"
+  ]
+ },
+ "production_rule_false_alarms_per_30d": {
+  "fixed": 28.3,
+  "rolling": 27.95
+ },
+ "calibration": {
+  "psi_daily/fixed": {
+   "chosen": 16.0,
+   "curve": [
+    {
+     "param": 0.25,
+     "false_alarms_per_30d": 28.3
+    },
+    {
+     "param": 0.5,
+     "false_alarms_per_30d": 28.3
+    },
+    {
+     "param": 1.0,
+     "false_alarms_per_30d": 28.3
+    },
+    {
+     "param": 2.0,
+     "false_alarms_per_30d": 28.15
+    },
+    {
+     "param": 4.0,
+     "false_alarms_per_30d": 21.45
+    },
+    {
+     "param": 8.0,
+     "false_alarms_per_30d": 2.15
+    },
+    {
+     "param": 16.0,
+     "false_alarms_per_30d": 0.0
+    }
+   ]
+  },
+  "psi_daily/rolling": {
+   "chosen": 16.0,
+   "curve": [
+    {
+     "param": 0.25,
+     "false_alarms_per_30d": 27.95
+    },
+    {
+     "param": 0.5,
+     "false_alarms_per_30d": 26.9
+    },
+    {
+     "param": 1.0,
+     "false_alarms_per_30d": 22.1
+    },
+    {
+     "param": 2.0,
+     "false_alarms_per_30d": 11.2
+    },
+    {
+     "param": 4.0,
+     "false_alarms_per_30d": 4.4
+    },
+    {
+     "param": 8.0,
+     "false_alarms_per_30d": 1.05
+    },
+    {
+     "param": 16.0,
+     "false_alarms_per_30d": 0.0
+    }
+   ]
+  },
+  "page_hinkley/fixed": {
+   "chosen": null,
+   "curve": [
+    {
+     "param": 15.0,
+     "false_alarms_per_30d": 46.75
+    },
+    {
+     "param": 30.0,
+     "false_alarms_per_30d": 31.4
+    },
+    {
+     "param": 60.0,
+     "false_alarms_per_30d": 21.95
+    },
+    {
+     "param": 120.0,
+     "false_alarms_per_30d": 13.95
+    },
+    {
+     "param": 250.0,
+     "false_alarms_per_30d": 8.95
+    },
+    {
+     "param": 500.0,
+     "false_alarms_per_30d": 4.7
+    },
+    {
+     "param": 1000.0,
+     "false_alarms_per_30d": 2.9
+    },
+    {
+     "param": 2000.0,
+     "false_alarms_per_30d": 1.5
+    }
+   ]
+  },
+  "page_hinkley/rolling": {
+   "chosen": 500.0,
+   "curve": [
+    {
+     "param": 15.0,
+     "false_alarms_per_30d": 18.4
+    },
+    {
+     "param": 30.0,
+     "false_alarms_per_30d": 14.3
+    },
+    {
+     "param": 60.0,
+     "false_alarms_per_30d": 8.65
+    },
+    {
+     "param": 120.0,
+     "false_alarms_per_30d": 5.0
+    },
+    {
+     "param": 250.0,
+     "false_alarms_per_30d": 1.5500000000000003
+    },
+    {
+     "param": 500.0,
+     "false_alarms_per_30d": 0.6
+    }
+   ]
+  },
+  "adwin/fixed": {
+   "chosen": 1e-80,
+   "curve": [
+    {
+     "param": 0.002,
+     "false_alarms_per_30d": 25.65
+    },
+    {
+     "param": 1e-05,
+     "false_alarms_per_30d": 18.8
+    },
+    {
+     "param": 1e-10,
+     "false_alarms_per_30d": 8.4
+    },
+    {
+     "param": 1e-20,
+     "false_alarms_per_30d": 4.55
+    },
+    {
+     "param": 1e-40,
+     "false_alarms_per_30d": 1.1
+    },
+    {
+     "param": 1e-80,
+     "false_alarms_per_30d": 0.0
+    }
+   ]
+  },
+  "adwin/rolling": {
+   "chosen": 1e-40,
+   "curve": [
+    {
+     "param": 0.002,
+     "false_alarms_per_30d": 19.1
+    },
+    {
+     "param": 1e-05,
+     "false_alarms_per_30d": 12.15
+    },
+    {
+     "param": 1e-10,
+     "false_alarms_per_30d": 6.200000000000001
+    },
+    {
+     "param": 1e-20,
+     "false_alarms_per_30d": 2.9
+    },
+    {
+     "param": 1e-40,
+     "false_alarms_per_30d": 0.3
+    }
+   ]
+  }
+ },
+ "results": {
+  "abrupt_0.5": {
+   "psi_daily/fixed": {
+    "detection_rate": {
+     "mean": 0.0,
+     "low": 0.0,
+     "high": 0.0,
+     "n": 30
+    },
+    "delay_h": {
+     "mean": NaN,
+     "low": NaN,
+     "high": NaN,
+     "n": 0
+    }
+   },
+   "psi_daily/rolling": {
+    "detection_rate": {
+     "mean": 0.0,
+     "low": 0.0,
+     "high": 0.0,
+     "n": 30
+    },
+    "delay_h": {
+     "mean": NaN,
+     "low": NaN,
+     "high": NaN,
+     "n": 0
+    }
+   },
+   "page_hinkley/rolling": {
+    "detection_rate": {
+     "mean": 0.13333333333333333,
+     "low": 0.03333333333333333,
+     "high": 0.26666666666666666,
+     "n": 30
+    },
+    "delay_h": {
+     "mean": 76.60442719335566,
+     "low": 33.08197044336267,
+     "high": 115.61558295648928,
+     "n": 4
+    }
+   },
+   "adwin/fixed": {
+    "detection_rate": {
+     "mean": 0.0,
+     "low": 0.0,
+     "high": 0.0,
+     "n": 30
+    },
+    "delay_h": {
+     "mean": NaN,
+     "low": NaN,
+     "high": NaN,
+     "n": 0
+    }
+   },
+   "adwin/rolling": {
+    "detection_rate": {
+     "mean": 0.03333333333333333,
+     "low": 0.0,
+     "high": 0.1,
+     "n": 30
+    },
+    "delay_h": {
+     "mean": 165.45655133458212,
+     "low": 165.45655133458212,
+     "high": 165.45655133458212,
+     "n": 1
+    }
+   }
+  },
+  "abrupt_1.0": {
+   "psi_daily/fixed": {
+    "detection_rate": {
+     "mean": 0.0,
+     "low": 0.0,
+     "high": 0.0,
+     "n": 30
+    },
+    "delay_h": {
+     "mean": NaN,
+     "low": NaN,
+     "high": NaN,
+     "n": 0
+    }
+   },
+   "psi_daily/rolling": {
+    "detection_rate": {
+     "mean": 0.0,
+     "low": 0.0,
+     "high": 0.0,
+     "n": 30
+    },
+    "delay_h": {
+     "mean": NaN,
+     "low": NaN,
+     "high": NaN,
+     "n": 0
+    }
+   },
+   "page_hinkley/rolling": {
+    "detection_rate": {
+     "mean": 0.0,
+     "low": 0.0,
+     "high": 0.0,
+     "n": 30
+    },
+    "delay_h": {
+     "mean": NaN,
+     "low": NaN,
+     "high": NaN,
+     "n": 0
+    }
+   },
+   "adwin/fixed": {
+    "detection_rate": {
+     "mean": 0.0,
+     "low": 0.0,
+     "high": 0.0,
+     "n": 30
+    },
+    "delay_h": {
+     "mean": NaN,
+     "low": NaN,
+     "high": NaN,
+     "n": 0
+    }
+   },
+   "adwin/rolling": {
+    "detection_rate": {
+     "mean": 0.0,
+     "low": 0.0,
+     "high": 0.0,
+     "n": 30
+    },
+    "delay_h": {
+     "mean": NaN,
+     "low": NaN,
+     "high": NaN,
+     "n": 0
+    }
+   }
+  },
+  "abrupt_2.0": {
+   "psi_daily/fixed": {
+    "detection_rate": {
+     "mean": 0.0,
+     "low": 0.0,
+     "high": 0.0,
+     "n": 30
+    },
+    "delay_h": {
+     "mean": NaN,
+     "low": NaN,
+     "high": NaN,
+     "n": 0
+    }
+   },
+   "psi_daily/rolling": {
+    "detection_rate": {
+     "mean": 0.0,
+     "low": 0.0,
+     "high": 0.0,
+     "n": 30
+    },
+    "delay_h": {
+     "mean": NaN,
+     "low": NaN,
+     "high": NaN,
+     "n": 0
+    }
+   },
+   "page_hinkley/rolling": {
+    "detection_rate": {
+     "mean": 0.13333333333333333,
+     "low": 0.03333333333333333,
+     "high": 0.26666666666666666,
+     "n": 30
+    },
+    "delay_h": {
+     "mean": 107.61475858615071,
+     "low": 71.16664063969235,
+     "high": 144.0628765326091,
+     "n": 4
+    }
+   },
+   "adwin/fixed": {
+    "detection_rate": {
+     "mean": 0.0,
+     "low": 0.0,
+     "high": 0.0,
+     "n": 30
+    },
+    "delay_h": {
+     "mean": NaN,
+     "low": NaN,
+     "high": NaN,
+     "n": 0
+    }
+   },
+   "adwin/rolling": {
+    "detection_rate": {
+     "mean": 0.06666666666666667,
+     "low": 0.0,
+     "high": 0.16666666666666666,
+     "n": 30
+    },
+    "delay_h": {
+     "mean": 142.87649187849536,
+     "low": 135.6727794028165,
+     "high": 150.08020435417419,
+     "n": 2
+    }
+   }
+  },
+  "gradual_0.5": {
+   "psi_daily/fixed": {
+    "detection_rate": {
+     "mean": 0.0,
+     "low": 0.0,
+     "high": 0.0,
+     "n": 30
+    },
+    "delay_h": {
+     "mean": NaN,
+     "low": NaN,
+     "high": NaN,
+     "n": 0
+    }
+   },
+   "psi_daily/rolling": {
+    "detection_rate": {
+     "mean": 0.0,
+     "low": 0.0,
+     "high": 0.0,
+     "n": 30
+    },
+    "delay_h": {
+     "mean": NaN,
+     "low": NaN,
+     "high": NaN,
+     "n": 0
+    }
+   },
+   "page_hinkley/rolling": {
+    "detection_rate": {
+     "mean": 0.16666666666666666,
+     "low": 0.03333333333333333,
+     "high": 0.3,
+     "n": 30
+    },
+    "delay_h": {
+     "mean": 139.44067484821252,
+     "low": 125.52417703396877,
+     "high": 153.3571726624563,
+     "n": 5
+    }
+   },
+   "adwin/fixed": {
+    "detection_rate": {
+     "mean": 0.0,
+     "low": 0.0,
+     "high": 0.0,
+     "n": 30
+    },
+    "delay_h": {
+     "mean": NaN,
+     "low": NaN,
+     "high": NaN,
+     "n": 0
+    }
+   },
+   "adwin/rolling": {
+    "detection_rate": {
+     "mean": 0.03333333333333333,
+     "low": 0.0,
+     "high": 0.1,
+     "n": 30
+    },
+    "delay_h": {
+     "mean": 142.8963102347122,
+     "low": 142.8963102347122,
+     "high": 142.8963102347122,
+     "n": 1
+    }
+   }
+  },
+  "gradual_1.0": {
+   "psi_daily/fixed": {
+    "detection_rate": {
+     "mean": 0.0,
+     "low": 0.0,
+     "high": 0.0,
+     "n": 30
+    },
+    "delay_h": {
+     "mean": NaN,
+     "low": NaN,
+     "high": NaN,
+     "n": 0
+    }
+   },
+   "psi_daily/rolling": {
+    "detection_rate": {
+     "mean": 0.0,
+     "low": 0.0,
+     "high": 0.0,
+     "n": 30
+    },
+    "delay_h": {
+     "mean": NaN,
+     "low": NaN,
+     "high": NaN,
+     "n": 0
+    }
+   },
+   "page_hinkley/rolling": {
+    "detection_rate": {
+     "mean": 0.1,
+     "low": 0.0,
+     "high": 0.23333333333333334,
+     "n": 30
+    },
+    "delay_h": {
+     "mean": 113.52945887094984,
+     "low": 83.25945557050969,
+     "high": 158.45959953186303,
+     "n": 3
+    }
+   },
+   "adwin/fixed": {
+    "detection_rate": {
+     "mean": 0.0,
+     "low": 0.0,
+     "high": 0.0,
+     "n": 30
+    },
+    "delay_h": {
+     "mean": NaN,
+     "low": NaN,
+     "high": NaN,
+     "n": 0
+    }
+   },
+   "adwin/rolling": {
+    "detection_rate": {
+     "mean": 0.06666666666666667,
+     "low": 0.0,
+     "high": 0.16666666666666666,
+     "n": 30
+    },
+    "delay_h": {
+     "mean": 115.56438854049324,
+     "low": 106.25945557050969,
+     "high": 124.8693215104768,
+     "n": 2
+    }
+   }
+  },
+  "gradual_2.0": {
+   "psi_daily/fixed": {
+    "detection_rate": {
+     "mean": 0.0,
+     "low": 0.0,
+     "high": 0.0,
+     "n": 30
+    },
+    "delay_h": {
+     "mean": NaN,
+     "low": NaN,
+     "high": NaN,
+     "n": 0
+    }
+   },
+   "psi_daily/rolling": {
+    "detection_rate": {
+     "mean": 0.0,
+     "low": 0.0,
+     "high": 0.0,
+     "n": 30
+    },
+    "delay_h": {
+     "mean": NaN,
+     "low": NaN,
+     "high": NaN,
+     "n": 0
+    }
+   },
+   "page_hinkley/rolling": {
+    "detection_rate": {
+     "mean": 0.1,
+     "low": 0.0,
+     "high": 0.2,
+     "n": 30
+    },
+    "delay_h": {
+     "mean": 84.78842743618522,
+     "low": 55.562752073580214,
+     "high": 143.12025503196955,
+     "n": 3
+    }
+   },
+   "adwin/fixed": {
+    "detection_rate": {
+     "mean": 0.0,
+     "low": 0.0,
+     "high": 0.0,
+     "n": 30
+    },
+    "delay_h": {
+     "mean": NaN,
+     "low": NaN,
+     "high": NaN,
+     "n": 0
+    }
+   },
+   "adwin/rolling": {
+    "detection_rate": {
+     "mean": 0.06666666666666667,
+     "low": 0.0,
+     "high": 0.16666666666666666,
+     "n": 30
+    },
+    "delay_h": {
+     "mean": 108.62251363829303,
+     "low": 103.56275207358021,
+     "high": 113.68227520300584,
+     "n": 2
+    }
+   }
+  }
+ }
+}

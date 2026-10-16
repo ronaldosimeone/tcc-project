@@ -1,0 +1,345 @@
+{
+  "schema_version": "1.0",
+  "evaluated_at": "2026-10-15T01:09:26.617805+00:00",
+  "requirements": [
+    "RNF-81"
+  ],
+  "fold": 1,
+  "test_event": [
+    "2020-05-29 23:30:00",
+    "2020-05-30 06:00:00"
+  ],
+  "sigma_train": {
+    "TP2": 2.9838755130767822,
+    "TP3": 0.6017338037490845,
+    "H1": 3.0219321250915527,
+    "DV_pressure": 0.3055795133113861,
+    "Reservoirs": 0.601019561290741,
+    "Oil_temperature": 6.3144307136535645,
+    "Motor_current": 2.2295806407928467
+  },
+  "models": {
+    "random_forest": {
+      "clean": {
+        "pr_auc": 0.9399459450077723,
+        "event_detected": 1.0,
+        "false_alarms_per_day": 0.12581797459272984,
+        "mean_p_in_failure": 0.9701608423572614
+      },
+      "noise_0.05": {
+        "pr_auc": 0.23378564348259318,
+        "event_detected": 1.0,
+        "false_alarms_per_day": 13.336705306829362,
+        "mean_p_in_failure": 0.5805105458866116
+      },
+      "noise_0.1": {
+        "pr_auc": 0.128144886273372,
+        "event_detected": 1.0,
+        "false_alarms_per_day": 7.42326050097106,
+        "mean_p_in_failure": 0.39459516866610533
+      },
+      "noise_0.25": {
+        "pr_auc": 0.16848855083596925,
+        "event_detected": 0.0,
+        "false_alarms_per_day": 0.0,
+        "mean_p_in_failure": 0.26844509796341537
+      },
+      "noise_0.5": {
+        "pr_auc": 0.1287904492860848,
+        "event_detected": 0.0,
+        "false_alarms_per_day": 0.0,
+        "mean_p_in_failure": 0.18695149292000615
+      },
+      "frozen_TP2": {
+        "pr_auc": 0.9294746696464131,
+        "event_detected": 1.0,
+        "false_alarms_per_day": 0.12581797459272984,
+        "mean_p_in_failure": 0.8751146605514684
+      },
+      "missing_TP2": {
+        "pr_auc": 0.9210894804197597,
+        "event_detected": 1.0,
+        "false_alarms_per_day": 0.12581797459272984,
+        "mean_p_in_failure": 0.8737833611444417
+      },
+      "frozen_TP3": {
+        "pr_auc": 0.748359673796786,
+        "event_detected": 0.0,
+        "false_alarms_per_day": 0.0,
+        "mean_p_in_failure": 0.44162657128476035
+      },
+      "missing_TP3": {
+        "pr_auc": 0.795750942150524,
+        "event_detected": 1.0,
+        "false_alarms_per_day": 1.3420583956557848,
+        "mean_p_in_failure": 0.645115291240297
+      },
+      "frozen_H1": {
+        "pr_auc": 0.8383770833300217,
+        "event_detected": 1.0,
+        "false_alarms_per_day": 0.1677572994569731,
+        "mean_p_in_failure": 0.8068185005672388
+      },
+      "missing_H1": {
+        "pr_auc": 0.8383770586349016,
+        "event_detected": 1.0,
+        "false_alarms_per_day": 0.1677572994569731,
+        "mean_p_in_failure": 0.8068185005672388
+      },
+      "frozen_DV_pressure": {
+        "pr_auc": 0.013990051731735937,
+        "event_detected": 0.0,
+        "false_alarms_per_day": 0.0,
+        "mean_p_in_failure": 0.0002448733009835159
+      },
+      "missing_DV_pressure": {
+        "pr_auc": 0.013990051731735937,
+        "event_detected": 0.0,
+        "false_alarms_per_day": 0.0,
+        "mean_p_in_failure": 0.0002448733009835159
+      },
+      "frozen_Reservoirs": {
+        "pr_auc": 0.7358198166629851,
+        "event_detected": 0.0,
+        "false_alarms_per_day": 0.0,
+        "mean_p_in_failure": 0.42361977656871974
+      },
+      "missing_Reservoirs": {
+        "pr_auc": 0.8898239714157684,
+        "event_detected": 1.0,
+        "false_alarms_per_day": 0.8807258221491088,
+        "mean_p_in_failure": 0.720744652147517
+      },
+      "frozen_Oil_temperature": {
+        "pr_auc": 0.7931805518953039,
+        "event_detected": 1.0,
+        "false_alarms_per_day": 0.1677572994569731,
+        "mean_p_in_failure": 0.6822337173850332
+      },
+      "missing_Oil_temperature": {
+        "pr_auc": 0.7881787728654562,
+        "event_detected": 1.0,
+        "false_alarms_per_day": 0.1677572994569731,
+        "mean_p_in_failure": 0.6479773614528298
+      },
+      "frozen_Motor_current": {
+        "pr_auc": 0.9353562077300343,
+        "event_detected": 1.0,
+        "false_alarms_per_day": 0.1677572994569731,
+        "mean_p_in_failure": 0.9075108135956828
+      },
+      "missing_Motor_current": {
+        "pr_auc": 0.934571869059285,
+        "event_detected": 1.0,
+        "false_alarms_per_day": 0.1677572994569731,
+        "mean_p_in_failure": 0.9071506441041574
+      },
+      "adv_0.25": {
+        "pr_auc": 0.1061866220985157,
+        "event_detected": 0.0,
+        "false_alarms_per_day": 0.0,
+        "mean_p_in_failure": 0.23808050847457626,
+        "delta_sigma": {
+          "TP2": 0.207413072553921,
+          "TP3": -0.1843948531852641,
+          "H1": -0.12571834749449162,
+          "DV_pressure": -0.08017275294367532,
+          "Reservoirs": 0.12235310131487964,
+          "Oil_temperature": -0.18574725366290556,
+          "Motor_current": 0.1996670081217234
+        }
+      },
+      "adv_0.5": {
+        "pr_auc": 0.1266576300541145,
+        "event_detected": 0.0,
+        "false_alarms_per_day": 0.0,
+        "mean_p_in_failure": 0.18216313559322034,
+        "delta_sigma": {
+          "TP2": 0.492491514372694,
+          "TP3": 0.12789094534242607,
+          "H1": -0.32941373144883,
+          "DV_pressure": 0.4561522683219458,
+          "Reservoirs": -0.0503997606550276,
+          "Oil_temperature": 0.33141425787079604,
+          "Motor_current": 0.4791583372361409
+        }
+      },
+      "adv_1.0": {
+        "pr_auc": 0.09235326183396922,
+        "event_detected": 0.0,
+        "false_alarms_per_day": 0.0,
+        "mean_p_in_failure": 0.09895615875476203,
+        "delta_sigma": {
+          "TP2": 0.6515080411915541,
+          "TP3": 0.8881039835306301,
+          "H1": -0.1590045344815647,
+          "DV_pressure": -0.9672395272184398,
+          "Reservoirs": -0.14859023457896736,
+          "Oil_temperature": -0.503325670089807,
+          "Motor_current": 0.4608198339394307
+        }
+      }
+    },
+    "xgboost": {
+      "clean": {
+        "pr_auc": 0.2007214642582088,
+        "event_detected": 1.0,
+        "false_alarms_per_day": 0.20969662432121638,
+        "mean_p_in_failure": 0.9864141941070557
+      },
+      "noise_0.05": {
+        "pr_auc": 0.13577138441163675,
+        "event_detected": 1.0,
+        "false_alarms_per_day": 0.46133257350667606,
+        "mean_p_in_failure": 0.9766329526901245
+      },
+      "noise_0.1": {
+        "pr_auc": 0.11500035269288023,
+        "event_detected": 1.0,
+        "false_alarms_per_day": 4.571386410202517,
+        "mean_p_in_failure": 0.8964794874191284
+      },
+      "noise_0.25": {
+        "pr_auc": 0.13086219639299548,
+        "event_detected": 1.0,
+        "false_alarms_per_day": 15.391732225177282,
+        "mean_p_in_failure": 0.6126295924186707
+      },
+      "noise_0.5": {
+        "pr_auc": 0.14397577575404724,
+        "event_detected": 1.0,
+        "false_alarms_per_day": 8.891136871219574,
+        "mean_p_in_failure": 0.3738457262516022
+      },
+      "frozen_TP2": {
+        "pr_auc": 0.23158884486887976,
+        "event_detected": 1.0,
+        "false_alarms_per_day": 0.2935752740497029,
+        "mean_p_in_failure": 0.9864683747291565
+      },
+      "missing_TP2": {
+        "pr_auc": 0.23235603388009649,
+        "event_detected": 1.0,
+        "false_alarms_per_day": 0.20969662432121638,
+        "mean_p_in_failure": 0.9863839745521545
+      },
+      "frozen_TP3": {
+        "pr_auc": 0.23864824550711128,
+        "event_detected": 1.0,
+        "false_alarms_per_day": 1.216240421063055,
+        "mean_p_in_failure": 0.9738814830780029
+      },
+      "missing_TP3": {
+        "pr_auc": 0.26008997772989656,
+        "event_detected": 1.0,
+        "false_alarms_per_day": 0.46133257350667606,
+        "mean_p_in_failure": 0.979928731918335
+      },
+      "frozen_H1": {
+        "pr_auc": 0.24934780756581765,
+        "event_detected": 1.0,
+        "false_alarms_per_day": 0.20969662432121638,
+        "mean_p_in_failure": 0.9865161776542664
+      },
+      "missing_H1": {
+        "pr_auc": 0.24934780756581765,
+        "event_detected": 1.0,
+        "false_alarms_per_day": 0.20969662432121638,
+        "mean_p_in_failure": 0.9865161776542664
+      },
+      "frozen_DV_pressure": {
+        "pr_auc": 0.04721189600993546,
+        "event_detected": 0.0,
+        "false_alarms_per_day": 0.0,
+        "mean_p_in_failure": 2.7030826458940282e-05
+      },
+      "missing_DV_pressure": {
+        "pr_auc": 0.04721189600993546,
+        "event_detected": 0.0,
+        "false_alarms_per_day": 0.0,
+        "mean_p_in_failure": 2.7030826458940282e-05
+      },
+      "frozen_Reservoirs": {
+        "pr_auc": 0.2736941602563225,
+        "event_detected": 1.0,
+        "false_alarms_per_day": 0.20969662432121638,
+        "mean_p_in_failure": 0.986426591873169
+      },
+      "missing_Reservoirs": {
+        "pr_auc": 0.2849160249683506,
+        "event_detected": 1.0,
+        "false_alarms_per_day": 0.2516359491854597,
+        "mean_p_in_failure": 0.9864344596862793
+      },
+      "frozen_Oil_temperature": {
+        "pr_auc": 0.15145983820970965,
+        "event_detected": 1.0,
+        "false_alarms_per_day": 0.2516359491854597,
+        "mean_p_in_failure": 0.9863803386688232
+      },
+      "missing_Oil_temperature": {
+        "pr_auc": 0.15147271617299962,
+        "event_detected": 1.0,
+        "false_alarms_per_day": 0.20969662432121638,
+        "mean_p_in_failure": 0.9863691926002502
+      },
+      "frozen_Motor_current": {
+        "pr_auc": 0.22885106387064447,
+        "event_detected": 1.0,
+        "false_alarms_per_day": 0.1677572994569731,
+        "mean_p_in_failure": 0.9863947629928589
+      },
+      "missing_Motor_current": {
+        "pr_auc": 0.22863153138050613,
+        "event_detected": 1.0,
+        "false_alarms_per_day": 0.1677572994569731,
+        "mean_p_in_failure": 0.9863946437835693
+      },
+      "adv_0.25": {
+        "pr_auc": 0.10632140225156775,
+        "event_detected": 1.0,
+        "false_alarms_per_day": 2.600238141583083,
+        "mean_p_in_failure": 0.8634716868400574,
+        "delta_sigma": {
+          "TP2": -0.06597258343383444,
+          "TP3": 0.18910321622464765,
+          "H1": -0.2371260853445984,
+          "DV_pressure": -0.23264919848640675,
+          "Reservoirs": 0.052515915450984274,
+          "Oil_temperature": 0.0501942868453677,
+          "Motor_current": 0.1823338734947632
+        }
+      },
+      "adv_0.5": {
+        "pr_auc": 0.08880596778441577,
+        "event_detected": 1.0,
+        "false_alarms_per_day": 0.5871505480994058,
+        "mean_p_in_failure": 0.8072148561477661,
+        "delta_sigma": {
+          "TP2": 0.27095642286240507,
+          "TP3": -0.3779534746247232,
+          "H1": 0.44752324739333027,
+          "DV_pressure": -0.3705963182863392,
+          "Reservoirs": 0.2785488831126989,
+          "Oil_temperature": -0.26938615827038737,
+          "Motor_current": 0.25878957060999175
+        }
+      },
+      "adv_1.0": {
+        "pr_auc": 0.04680495359331545,
+        "event_detected": 0.0,
+        "false_alarms_per_day": 2.726056116175813,
+        "mean_p_in_failure": 0.0013634009519591928,
+        "delta_sigma": {
+          "TP2": 0.9032101389575704,
+          "TP3": 0.9390562406829972,
+          "H1": -0.0023987064557997595,
+          "DV_pressure": -0.9042703498089177,
+          "Reservoirs": -0.8565043776811598,
+          "Oil_temperature": -0.37348581653383817,
+          "Motor_current": -0.6448418442102619
+        }
+      }
+    }
+  }
+}

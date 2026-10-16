@@ -1,0 +1,3691 @@
+{
+  "schema_version": "1.0",
+  "evaluated_at": "2026-10-15T13:39:32.516139+00:00",
+  "twin_features": [
+    "fill_residual",
+    "idle_decay_residual",
+    "current_residual",
+    "duty_residual"
+  ],
+  "config": {
+    "seeds": 3,
+    "neg_stride": 5
+  },
+  "physics_signal": [
+    {
+      "fold": 1,
+      "mean_z_in_failure": {
+        "fill_residual": -1.1552934646606445,
+        "idle_decay_residual": 0.07743576169013977,
+        "current_residual": 0.028279567137360573,
+        "duty_residual": 5.34090518951416
+      }
+    },
+    {
+      "fold": 2,
+      "mean_z_in_failure": {
+        "fill_residual": -0.7837578058242798,
+        "idle_decay_residual": -1.1643478870391846,
+        "current_residual": 0.6715016961097717,
+        "duty_residual": 4.805226802825928
+      }
+    },
+    {
+      "fold": 3,
+      "mean_z_in_failure": {
+        "fill_residual": -0.7554727792739868,
+        "idle_decay_residual": -3.7043254375457764,
+        "current_residual": 0.3937283158302307,
+        "duty_residual": 4.032472610473633
+      }
+    }
+  ],
+  "summary": {
+    "ml_only": {
+      "pr_auc": {
+        "mean": 0.39737992450208126,
+        "low": 0.2320840057516113,
+        "high": 0.5755543636031337,
+        "n": 9
+      },
+      "event_recall_inner": {
+        "mean": 0.6666666666666666,
+        "low": 0.3333333333333333,
+        "high": 0.8888888888888888,
+        "n": 9
+      },
+      "false_alarms_per_day_inner": {
+        "mean": 0.06981694451268397,
+        "low": 0.013733984171583244,
+        "high": 0.13505589430150683,
+        "n": 9
+      },
+      "expected_cost_inner": {
+        "mean": 35.0,
+        "low": 11.777777777777779,
+        "high": 67.33333333333333,
+        "n": 9
+      },
+      "lead_time_s_inner": {
+        "mean": 478.3333333333333,
+        "low": 273.1666666666667,
+        "high": 670.0,
+        "n": 6
+      }
+    },
+    "hybrid": {
+      "pr_auc": {
+        "mean": 0.42481595194736144,
+        "low": 0.21374009997019733,
+        "high": 0.6596612846814947,
+        "n": 9
+      },
+      "event_recall_inner": {
+        "mean": 0.6666666666666666,
+        "low": 0.3333333333333333,
+        "high": 0.8888888888888888,
+        "n": 9
+      },
+      "false_alarms_per_day_inner": {
+        "mean": 0.10717827465306615,
+        "low": 0.0,
+        "high": 0.21435654930613232,
+        "n": 9
+      },
+      "expected_cost_inner": {
+        "mean": 35.888888888888886,
+        "low": 11.666666666666666,
+        "high": 67.77777777777777,
+        "n": 9
+      },
+      "lead_time_s_inner": {
+        "mean": 247.0,
+        "low": 96.33333333333333,
+        "high": 401.0,
+        "n": 6
+      }
+    },
+    "physics_only": {
+      "pr_auc": {
+        "mean": 0.39566020989551565,
+        "low": 0.18287479341939775,
+        "high": 0.6480744187742551,
+        "n": 9
+      },
+      "event_recall_inner": {
+        "mean": 0.3333333333333333,
+        "low": 0.1111111111111111,
+        "high": 0.6666666666666666,
+        "n": 9
+      },
+      "false_alarms_per_day_inner": {
+        "mean": 0.306782740127081,
+        "low": 0.20021332552528545,
+        "high": 0.42346801629067277,
+        "n": 9
+      },
+      "expected_cost_inner": {
+        "mean": 77.0,
+        "low": 45.0,
+        "high": 101.0,
+        "n": 9
+      },
+      "lead_time_s_inner": {
+        "mean": 9395.0,
+        "low": 9395.0,
+        "high": 9395.0,
+        "n": 3
+      }
+    },
+    "fusion": {
+      "pr_auc": {
+        "mean": NaN,
+        "low": NaN,
+        "high": NaN,
+        "n": 0
+      },
+      "event_recall_inner": {
+        "mean": 1.0,
+        "low": 1.0,
+        "high": 1.0,
+        "n": 9
+      },
+      "false_alarms_per_day_inner": {
+        "mean": 0.34864013473026945,
+        "low": 0.20431138419210954,
+        "high": 0.5030847468302255,
+        "n": 9
+      },
+      "expected_cost_inner": {
+        "mean": 11.333333333333334,
+        "low": 7.777777777777778,
+        "high": 14.444444444444445,
+        "n": 9
+      },
+      "lead_time_s_inner": {
+        "mean": 3450.5555555555557,
+        "low": 1280.2222222222222,
+        "high": 6402.555555555556,
+        "n": 9
+      }
+    }
+  },
+  "wilcoxon_hybrid_vs_ml_only_over_folds": {
+    "pr_auc": {
+      "statistic": 3.0,
+      "p_value": 1.0
+    },
+    "expected_cost_inner": {
+      "statistic": 2.5,
+      "p_value": 1.0
+    }
+  },
+  "fusion_vs_ml_only_expected_cost_over_folds": {
+    "statistic": 3.0,
+    "p_value": 1.0
+  },
+  "note": "3 walk-forward folds: no paired test can reach p < 0.05 (minimum one-sided p = 0.125).",
+  "runs": [
+    {
+      "model": "xgboost",
+      "seed": 0,
+      "fold": 1,
+      "test_event": [
+        "2020-05-29 23:30:00",
+        "2020-05-30 06:00:00"
+      ],
+      "n_train_rows_used": 147786,
+      "n_train_positives": 8657,
+      "n_test_rows": 163896,
+      "n_test_positives": 2360,
+      "point": {
+        "roc_auc": 0.9673533653200462,
+        "pr_auc": 0.2031168908812418,
+        "f1_at_0.5": 0.2800096223237912
+      },
+      "event_fixed": {
+        "n_events": 1,
+        "n_detected": 1,
+        "event_recall": 1.0,
+        "n_episodes": 6,
+        "n_false_alarm_episodes": 5,
+        "episode_precision": 0.16666666666666666,
+        "event_f1": 0.2857142857142857,
+        "observed_days": 23.84396990740741,
+        "false_alarms_per_day": 0.20969662432121638,
+        "mean_lead_time_s": 765.0,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.16131896093728154,
+        "range_recall": 0.9930982905982906,
+        "range_f1": 0.27755230465380853,
+        "expected_cost": 5.0,
+        "outcomes": [
+          {
+            "event_start": "2020-05-29 23:30:00",
+            "event_end": "2020-05-30 06:00:00",
+            "detected": true,
+            "first_alarm": "2020-05-29 23:17:15",
+            "lead_time_s": 765.0,
+            "meets_min_lead": false
+          }
+        ],
+        "threshold": 0.5
+      },
+      "event_inner": {
+        "n_events": 1,
+        "n_detected": 1,
+        "event_recall": 1.0,
+        "n_episodes": 6,
+        "n_false_alarm_episodes": 5,
+        "episode_precision": 0.16666666666666666,
+        "event_f1": 0.2857142857142857,
+        "observed_days": 23.84396990740741,
+        "false_alarms_per_day": 0.20969662432121638,
+        "mean_lead_time_s": 765.0,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.16131896093728154,
+        "range_recall": 0.9930982905982906,
+        "range_f1": 0.27755230465380853,
+        "expected_cost": 5.0,
+        "outcomes": [
+          {
+            "event_start": "2020-05-29 23:30:00",
+            "event_end": "2020-05-30 06:00:00",
+            "detected": true,
+            "first_alarm": "2020-05-29 23:17:15",
+            "lead_time_s": 765.0,
+            "meets_min_lead": false
+          }
+        ],
+        "threshold": 0.5,
+        "threshold_source": "fallback_fixed (<2 failures in training data)"
+      },
+      "event_oracle_upper_bound": {
+        "n_events": 1,
+        "n_detected": 1,
+        "event_recall": 1.0,
+        "n_episodes": 5,
+        "n_false_alarm_episodes": 4,
+        "episode_precision": 0.2,
+        "event_f1": 0.33333333333333337,
+        "observed_days": 23.84396990740741,
+        "false_alarms_per_day": 0.1677572994569731,
+        "mean_lead_time_s": 706.0,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.19406048878980356,
+        "range_recall": 0.9928846153846154,
+        "range_f1": 0.32466484439047943,
+        "expected_cost": 4.0,
+        "outcomes": [
+          {
+            "event_start": "2020-05-29 23:30:00",
+            "event_end": "2020-05-30 06:00:00",
+            "detected": true,
+            "first_alarm": "2020-05-29 23:18:14",
+            "lead_time_s": 706.0,
+            "meets_min_lead": false
+          }
+        ],
+        "threshold": 0.95
+      },
+      "uncertainty": {
+        "ece": 0.07294302163120163,
+        "mce": 0.857855920280729,
+        "brier": 0.07290800570216219,
+        "conformal": {
+          "skipped": "no out-of-fold calibration scores with both classes"
+        }
+      },
+      "seconds": 7.4,
+      "variant": "ml_only"
+    },
+    {
+      "model": "xgboost",
+      "seed": 0,
+      "fold": 1,
+      "test_event": [
+        "2020-05-29 23:30:00",
+        "2020-05-30 06:00:00"
+      ],
+      "n_train_rows_used": 147786,
+      "n_train_positives": 8657,
+      "n_test_rows": 163896,
+      "n_test_positives": 2360,
+      "point": {
+        "roc_auc": 0.9642201654372263,
+        "pr_auc": 0.19173570004270263,
+        "f1_at_0.5": 0.27841588896865277
+      },
+      "event_fixed": {
+        "n_events": 1,
+        "n_detected": 1,
+        "event_recall": 1.0,
+        "n_episodes": 11,
+        "n_false_alarm_episodes": 10,
+        "episode_precision": 0.09090909090909091,
+        "event_f1": 0.16666666666666669,
+        "observed_days": 23.84396990740741,
+        "false_alarms_per_day": 0.41939324864243277,
+        "mean_lead_time_s": 458.0,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.08913921360255048,
+        "range_recall": 0.9928846153846154,
+        "range_f1": 0.16359150592145635,
+        "expected_cost": 10.0,
+        "outcomes": [
+          {
+            "event_start": "2020-05-29 23:30:00",
+            "event_end": "2020-05-30 06:00:00",
+            "detected": true,
+            "first_alarm": "2020-05-29 23:22:22",
+            "lead_time_s": 458.0,
+            "meets_min_lead": false
+          }
+        ],
+        "threshold": 0.5
+      },
+      "event_inner": {
+        "n_events": 1,
+        "n_detected": 1,
+        "event_recall": 1.0,
+        "n_episodes": 11,
+        "n_false_alarm_episodes": 10,
+        "episode_precision": 0.09090909090909091,
+        "event_f1": 0.16666666666666669,
+        "observed_days": 23.84396990740741,
+        "false_alarms_per_day": 0.41939324864243277,
+        "mean_lead_time_s": 458.0,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.08913921360255048,
+        "range_recall": 0.9928846153846154,
+        "range_f1": 0.16359150592145635,
+        "expected_cost": 10.0,
+        "outcomes": [
+          {
+            "event_start": "2020-05-29 23:30:00",
+            "event_end": "2020-05-30 06:00:00",
+            "detected": true,
+            "first_alarm": "2020-05-29 23:22:22",
+            "lead_time_s": 458.0,
+            "meets_min_lead": false
+          }
+        ],
+        "threshold": 0.5,
+        "threshold_source": "fallback_fixed (<2 failures in training data)"
+      },
+      "event_oracle_upper_bound": {
+        "n_events": 1,
+        "n_detected": 1,
+        "event_recall": 1.0,
+        "n_episodes": 8,
+        "n_false_alarm_episodes": 5,
+        "episode_precision": 0.375,
+        "event_f1": 0.5454545454545454,
+        "observed_days": 23.84396990740741,
+        "false_alarms_per_day": 0.20969662432121638,
+        "mean_lead_time_s": 448.0,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.125,
+        "range_recall": 0.9855128205128205,
+        "range_f1": 0.22185984761025168,
+        "expected_cost": 5.0,
+        "outcomes": [
+          {
+            "event_start": "2020-05-29 23:30:00",
+            "event_end": "2020-05-30 06:00:00",
+            "detected": true,
+            "first_alarm": "2020-05-29 23:22:32",
+            "lead_time_s": 448.0,
+            "meets_min_lead": false
+          }
+        ],
+        "threshold": 0.8
+      },
+      "uncertainty": {
+        "ece": 0.07390846468670566,
+        "mce": 0.8330568756878762,
+        "brier": 0.07255339983191005,
+        "conformal": {
+          "skipped": "no out-of-fold calibration scores with both classes"
+        }
+      },
+      "seconds": 6.7,
+      "variant": "hybrid"
+    },
+    {
+      "model": "logistic_regression",
+      "seed": 0,
+      "fold": 1,
+      "test_event": [
+        "2020-05-29 23:30:00",
+        "2020-05-30 06:00:00"
+      ],
+      "n_train_rows_used": 147786,
+      "n_train_positives": 8657,
+      "n_test_rows": 163896,
+      "n_test_positives": 2360,
+      "point": {
+        "roc_auc": 0.8924424492037458,
+        "pr_auc": 0.06398841621153271,
+        "f1_at_0.5": 0.0
+      },
+      "event_fixed": {
+        "n_events": 1,
+        "n_detected": 0,
+        "event_recall": 0.0,
+        "n_episodes": 13,
+        "n_false_alarm_episodes": 13,
+        "episode_precision": 0.0,
+        "event_f1": 0.0,
+        "observed_days": 23.84396990740741,
+        "false_alarms_per_day": 0.5452112232351626,
+        "mean_lead_time_s": null,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.0,
+        "range_recall": 0.0,
+        "range_f1": 0.0,
+        "expected_cost": 113.0,
+        "outcomes": [
+          {
+            "event_start": "2020-05-29 23:30:00",
+            "event_end": "2020-05-30 06:00:00",
+            "detected": false,
+            "first_alarm": null,
+            "lead_time_s": null,
+            "meets_min_lead": false
+          }
+        ],
+        "threshold": 0.5
+      },
+      "event_inner": {
+        "n_events": 1,
+        "n_detected": 0,
+        "event_recall": 0.0,
+        "n_episodes": 13,
+        "n_false_alarm_episodes": 13,
+        "episode_precision": 0.0,
+        "event_f1": 0.0,
+        "observed_days": 23.84396990740741,
+        "false_alarms_per_day": 0.5452112232351626,
+        "mean_lead_time_s": null,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.0,
+        "range_recall": 0.0,
+        "range_f1": 0.0,
+        "expected_cost": 113.0,
+        "outcomes": [
+          {
+            "event_start": "2020-05-29 23:30:00",
+            "event_end": "2020-05-30 06:00:00",
+            "detected": false,
+            "first_alarm": null,
+            "lead_time_s": null,
+            "meets_min_lead": false
+          }
+        ],
+        "threshold": 0.5,
+        "threshold_source": "fallback_fixed (<2 failures in training data)"
+      },
+      "event_oracle_upper_bound": {
+        "n_events": 1,
+        "n_detected": 1,
+        "event_recall": 1.0,
+        "n_episodes": 16,
+        "n_false_alarm_episodes": 15,
+        "episode_precision": 0.0625,
+        "event_f1": 0.11764705882352941,
+        "observed_days": 23.84396990740741,
+        "false_alarms_per_day": 0.6290898729636492,
+        "mean_lead_time_s": -2585.0,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.0625,
+        "range_recall": 0.9395726495726495,
+        "range_f1": 0.11720365908267054,
+        "expected_cost": 15.0,
+        "outcomes": [
+          {
+            "event_start": "2020-05-29 23:30:00",
+            "event_end": "2020-05-30 06:00:00",
+            "detected": true,
+            "first_alarm": "2020-05-30 00:13:05",
+            "lead_time_s": -2585.0,
+            "meets_min_lead": false
+          }
+        ],
+        "threshold": 0.15
+      },
+      "uncertainty": {
+        "ece": 0.0775491112874166,
+        "mce": 0.9936971838138652,
+        "brier": 0.05320892006492141,
+        "conformal": {
+          "skipped": "no out-of-fold calibration scores with both classes"
+        }
+      },
+      "seconds": 2.1,
+      "variant": "physics_only"
+    },
+    {
+      "model": "ml_only|physics_only",
+      "seed": 0,
+      "fold": 1,
+      "variant": "fusion",
+      "point": {
+        "pr_auc": NaN
+      },
+      "event_inner": {
+        "n_events": 1,
+        "n_detected": 1,
+        "event_recall": 1.0,
+        "n_episodes": 17,
+        "n_false_alarm_episodes": 16,
+        "episode_precision": 0.058823529411764705,
+        "event_f1": 0.1111111111111111,
+        "observed_days": 23.84396990740741,
+        "false_alarms_per_day": 0.6710291978278924,
+        "mean_lead_time_s": 765.0,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.05693610386021702,
+        "range_recall": 0.9930982905982906,
+        "range_f1": 0.1076977053614839,
+        "expected_cost": 16.0,
+        "outcomes": [
+          {
+            "event_start": "2020-05-29 23:30:00",
+            "event_end": "2020-05-30 06:00:00",
+            "detected": true,
+            "first_alarm": "2020-05-29 23:17:15",
+            "lead_time_s": 765.0,
+            "meets_min_lead": false
+          }
+        ]
+      }
+    },
+    {
+      "model": "xgboost",
+      "seed": 1,
+      "fold": 1,
+      "test_event": [
+        "2020-05-29 23:30:00",
+        "2020-05-30 06:00:00"
+      ],
+      "n_train_rows_used": 147786,
+      "n_train_positives": 8657,
+      "n_test_rows": 163896,
+      "n_test_positives": 2360,
+      "point": {
+        "roc_auc": 0.9697820192570811,
+        "pr_auc": 0.22151308418178212,
+        "f1_at_0.5": 0.28002646298189693
+      },
+      "event_fixed": {
+        "n_events": 1,
+        "n_detected": 1,
+        "event_recall": 1.0,
+        "n_episodes": 6,
+        "n_false_alarm_episodes": 5,
+        "episode_precision": 0.16666666666666666,
+        "event_f1": 0.2857142857142857,
+        "observed_days": 23.84396990740741,
+        "false_alarms_per_day": 0.20969662432121638,
+        "mean_lead_time_s": 756.0,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.16137987943887327,
+        "range_recall": 0.9930982905982906,
+        "range_f1": 0.27764246491130123,
+        "expected_cost": 5.0,
+        "outcomes": [
+          {
+            "event_start": "2020-05-29 23:30:00",
+            "event_end": "2020-05-30 06:00:00",
+            "detected": true,
+            "first_alarm": "2020-05-29 23:17:24",
+            "lead_time_s": 756.0,
+            "meets_min_lead": false
+          }
+        ],
+        "threshold": 0.5
+      },
+      "event_inner": {
+        "n_events": 1,
+        "n_detected": 1,
+        "event_recall": 1.0,
+        "n_episodes": 6,
+        "n_false_alarm_episodes": 5,
+        "episode_precision": 0.16666666666666666,
+        "event_f1": 0.2857142857142857,
+        "observed_days": 23.84396990740741,
+        "false_alarms_per_day": 0.20969662432121638,
+        "mean_lead_time_s": 756.0,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.16137987943887327,
+        "range_recall": 0.9930982905982906,
+        "range_f1": 0.27764246491130123,
+        "expected_cost": 5.0,
+        "outcomes": [
+          {
+            "event_start": "2020-05-29 23:30:00",
+            "event_end": "2020-05-30 06:00:00",
+            "detected": true,
+            "first_alarm": "2020-05-29 23:17:24",
+            "lead_time_s": 756.0,
+            "meets_min_lead": false
+          }
+        ],
+        "threshold": 0.5,
+        "threshold_source": "fallback_fixed (<2 failures in training data)"
+      },
+      "event_oracle_upper_bound": {
+        "n_events": 1,
+        "n_detected": 1,
+        "event_recall": 1.0,
+        "n_episodes": 6,
+        "n_false_alarm_episodes": 5,
+        "episode_precision": 0.16666666666666666,
+        "event_f1": 0.2857142857142857,
+        "observed_days": 23.84396990740741,
+        "false_alarms_per_day": 0.20969662432121638,
+        "mean_lead_time_s": 706.0,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.16171707399150295,
+        "range_recall": 0.9928846153846154,
+        "range_f1": 0.2781329635814751,
+        "expected_cost": 5.0,
+        "outcomes": [
+          {
+            "event_start": "2020-05-29 23:30:00",
+            "event_end": "2020-05-30 06:00:00",
+            "detected": true,
+            "first_alarm": "2020-05-29 23:18:14",
+            "lead_time_s": 706.0,
+            "meets_min_lead": false
+          }
+        ],
+        "threshold": 0.85
+      },
+      "uncertainty": {
+        "ece": 0.07299231969219082,
+        "mce": 0.8431277804904513,
+        "brier": 0.07296667765858281,
+        "conformal": {
+          "skipped": "no out-of-fold calibration scores with both classes"
+        }
+      },
+      "seconds": 7.2,
+      "variant": "ml_only"
+    },
+    {
+      "model": "xgboost",
+      "seed": 1,
+      "fold": 1,
+      "test_event": [
+        "2020-05-29 23:30:00",
+        "2020-05-30 06:00:00"
+      ],
+      "n_train_rows_used": 147786,
+      "n_train_positives": 8657,
+      "n_test_rows": 163896,
+      "n_test_positives": 2360,
+      "point": {
+        "roc_auc": 0.9518392722764006,
+        "pr_auc": 0.13149300502992067,
+        "f1_at_0.5": 0.2819409947295087
+      },
+      "event_fixed": {
+        "n_events": 1,
+        "n_detected": 1,
+        "event_recall": 1.0,
+        "n_episodes": 6,
+        "n_false_alarm_episodes": 5,
+        "episode_precision": 0.16666666666666666,
+        "event_f1": 0.2857142857142857,
+        "observed_days": 23.84396990740741,
+        "false_alarms_per_day": 0.20969662432121638,
+        "mean_lead_time_s": 488.0,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.1632137550413925,
+        "range_recall": 0.9928846153846154,
+        "range_f1": 0.28034366373172465,
+        "expected_cost": 5.0,
+        "outcomes": [
+          {
+            "event_start": "2020-05-29 23:30:00",
+            "event_end": "2020-05-30 06:00:00",
+            "detected": true,
+            "first_alarm": "2020-05-29 23:21:52",
+            "lead_time_s": 488.0,
+            "meets_min_lead": false
+          }
+        ],
+        "threshold": 0.5
+      },
+      "event_inner": {
+        "n_events": 1,
+        "n_detected": 1,
+        "event_recall": 1.0,
+        "n_episodes": 6,
+        "n_false_alarm_episodes": 5,
+        "episode_precision": 0.16666666666666666,
+        "event_f1": 0.2857142857142857,
+        "observed_days": 23.84396990740741,
+        "false_alarms_per_day": 0.20969662432121638,
+        "mean_lead_time_s": 488.0,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.1632137550413925,
+        "range_recall": 0.9928846153846154,
+        "range_f1": 0.28034366373172465,
+        "expected_cost": 5.0,
+        "outcomes": [
+          {
+            "event_start": "2020-05-29 23:30:00",
+            "event_end": "2020-05-30 06:00:00",
+            "detected": true,
+            "first_alarm": "2020-05-29 23:21:52",
+            "lead_time_s": 488.0,
+            "meets_min_lead": false
+          }
+        ],
+        "threshold": 0.5,
+        "threshold_source": "fallback_fixed (<2 failures in training data)"
+      },
+      "event_oracle_upper_bound": {
+        "n_events": 1,
+        "n_detected": 1,
+        "event_recall": 1.0,
+        "n_episodes": 9,
+        "n_false_alarm_episodes": 5,
+        "episode_precision": 0.4444444444444444,
+        "event_f1": 0.6153846153846153,
+        "observed_days": 23.84396990740741,
+        "false_alarms_per_day": 0.20969662432121638,
+        "mean_lead_time_s": 448.0,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.3333333333333333,
+        "range_recall": 0.6592307692307693,
+        "range_f1": 0.44277964350297083,
+        "expected_cost": 5.0,
+        "outcomes": [
+          {
+            "event_start": "2020-05-29 23:30:00",
+            "event_end": "2020-05-30 06:00:00",
+            "detected": true,
+            "first_alarm": "2020-05-29 23:22:32",
+            "lead_time_s": 448.0,
+            "meets_min_lead": false
+          }
+        ],
+        "threshold": 0.9
+      },
+      "uncertainty": {
+        "ece": 0.07374993225159567,
+        "mce": 0.8358370585047241,
+        "brier": 0.07260367719859588,
+        "conformal": {
+          "skipped": "no out-of-fold calibration scores with both classes"
+        }
+      },
+      "seconds": 6.4,
+      "variant": "hybrid"
+    },
+    {
+      "model": "logistic_regression",
+      "seed": 1,
+      "fold": 1,
+      "test_event": [
+        "2020-05-29 23:30:00",
+        "2020-05-30 06:00:00"
+      ],
+      "n_train_rows_used": 147786,
+      "n_train_positives": 8657,
+      "n_test_rows": 163896,
+      "n_test_positives": 2360,
+      "point": {
+        "roc_auc": 0.8924424492037458,
+        "pr_auc": 0.06398841621153271,
+        "f1_at_0.5": 0.0
+      },
+      "event_fixed": {
+        "n_events": 1,
+        "n_detected": 0,
+        "event_recall": 0.0,
+        "n_episodes": 13,
+        "n_false_alarm_episodes": 13,
+        "episode_precision": 0.0,
+        "event_f1": 0.0,
+        "observed_days": 23.84396990740741,
+        "false_alarms_per_day": 0.5452112232351626,
+        "mean_lead_time_s": null,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.0,
+        "range_recall": 0.0,
+        "range_f1": 0.0,
+        "expected_cost": 113.0,
+        "outcomes": [
+          {
+            "event_start": "2020-05-29 23:30:00",
+            "event_end": "2020-05-30 06:00:00",
+            "detected": false,
+            "first_alarm": null,
+            "lead_time_s": null,
+            "meets_min_lead": false
+          }
+        ],
+        "threshold": 0.5
+      },
+      "event_inner": {
+        "n_events": 1,
+        "n_detected": 0,
+        "event_recall": 0.0,
+        "n_episodes": 13,
+        "n_false_alarm_episodes": 13,
+        "episode_precision": 0.0,
+        "event_f1": 0.0,
+        "observed_days": 23.84396990740741,
+        "false_alarms_per_day": 0.5452112232351626,
+        "mean_lead_time_s": null,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.0,
+        "range_recall": 0.0,
+        "range_f1": 0.0,
+        "expected_cost": 113.0,
+        "outcomes": [
+          {
+            "event_start": "2020-05-29 23:30:00",
+            "event_end": "2020-05-30 06:00:00",
+            "detected": false,
+            "first_alarm": null,
+            "lead_time_s": null,
+            "meets_min_lead": false
+          }
+        ],
+        "threshold": 0.5,
+        "threshold_source": "fallback_fixed (<2 failures in training data)"
+      },
+      "event_oracle_upper_bound": {
+        "n_events": 1,
+        "n_detected": 1,
+        "event_recall": 1.0,
+        "n_episodes": 16,
+        "n_false_alarm_episodes": 15,
+        "episode_precision": 0.0625,
+        "event_f1": 0.11764705882352941,
+        "observed_days": 23.84396990740741,
+        "false_alarms_per_day": 0.6290898729636492,
+        "mean_lead_time_s": -2585.0,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.0625,
+        "range_recall": 0.9395726495726495,
+        "range_f1": 0.11720365908267054,
+        "expected_cost": 15.0,
+        "outcomes": [
+          {
+            "event_start": "2020-05-29 23:30:00",
+            "event_end": "2020-05-30 06:00:00",
+            "detected": true,
+            "first_alarm": "2020-05-30 00:13:05",
+            "lead_time_s": -2585.0,
+            "meets_min_lead": false
+          }
+        ],
+        "threshold": 0.15
+      },
+      "uncertainty": {
+        "ece": 0.0775491112874166,
+        "mce": 0.9936971838138652,
+        "brier": 0.05320892006492141,
+        "conformal": {
+          "skipped": "no out-of-fold calibration scores with both classes"
+        }
+      },
+      "seconds": 2.0,
+      "variant": "physics_only"
+    },
+    {
+      "model": "ml_only|physics_only",
+      "seed": 1,
+      "fold": 1,
+      "variant": "fusion",
+      "point": {
+        "pr_auc": NaN
+      },
+      "event_inner": {
+        "n_events": 1,
+        "n_detected": 1,
+        "event_recall": 1.0,
+        "n_episodes": 17,
+        "n_false_alarm_episodes": 16,
+        "episode_precision": 0.058823529411764705,
+        "event_f1": 0.1111111111111111,
+        "observed_days": 23.84396990740741,
+        "false_alarms_per_day": 0.6710291978278924,
+        "mean_lead_time_s": 756.0,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.05695760450783763,
+        "range_recall": 0.9930982905982906,
+        "range_f1": 0.10773616897334806,
+        "expected_cost": 16.0,
+        "outcomes": [
+          {
+            "event_start": "2020-05-29 23:30:00",
+            "event_end": "2020-05-30 06:00:00",
+            "detected": true,
+            "first_alarm": "2020-05-29 23:17:24",
+            "lead_time_s": 756.0,
+            "meets_min_lead": false
+          }
+        ]
+      }
+    },
+    {
+      "model": "xgboost",
+      "seed": 2,
+      "fold": 1,
+      "test_event": [
+        "2020-05-29 23:30:00",
+        "2020-05-30 06:00:00"
+      ],
+      "n_train_rows_used": 147786,
+      "n_train_positives": 8657,
+      "n_test_rows": 163896,
+      "n_test_positives": 2360,
+      "point": {
+        "roc_auc": 0.9648323853191565,
+        "pr_auc": 0.19352757073697602,
+        "f1_at_0.5": 0.2802118440057776
+      },
+      "event_fixed": {
+        "n_events": 1,
+        "n_detected": 1,
+        "event_recall": 1.0,
+        "n_episodes": 5,
+        "n_false_alarm_episodes": 4,
+        "episode_precision": 0.2,
+        "event_f1": 0.33333333333333337,
+        "observed_days": 23.84396990740741,
+        "false_alarms_per_day": 0.1677572994569731,
+        "mean_lead_time_s": 716.0,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.19398142310763672,
+        "range_recall": 0.9930982905982906,
+        "range_f1": 0.32456559988648026,
+        "expected_cost": 4.0,
+        "outcomes": [
+          {
+            "event_start": "2020-05-29 23:30:00",
+            "event_end": "2020-05-30 06:00:00",
+            "detected": true,
+            "first_alarm": "2020-05-29 23:18:04",
+            "lead_time_s": 716.0,
+            "meets_min_lead": false
+          }
+        ],
+        "threshold": 0.5
+      },
+      "event_inner": {
+        "n_events": 1,
+        "n_detected": 1,
+        "event_recall": 1.0,
+        "n_episodes": 5,
+        "n_false_alarm_episodes": 4,
+        "episode_precision": 0.2,
+        "event_f1": 0.33333333333333337,
+        "observed_days": 23.84396990740741,
+        "false_alarms_per_day": 0.1677572994569731,
+        "mean_lead_time_s": 716.0,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.19398142310763672,
+        "range_recall": 0.9930982905982906,
+        "range_f1": 0.32456559988648026,
+        "expected_cost": 4.0,
+        "outcomes": [
+          {
+            "event_start": "2020-05-29 23:30:00",
+            "event_end": "2020-05-30 06:00:00",
+            "detected": true,
+            "first_alarm": "2020-05-29 23:18:04",
+            "lead_time_s": 716.0,
+            "meets_min_lead": false
+          }
+        ],
+        "threshold": 0.5,
+        "threshold_source": "fallback_fixed (<2 failures in training data)"
+      },
+      "event_oracle_upper_bound": {
+        "n_events": 1,
+        "n_detected": 1,
+        "event_recall": 1.0,
+        "n_episodes": 5,
+        "n_false_alarm_episodes": 4,
+        "episode_precision": 0.2,
+        "event_f1": 0.33333333333333337,
+        "observed_days": 23.84396990740741,
+        "false_alarms_per_day": 0.1677572994569731,
+        "mean_lead_time_s": 706.0,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.1940629861665896,
+        "range_recall": 0.9930982905982906,
+        "range_f1": 0.32467976104414187,
+        "expected_cost": 4.0,
+        "outcomes": [
+          {
+            "event_start": "2020-05-29 23:30:00",
+            "event_end": "2020-05-30 06:00:00",
+            "detected": true,
+            "first_alarm": "2020-05-29 23:18:14",
+            "lead_time_s": 706.0,
+            "meets_min_lead": false
+          }
+        ],
+        "threshold": 0.9
+      },
+      "uncertainty": {
+        "ece": 0.07292488154716623,
+        "mce": 0.8482877686619759,
+        "brier": 0.07291598121439434,
+        "conformal": {
+          "skipped": "no out-of-fold calibration scores with both classes"
+        }
+      },
+      "seconds": 7.1,
+      "variant": "ml_only"
+    },
+    {
+      "model": "xgboost",
+      "seed": 2,
+      "fold": 1,
+      "test_event": [
+        "2020-05-29 23:30:00",
+        "2020-05-30 06:00:00"
+      ],
+      "n_train_rows_used": 147786,
+      "n_train_positives": 8657,
+      "n_test_rows": 163896,
+      "n_test_positives": 2360,
+      "point": {
+        "roc_auc": 0.9591325276812934,
+        "pr_auc": 0.16185345717758345,
+        "f1_at_0.5": 0.28168502602590484
+      },
+      "event_fixed": {
+        "n_events": 1,
+        "n_detected": 1,
+        "event_recall": 1.0,
+        "n_episodes": 9,
+        "n_false_alarm_episodes": 8,
+        "episode_precision": 0.1111111111111111,
+        "event_f1": 0.19999999999999998,
+        "observed_days": 23.84396990740741,
+        "false_alarms_per_day": 0.3355145989139462,
+        "mean_lead_time_s": 448.0,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.10899425898362747,
+        "range_recall": 0.9928846153846154,
+        "range_f1": 0.1964258058257752,
+        "expected_cost": 8.0,
+        "outcomes": [
+          {
+            "event_start": "2020-05-29 23:30:00",
+            "event_end": "2020-05-30 06:00:00",
+            "detected": true,
+            "first_alarm": "2020-05-29 23:22:32",
+            "lead_time_s": 448.0,
+            "meets_min_lead": false
+          }
+        ],
+        "threshold": 0.5
+      },
+      "event_inner": {
+        "n_events": 1,
+        "n_detected": 1,
+        "event_recall": 1.0,
+        "n_episodes": 9,
+        "n_false_alarm_episodes": 8,
+        "episode_precision": 0.1111111111111111,
+        "event_f1": 0.19999999999999998,
+        "observed_days": 23.84396990740741,
+        "false_alarms_per_day": 0.3355145989139462,
+        "mean_lead_time_s": 448.0,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.10899425898362747,
+        "range_recall": 0.9928846153846154,
+        "range_f1": 0.1964258058257752,
+        "expected_cost": 8.0,
+        "outcomes": [
+          {
+            "event_start": "2020-05-29 23:30:00",
+            "event_end": "2020-05-30 06:00:00",
+            "detected": true,
+            "first_alarm": "2020-05-29 23:22:32",
+            "lead_time_s": 448.0,
+            "meets_min_lead": false
+          }
+        ],
+        "threshold": 0.5,
+        "threshold_source": "fallback_fixed (<2 failures in training data)"
+      },
+      "event_oracle_upper_bound": {
+        "n_events": 1,
+        "n_detected": 1,
+        "event_recall": 1.0,
+        "n_episodes": 10,
+        "n_false_alarm_episodes": 7,
+        "episode_precision": 0.3,
+        "event_f1": 0.4615384615384615,
+        "observed_days": 23.84396990740741,
+        "false_alarms_per_day": 0.2935752740497029,
+        "mean_lead_time_s": 448.0,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.2,
+        "range_recall": 0.744775641025641,
+        "range_f1": 0.3153238117854599,
+        "expected_cost": 7.0,
+        "outcomes": [
+          {
+            "event_start": "2020-05-29 23:30:00",
+            "event_end": "2020-05-30 06:00:00",
+            "detected": true,
+            "first_alarm": "2020-05-29 23:22:32",
+            "lead_time_s": 448.0,
+            "meets_min_lead": false
+          }
+        ],
+        "threshold": 0.65
+      },
+      "uncertainty": {
+        "ece": 0.0736145768819079,
+        "mce": 0.8299740130715123,
+        "brier": 0.07188510472624617,
+        "conformal": {
+          "skipped": "no out-of-fold calibration scores with both classes"
+        }
+      },
+      "seconds": 6.5,
+      "variant": "hybrid"
+    },
+    {
+      "model": "logistic_regression",
+      "seed": 2,
+      "fold": 1,
+      "test_event": [
+        "2020-05-29 23:30:00",
+        "2020-05-30 06:00:00"
+      ],
+      "n_train_rows_used": 147786,
+      "n_train_positives": 8657,
+      "n_test_rows": 163896,
+      "n_test_positives": 2360,
+      "point": {
+        "roc_auc": 0.8924424492037458,
+        "pr_auc": 0.06398841621153271,
+        "f1_at_0.5": 0.0
+      },
+      "event_fixed": {
+        "n_events": 1,
+        "n_detected": 0,
+        "event_recall": 0.0,
+        "n_episodes": 13,
+        "n_false_alarm_episodes": 13,
+        "episode_precision": 0.0,
+        "event_f1": 0.0,
+        "observed_days": 23.84396990740741,
+        "false_alarms_per_day": 0.5452112232351626,
+        "mean_lead_time_s": null,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.0,
+        "range_recall": 0.0,
+        "range_f1": 0.0,
+        "expected_cost": 113.0,
+        "outcomes": [
+          {
+            "event_start": "2020-05-29 23:30:00",
+            "event_end": "2020-05-30 06:00:00",
+            "detected": false,
+            "first_alarm": null,
+            "lead_time_s": null,
+            "meets_min_lead": false
+          }
+        ],
+        "threshold": 0.5
+      },
+      "event_inner": {
+        "n_events": 1,
+        "n_detected": 0,
+        "event_recall": 0.0,
+        "n_episodes": 13,
+        "n_false_alarm_episodes": 13,
+        "episode_precision": 0.0,
+        "event_f1": 0.0,
+        "observed_days": 23.84396990740741,
+        "false_alarms_per_day": 0.5452112232351626,
+        "mean_lead_time_s": null,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.0,
+        "range_recall": 0.0,
+        "range_f1": 0.0,
+        "expected_cost": 113.0,
+        "outcomes": [
+          {
+            "event_start": "2020-05-29 23:30:00",
+            "event_end": "2020-05-30 06:00:00",
+            "detected": false,
+            "first_alarm": null,
+            "lead_time_s": null,
+            "meets_min_lead": false
+          }
+        ],
+        "threshold": 0.5,
+        "threshold_source": "fallback_fixed (<2 failures in training data)"
+      },
+      "event_oracle_upper_bound": {
+        "n_events": 1,
+        "n_detected": 1,
+        "event_recall": 1.0,
+        "n_episodes": 16,
+        "n_false_alarm_episodes": 15,
+        "episode_precision": 0.0625,
+        "event_f1": 0.11764705882352941,
+        "observed_days": 23.84396990740741,
+        "false_alarms_per_day": 0.6290898729636492,
+        "mean_lead_time_s": -2585.0,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.0625,
+        "range_recall": 0.9395726495726495,
+        "range_f1": 0.11720365908267054,
+        "expected_cost": 15.0,
+        "outcomes": [
+          {
+            "event_start": "2020-05-29 23:30:00",
+            "event_end": "2020-05-30 06:00:00",
+            "detected": true,
+            "first_alarm": "2020-05-30 00:13:05",
+            "lead_time_s": -2585.0,
+            "meets_min_lead": false
+          }
+        ],
+        "threshold": 0.15
+      },
+      "uncertainty": {
+        "ece": 0.0775491112874166,
+        "mce": 0.9936971838138652,
+        "brier": 0.05320892006492141,
+        "conformal": {
+          "skipped": "no out-of-fold calibration scores with both classes"
+        }
+      },
+      "seconds": 1.9,
+      "variant": "physics_only"
+    },
+    {
+      "model": "ml_only|physics_only",
+      "seed": 2,
+      "fold": 1,
+      "variant": "fusion",
+      "point": {
+        "pr_auc": NaN
+      },
+      "event_inner": {
+        "n_events": 1,
+        "n_detected": 1,
+        "event_recall": 1.0,
+        "n_episodes": 16,
+        "n_false_alarm_episodes": 15,
+        "episode_precision": 0.0625,
+        "event_f1": 0.11764705882352941,
+        "observed_days": 23.84396990740741,
+        "false_alarms_per_day": 0.6290898729636492,
+        "mean_lead_time_s": 716.0,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.06061919472113647,
+        "range_recall": 0.9930982905982906,
+        "range_f1": 0.11426367976945186,
+        "expected_cost": 15.0,
+        "outcomes": [
+          {
+            "event_start": "2020-05-29 23:30:00",
+            "event_end": "2020-05-30 06:00:00",
+            "detected": true,
+            "first_alarm": "2020-05-29 23:18:04",
+            "lead_time_s": 716.0,
+            "meets_min_lead": false
+          }
+        ]
+      }
+    },
+    {
+      "model": "xgboost",
+      "seed": 0,
+      "fold": 2,
+      "test_event": [
+        "2020-06-05 10:00:00",
+        "2020-06-07 14:30:00"
+      ],
+      "n_train_rows_used": 182453,
+      "n_train_positives": 11017,
+      "n_test_rows": 180806,
+      "n_test_positives": 17315,
+      "point": {
+        "roc_auc": 0.9568255679436456,
+        "pr_auc": 0.7839356461145155,
+        "f1_at_0.5": 0.32113821138211385
+      },
+      "event_fixed": {
+        "n_events": 1,
+        "n_detected": 1,
+        "event_recall": 1.0,
+        "n_episodes": 13,
+        "n_false_alarm_episodes": 0,
+        "episode_precision": 1.0,
+        "event_f1": 1.0,
+        "observed_days": 24.270694444444445,
+        "false_alarms_per_day": 0.0,
+        "mean_lead_time_s": 244.0,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.9890558421170665,
+        "range_recall": 0.5062781847781848,
+        "range_f1": 0.6697331664831622,
+        "expected_cost": 0.0,
+        "outcomes": [
+          {
+            "event_start": "2020-06-05 10:00:00",
+            "event_end": "2020-06-07 14:30:00",
+            "detected": true,
+            "first_alarm": "2020-06-05 09:55:56",
+            "lead_time_s": 244.0,
+            "meets_min_lead": false
+          }
+        ],
+        "threshold": 0.5
+      },
+      "event_inner": {
+        "n_events": 1,
+        "n_detected": 1,
+        "event_recall": 1.0,
+        "n_episodes": 15,
+        "n_false_alarm_episodes": 0,
+        "episode_precision": 1.0,
+        "event_f1": 1.0,
+        "observed_days": 24.270694444444445,
+        "false_alarms_per_day": 0.0,
+        "mean_lead_time_s": 244.0,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.9905150631681244,
+        "range_recall": 0.5054095238095239,
+        "range_f1": 0.6693061278087574,
+        "expected_cost": 0.0,
+        "outcomes": [
+          {
+            "event_start": "2020-06-05 10:00:00",
+            "event_end": "2020-06-07 14:30:00",
+            "detected": true,
+            "first_alarm": "2020-06-05 09:55:56",
+            "lead_time_s": 244.0,
+            "meets_min_lead": false
+          }
+        ],
+        "threshold": 0.65,
+        "threshold_source": "inner_oof_cost_optimal"
+      },
+      "event_oracle_upper_bound": {
+        "n_events": 1,
+        "n_detected": 1,
+        "event_recall": 1.0,
+        "n_episodes": 16,
+        "n_false_alarm_episodes": 0,
+        "episode_precision": 1.0,
+        "event_f1": 1.0,
+        "observed_days": 24.270694444444445,
+        "false_alarms_per_day": 0.0,
+        "mean_lead_time_s": 224.0,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.9340857969151671,
+        "range_recall": 0.5053447971781305,
+        "range_f1": 0.6558640611448228,
+        "expected_cost": 0.0,
+        "outcomes": [
+          {
+            "event_start": "2020-06-05 10:00:00",
+            "event_end": "2020-06-07 14:30:00",
+            "detected": true,
+            "first_alarm": "2020-06-05 09:56:16",
+            "lead_time_s": 224.0,
+            "meets_min_lead": false
+          }
+        ],
+        "threshold": 0.95
+      },
+      "uncertainty": {
+        "ece": 0.07540980429459752,
+        "mce": 0.8536363115251463,
+        "brier": 0.07333294104021996,
+        "conformal": {
+          "alpha": 0.1,
+          "coverage": 0.8259902879329226,
+          "mean_set_size": 0.9309978651150957,
+          "ambiguous_rate": 0.0,
+          "empty_rate": 0.06900213488490427,
+          "coverage_class_0": 0.8403887675774202,
+          "coverage_class_1": 0.6900375397054577
+        },
+        "ece_isotonic": 0.06859860045431274
+      },
+      "seconds": 15.6,
+      "variant": "ml_only"
+    },
+    {
+      "model": "xgboost",
+      "seed": 0,
+      "fold": 2,
+      "test_event": [
+        "2020-06-05 10:00:00",
+        "2020-06-07 14:30:00"
+      ],
+      "n_train_rows_used": 182453,
+      "n_train_positives": 11017,
+      "n_test_rows": 180806,
+      "n_test_positives": 17315,
+      "point": {
+        "roc_auc": 0.9836116314339477,
+        "pr_auc": 0.901800510776833,
+        "f1_at_0.5": 0.3041010081237154
+      },
+      "event_fixed": {
+        "n_events": 1,
+        "n_detected": 1,
+        "event_recall": 1.0,
+        "n_episodes": 24,
+        "n_false_alarm_episodes": 0,
+        "episode_precision": 1.0,
+        "event_f1": 1.0,
+        "observed_days": 24.270694444444445,
+        "false_alarms_per_day": 0.0,
+        "mean_lead_time_s": 36.0,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.9573379783233799,
+        "range_recall": 0.5033616287094548,
+        "range_f1": 0.6598032910724827,
+        "expected_cost": 0.0,
+        "outcomes": [
+          {
+            "event_start": "2020-06-05 10:00:00",
+            "event_end": "2020-06-07 14:30:00",
+            "detected": true,
+            "first_alarm": "2020-06-05 09:59:24",
+            "lead_time_s": 36.0,
+            "meets_min_lead": false
+          }
+        ],
+        "threshold": 0.5
+      },
+      "event_inner": {
+        "n_events": 1,
+        "n_detected": 1,
+        "event_recall": 1.0,
+        "n_episodes": 25,
+        "n_false_alarm_episodes": 0,
+        "episode_precision": 1.0,
+        "event_f1": 1.0,
+        "observed_days": 24.270694444444445,
+        "false_alarms_per_day": 0.0,
+        "mean_lead_time_s": 36.0,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.9990444591904446,
+        "range_recall": 0.5030128042328043,
+        "range_f1": 0.6691251621464017,
+        "expected_cost": 0.0,
+        "outcomes": [
+          {
+            "event_start": "2020-06-05 10:00:00",
+            "event_end": "2020-06-07 14:30:00",
+            "detected": true,
+            "first_alarm": "2020-06-05 09:59:24",
+            "lead_time_s": 36.0,
+            "meets_min_lead": false
+          }
+        ],
+        "threshold": 0.6,
+        "threshold_source": "inner_oof_cost_optimal"
+      },
+      "event_oracle_upper_bound": {
+        "n_events": 1,
+        "n_detected": 1,
+        "event_recall": 1.0,
+        "n_episodes": 44,
+        "n_false_alarm_episodes": 0,
+        "episode_precision": 1.0,
+        "event_f1": 1.0,
+        "observed_days": 24.270694444444445,
+        "false_alarms_per_day": 0.0,
+        "mean_lead_time_s": -301.0,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.8136363636363636,
+        "range_recall": 0.5001272045855379,
+        "range_f1": 0.6194747516790108,
+        "expected_cost": 0.0,
+        "outcomes": [
+          {
+            "event_start": "2020-06-05 10:00:00",
+            "event_end": "2020-06-07 14:30:00",
+            "detected": true,
+            "first_alarm": "2020-06-05 10:05:01",
+            "lead_time_s": -301.0,
+            "meets_min_lead": false
+          }
+        ],
+        "threshold": 0.95
+      },
+      "uncertainty": {
+        "ece": 0.07989925742189367,
+        "mce": 0.49721435749012494,
+        "brier": 0.07839775335277538,
+        "conformal": {
+          "alpha": 0.1,
+          "coverage": 0.8268254372089422,
+          "mean_set_size": 0.8375772927889561,
+          "ambiguous_rate": 0.0,
+          "empty_rate": 0.16242270721104388,
+          "coverage_class_0": 0.8541081772085314,
+          "coverage_class_1": 0.5692174415246896
+        },
+        "ece_isotonic": 0.08043876901069694
+      },
+      "seconds": 17.2,
+      "variant": "hybrid"
+    },
+    {
+      "model": "logistic_regression",
+      "seed": 0,
+      "fold": 2,
+      "test_event": [
+        "2020-06-05 10:00:00",
+        "2020-06-07 14:30:00"
+      ],
+      "n_train_rows_used": 182453,
+      "n_train_positives": 11017,
+      "n_test_rows": 180806,
+      "n_test_positives": 17315,
+      "point": {
+        "roc_auc": 0.8470453315775053,
+        "pr_auc": 0.24231798202333024,
+        "f1_at_0.5": 0.0
+      },
+      "event_fixed": {
+        "n_events": 1,
+        "n_detected": 0,
+        "event_recall": 0.0,
+        "n_episodes": 14,
+        "n_false_alarm_episodes": 14,
+        "episode_precision": 0.0,
+        "event_f1": 0.0,
+        "observed_days": 24.270694444444445,
+        "false_alarms_per_day": 0.5768273352064962,
+        "mean_lead_time_s": null,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.0,
+        "range_recall": 0.0,
+        "range_f1": 0.0,
+        "expected_cost": 114.0,
+        "outcomes": [
+          {
+            "event_start": "2020-06-05 10:00:00",
+            "event_end": "2020-06-07 14:30:00",
+            "detected": false,
+            "first_alarm": null,
+            "lead_time_s": null,
+            "meets_min_lead": false
+          }
+        ],
+        "threshold": 0.5
+      },
+      "event_inner": {
+        "n_events": 1,
+        "n_detected": 0,
+        "event_recall": 0.0,
+        "n_episodes": 4,
+        "n_false_alarm_episodes": 4,
+        "episode_precision": 0.0,
+        "event_f1": 0.0,
+        "observed_days": 24.270694444444445,
+        "false_alarms_per_day": 0.16480781005899892,
+        "mean_lead_time_s": null,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.0,
+        "range_recall": 0.0,
+        "range_f1": 0.0,
+        "expected_cost": 104.0,
+        "outcomes": [
+          {
+            "event_start": "2020-06-05 10:00:00",
+            "event_end": "2020-06-07 14:30:00",
+            "detected": false,
+            "first_alarm": null,
+            "lead_time_s": null,
+            "meets_min_lead": false
+          }
+        ],
+        "threshold": 0.95,
+        "threshold_source": "inner_oof_cost_optimal"
+      },
+      "event_oracle_upper_bound": {
+        "n_events": 1,
+        "n_detected": 1,
+        "event_recall": 1.0,
+        "n_episodes": 21,
+        "n_false_alarm_episodes": 20,
+        "episode_precision": 0.047619047619047616,
+        "event_f1": 0.0909090909090909,
+        "observed_days": 24.270694444444445,
+        "false_alarms_per_day": 0.8240390502949946,
+        "mean_lead_time_s": -121389.0,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.047619047619047616,
+        "range_recall": 0.500026455026455,
+        "range_f1": 0.08695692179581845,
+        "expected_cost": 20.0,
+        "outcomes": [
+          {
+            "event_start": "2020-06-05 10:00:00",
+            "event_end": "2020-06-07 14:30:00",
+            "detected": true,
+            "first_alarm": "2020-06-06 19:43:09",
+            "lead_time_s": -121389.0,
+            "meets_min_lead": false
+          }
+        ],
+        "threshold": 0.2
+      },
+      "uncertainty": {
+        "ece": 0.1887177881234688,
+        "mce": 0.9470996923871489,
+        "brier": 0.17008890028752824,
+        "conformal": {
+          "alpha": 0.1,
+          "coverage": 0.7681880026105329,
+          "mean_set_size": 0.9031835226707078,
+          "ambiguous_rate": 0.0,
+          "empty_rate": 0.09681647732929217,
+          "coverage_class_0": 0.8494779529148393,
+          "coverage_class_1": 0.000635287323130234
+        },
+        "ece_isotonic": 0.090943775537537
+      },
+      "seconds": 10.1,
+      "variant": "physics_only"
+    },
+    {
+      "model": "ml_only|physics_only",
+      "seed": 0,
+      "fold": 2,
+      "variant": "fusion",
+      "point": {
+        "pr_auc": NaN
+      },
+      "event_inner": {
+        "n_events": 1,
+        "n_detected": 1,
+        "event_recall": 1.0,
+        "n_episodes": 19,
+        "n_false_alarm_episodes": 4,
+        "episode_precision": 0.7894736842105263,
+        "event_f1": 0.8823529411764706,
+        "observed_days": 24.270694444444445,
+        "false_alarms_per_day": 0.16480781005899892,
+        "mean_lead_time_s": 244.0,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.7819855761853614,
+        "range_recall": 0.5054095238095239,
+        "range_f1": 0.613988600216561,
+        "expected_cost": 4.0,
+        "outcomes": [
+          {
+            "event_start": "2020-06-05 10:00:00",
+            "event_end": "2020-06-07 14:30:00",
+            "detected": true,
+            "first_alarm": "2020-06-05 09:55:56",
+            "lead_time_s": 244.0,
+            "meets_min_lead": false
+          }
+        ]
+      }
+    },
+    {
+      "model": "xgboost",
+      "seed": 1,
+      "fold": 2,
+      "test_event": [
+        "2020-06-05 10:00:00",
+        "2020-06-07 14:30:00"
+      ],
+      "n_train_rows_used": 182453,
+      "n_train_positives": 11017,
+      "n_test_rows": 180806,
+      "n_test_positives": 17315,
+      "point": {
+        "roc_auc": 0.9500615390978797,
+        "pr_auc": 0.745365065525257,
+        "f1_at_0.5": 0.3091688590080873
+      },
+      "event_fixed": {
+        "n_events": 1,
+        "n_detected": 1,
+        "event_recall": 1.0,
+        "n_episodes": 16,
+        "n_false_alarm_episodes": 1,
+        "episode_precision": 0.9375,
+        "event_f1": 0.967741935483871,
+        "observed_days": 24.270694444444445,
+        "false_alarms_per_day": 0.04120195251474973,
+        "mean_lead_time_s": 244.0,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.9286078717201166,
+        "range_recall": 0.5053694885361552,
+        "range_f1": 0.6545292808499769,
+        "expected_cost": 1.0,
+        "outcomes": [
+          {
+            "event_start": "2020-06-05 10:00:00",
+            "event_end": "2020-06-07 14:30:00",
+            "detected": true,
+            "first_alarm": "2020-06-05 09:55:56",
+            "lead_time_s": 244.0,
+            "meets_min_lead": false
+          }
+        ],
+        "threshold": 0.5
+      },
+      "event_inner": {
+        "n_events": 1,
+        "n_detected": 1,
+        "event_recall": 1.0,
+        "n_episodes": 16,
+        "n_false_alarm_episodes": 1,
+        "episode_precision": 0.9375,
+        "event_f1": 0.967741935483871,
+        "observed_days": 24.270694444444445,
+        "false_alarms_per_day": 0.04120195251474973,
+        "mean_lead_time_s": 244.0,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.9286078717201166,
+        "range_recall": 0.5053447971781305,
+        "range_f1": 0.6545085716852442,
+        "expected_cost": 1.0,
+        "outcomes": [
+          {
+            "event_start": "2020-06-05 10:00:00",
+            "event_end": "2020-06-07 14:30:00",
+            "detected": true,
+            "first_alarm": "2020-06-05 09:55:56",
+            "lead_time_s": 244.0,
+            "meets_min_lead": false
+          }
+        ],
+        "threshold": 0.75,
+        "threshold_source": "inner_oof_cost_optimal"
+      },
+      "event_oracle_upper_bound": {
+        "n_events": 1,
+        "n_detected": 1,
+        "event_recall": 1.0,
+        "n_episodes": 16,
+        "n_false_alarm_episodes": 0,
+        "episode_precision": 1.0,
+        "event_f1": 1.0,
+        "observed_days": 24.270694444444445,
+        "false_alarms_per_day": 0.0,
+        "mean_lead_time_s": 184.0,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.9368275050437121,
+        "range_recall": 0.5053412698412698,
+        "range_f1": 0.6565356416883659,
+        "expected_cost": 0.0,
+        "outcomes": [
+          {
+            "event_start": "2020-06-05 10:00:00",
+            "event_end": "2020-06-07 14:30:00",
+            "detected": true,
+            "first_alarm": "2020-06-05 09:56:56",
+            "lead_time_s": 184.0,
+            "meets_min_lead": false
+          }
+        ],
+        "threshold": 0.95
+      },
+      "uncertainty": {
+        "ece": 0.07721114273493185,
+        "mce": 0.8486975436724389,
+        "brier": 0.07623387840010747,
+        "conformal": {
+          "alpha": 0.1,
+          "coverage": 0.8299392719268166,
+          "mean_set_size": 0.9350961804364899,
+          "ambiguous_rate": 0.0,
+          "empty_rate": 0.06490381956351006,
+          "coverage_class_0": 0.8440219950945312,
+          "coverage_class_1": 0.6969679468668785
+        },
+        "ece_isotonic": 0.07196160947944646
+      },
+      "seconds": 16.8,
+      "variant": "ml_only"
+    },
+    {
+      "model": "xgboost",
+      "seed": 1,
+      "fold": 2,
+      "test_event": [
+        "2020-06-05 10:00:00",
+        "2020-06-07 14:30:00"
+      ],
+      "n_train_rows_used": 182453,
+      "n_train_positives": 11017,
+      "n_test_rows": 180806,
+      "n_test_positives": 17315,
+      "point": {
+        "roc_auc": 0.9808376758195061,
+        "pr_auc": 0.8907883508551172,
+        "f1_at_0.5": 0.3020772094846169
+      },
+      "event_fixed": {
+        "n_events": 1,
+        "n_detected": 1,
+        "event_recall": 1.0,
+        "n_episodes": 18,
+        "n_false_alarm_episodes": 0,
+        "episode_precision": 1.0,
+        "event_f1": 1.0,
+        "observed_days": 24.270694444444445,
+        "false_alarms_per_day": 0.0,
+        "mean_lead_time_s": 36.0,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.9986728599867286,
+        "range_recall": 0.5043184891240446,
+        "range_f1": 0.6701957242477457,
+        "expected_cost": 0.0,
+        "outcomes": [
+          {
+            "event_start": "2020-06-05 10:00:00",
+            "event_end": "2020-06-07 14:30:00",
+            "detected": true,
+            "first_alarm": "2020-06-05 09:59:24",
+            "lead_time_s": 36.0,
+            "meets_min_lead": false
+          }
+        ],
+        "threshold": 0.5
+      },
+      "event_inner": {
+        "n_events": 1,
+        "n_detected": 1,
+        "event_recall": 1.0,
+        "n_episodes": 22,
+        "n_false_alarm_episodes": 0,
+        "episode_precision": 1.0,
+        "event_f1": 1.0,
+        "observed_days": 24.270694444444445,
+        "false_alarms_per_day": 0.0,
+        "mean_lead_time_s": 36.0,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.9534596127164143,
+        "range_recall": 0.5036041824137062,
+        "range_f1": 0.6590874748674382,
+        "expected_cost": 0.0,
+        "outcomes": [
+          {
+            "event_start": "2020-06-05 10:00:00",
+            "event_end": "2020-06-07 14:30:00",
+            "detected": true,
+            "first_alarm": "2020-06-05 09:59:24",
+            "lead_time_s": 36.0,
+            "meets_min_lead": false
+          }
+        ],
+        "threshold": 0.65,
+        "threshold_source": "inner_oof_cost_optimal"
+      },
+      "event_oracle_upper_bound": {
+        "n_events": 1,
+        "n_detected": 1,
+        "event_recall": 1.0,
+        "n_episodes": 77,
+        "n_false_alarm_episodes": 0,
+        "episode_precision": 1.0,
+        "event_f1": 1.0,
+        "observed_days": 24.270694444444445,
+        "false_alarms_per_day": 0.0,
+        "mean_lead_time_s": -63.0,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.868831168831169,
+        "range_recall": 0.500214404169628,
+        "range_f1": 0.6348975870661272,
+        "expected_cost": 0.0,
+        "outcomes": [
+          {
+            "event_start": "2020-06-05 10:00:00",
+            "event_end": "2020-06-07 14:30:00",
+            "detected": true,
+            "first_alarm": "2020-06-05 10:01:03",
+            "lead_time_s": -63.0,
+            "meets_min_lead": false
+          }
+        ],
+        "threshold": 0.95
+      },
+      "uncertainty": {
+        "ece": 0.07949432716996058,
+        "mce": 0.8568439544737338,
+        "brier": 0.07832817039194048,
+        "conformal": {
+          "alpha": 0.1,
+          "coverage": 0.8275333783170913,
+          "mean_set_size": 0.8357300089598797,
+          "ambiguous_rate": 0.0,
+          "empty_rate": 0.16426999104012036,
+          "coverage_class_0": 0.8533864249408224,
+          "coverage_class_1": 0.5834247762056021
+        },
+        "ece_isotonic": 0.08224300083170176
+      },
+      "seconds": 15.6,
+      "variant": "hybrid"
+    },
+    {
+      "model": "logistic_regression",
+      "seed": 1,
+      "fold": 2,
+      "test_event": [
+        "2020-06-05 10:00:00",
+        "2020-06-07 14:30:00"
+      ],
+      "n_train_rows_used": 182453,
+      "n_train_positives": 11017,
+      "n_test_rows": 180806,
+      "n_test_positives": 17315,
+      "point": {
+        "roc_auc": 0.8470453315775053,
+        "pr_auc": 0.24231798202333024,
+        "f1_at_0.5": 0.0
+      },
+      "event_fixed": {
+        "n_events": 1,
+        "n_detected": 0,
+        "event_recall": 0.0,
+        "n_episodes": 14,
+        "n_false_alarm_episodes": 14,
+        "episode_precision": 0.0,
+        "event_f1": 0.0,
+        "observed_days": 24.270694444444445,
+        "false_alarms_per_day": 0.5768273352064962,
+        "mean_lead_time_s": null,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.0,
+        "range_recall": 0.0,
+        "range_f1": 0.0,
+        "expected_cost": 114.0,
+        "outcomes": [
+          {
+            "event_start": "2020-06-05 10:00:00",
+            "event_end": "2020-06-07 14:30:00",
+            "detected": false,
+            "first_alarm": null,
+            "lead_time_s": null,
+            "meets_min_lead": false
+          }
+        ],
+        "threshold": 0.5
+      },
+      "event_inner": {
+        "n_events": 1,
+        "n_detected": 0,
+        "event_recall": 0.0,
+        "n_episodes": 4,
+        "n_false_alarm_episodes": 4,
+        "episode_precision": 0.0,
+        "event_f1": 0.0,
+        "observed_days": 24.270694444444445,
+        "false_alarms_per_day": 0.16480781005899892,
+        "mean_lead_time_s": null,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.0,
+        "range_recall": 0.0,
+        "range_f1": 0.0,
+        "expected_cost": 104.0,
+        "outcomes": [
+          {
+            "event_start": "2020-06-05 10:00:00",
+            "event_end": "2020-06-07 14:30:00",
+            "detected": false,
+            "first_alarm": null,
+            "lead_time_s": null,
+            "meets_min_lead": false
+          }
+        ],
+        "threshold": 0.95,
+        "threshold_source": "inner_oof_cost_optimal"
+      },
+      "event_oracle_upper_bound": {
+        "n_events": 1,
+        "n_detected": 1,
+        "event_recall": 1.0,
+        "n_episodes": 21,
+        "n_false_alarm_episodes": 20,
+        "episode_precision": 0.047619047619047616,
+        "event_f1": 0.0909090909090909,
+        "observed_days": 24.270694444444445,
+        "false_alarms_per_day": 0.8240390502949946,
+        "mean_lead_time_s": -121389.0,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.047619047619047616,
+        "range_recall": 0.500026455026455,
+        "range_f1": 0.08695692179581845,
+        "expected_cost": 20.0,
+        "outcomes": [
+          {
+            "event_start": "2020-06-05 10:00:00",
+            "event_end": "2020-06-07 14:30:00",
+            "detected": true,
+            "first_alarm": "2020-06-06 19:43:09",
+            "lead_time_s": -121389.0,
+            "meets_min_lead": false
+          }
+        ],
+        "threshold": 0.2
+      },
+      "uncertainty": {
+        "ece": 0.1887177881234688,
+        "mce": 0.9470996923871489,
+        "brier": 0.17008890028752824,
+        "conformal": {
+          "alpha": 0.1,
+          "coverage": 0.7681880026105329,
+          "mean_set_size": 0.9031835226707078,
+          "ambiguous_rate": 0.0,
+          "empty_rate": 0.09681647732929217,
+          "coverage_class_0": 0.8494779529148393,
+          "coverage_class_1": 0.000635287323130234
+        },
+        "ece_isotonic": 0.090943775537537
+      },
+      "seconds": 10.2,
+      "variant": "physics_only"
+    },
+    {
+      "model": "ml_only|physics_only",
+      "seed": 1,
+      "fold": 2,
+      "variant": "fusion",
+      "point": {
+        "pr_auc": NaN
+      },
+      "event_inner": {
+        "n_events": 1,
+        "n_detected": 1,
+        "event_recall": 1.0,
+        "n_episodes": 20,
+        "n_false_alarm_episodes": 5,
+        "episode_precision": 0.75,
+        "event_f1": 0.8571428571428571,
+        "observed_days": 24.270694444444445,
+        "false_alarms_per_day": 0.20600976257374864,
+        "mean_lead_time_s": 244.0,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.7428862973760932,
+        "range_recall": 0.5053447971781305,
+        "range_f1": 0.6015131763850257,
+        "expected_cost": 5.0,
+        "outcomes": [
+          {
+            "event_start": "2020-06-05 10:00:00",
+            "event_end": "2020-06-07 14:30:00",
+            "detected": true,
+            "first_alarm": "2020-06-05 09:55:56",
+            "lead_time_s": 244.0,
+            "meets_min_lead": false
+          }
+        ]
+      }
+    },
+    {
+      "model": "xgboost",
+      "seed": 2,
+      "fold": 2,
+      "test_event": [
+        "2020-06-05 10:00:00",
+        "2020-06-07 14:30:00"
+      ],
+      "n_train_rows_used": 182453,
+      "n_train_positives": 11017,
+      "n_test_rows": 180806,
+      "n_test_positives": 17315,
+      "point": {
+        "roc_auc": 0.9448608723920411,
+        "pr_auc": 0.7256649236515377,
+        "f1_at_0.5": 0.3247236035340125
+      },
+      "event_fixed": {
+        "n_events": 1,
+        "n_detected": 1,
+        "event_recall": 1.0,
+        "n_episodes": 15,
+        "n_false_alarm_episodes": 0,
+        "episode_precision": 1.0,
+        "event_f1": 1.0,
+        "observed_days": 24.270694444444445,
+        "false_alarms_per_day": 0.0,
+        "mean_lead_time_s": 244.0,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.9905150631681244,
+        "range_recall": 0.5053765432098766,
+        "range_f1": 0.6692772076357592,
+        "expected_cost": 0.0,
+        "outcomes": [
+          {
+            "event_start": "2020-06-05 10:00:00",
+            "event_end": "2020-06-07 14:30:00",
+            "detected": true,
+            "first_alarm": "2020-06-05 09:55:56",
+            "lead_time_s": 244.0,
+            "meets_min_lead": false
+          }
+        ],
+        "threshold": 0.5
+      },
+      "event_inner": {
+        "n_events": 1,
+        "n_detected": 1,
+        "event_recall": 1.0,
+        "n_episodes": 15,
+        "n_false_alarm_episodes": 0,
+        "episode_precision": 1.0,
+        "event_f1": 1.0,
+        "observed_days": 24.270694444444445,
+        "false_alarms_per_day": 0.0,
+        "mean_lead_time_s": 145.0,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.9940181518151815,
+        "range_recall": 0.5053412698412698,
+        "range_f1": 0.670044003896822,
+        "expected_cost": 0.0,
+        "outcomes": [
+          {
+            "event_start": "2020-06-05 10:00:00",
+            "event_end": "2020-06-07 14:30:00",
+            "detected": true,
+            "first_alarm": "2020-06-05 09:57:35",
+            "lead_time_s": 145.0,
+            "meets_min_lead": false
+          }
+        ],
+        "threshold": 0.95,
+        "threshold_source": "inner_oof_cost_optimal"
+      },
+      "event_oracle_upper_bound": {
+        "n_events": 1,
+        "n_detected": 1,
+        "event_recall": 1.0,
+        "n_episodes": 15,
+        "n_false_alarm_episodes": 0,
+        "episode_precision": 1.0,
+        "event_f1": 1.0,
+        "observed_days": 24.270694444444445,
+        "false_alarms_per_day": 0.0,
+        "mean_lead_time_s": 145.0,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.9940181518151815,
+        "range_recall": 0.5053412698412698,
+        "range_f1": 0.670044003896822,
+        "expected_cost": 0.0,
+        "outcomes": [
+          {
+            "event_start": "2020-06-05 10:00:00",
+            "event_end": "2020-06-07 14:30:00",
+            "detected": true,
+            "first_alarm": "2020-06-05 09:57:35",
+            "lead_time_s": 145.0,
+            "meets_min_lead": false
+          }
+        ],
+        "threshold": 0.95
+      },
+      "uncertainty": {
+        "ece": 0.07491061235627938,
+        "mce": 0.8536663483699848,
+        "brier": 0.07257937111005142,
+        "conformal": {
+          "alpha": 0.1,
+          "coverage": 0.8190104310697653,
+          "mean_set_size": 0.9242724245876797,
+          "ambiguous_rate": 0.0,
+          "empty_rate": 0.07572757541232039,
+          "coverage_class_0": 0.8389269134080775,
+          "coverage_class_1": 0.6309558186543459
+        },
+        "ece_isotonic": 0.06819829936475355
+      },
+      "seconds": 16.7,
+      "variant": "ml_only"
+    },
+    {
+      "model": "xgboost",
+      "seed": 2,
+      "fold": 2,
+      "test_event": [
+        "2020-06-05 10:00:00",
+        "2020-06-07 14:30:00"
+      ],
+      "n_train_rows_used": 182453,
+      "n_train_positives": 11017,
+      "n_test_rows": 180806,
+      "n_test_positives": 17315,
+      "point": {
+        "roc_auc": 0.9787663101844479,
+        "pr_auc": 0.8811754671683534,
+        "f1_at_0.5": 0.3023027927486526
+      },
+      "event_fixed": {
+        "n_events": 1,
+        "n_detected": 1,
+        "event_recall": 1.0,
+        "n_episodes": 29,
+        "n_false_alarm_episodes": 0,
+        "episode_precision": 1.0,
+        "event_f1": 1.0,
+        "observed_days": 24.270694444444445,
+        "false_alarms_per_day": 0.0,
+        "mean_lead_time_s": 16.0,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.9996289682999792,
+        "range_recall": 0.5026144864075899,
+        "range_f1": 0.6689035641004634,
+        "expected_cost": 0.0,
+        "outcomes": [
+          {
+            "event_start": "2020-06-05 10:00:00",
+            "event_end": "2020-06-07 14:30:00",
+            "detected": true,
+            "first_alarm": "2020-06-05 09:59:44",
+            "lead_time_s": 16.0,
+            "meets_min_lead": false
+          }
+        ],
+        "threshold": 0.5
+      },
+      "event_inner": {
+        "n_events": 1,
+        "n_detected": 1,
+        "event_recall": 1.0,
+        "n_episodes": 29,
+        "n_false_alarm_episodes": 0,
+        "episode_precision": 1.0,
+        "event_f1": 1.0,
+        "observed_days": 24.270694444444445,
+        "false_alarms_per_day": 0.0,
+        "mean_lead_time_s": 16.0,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.9996289682999792,
+        "range_recall": 0.5026144864075899,
+        "range_f1": 0.6689035641004634,
+        "expected_cost": 0.0,
+        "outcomes": [
+          {
+            "event_start": "2020-06-05 10:00:00",
+            "event_end": "2020-06-07 14:30:00",
+            "detected": true,
+            "first_alarm": "2020-06-05 09:59:44",
+            "lead_time_s": 16.0,
+            "meets_min_lead": false
+          }
+        ],
+        "threshold": 0.5,
+        "threshold_source": "inner_oof_cost_optimal"
+      },
+      "event_oracle_upper_bound": {
+        "n_events": 1,
+        "n_detected": 1,
+        "event_recall": 1.0,
+        "n_episodes": 51,
+        "n_false_alarm_episodes": 0,
+        "episode_precision": 1.0,
+        "event_f1": 1.0,
+        "observed_days": 24.270694444444445,
+        "false_alarms_per_day": 0.0,
+        "mean_lead_time_s": -93.0,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.8607843137254901,
+        "range_recall": 0.5001037758537759,
+        "range_f1": 0.6326478845485481,
+        "expected_cost": 0.0,
+        "outcomes": [
+          {
+            "event_start": "2020-06-05 10:00:00",
+            "event_end": "2020-06-07 14:30:00",
+            "detected": true,
+            "first_alarm": "2020-06-05 10:01:33",
+            "lead_time_s": -93.0,
+            "meets_min_lead": false
+          }
+        ],
+        "threshold": 0.95
+      },
+      "uncertainty": {
+        "ece": 0.08023607603089178,
+        "mce": 0.7788608515214535,
+        "brier": 0.0783281564749503,
+        "conformal": {
+          "alpha": 0.1,
+          "coverage": 0.82663739035209,
+          "mean_set_size": 0.8330862913841355,
+          "ambiguous_rate": 0.0,
+          "empty_rate": 0.16691370861586452,
+          "coverage_class_0": 0.8536433198157697,
+          "coverage_class_1": 0.5716430840311868
+        },
+        "ece_isotonic": 0.08207350395930146
+      },
+      "seconds": 17.8,
+      "variant": "hybrid"
+    },
+    {
+      "model": "logistic_regression",
+      "seed": 2,
+      "fold": 2,
+      "test_event": [
+        "2020-06-05 10:00:00",
+        "2020-06-07 14:30:00"
+      ],
+      "n_train_rows_used": 182453,
+      "n_train_positives": 11017,
+      "n_test_rows": 180806,
+      "n_test_positives": 17315,
+      "point": {
+        "roc_auc": 0.8470453315775053,
+        "pr_auc": 0.24231798202333024,
+        "f1_at_0.5": 0.0
+      },
+      "event_fixed": {
+        "n_events": 1,
+        "n_detected": 0,
+        "event_recall": 0.0,
+        "n_episodes": 14,
+        "n_false_alarm_episodes": 14,
+        "episode_precision": 0.0,
+        "event_f1": 0.0,
+        "observed_days": 24.270694444444445,
+        "false_alarms_per_day": 0.5768273352064962,
+        "mean_lead_time_s": null,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.0,
+        "range_recall": 0.0,
+        "range_f1": 0.0,
+        "expected_cost": 114.0,
+        "outcomes": [
+          {
+            "event_start": "2020-06-05 10:00:00",
+            "event_end": "2020-06-07 14:30:00",
+            "detected": false,
+            "first_alarm": null,
+            "lead_time_s": null,
+            "meets_min_lead": false
+          }
+        ],
+        "threshold": 0.5
+      },
+      "event_inner": {
+        "n_events": 1,
+        "n_detected": 0,
+        "event_recall": 0.0,
+        "n_episodes": 4,
+        "n_false_alarm_episodes": 4,
+        "episode_precision": 0.0,
+        "event_f1": 0.0,
+        "observed_days": 24.270694444444445,
+        "false_alarms_per_day": 0.16480781005899892,
+        "mean_lead_time_s": null,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.0,
+        "range_recall": 0.0,
+        "range_f1": 0.0,
+        "expected_cost": 104.0,
+        "outcomes": [
+          {
+            "event_start": "2020-06-05 10:00:00",
+            "event_end": "2020-06-07 14:30:00",
+            "detected": false,
+            "first_alarm": null,
+            "lead_time_s": null,
+            "meets_min_lead": false
+          }
+        ],
+        "threshold": 0.95,
+        "threshold_source": "inner_oof_cost_optimal"
+      },
+      "event_oracle_upper_bound": {
+        "n_events": 1,
+        "n_detected": 1,
+        "event_recall": 1.0,
+        "n_episodes": 21,
+        "n_false_alarm_episodes": 20,
+        "episode_precision": 0.047619047619047616,
+        "event_f1": 0.0909090909090909,
+        "observed_days": 24.270694444444445,
+        "false_alarms_per_day": 0.8240390502949946,
+        "mean_lead_time_s": -121389.0,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.047619047619047616,
+        "range_recall": 0.500026455026455,
+        "range_f1": 0.08695692179581845,
+        "expected_cost": 20.0,
+        "outcomes": [
+          {
+            "event_start": "2020-06-05 10:00:00",
+            "event_end": "2020-06-07 14:30:00",
+            "detected": true,
+            "first_alarm": "2020-06-06 19:43:09",
+            "lead_time_s": -121389.0,
+            "meets_min_lead": false
+          }
+        ],
+        "threshold": 0.2
+      },
+      "uncertainty": {
+        "ece": 0.1887177881234688,
+        "mce": 0.9470996923871489,
+        "brier": 0.17008890028752824,
+        "conformal": {
+          "alpha": 0.1,
+          "coverage": 0.7681880026105329,
+          "mean_set_size": 0.9031835226707078,
+          "ambiguous_rate": 0.0,
+          "empty_rate": 0.09681647732929217,
+          "coverage_class_0": 0.8494779529148393,
+          "coverage_class_1": 0.000635287323130234
+        },
+        "ece_isotonic": 0.090943775537537
+      },
+      "seconds": 10.2,
+      "variant": "physics_only"
+    },
+    {
+      "model": "ml_only|physics_only",
+      "seed": 2,
+      "fold": 2,
+      "variant": "fusion",
+      "point": {
+        "pr_auc": NaN
+      },
+      "event_inner": {
+        "n_events": 1,
+        "n_detected": 1,
+        "event_recall": 1.0,
+        "n_episodes": 19,
+        "n_false_alarm_episodes": 4,
+        "episode_precision": 0.7894736842105263,
+        "event_f1": 0.8823529411764706,
+        "observed_days": 24.270694444444445,
+        "false_alarms_per_day": 0.16480781005899892,
+        "mean_lead_time_s": 145.0,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.7847511724856696,
+        "range_recall": 0.5053412698412698,
+        "range_f1": 0.6147887407169761,
+        "expected_cost": 4.0,
+        "outcomes": [
+          {
+            "event_start": "2020-06-05 10:00:00",
+            "event_end": "2020-06-07 14:30:00",
+            "detected": true,
+            "first_alarm": "2020-06-05 09:57:35",
+            "lead_time_s": 145.0,
+            "meets_min_lead": false
+          }
+        ]
+      }
+    },
+    {
+      "model": "xgboost",
+      "seed": 0,
+      "fold": 3,
+      "test_event": [
+        "2020-07-15 14:30:00",
+        "2020-07-15 19:00:00"
+      ],
+      "n_train_rows_used": 232466,
+      "n_train_positives": 28332,
+      "n_test_rows": 467917,
+      "n_test_positives": 1622,
+      "point": {
+        "roc_auc": 0.9876622526483099,
+        "pr_auc": 0.2233378129879182,
+        "f1_at_0.5": 0.0
+      },
+      "event_fixed": {
+        "n_events": 1,
+        "n_detected": 0,
+        "event_recall": 0.0,
+        "n_episodes": 0,
+        "n_false_alarm_episodes": 0,
+        "episode_precision": 0.0,
+        "event_f1": 0.0,
+        "observed_days": 66.56232638888889,
+        "false_alarms_per_day": 0.0,
+        "mean_lead_time_s": null,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.0,
+        "range_recall": 0.0,
+        "range_f1": 0.0,
+        "expected_cost": 100.0,
+        "outcomes": [
+          {
+            "event_start": "2020-07-15 14:30:00",
+            "event_end": "2020-07-15 19:00:00",
+            "detected": false,
+            "first_alarm": null,
+            "lead_time_s": null,
+            "meets_min_lead": false
+          }
+        ],
+        "threshold": 0.5
+      },
+      "event_inner": {
+        "n_events": 1,
+        "n_detected": 0,
+        "event_recall": 0.0,
+        "n_episodes": 0,
+        "n_false_alarm_episodes": 0,
+        "episode_precision": 0.0,
+        "event_f1": 0.0,
+        "observed_days": 66.56232638888889,
+        "false_alarms_per_day": 0.0,
+        "mean_lead_time_s": null,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.0,
+        "range_recall": 0.0,
+        "range_f1": 0.0,
+        "expected_cost": 100.0,
+        "outcomes": [
+          {
+            "event_start": "2020-07-15 14:30:00",
+            "event_end": "2020-07-15 19:00:00",
+            "detected": false,
+            "first_alarm": null,
+            "lead_time_s": null,
+            "meets_min_lead": false
+          }
+        ],
+        "threshold": 0.95,
+        "threshold_source": "inner_oof_cost_optimal"
+      },
+      "event_oracle_upper_bound": {
+        "n_events": 1,
+        "n_detected": 1,
+        "event_recall": 1.0,
+        "n_episodes": 5,
+        "n_false_alarm_episodes": 4,
+        "episode_precision": 0.2,
+        "event_f1": 0.33333333333333337,
+        "observed_days": 66.56232638888889,
+        "false_alarms_per_day": 0.06009405345345188,
+        "mean_lead_time_s": -15566.0,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.0,
+        "range_recall": 0.0,
+        "range_f1": 0.0,
+        "expected_cost": 4.0,
+        "outcomes": [
+          {
+            "event_start": "2020-07-15 14:30:00",
+            "event_end": "2020-07-15 19:00:00",
+            "detected": true,
+            "first_alarm": "2020-07-15 18:49:26",
+            "lead_time_s": -15566.0,
+            "meets_min_lead": false
+          }
+        ],
+        "threshold": 0.15
+      },
+      "uncertainty": {
+        "ece": 0.003412325850538712,
+        "mce": 0.6277006387710571,
+        "brier": 0.003408342800915864,
+        "conformal": {
+          "alpha": 0.1,
+          "coverage": 0.9375060106813815,
+          "mean_set_size": 0.9535323572342959,
+          "ambiguous_rate": 0.0,
+          "empty_rate": 0.04646764276570418,
+          "coverage_class_0": 0.9383373186502107,
+          "coverage_class_1": 0.6985203452527744
+        },
+        "ece_isotonic": 0.0036010351386343547
+      },
+      "seconds": 28.1,
+      "variant": "ml_only"
+    },
+    {
+      "model": "xgboost",
+      "seed": 0,
+      "fold": 3,
+      "test_event": [
+        "2020-07-15 14:30:00",
+        "2020-07-15 19:00:00"
+      ],
+      "n_train_rows_used": 232466,
+      "n_train_positives": 28332,
+      "n_test_rows": 467917,
+      "n_test_positives": 1622,
+      "point": {
+        "roc_auc": 0.9905288923364705,
+        "pr_auc": 0.19557819239610846,
+        "f1_at_0.5": 0.0
+      },
+      "event_fixed": {
+        "n_events": 1,
+        "n_detected": 0,
+        "event_recall": 0.0,
+        "n_episodes": 0,
+        "n_false_alarm_episodes": 0,
+        "episode_precision": 0.0,
+        "event_f1": 0.0,
+        "observed_days": 66.56232638888889,
+        "false_alarms_per_day": 0.0,
+        "mean_lead_time_s": null,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.0,
+        "range_recall": 0.0,
+        "range_f1": 0.0,
+        "expected_cost": 100.0,
+        "outcomes": [
+          {
+            "event_start": "2020-07-15 14:30:00",
+            "event_end": "2020-07-15 19:00:00",
+            "detected": false,
+            "first_alarm": null,
+            "lead_time_s": null,
+            "meets_min_lead": false
+          }
+        ],
+        "threshold": 0.5
+      },
+      "event_inner": {
+        "n_events": 1,
+        "n_detected": 0,
+        "event_recall": 0.0,
+        "n_episodes": 0,
+        "n_false_alarm_episodes": 0,
+        "episode_precision": 0.0,
+        "event_f1": 0.0,
+        "observed_days": 66.56232638888889,
+        "false_alarms_per_day": 0.0,
+        "mean_lead_time_s": null,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.0,
+        "range_recall": 0.0,
+        "range_f1": 0.0,
+        "expected_cost": 100.0,
+        "outcomes": [
+          {
+            "event_start": "2020-07-15 14:30:00",
+            "event_end": "2020-07-15 19:00:00",
+            "detected": false,
+            "first_alarm": null,
+            "lead_time_s": null,
+            "meets_min_lead": false
+          }
+        ],
+        "threshold": 0.85,
+        "threshold_source": "inner_oof_cost_optimal"
+      },
+      "event_oracle_upper_bound": {
+        "n_events": 1,
+        "n_detected": 1,
+        "event_recall": 1.0,
+        "n_episodes": 2,
+        "n_false_alarm_episodes": 1,
+        "episode_precision": 0.5,
+        "event_f1": 0.6666666666666666,
+        "observed_days": 66.56232638888889,
+        "false_alarms_per_day": 0.01502351336336297,
+        "mean_lead_time_s": 3141.0,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.0,
+        "range_recall": 0.0,
+        "range_f1": 0.0,
+        "expected_cost": 1.0,
+        "outcomes": [
+          {
+            "event_start": "2020-07-15 14:30:00",
+            "event_end": "2020-07-15 19:00:00",
+            "detected": true,
+            "first_alarm": "2020-07-15 13:37:39",
+            "lead_time_s": 3141.0,
+            "meets_min_lead": false
+          }
+        ],
+        "threshold": 0.15
+      },
+      "uncertainty": {
+        "ece": 0.003426806341750708,
+        "mce": 0.9399354457855225,
+        "brier": 0.0034523118234552324,
+        "conformal": {
+          "alpha": 0.1,
+          "coverage": 0.955378838554701,
+          "mean_set_size": 0.9668616442659702,
+          "ambiguous_rate": 0.0,
+          "empty_rate": 0.033138355734029755,
+          "coverage_class_0": 0.9564031353542285,
+          "coverage_class_1": 0.6609124537607891
+        },
+        "ece_isotonic": 0.0032241706947772563
+      },
+      "seconds": 27.5,
+      "variant": "hybrid"
+    },
+    {
+      "model": "logistic_regression",
+      "seed": 0,
+      "fold": 3,
+      "test_event": [
+        "2020-07-15 14:30:00",
+        "2020-07-15 19:00:00"
+      ],
+      "n_train_rows_used": 232466,
+      "n_train_positives": 28332,
+      "n_test_rows": 467917,
+      "n_test_positives": 1622,
+      "point": {
+        "roc_auc": 0.9998049741456279,
+        "pr_auc": 0.8806742314516838,
+        "f1_at_0.5": 0.7170645446507515
+      },
+      "event_fixed": {
+        "n_events": 1,
+        "n_detected": 1,
+        "event_recall": 1.0,
+        "n_episodes": 14,
+        "n_false_alarm_episodes": 12,
+        "episode_precision": 0.14285714285714285,
+        "event_f1": 0.25,
+        "observed_days": 66.56232638888889,
+        "false_alarms_per_day": 0.18028216036035566,
+        "mean_lead_time_s": 1248.0,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.1252506905456478,
+        "range_recall": 0.7478549382716049,
+        "range_f1": 0.2145658998290503,
+        "expected_cost": 12.0,
+        "outcomes": [
+          {
+            "event_start": "2020-07-15 14:30:00",
+            "event_end": "2020-07-15 19:00:00",
+            "detected": true,
+            "first_alarm": "2020-07-15 14:09:12",
+            "lead_time_s": 1248.0,
+            "meets_min_lead": false
+          }
+        ],
+        "threshold": 0.5
+      },
+      "event_inner": {
+        "n_events": 1,
+        "n_detected": 1,
+        "event_recall": 1.0,
+        "n_episodes": 26,
+        "n_false_alarm_episodes": 14,
+        "episode_precision": 0.46153846153846156,
+        "event_f1": 0.631578947368421,
+        "observed_days": 66.56232638888889,
+        "false_alarms_per_day": 0.2103291870870816,
+        "mean_lead_time_s": 9395.0,
+        "n_meeting_min_lead": 1,
+        "range_precision": 0.0541294268686762,
+        "range_recall": 0.7478549382716049,
+        "range_f1": 0.1009519909592511,
+        "expected_cost": 14.0,
+        "outcomes": [
+          {
+            "event_start": "2020-07-15 14:30:00",
+            "event_end": "2020-07-15 19:00:00",
+            "detected": true,
+            "first_alarm": "2020-07-15 11:53:25",
+            "lead_time_s": 9395.0,
+            "meets_min_lead": true
+          }
+        ],
+        "threshold": 0.15,
+        "threshold_source": "inner_oof_cost_optimal"
+      },
+      "event_oracle_upper_bound": {
+        "n_events": 1,
+        "n_detected": 1,
+        "event_recall": 1.0,
+        "n_episodes": 1,
+        "n_false_alarm_episodes": 0,
+        "episode_precision": 1.0,
+        "event_f1": 1.0,
+        "observed_days": 66.56232638888889,
+        "false_alarms_per_day": 0.0,
+        "mean_lead_time_s": -3291.0,
+        "n_meeting_min_lead": 0,
+        "range_precision": 1.0,
+        "range_recall": 0.5890432098765432,
+        "range_f1": 0.7413809847528406,
+        "expected_cost": 0.0,
+        "outcomes": [
+          {
+            "event_start": "2020-07-15 14:30:00",
+            "event_end": "2020-07-15 19:00:00",
+            "detected": true,
+            "first_alarm": "2020-07-15 15:24:51",
+            "lead_time_s": -3291.0,
+            "meets_min_lead": false
+          }
+        ],
+        "threshold": 0.95
+      },
+      "uncertainty": {
+        "ece": 0.015923027598164056,
+        "mce": 0.5592086940925349,
+        "brier": 0.002172308749535381,
+        "conformal": {
+          "alpha": 0.1,
+          "coverage": 0.9503202491040078,
+          "mean_set_size": 0.9587918370138294,
+          "ambiguous_rate": 0.0,
+          "empty_rate": 0.041208162986170624,
+          "coverage_class_0": 0.9501474388530866,
+          "coverage_class_1": 1.0
+        },
+        "ece_isotonic": 0.0012815392216586783
+      },
+      "seconds": 10.2,
+      "variant": "physics_only"
+    },
+    {
+      "model": "ml_only|physics_only",
+      "seed": 0,
+      "fold": 3,
+      "variant": "fusion",
+      "point": {
+        "pr_auc": NaN
+      },
+      "event_inner": {
+        "n_events": 1,
+        "n_detected": 1,
+        "event_recall": 1.0,
+        "n_episodes": 26,
+        "n_false_alarm_episodes": 14,
+        "episode_precision": 0.46153846153846156,
+        "event_f1": 0.631578947368421,
+        "observed_days": 66.56232638888889,
+        "false_alarms_per_day": 0.2103291870870816,
+        "mean_lead_time_s": 9395.0,
+        "n_meeting_min_lead": 1,
+        "range_precision": 0.0541294268686762,
+        "range_recall": 0.7478549382716049,
+        "range_f1": 0.1009519909592511,
+        "expected_cost": 14.0,
+        "outcomes": [
+          {
+            "event_start": "2020-07-15 14:30:00",
+            "event_end": "2020-07-15 19:00:00",
+            "detected": true,
+            "first_alarm": "2020-07-15 11:53:25",
+            "lead_time_s": 9395.0,
+            "meets_min_lead": true
+          }
+        ]
+      }
+    },
+    {
+      "model": "xgboost",
+      "seed": 1,
+      "fold": 3,
+      "test_event": [
+        "2020-07-15 14:30:00",
+        "2020-07-15 19:00:00"
+      ],
+      "n_train_rows_used": 232466,
+      "n_train_positives": 28332,
+      "n_test_rows": 467917,
+      "n_test_positives": 1622,
+      "point": {
+        "roc_auc": 0.9890006126818979,
+        "pr_auc": 0.25319261812068994,
+        "f1_at_0.5": 0.0
+      },
+      "event_fixed": {
+        "n_events": 1,
+        "n_detected": 0,
+        "event_recall": 0.0,
+        "n_episodes": 0,
+        "n_false_alarm_episodes": 0,
+        "episode_precision": 0.0,
+        "event_f1": 0.0,
+        "observed_days": 66.56232638888889,
+        "false_alarms_per_day": 0.0,
+        "mean_lead_time_s": null,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.0,
+        "range_recall": 0.0,
+        "range_f1": 0.0,
+        "expected_cost": 100.0,
+        "outcomes": [
+          {
+            "event_start": "2020-07-15 14:30:00",
+            "event_end": "2020-07-15 19:00:00",
+            "detected": false,
+            "first_alarm": null,
+            "lead_time_s": null,
+            "meets_min_lead": false
+          }
+        ],
+        "threshold": 0.5
+      },
+      "event_inner": {
+        "n_events": 1,
+        "n_detected": 0,
+        "event_recall": 0.0,
+        "n_episodes": 0,
+        "n_false_alarm_episodes": 0,
+        "episode_precision": 0.0,
+        "event_f1": 0.0,
+        "observed_days": 66.56232638888889,
+        "false_alarms_per_day": 0.0,
+        "mean_lead_time_s": null,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.0,
+        "range_recall": 0.0,
+        "range_f1": 0.0,
+        "expected_cost": 100.0,
+        "outcomes": [
+          {
+            "event_start": "2020-07-15 14:30:00",
+            "event_end": "2020-07-15 19:00:00",
+            "detected": false,
+            "first_alarm": null,
+            "lead_time_s": null,
+            "meets_min_lead": false
+          }
+        ],
+        "threshold": 0.55,
+        "threshold_source": "inner_oof_cost_optimal"
+      },
+      "event_oracle_upper_bound": {
+        "n_events": 1,
+        "n_detected": 1,
+        "event_recall": 1.0,
+        "n_episodes": 3,
+        "n_false_alarm_episodes": 2,
+        "episode_precision": 0.3333333333333333,
+        "event_f1": 0.5,
+        "observed_days": 66.56232638888889,
+        "false_alarms_per_day": 0.03004702672672594,
+        "mean_lead_time_s": -15566.0,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.3333333333333333,
+        "range_recall": 0.5003086419753087,
+        "range_f1": 0.4000987288658522,
+        "expected_cost": 2.0,
+        "outcomes": [
+          {
+            "event_start": "2020-07-15 14:30:00",
+            "event_end": "2020-07-15 19:00:00",
+            "detected": true,
+            "first_alarm": "2020-07-15 18:49:26",
+            "lead_time_s": -15566.0,
+            "meets_min_lead": false
+          }
+        ],
+        "threshold": 0.15
+      },
+      "uncertainty": {
+        "ece": 0.0033002652845373357,
+        "mce": 0.5798366665840149,
+        "brier": 0.0033617549081171754,
+        "conformal": {
+          "alpha": 0.1,
+          "coverage": 0.9214796641284673,
+          "mean_set_size": 0.9362408290359188,
+          "ambiguous_rate": 0.0,
+          "empty_rate": 0.06375917096408124,
+          "coverage_class_0": 0.9222959714343923,
+          "coverage_class_1": 0.686806411837238
+        },
+        "ece_isotonic": 0.0038695185885687026
+      },
+      "seconds": 26.8,
+      "variant": "ml_only"
+    },
+    {
+      "model": "xgboost",
+      "seed": 1,
+      "fold": 3,
+      "test_event": [
+        "2020-07-15 14:30:00",
+        "2020-07-15 19:00:00"
+      ],
+      "n_train_rows_used": 232466,
+      "n_train_positives": 28332,
+      "n_test_rows": 467917,
+      "n_test_positives": 1622,
+      "point": {
+        "roc_auc": 0.9922606062066862,
+        "pr_auc": 0.2115562547033829,
+        "f1_at_0.5": 0.0
+      },
+      "event_fixed": {
+        "n_events": 1,
+        "n_detected": 0,
+        "event_recall": 0.0,
+        "n_episodes": 0,
+        "n_false_alarm_episodes": 0,
+        "episode_precision": 0.0,
+        "event_f1": 0.0,
+        "observed_days": 66.56232638888889,
+        "false_alarms_per_day": 0.0,
+        "mean_lead_time_s": null,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.0,
+        "range_recall": 0.0,
+        "range_f1": 0.0,
+        "expected_cost": 100.0,
+        "outcomes": [
+          {
+            "event_start": "2020-07-15 14:30:00",
+            "event_end": "2020-07-15 19:00:00",
+            "detected": false,
+            "first_alarm": null,
+            "lead_time_s": null,
+            "meets_min_lead": false
+          }
+        ],
+        "threshold": 0.5
+      },
+      "event_inner": {
+        "n_events": 1,
+        "n_detected": 0,
+        "event_recall": 0.0,
+        "n_episodes": 0,
+        "n_false_alarm_episodes": 0,
+        "episode_precision": 0.0,
+        "event_f1": 0.0,
+        "observed_days": 66.56232638888889,
+        "false_alarms_per_day": 0.0,
+        "mean_lead_time_s": null,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.0,
+        "range_recall": 0.0,
+        "range_f1": 0.0,
+        "expected_cost": 100.0,
+        "outcomes": [
+          {
+            "event_start": "2020-07-15 14:30:00",
+            "event_end": "2020-07-15 19:00:00",
+            "detected": false,
+            "first_alarm": null,
+            "lead_time_s": null,
+            "meets_min_lead": false
+          }
+        ],
+        "threshold": 0.8,
+        "threshold_source": "inner_oof_cost_optimal"
+      },
+      "event_oracle_upper_bound": {
+        "n_events": 1,
+        "n_detected": 1,
+        "event_recall": 1.0,
+        "n_episodes": 3,
+        "n_false_alarm_episodes": 1,
+        "episode_precision": 0.6666666666666666,
+        "event_f1": 0.8,
+        "observed_days": 66.56232638888889,
+        "false_alarms_per_day": 0.01502351336336297,
+        "mean_lead_time_s": 3141.0,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.0,
+        "range_recall": 0.0,
+        "range_f1": 0.0,
+        "expected_cost": 1.0,
+        "outcomes": [
+          {
+            "event_start": "2020-07-15 14:30:00",
+            "event_end": "2020-07-15 19:00:00",
+            "detected": true,
+            "first_alarm": "2020-07-15 13:37:39",
+            "lead_time_s": 3141.0,
+            "meets_min_lead": false
+          }
+        ],
+        "threshold": 0.15
+      },
+      "uncertainty": {
+        "ece": 0.0034183988894389452,
+        "mce": 0.866819828748703,
+        "brier": 0.0034446138298827645,
+        "conformal": {
+          "alpha": 0.1,
+          "coverage": 0.955205730930913,
+          "mean_set_size": 0.9660281631143985,
+          "ambiguous_rate": 0.0,
+          "empty_rate": 0.03397183688560151,
+          "coverage_class_0": 0.9560771614535862,
+          "coverage_class_1": 0.7046855733662145
+        },
+        "ece_isotonic": 0.0032222543251838104
+      },
+      "seconds": 28.6,
+      "variant": "hybrid"
+    },
+    {
+      "model": "logistic_regression",
+      "seed": 1,
+      "fold": 3,
+      "test_event": [
+        "2020-07-15 14:30:00",
+        "2020-07-15 19:00:00"
+      ],
+      "n_train_rows_used": 232466,
+      "n_train_positives": 28332,
+      "n_test_rows": 467917,
+      "n_test_positives": 1622,
+      "point": {
+        "roc_auc": 0.9998049741456279,
+        "pr_auc": 0.8806742314516838,
+        "f1_at_0.5": 0.7170645446507515
+      },
+      "event_fixed": {
+        "n_events": 1,
+        "n_detected": 1,
+        "event_recall": 1.0,
+        "n_episodes": 14,
+        "n_false_alarm_episodes": 12,
+        "episode_precision": 0.14285714285714285,
+        "event_f1": 0.25,
+        "observed_days": 66.56232638888889,
+        "false_alarms_per_day": 0.18028216036035566,
+        "mean_lead_time_s": 1248.0,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.1252506905456478,
+        "range_recall": 0.7478549382716049,
+        "range_f1": 0.2145658998290503,
+        "expected_cost": 12.0,
+        "outcomes": [
+          {
+            "event_start": "2020-07-15 14:30:00",
+            "event_end": "2020-07-15 19:00:00",
+            "detected": true,
+            "first_alarm": "2020-07-15 14:09:12",
+            "lead_time_s": 1248.0,
+            "meets_min_lead": false
+          }
+        ],
+        "threshold": 0.5
+      },
+      "event_inner": {
+        "n_events": 1,
+        "n_detected": 1,
+        "event_recall": 1.0,
+        "n_episodes": 26,
+        "n_false_alarm_episodes": 14,
+        "episode_precision": 0.46153846153846156,
+        "event_f1": 0.631578947368421,
+        "observed_days": 66.56232638888889,
+        "false_alarms_per_day": 0.2103291870870816,
+        "mean_lead_time_s": 9395.0,
+        "n_meeting_min_lead": 1,
+        "range_precision": 0.0541294268686762,
+        "range_recall": 0.7478549382716049,
+        "range_f1": 0.1009519909592511,
+        "expected_cost": 14.0,
+        "outcomes": [
+          {
+            "event_start": "2020-07-15 14:30:00",
+            "event_end": "2020-07-15 19:00:00",
+            "detected": true,
+            "first_alarm": "2020-07-15 11:53:25",
+            "lead_time_s": 9395.0,
+            "meets_min_lead": true
+          }
+        ],
+        "threshold": 0.15,
+        "threshold_source": "inner_oof_cost_optimal"
+      },
+      "event_oracle_upper_bound": {
+        "n_events": 1,
+        "n_detected": 1,
+        "event_recall": 1.0,
+        "n_episodes": 1,
+        "n_false_alarm_episodes": 0,
+        "episode_precision": 1.0,
+        "event_f1": 1.0,
+        "observed_days": 66.56232638888889,
+        "false_alarms_per_day": 0.0,
+        "mean_lead_time_s": -3291.0,
+        "n_meeting_min_lead": 0,
+        "range_precision": 1.0,
+        "range_recall": 0.5890432098765432,
+        "range_f1": 0.7413809847528406,
+        "expected_cost": 0.0,
+        "outcomes": [
+          {
+            "event_start": "2020-07-15 14:30:00",
+            "event_end": "2020-07-15 19:00:00",
+            "detected": true,
+            "first_alarm": "2020-07-15 15:24:51",
+            "lead_time_s": -3291.0,
+            "meets_min_lead": false
+          }
+        ],
+        "threshold": 0.95
+      },
+      "uncertainty": {
+        "ece": 0.015923027598164056,
+        "mce": 0.5592086940925349,
+        "brier": 0.002172308749535381,
+        "conformal": {
+          "alpha": 0.1,
+          "coverage": 0.9503202491040078,
+          "mean_set_size": 0.9587918370138294,
+          "ambiguous_rate": 0.0,
+          "empty_rate": 0.041208162986170624,
+          "coverage_class_0": 0.9501474388530866,
+          "coverage_class_1": 1.0
+        },
+        "ece_isotonic": 0.0012815392216586783
+      },
+      "seconds": 10.9,
+      "variant": "physics_only"
+    },
+    {
+      "model": "ml_only|physics_only",
+      "seed": 1,
+      "fold": 3,
+      "variant": "fusion",
+      "point": {
+        "pr_auc": NaN
+      },
+      "event_inner": {
+        "n_events": 1,
+        "n_detected": 1,
+        "event_recall": 1.0,
+        "n_episodes": 26,
+        "n_false_alarm_episodes": 14,
+        "episode_precision": 0.46153846153846156,
+        "event_f1": 0.631578947368421,
+        "observed_days": 66.56232638888889,
+        "false_alarms_per_day": 0.2103291870870816,
+        "mean_lead_time_s": 9395.0,
+        "n_meeting_min_lead": 1,
+        "range_precision": 0.0541294268686762,
+        "range_recall": 0.7478549382716049,
+        "range_f1": 0.1009519909592511,
+        "expected_cost": 14.0,
+        "outcomes": [
+          {
+            "event_start": "2020-07-15 14:30:00",
+            "event_end": "2020-07-15 19:00:00",
+            "detected": true,
+            "first_alarm": "2020-07-15 11:53:25",
+            "lead_time_s": 9395.0,
+            "meets_min_lead": true
+          }
+        ]
+      }
+    },
+    {
+      "model": "xgboost",
+      "seed": 2,
+      "fold": 3,
+      "test_event": [
+        "2020-07-15 14:30:00",
+        "2020-07-15 19:00:00"
+      ],
+      "n_train_rows_used": 232466,
+      "n_train_positives": 28332,
+      "n_test_rows": 467917,
+      "n_test_positives": 1622,
+      "point": {
+        "roc_auc": 0.9902773448945579,
+        "pr_auc": 0.22676570831881301,
+        "f1_at_0.5": 0.0
+      },
+      "event_fixed": {
+        "n_events": 1,
+        "n_detected": 0,
+        "event_recall": 0.0,
+        "n_episodes": 0,
+        "n_false_alarm_episodes": 0,
+        "episode_precision": 0.0,
+        "event_f1": 0.0,
+        "observed_days": 66.56232638888889,
+        "false_alarms_per_day": 0.0,
+        "mean_lead_time_s": null,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.0,
+        "range_recall": 0.0,
+        "range_f1": 0.0,
+        "expected_cost": 100.0,
+        "outcomes": [
+          {
+            "event_start": "2020-07-15 14:30:00",
+            "event_end": "2020-07-15 19:00:00",
+            "detected": false,
+            "first_alarm": null,
+            "lead_time_s": null,
+            "meets_min_lead": false
+          }
+        ],
+        "threshold": 0.5
+      },
+      "event_inner": {
+        "n_events": 1,
+        "n_detected": 0,
+        "event_recall": 0.0,
+        "n_episodes": 0,
+        "n_false_alarm_episodes": 0,
+        "episode_precision": 0.0,
+        "event_f1": 0.0,
+        "observed_days": 66.56232638888889,
+        "false_alarms_per_day": 0.0,
+        "mean_lead_time_s": null,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.0,
+        "range_recall": 0.0,
+        "range_f1": 0.0,
+        "expected_cost": 100.0,
+        "outcomes": [
+          {
+            "event_start": "2020-07-15 14:30:00",
+            "event_end": "2020-07-15 19:00:00",
+            "detected": false,
+            "first_alarm": null,
+            "lead_time_s": null,
+            "meets_min_lead": false
+          }
+        ],
+        "threshold": 0.7,
+        "threshold_source": "inner_oof_cost_optimal"
+      },
+      "event_oracle_upper_bound": {
+        "n_events": 1,
+        "n_detected": 1,
+        "event_recall": 1.0,
+        "n_episodes": 6,
+        "n_false_alarm_episodes": 3,
+        "episode_precision": 0.5,
+        "event_f1": 0.6666666666666666,
+        "observed_days": 66.56232638888889,
+        "false_alarms_per_day": 0.045070540090088915,
+        "mean_lead_time_s": -10717.0,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.3333333333333333,
+        "range_recall": 0.5007716049382716,
+        "range_f1": 0.4002466851680543,
+        "expected_cost": 3.0,
+        "outcomes": [
+          {
+            "event_start": "2020-07-15 14:30:00",
+            "event_end": "2020-07-15 19:00:00",
+            "detected": true,
+            "first_alarm": "2020-07-15 17:28:37",
+            "lead_time_s": -10717.0,
+            "meets_min_lead": false
+          }
+        ],
+        "threshold": 0.1
+      },
+      "uncertainty": {
+        "ece": 0.0032935795224357583,
+        "mce": 0.43323051929473877,
+        "brier": 0.0033718070640463074,
+        "conformal": {
+          "alpha": 0.1,
+          "coverage": 0.917528108617554,
+          "mean_set_size": 0.9343430565677247,
+          "ambiguous_rate": 0.0,
+          "empty_rate": 0.06565694343227538,
+          "coverage_class_0": 0.9180990574636229,
+          "coverage_class_1": 0.7533908754623921
+        },
+        "ece_isotonic": 0.0036040788493072627
+      },
+      "seconds": 26.9,
+      "variant": "ml_only"
+    },
+    {
+      "model": "xgboost",
+      "seed": 2,
+      "fold": 3,
+      "test_event": [
+        "2020-07-15 14:30:00",
+        "2020-07-15 19:00:00"
+      ],
+      "n_train_rows_used": 232466,
+      "n_train_positives": 28332,
+      "n_test_rows": 467917,
+      "n_test_positives": 1622,
+      "point": {
+        "roc_auc": 0.9933418603816964,
+        "pr_auc": 0.2573626293762513,
+        "f1_at_0.5": 0.021238938053097345
+      },
+      "event_fixed": {
+        "n_events": 1,
+        "n_detected": 1,
+        "event_recall": 1.0,
+        "n_episodes": 3,
+        "n_false_alarm_episodes": 0,
+        "episode_precision": 1.0,
+        "event_f1": 1.0,
+        "observed_days": 66.56232638888889,
+        "false_alarms_per_day": 0.0,
+        "mean_lead_time_s": 3141.0,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.3333333333333333,
+        "range_recall": 0.5009259259259259,
+        "range_f1": 0.4002959674435812,
+        "expected_cost": 0.0,
+        "outcomes": [
+          {
+            "event_start": "2020-07-15 14:30:00",
+            "event_end": "2020-07-15 19:00:00",
+            "detected": true,
+            "first_alarm": "2020-07-15 13:37:39",
+            "lead_time_s": 3141.0,
+            "meets_min_lead": false
+          }
+        ],
+        "threshold": 0.5
+      },
+      "event_inner": {
+        "n_events": 1,
+        "n_detected": 0,
+        "event_recall": 0.0,
+        "n_episodes": 0,
+        "n_false_alarm_episodes": 0,
+        "episode_precision": 0.0,
+        "event_f1": 0.0,
+        "observed_days": 66.56232638888889,
+        "false_alarms_per_day": 0.0,
+        "mean_lead_time_s": null,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.0,
+        "range_recall": 0.0,
+        "range_f1": 0.0,
+        "expected_cost": 100.0,
+        "outcomes": [
+          {
+            "event_start": "2020-07-15 14:30:00",
+            "event_end": "2020-07-15 19:00:00",
+            "detected": false,
+            "first_alarm": null,
+            "lead_time_s": null,
+            "meets_min_lead": false
+          }
+        ],
+        "threshold": 0.85,
+        "threshold_source": "inner_oof_cost_optimal"
+      },
+      "event_oracle_upper_bound": {
+        "n_events": 1,
+        "n_detected": 1,
+        "event_recall": 1.0,
+        "n_episodes": 1,
+        "n_false_alarm_episodes": 0,
+        "episode_precision": 1.0,
+        "event_f1": 1.0,
+        "observed_days": 66.56232638888889,
+        "false_alarms_per_day": 0.0,
+        "mean_lead_time_s": 3141.0,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.0,
+        "range_recall": 0.0,
+        "range_f1": 0.0,
+        "expected_cost": 0.0,
+        "outcomes": [
+          {
+            "event_start": "2020-07-15 14:30:00",
+            "event_end": "2020-07-15 19:00:00",
+            "detected": true,
+            "first_alarm": "2020-07-15 13:37:39",
+            "lead_time_s": 3141.0,
+            "meets_min_lead": false
+          }
+        ],
+        "threshold": 0.7
+      },
+      "uncertainty": {
+        "ece": 0.003407294325290156,
+        "mce": 0.8164554635683696,
+        "brier": 0.0034325140638717003,
+        "conformal": {
+          "alpha": 0.1,
+          "coverage": 0.935114560915718,
+          "mean_set_size": 0.9469307590876159,
+          "ambiguous_rate": 0.0,
+          "empty_rate": 0.05306924091238403,
+          "coverage_class_0": 0.935787430703739,
+          "coverage_class_1": 0.7416769420468557
+        },
+        "ece_isotonic": 0.0035623088686860785
+      },
+      "seconds": 28.4,
+      "variant": "hybrid"
+    },
+    {
+      "model": "logistic_regression",
+      "seed": 2,
+      "fold": 3,
+      "test_event": [
+        "2020-07-15 14:30:00",
+        "2020-07-15 19:00:00"
+      ],
+      "n_train_rows_used": 232466,
+      "n_train_positives": 28332,
+      "n_test_rows": 467917,
+      "n_test_positives": 1622,
+      "point": {
+        "roc_auc": 0.9998049741456279,
+        "pr_auc": 0.8806742314516838,
+        "f1_at_0.5": 0.7170645446507515
+      },
+      "event_fixed": {
+        "n_events": 1,
+        "n_detected": 1,
+        "event_recall": 1.0,
+        "n_episodes": 14,
+        "n_false_alarm_episodes": 12,
+        "episode_precision": 0.14285714285714285,
+        "event_f1": 0.25,
+        "observed_days": 66.56232638888889,
+        "false_alarms_per_day": 0.18028216036035566,
+        "mean_lead_time_s": 1248.0,
+        "n_meeting_min_lead": 0,
+        "range_precision": 0.1252506905456478,
+        "range_recall": 0.7478549382716049,
+        "range_f1": 0.2145658998290503,
+        "expected_cost": 12.0,
+        "outcomes": [
+          {
+            "event_start": "2020-07-15 14:30:00",
+            "event_end": "2020-07-15 19:00:00",
+            "detected": true,
+            "first_alarm": "2020-07-15 14:09:12",
+            "lead_time_s": 1248.0,
+            "meets_min_lead": false
+          }
+        ],
+        "threshold": 0.5
+      },
+      "event_inner": {
+        "n_events": 1,
+        "n_detected": 1,
+        "event_recall": 1.0,
+        "n_episodes": 26,
+        "n_false_alarm_episodes": 14,
+        "episode_precision": 0.46153846153846156,
+        "event_f1": 0.631578947368421,
+        "observed_days": 66.56232638888889,
+        "false_alarms_per_day": 0.2103291870870816,
+        "mean_lead_time_s": 9395.0,
+        "n_meeting_min_lead": 1,
+        "range_precision": 0.0541294268686762,
+        "range_recall": 0.7478549382716049,
+        "range_f1": 0.1009519909592511,
+        "expected_cost": 14.0,
+        "outcomes": [
+          {
+            "event_start": "2020-07-15 14:30:00",
+            "event_end": "2020-07-15 19:00:00",
+            "detected": true,
+            "first_alarm": "2020-07-15 11:53:25",
+            "lead_time_s": 9395.0,
+            "meets_min_lead": true
+          }
+        ],
+        "threshold": 0.15,
+        "threshold_source": "inner_oof_cost_optimal"
+      },
+      "event_oracle_upper_bound": {
+        "n_events": 1,
+        "n_detected": 1,
+        "event_recall": 1.0,
+        "n_episodes": 1,
+        "n_false_alarm_episodes": 0,
+        "episode_precision": 1.0,
+        "event_f1": 1.0,
+        "observed_days": 66.56232638888889,
+        "false_alarms_per_day": 0.0,
+        "mean_lead_time_s": -3291.0,
+        "n_meeting_min_lead": 0,
+        "range_precision": 1.0,
+        "range_recall": 0.5890432098765432,
+        "range_f1": 0.7413809847528406,
+        "expected_cost": 0.0,
+        "outcomes": [
+          {
+            "event_start": "2020-07-15 14:30:00",
+            "event_end": "2020-07-15 19:00:00",
+            "detected": true,
+            "first_alarm": "2020-07-15 15:24:51",
+            "lead_time_s": -3291.0,
+            "meets_min_lead": false
+          }
+        ],
+        "threshold": 0.95
+      },
+      "uncertainty": {
+        "ece": 0.015923027598164056,
+        "mce": 0.5592086940925349,
+        "brier": 0.002172308749535381,
+        "conformal": {
+          "alpha": 0.1,
+          "coverage": 0.9503202491040078,
+          "mean_set_size": 0.9587918370138294,
+          "ambiguous_rate": 0.0,
+          "empty_rate": 0.041208162986170624,
+          "coverage_class_0": 0.9501474388530866,
+          "coverage_class_1": 1.0
+        },
+        "ece_isotonic": 0.0012815392216586783
+      },
+      "seconds": 10.8,
+      "variant": "physics_only"
+    },
+    {
+      "model": "ml_only|physics_only",
+      "seed": 2,
+      "fold": 3,
+      "variant": "fusion",
+      "point": {
+        "pr_auc": NaN
+      },
+      "event_inner": {
+        "n_events": 1,
+        "n_detected": 1,
+        "event_recall": 1.0,
+        "n_episodes": 26,
+        "n_false_alarm_episodes": 14,
+        "episode_precision": 0.46153846153846156,
+        "event_f1": 0.631578947368421,
+        "observed_days": 66.56232638888889,
+        "false_alarms_per_day": 0.2103291870870816,
+        "mean_lead_time_s": 9395.0,
+        "n_meeting_min_lead": 1,
+        "range_precision": 0.0541294268686762,
+        "range_recall": 0.7478549382716049,
+        "range_f1": 0.1009519909592511,
+        "expected_cost": 14.0,
+        "outcomes": [
+          {
+            "event_start": "2020-07-15 14:30:00",
+            "event_end": "2020-07-15 19:00:00",
+            "detected": true,
+            "first_alarm": "2020-07-15 11:53:25",
+            "lead_time_s": 9395.0,
+            "meets_min_lead": true
+          }
+        ]
+      }
+    }
+  ]
+}

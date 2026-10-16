@@ -1,0 +1,98 @@
+{
+  "schema_version": "1.0",
+  "evaluated_at": "2026-10-15T01:06:16.049279+00:00",
+  "requirements": [
+    "RNF-80"
+  ],
+  "proxy": "ONNX Runtime, 1 intra-op thread, dev CPU \u2014 not a Raspberry Pi/Jetson measurement",
+  "onnxruntime": "1.18.1",
+  "slice": [
+    "2020-05-27",
+    "2020-06-01"
+  ],
+  "n_rows": 38909,
+  "n_positive_rows": 2360,
+  "models": {
+    "mlp_v1": {
+      "input": [
+        34
+      ],
+      "fp32": {
+        "size_mb": 0.203107,
+        "latency_single_ms_1thread": {
+          "p50": 0.01979999797185883,
+          "p95": 0.0390199988032691
+        },
+        "latency_batch256_ms_1thread": {
+          "p50": 0.256349998380756,
+          "p95": 0.34040000027744083
+        },
+        "pr_auc": 0.9995012698149498
+      },
+      "int8": {
+        "size_mb": 0.055954,
+        "latency_single_ms_1thread": {
+          "p50": 0.014700002793688327,
+          "p95": 0.021809998725075264
+        },
+        "latency_batch256_ms_1thread": {
+          "p50": 0.11810000069090165,
+          "p95": 0.18664999770407972
+        },
+        "pr_auc": 0.9995146358472844
+      },
+      "agreement": {
+        "decision_agreement_at_0.5": 1.0,
+        "mean_abs_prob_diff": 4.4700900616589934e-05,
+        "max_abs_prob_diff": 0.11798560619354248
+      },
+      "speedup_single": 1.3469383815600542,
+      "size_ratio": 0.27549025882909006
+    },
+    "tcn_v1": {
+      "input": [
+        60,
+        12
+      ],
+      "fp32": {
+        "size_mb": 0.670655,
+        "latency_single_ms_1thread": {
+          "p50": 0.46379999912460335,
+          "p95": 1.2111050007661077
+        },
+        "latency_batch256_ms_1thread": {
+          "p50": 114.43759999747272,
+          "p95": 141.3944750012888
+        },
+        "pr_auc": 0.999982121147107
+      },
+      "int8": {
+        "size_mb": 0.651974,
+        "latency_single_ms_1thread": {
+          "p50": 0.30670000342070125,
+          "p95": 0.4408550015796207
+        },
+        "latency_batch256_ms_1thread": {
+          "p50": 104.86255000068923,
+          "p95": 146.65514000189427
+        },
+        "pr_auc": 0.9999821211471072
+      },
+      "agreement": {
+        "decision_agreement_at_0.5": 0.9997425997425997,
+        "mean_abs_prob_diff": 2.257930646010209e-05,
+        "max_abs_prob_diff": 0.021706581115722656
+      },
+      "speedup_single": 1.512226912134747,
+      "size_ratio": 0.9721451416898406
+    },
+    "random_forest_v2": {
+      "size_mb": 6.191598,
+      "latency_single_ms_1thread": {
+        "p50": 0.02010000025620684,
+        "p95": 0.04080500475538428
+      },
+      "int8": "not applicable \u2014 ONNX-ML TreeEnsemble has no quantized kernels"
+    }
+  }
+}
