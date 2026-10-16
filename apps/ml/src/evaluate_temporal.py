@@ -39,7 +39,7 @@ import json
 import logging
 import sys
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -222,9 +222,11 @@ def _inner_threshold(
     train_idx: np.ndarray,
     events: list[FailureEvent],
     neg_stride: int,
+    candidates: Sequence[float] | None = None,
 ) -> tuple[float, str, np.ndarray | None, np.ndarray | None]:
     """Returns ``(threshold, source, oof_scores, oof_labels)``. The out-of-fold
-    training scores are reused as the conformal calibration set (RF-31)."""
+    training scores are reused as the conformal calibration set (RF-31).
+    ``candidates`` overrides the default threshold grid (0.05…0.95)."""
     t_lo, t_hi = ts.iloc[train_idx].min(), ts.iloc[train_idx].max()
     inner_events: list[FailureEvent] = [
         ev for ev in events if ev.start >= t_lo and ev.end <= t_hi
@@ -263,6 +265,7 @@ def _inner_threshold(
         oof[mask],
         scored_events,
         k=PERSISTENCE_K,
+        candidates=candidates,
         **EVAL_KW,
     )
     return (thr, "inner_oof_cost_optimal", oof[mask], y.to_numpy()[train_idx][mask])

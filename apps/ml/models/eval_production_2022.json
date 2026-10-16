@@ -1,0 +1,106 @@
+{
+  "schema_version": "1.0",
+  "evaluated_at": "2026-10-16T16:57:52.058321+00:00",
+  "requirements": [
+    "RF-33"
+  ],
+  "model": "random_forest_v2.onnx",
+  "model_training": {
+    "split": "random 20% hold-out",
+    "class_balancing": "SMOTE + class_weight='balanced_subsample'",
+    "trained_at": "2026-09-10T05:15:52.823158+00:00"
+  },
+  "serving_fix": {
+    "Reservoirs": "TP3",
+    "Oil_level": 1.0
+  },
+  "as_deployed": {
+    "pr_auc": 0.057852969192266526,
+    "roc_auc": 0.5391824760561662,
+    "prevalence": 0.019690114571297313,
+    "events_at_model_threshold": {
+      "threshold": 0.6598,
+      "event_recall": 0.0,
+      "false_alarms_per_day": 0.0,
+      "mean_lead_time_s": null,
+      "expected_cost": 300.0,
+      "detected": {
+        "2022-02-28 21:53:00": false,
+        "2022-03-23 14:54:00": false,
+        "2022-05-30 12:00:00": false
+      }
+    },
+    "events_at_backend_event_threshold": {
+      "threshold": 0.7,
+      "event_recall": 0.0,
+      "false_alarms_per_day": 0.0,
+      "mean_lead_time_s": null,
+      "expected_cost": 300.0,
+      "detected": {
+        "2022-02-28 21:53:00": false,
+        "2022-03-23 14:54:00": false,
+        "2022-05-30 12:00:00": false
+      }
+    }
+  },
+  "harmonized_at_input": {
+    "pr_auc": 0.056766397425715175,
+    "roc_auc": 0.5301182738185929,
+    "prevalence": 0.019690114571297313,
+    "events_at_model_threshold": {
+      "threshold": 0.6598,
+      "event_recall": 0.0,
+      "false_alarms_per_day": 0.0,
+      "mean_lead_time_s": null,
+      "expected_cost": 300.0,
+      "detected": {
+        "2022-02-28 21:53:00": false,
+        "2022-03-23 14:54:00": false,
+        "2022-05-30 12:00:00": false
+      }
+    },
+    "events_at_backend_event_threshold": {
+      "threshold": 0.7,
+      "event_recall": 0.0,
+      "false_alarms_per_day": 0.0,
+      "mean_lead_time_s": null,
+      "expected_cost": 300.0,
+      "detected": {
+        "2022-02-28 21:53:00": false,
+        "2022-03-23 14:54:00": false,
+        "2022-05-30 12:00:00": false
+      }
+    }
+  },
+  "in_sample_2020_contaminated": {
+    "pr_auc": 0.9995705308088397,
+    "roc_auc": 0.9999932382373157,
+    "prevalence": 0.019746227293222972,
+    "events_at_model_threshold": {
+      "threshold": 0.6598,
+      "event_recall": 1.0,
+      "false_alarms_per_day": 0.009382335039492137,
+      "mean_lead_time_s": -414.5,
+      "expected_cost": 2.0,
+      "detected": {
+        "2020-04-18 00:00:00": true,
+        "2020-05-29 23:30:00": true,
+        "2020-06-05 10:00:00": true,
+        "2020-07-15 14:30:00": true
+      }
+    },
+    "events_at_backend_event_threshold": {
+      "threshold": 0.7,
+      "event_recall": 1.0,
+      "false_alarms_per_day": 0.009382335039492137,
+      "mean_lead_time_s": -419.5,
+      "expected_cost": 2.0,
+      "detected": {
+        "2020-04-18 00:00:00": true,
+        "2020-05-29 23:30:00": true,
+        "2020-06-05 10:00:00": true,
+        "2020-07-15 14:30:00": true
+      }
+    }
+  }
+}

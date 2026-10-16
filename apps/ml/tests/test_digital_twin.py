@@ -93,3 +93,21 @@ def test_requires_fit_and_both_regimes() -> None:
     only_idle = only_idle[only_idle.COMP == 1]
     with pytest.raises(ValueError):
         PhysicsTwin().fit(only_idle)
+
+
+def test_pressure_column_is_configurable() -> None:
+    """Cross-dataset work uses TP3 (MetroPT 2022 `Reservoirs` is another
+    signal). With TP3 carrying the same values the residuals are identical,
+    and a meaningless `Reservoirs` column is ignored."""
+    healthy = _cycle(40)
+    test = _cycle(10, leak=0.08, seed=1)
+    default = PhysicsTwin().fit(healthy).transform(test)
+
+    def swap(df: pd.DataFrame) -> pd.DataFrame:
+        out = df.copy()
+        out["TP3"] = out["Reservoirs"]
+        out["Reservoirs"] = 1.6  # unrelated constant, like the 2022 channel
+        return out
+
+    tp3 = PhysicsTwin(pressure_col="TP3").fit(swap(healthy)).transform(swap(test))
+    pd.testing.assert_frame_equal(default, tp3)

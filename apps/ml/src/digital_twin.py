@@ -54,17 +54,21 @@ def _predict(coef: np.ndarray, X: np.ndarray) -> np.ndarray:
 class PhysicsTwin:
     window: int = 30
     duty_window: int = 360
+    # Main-reservoir pressure used in the mass balance. On MetroPT-3
+    # ``Reservoirs`` is a copy of ``TP3`` (r = 1.000); on MetroPT 2022
+    # ``Reservoirs`` is a different ~1.6 bar signal, so cross-dataset work
+    # uses ``TP3`` (identical on 2020, valid on 2022).
+    pressure_col: str = "Reservoirs"
     fill_coef: np.ndarray = field(default_factory=lambda: np.zeros(2))
     current_coef: np.ndarray = field(default_factory=lambda: np.zeros(3))
     idle_decay: float = 0.0
     duty_mean: float = 0.0
     fitted: bool = False
 
-    @staticmethod
-    def _signals(df: pd.DataFrame) -> pd.DataFrame:
+    def _signals(self, df: pd.DataFrame) -> pd.DataFrame:
         out = pd.DataFrame(index=df.index)
         out["loading"] = (df["COMP"] < 0.5).astype(float)
-        out["dR"] = df["Reservoirs"].diff().fillna(0.0)
+        out["dR"] = df[self.pressure_col].diff().fillna(0.0)
         return out
 
     def fit(self, df_normal: pd.DataFrame) -> "PhysicsTwin":
@@ -75,7 +79,8 @@ class PhysicsTwin:
         if load.sum() < 10 or idle.sum() < 10:
             raise ValueError("Need both loading and idle samples to fit the twin.")
         self.fill_coef = _lstsq(
-            df_normal["Reservoirs"].to_numpy()[load, None], sig["dR"].to_numpy()[load]
+            df_normal[self.pressure_col].to_numpy()[load, None],
+            sig["dR"].to_numpy()[load],
         )
         self.current_coef = _lstsq(
             df_normal[["TP2", "Oil_temperature"]].to_numpy()[load],
@@ -99,7 +104,7 @@ class PhysicsTwin:
         load = sig["loading"].to_numpy() == 1
         dR = sig["dR"].to_numpy()
 
-        fill_exp = _predict(self.fill_coef, df["Reservoirs"].to_numpy()[:, None])
+        fill_exp = _predict(self.fill_coef, df[self.pressure_col].to_numpy()[:, None])
         cur_exp = _predict(self.current_coef, df[["TP2", "Oil_temperature"]].to_numpy())
 
         out = pd.DataFrame(index=df.index)

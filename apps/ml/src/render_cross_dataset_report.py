@@ -244,6 +244,135 @@ def render(
     return "\n".join(head + body)
 
 
+PRODUCTION_JSON: Path = _ML_ROOT / "models" / "eval_production_2022.json"
+TWIN_JSON: Path = _ML_ROOT / "models" / "eval_twin_cross.json"
+CHALLENGER_CARD: Path = _ML_ROOT / "models" / "xgboost_v3_card.json"
+
+TWIN_LABEL: dict[str, str] = {
+    "ml_2020_only": "ML (XGBoost) só 2020",
+    "ml_only": "ML (XGBoost) 2020 + semanas normais 2022",
+    "hybrid": "Híbrido (features + resíduos físicos)",
+    "physics_only": "Física, twin calibrado por período",
+    "physics_uncalibrated": "Física, twin de 2020 sem calibrar",
+    "fusion": "Fusão (ML ou física)",
+}
+
+
+POOLED_LABEL: dict[str, str] = {
+    "ml_only": "ML (XGBoost)",
+    "physics_only": "Física (twin calibrado por período)",
+    "hybrid": "Híbrido (features + resíduos físicos)",
+    "fusion": "Fusão (ML ou física)",
+}
+
+
+def _production(p: dict[str, Any]) -> list[str]:
+    lines = [
+        "## Q5 — E o modelo que está em produção?",
+        "",
+        f"`{p['model']}` foi treinado com {p['model_training']['split']} e "
+        f"{p['model_training']['class_balancing']}. Avaliado **sem retreino**:",
+        "",
+        "| Entrada | PR-AUC | Falhas detectadas (limiar do modelo) | FA/dia |",
+        "|---|---|---|---|",
+    ]
+    for key, label in (
+        ("in_sample_2020_contaminated", "2020 — dados de treino (contaminado)"),
+        ("as_deployed", "2022 — como implantado"),
+        ("harmonized_at_input", "2022 — `Reservoirs`:=`TP3`, `Oil_level`:=moda"),
+    ):
+        r = p[key]
+        e = r["events_at_model_threshold"]
+        hits = sum(e["detected"].values())
+        lines.append(
+            f"| {label} | {r['pr_auc']:.3f} | {hits}/{len(e['detected'])} | "
+            f"{e['false_alarms_per_day']:.2f} |"
+        )
+    lines += [
+        "",
+        "Perfeito nos dados que viu e cego num período novo: é a assinatura de "
+        "sobreajuste do split aleatório + SMOTE. Corrigir os sensores na entrada "
+        "não resolve, então o problema está no treino e não na harmonização.",
+        "",
+    ]
+    return lines
+
+
+def _twin(t: dict[str, Any]) -> list[str]:
+    lines = ["## Q6 — A física generaliza onde o ML não generaliza?", ""]
+    tr = t.get("transfer")
+    if tr:
+        lines += [
+            "**Transferência sem rótulo de falha de 2022.** Treino = 2020 + "
+            f"semanas normais de 2022 ({tr['calibration_window'][0]} → "
+            f"{tr['calibration_window'][1]}); teste = resto de 2022.",
+            "",
+            "| Variante | Recall de evento | FA/dia | Custo | Detecção por falha |",
+            "|---|---|---|---|---|",
+        ]
+        for v, s in tr["summary"].items():
+            det = " · ".join(
+                f"{k[:10]}: {x:.0%}" for k, x in s["detected_per_event"].items()
+            )
+            lines.append(
+                f"| {TWIN_LABEL.get(v, v)} | {_ci(s['event_recall'])} | "
+                f"{_ci(s['false_alarms_per_day'])} | {_ci(s['expected_cost'], 1)} | {det} |"
+            )
+        lines += ["", "Resíduos físicos (z médio) dentro de cada falha de 2022:", ""]
+        for ev, z in tr["physics_z_in_2022_failures"].items():
+            lines.append(
+                f"* {ev}: " + ", ".join(f"`{k}` {v:+.1f}" for k, v in z.items())
+            )
+        lines.append("")
+    pw = t.get("pooled_walk_forward")
+    if pw:
+        lines += [
+            f"**Walk-forward conjunto ({pw['n_folds']} folds).** Twin calibrado por "
+            "período só com as linhas normais do treino de cada fold.",
+            "",
+            "| Variante | Recall (todos) | Custo (todos) | Recall (folds 2022) | "
+            "Custo (folds 2022) |",
+            "|---|---|---|---|---|",
+        ]
+        for v, s in pw["summary"].items():
+            s22 = pw["summary_2022_folds"].get(v)
+            lines.append(
+                f"| {POOLED_LABEL.get(v, v)} | {_ci(s['event_recall'])} | "
+                f"{_ci(s['expected_cost'], 1)} | "
+                + (
+                    f"{_ci(s22['event_recall'])} | {_ci(s22['expected_cost'], 1)} |"
+                    if s22
+                    else "— | — |"
+                )
+            )
+        lines += ["", "Gate RN-05 (custo esperado, pareado por fold):", ""]
+        for key, g in pw["promotion_gate_rn05"].items():
+            lines.append(
+                f"* {key.replace('_vs_', ' × ')}: melhora mediana "
+                f"{g['median_improvement']:+.1f}, p = {g['p_value']:.3f} → "
+                f"{'promove' if g['promote'] else 'não promove'}"
+            )
+        lines.append("")
+    return lines
+
+
+def _challenger(c: dict[str, Any]) -> list[str]:
+    g = c["evidence"]["rn05_gate_vs_random_forest"]
+    return [
+        "## Q7 — O que fica em produção",
+        "",
+        f"O candidato `{c['model_name']}` foi treinado com 2020 + 2022 "
+        f"({c['feature_count']} features, sem {', '.join(c['dropped_sensors'])}). O "
+        f"balanceamento foi feito só no treino ({c['class_balancing']}), e o limiar "
+        f"{c['decision_threshold']} saiu de {c['threshold_strategy']}. "
+        f"Contra o RF no walk-forward conjunto, o gate RN-05 deu p = {g['p_value']:.3f}, "
+        "e por isso o modelo **não é promovido**. Ele foi registrado no MLflow como "
+        "`challenger` (shadow + canary, `CHALLENGER_MODEL=xgboost_v3`), e o "
+        "`random_forest_v2` continua `champion` até haver evidência significativa.",
+        "",
+    ]
+
+
 def main() -> None:
     data = json.loads(IN_JSON.read_text(encoding="utf-8"))
     ingest = json.loads(INGEST_JSON.read_text(encoding="utf-8"))
@@ -252,7 +381,15 @@ def main() -> None:
         if HARMONIZED_JSON.exists()
         else None
     )
-    OUT_MD.write_text(render(data, ingest, harmonized) + "\n", encoding="utf-8")
+    text = render(data, ingest, harmonized)
+    for path, fn in (
+        (PRODUCTION_JSON, _production),
+        (TWIN_JSON, _twin),
+        (CHALLENGER_CARD, _challenger),
+    ):
+        if path.exists():
+            text += "\n" + "\n".join(fn(json.loads(path.read_text(encoding="utf-8"))))
+    OUT_MD.write_text(text + "\n", encoding="utf-8")
     print(f"Wrote {OUT_MD}")
 
 
