@@ -1,0 +1,360 @@
+{
+  "uid": "predictiq-reliability",
+  "title": "PredictIQ — RAG, histórico, MQTT e shadow (2ª rodada)",
+  "description": "Sinais introduzidos na segunda rodada: gate de fundamentação RN-04, safety guard RNF-84, feedback RF-38, eventos de falha, ingestão MQTT e shadow/canary. Métricas definidas em apps/backend/src/core/metrics.py (seção 3).",
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "tags": [
+    "predictiq",
+    "rn-04",
+    "rnf-84",
+    "rf-38"
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "DS_PROMETHEUS",
+        "type": "datasource",
+        "query": "prometheus",
+        "current": {
+          "text": "Prometheus",
+          "value": "Prometheus"
+        }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "row",
+      "title": "Assistente RAG — fundamentação e segurança (RN-04 / RNF-84)",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "panels": []
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Planos bloqueados por falta de fundamentação (24 h)",
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 0,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "expr": "sum(increase(predictiq_rag_grounding_total{llm_called=\"false\"}[24h])) / clamp_min(sum(increase(predictiq_rag_grounding_total[24h])), 1)",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "description": "RN-04: fração de pedidos em que nenhum trecho atingiu τ e o LLM não foi chamado."
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Planos substituídos pelo safety guard (24 h)",
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 6,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "expr": "sum(increase(predictiq_rag_safety_blocks_total[24h]))",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "description": "RNF-84: planos que mandavam desativar dispositivo de segurança. Qualquer valor > 0 merece revisão."
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Trechos descartados por injeção (24 h)",
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 12,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "expr": "sum(increase(predictiq_rag_injection_chunks_dropped_total[24h]))",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "description": "RNF-84: trechos de manual com padrão de prompt injection, removidos antes do LLM."
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Avaliação positiva dos planos (7 d)",
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 18,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "expr": "sum(increase(predictiq_feedback_votes_total{kind=\"plan\",helpful=\"true\"}[7d])) / clamp_min(sum(increase(predictiq_feedback_votes_total{kind=\"plan\"}[7d])), 1)",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "description": "RF-38: fração dos planos avaliados como úteis pelo técnico."
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Decisões do gate RN-04 por hora",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 6
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "expr": "sum(increase(predictiq_rag_grounding_total[1h])) by (llm_called)",
+          "legendFormat": "llm_called={{llm_called}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Votos do técnico por hora (RF-38)",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 6
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "expr": "sum(increase(predictiq_feedback_votes_total[1h])) by (kind, helpful)",
+          "legendFormat": "{{kind}} útil={{helpful}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "type": "row",
+      "title": "Histórico, frota e telemetria",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 14
+      },
+      "panels": []
+    },
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "Eventos de falha abertos/fechados por hora",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 15
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "expr": "sum(increase(predictiq_failure_events_total[1h])) by (transition)",
+          "legendFormat": "{{transition}}",
+          "refId": "A"
+        }
+      ],
+      "description": "EventTracker online (RN-03). Aberturas sem fechamento por muito tempo indicam ativo preso em alarme."
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "Telemetria industrial — leituras/s por transporte e resultado",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 15
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(predictiq_telemetry_messages_total[5m])) by (transport, result)",
+          "legendFormat": "{{transport}} {{result}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        },
+        "overrides": []
+      },
+      "description": "MQTT e OPC UA. rejected = leitura inválida (MQTT: tópico×payload divergente, anti-spoofing); unknown_asset = ativo não cadastrado."
+    },
+    {
+      "id": 11,
+      "type": "row",
+      "title": "Modelos — shadow / canary",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 23
+      },
+      "panels": []
+    },
+    {
+      "id": 12,
+      "type": "stat",
+      "title": "Discordância champion × challenger (1 h)",
+      "gridPos": {
+        "h": 5,
+        "w": 8,
+        "x": 0,
+        "y": 24
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "expr": "sum(increase(predictiq_shadow_predictions_total{agreement=\"disagree\"}[1h])) / clamp_min(sum(increase(predictiq_shadow_predictions_total[1h])), 1)",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "description": "Fração das inferências shadow em que a classe do challenger difere da do champion. Promoção continua exigindo o gate RN-05."
+    },
+    {
+      "id": 13,
+      "type": "timeseries",
+      "title": "Inferências shadow/s por concordância",
+      "gridPos": {
+        "h": 8,
+        "w": 16,
+        "x": 8,
+        "y": 24
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(predictiq_shadow_predictions_total[5m])) by (agreement)",
+          "legendFormat": "{{agreement}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        },
+        "overrides": []
+      }
+    }
+  ]
+}

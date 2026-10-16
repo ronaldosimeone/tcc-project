@@ -211,9 +211,14 @@ services:
     networks:
       - app-network
 
+  # TimescaleDB = Postgres 15 + extensão (mesmo major do volume existente).
+  # `shared_preload_libraries` explícito: um volume inicializado pelo
+  # postgres:15 puro não traz a extensão pré-carregada. A migração 0009 só
+  # converte `predictions` em hypertable quando a extensão está carregada.
   db:
-    image: postgres:15
+    image: timescale/timescaledb:2.17.2-pg15
     container_name: db
+    command: ["postgres", "-c", "shared_preload_libraries=timescaledb"]
     env_file:
       - .env
     ports:

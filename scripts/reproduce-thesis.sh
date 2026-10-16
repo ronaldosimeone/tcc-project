@@ -6,7 +6,9 @@
 #   bash scripts/reproduce-thesis.sh ml rag     # only some stages
 #
 # Stages
-#   ml     temporal evaluation, explanations, RUL, drift, robustness, edge   (apps/ml/.venv)
+#   ml     temporal evaluation, explanations, RUL, drift, robustness, edge,  (apps/ml/.venv)
+#          digital twin, cross-dataset (RF-33), energy (RNF-83)
+#   infra  TimescaleDB vs Postgres benchmark (Docker) + RNF-45 per embedder
 #   rag    RAG retrieval (mcp-server image) + generation (backend venv + Ollama)
 #   docs   renders docs/*.md from the JSON results (no training)
 #   manifest  writes docs/reproducibility_manifest.json (commit, versions, hashes)
@@ -15,7 +17,9 @@
 #   apps/ml/.venv and apps/backend/.venv installed from their requirements files,
 #   Docker with the `projeto-tcc-mcp-server` image built (docker compose build mcp-server),
 #   Ollama running locally with llama3.2:3b and qwen2.5:3b-instruct pulled,
-#   the WAP-5 manual + sidecar in apps/mcp-server/data/manuals (see CORPUS-CURATION.md).
+#   the WAP-5 manual + sidecar in apps/mcp-server/data/manuals (see CORPUS-CURATION.md),
+#   MetroPT 2022 dataset_train.csv in apps/ml/data/raw/metropt2022/ (Zenodo
+#   10.5281/zenodo.6854240, md5 checked by the ingestion).
 #
 # Every stage is deterministic given the seeds fixed in the scripts; the LLM
 # stage uses temperature 0 and seed 42 (Ollama), which is deterministic per
@@ -30,7 +34,7 @@ BE_PY="$ROOT/apps/backend/.venv/Scripts/python.exe"
 [ -x "$BE_PY" ] || BE_PY="$ROOT/apps/backend/.venv/bin/python"
 
 STAGES=("$@")
-[ ${#STAGES[@]} -eq 0 ] && STAGES=(ml rag docs manifest)
+[ ${#STAGES[@]} -eq 0 ] && STAGES=(ml rag infra docs manifest)
 
 run_ml() {
   cd "$ROOT/apps/ml"
@@ -44,6 +48,25 @@ run_ml() {
   "$ML_PY" -m src.edge_quantization                             # RNF-80
   "$ML_PY" -m pytest -q tests/test_digital_twin.py
   "$ML_PY" -m src.evaluate_twin --seeds 3                       # digital twin + fusão
+  "$ML_PY" -m pytest -q tests/test_ingest_metropt2022.py
+  "$ML_PY" -m src.ingest_metropt2022                            # RF-33 — 2º dataset
+  "$ML_PY" -m src.evaluate_cross_dataset --seeds 3              # RF-33, RN-05 com 6 folds
+  "$ML_PY" -m src.evaluate_cross_dataset --seeds 3 --drop-sensors Reservoirs Oil_level \
+    --tag harmonized --only shift cross pooled                  # harmonização semântica
+  # RNF-83 — rode com a máquina ociosa (mede energia da máquina inteira).
+  "$ML_PY" -m src.evaluate_energy
+}
+
+run_infra() {
+  cd "$ROOT/apps/backend"
+  docker rm -f bench-pg bench-ts >/dev/null 2>&1 || true
+  docker run -d --name bench-pg -e POSTGRES_PASSWORD=bench -p 55432:5432 postgres:15 >/dev/null
+  docker run -d --name bench-ts -e POSTGRES_PASSWORD=bench -p 55433:5432     timescale/timescaledb:2.17.2-pg15 postgres -c shared_preload_libraries=timescaledb >/dev/null
+  until docker exec bench-pg pg_isready -U postgres >/dev/null 2>&1 &&         docker exec bench-ts pg_isready -U postgres >/dev/null 2>&1; do sleep 1; done
+  sleep 3
+  "$BE_PY" benchmarks/benchmark_timescale.py     --plain postgresql://postgres:bench@localhost:55432/postgres     --timescale postgresql://postgres:bench@localhost:55433/postgres
+  docker rm -f bench-pg bench-ts >/dev/null
+  mcp_docker "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"     python benchmark_embedder_latency.py --manuals /src/data/manuals --out /src/embedder_latency_benchmark.json
 }
 
 mcp_docker() {
@@ -79,6 +102,7 @@ run_rag() {
 run_docs() {
   cd "$ROOT/apps/ml"
   "$ML_PY" -m src.render_temporal_report
+  "$ML_PY" -m src.render_cross_dataset_report
   cd "$ROOT/apps/backend"
   "$BE_PY" benchmarks/benchmark_rag.py report
   "$BE_PY" benchmarks/benchmark_redteam.py report

@@ -33,6 +33,12 @@ RESULT_FILES: list[str] = [
     "apps/ml/models/eval_robustness.json",
     "apps/ml/models/edge_quantization.json",
     "apps/ml/models/eval_twin.json",
+    "apps/ml/models/metropt2022_ingest.json",
+    "apps/ml/models/eval_cross_dataset.json",
+    "apps/ml/models/eval_cross_dataset_harmonized.json",
+    "apps/ml/models/eval_energy.json",
+    "apps/backend/benchmarks/timescale_benchmark.json",
+    "apps/mcp-server/embedder_latency_benchmark.json",
     "apps/backend/benchmarks/rag_cases_v1.json",
     "apps/backend/benchmarks/out/rag_retrieval.json",
     "apps/backend/benchmarks/out/rag_retrieval_mpnet.json",
@@ -43,6 +49,7 @@ RESULT_FILES: list[str] = [
 ]
 INPUT_FILES: list[str] = [
     "apps/ml/data/processed/metropt3.parquet",
+    "apps/ml/data/processed/metropt2022.parquet",
     "apps/ml/models/random_forest_v2.onnx",
     "apps/ml/models/mlp_v1.onnx",
     "apps/ml/models/tcn_v1.onnx",
