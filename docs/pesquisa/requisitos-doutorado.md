@@ -19,7 +19,7 @@ versões e hashes: [`reproducibility_manifest.json`](../reproducibility_manifest
 | RN-02 | Limiar minimiza o custo esperado (C_FN = 100 · C_FP), escolhido em scores OOF do treino | `cost_optimal_threshold`, `evaluate_temporal._inner_threshold` | ✅ | idem |
 | RN-03 | Alarme só após k = 6 amostras consecutivas acima do limiar | `persistent_alarms` | ✅ | `tests/test_temporal_validation.py` |
 | RN-04 | Plano sem trecho de manual ≥ τ é bloqueado; citação a página não recuperada é sinalizada | `apps/backend/src/services/grounding.py` | ✅ τ = 0,6 só funciona com bge-m3 (AUC de fundamentação 0,89 × 0,61 do MiniLM) | [`rag_benchmark.md`](../rag_benchmark.md), `tests/test_grounding_xai.py` |
-| RN-05 | Promoção só com significância estatística (Wilcoxon pareado, p < 0,05) | `apps/ml/src/promotion_gate.py` | ✅ Gate recusa toda troca como **subpotente** (3 folds → p mínimo 0,125) | `tests/test_promotion_gate.py` |
+| RN-05 | Promoção só com significância estatística (Wilcoxon pareado, p < 0,05) | `apps/ml/src/promotion_gate.py` | ✅ Só com o MetroPT-3, o gate recusa toda troca como **subpotente** (3 folds → p mínimo 0,125). Com o walk-forward conjunto (6 folds, p mínimo 0,016) ele **promove** XGBoost sobre LogReg (p = 0,016) e recusa XGBoost × RF (p = 0,44) | `tests/test_promotion_gate.py`, [`cross_dataset_evaluation.md`](../cross_dataset_evaluation.md) |
 
 ## Requisitos funcionais
 
@@ -30,12 +30,12 @@ versões e hashes: [`reproducibility_manifest.json`](../reproducibility_manifest
 | RF-30 | RUL por análise de sobrevivência | `rul.py`, `evaluate_rul.py` (XGBoost AFT, censura no corte de treino) | ❌ | C-index 0,49 (≈ acaso) × 0,58 do baseline de renovação: 1–3 falhas não bastam para aprender RUL |
 | RF-31 | Incerteza: calibração + conformal | `uncertainty.py` (ECE, isotônica, Mondrian) | 🟡 | ECE 0,05; cobertura conformal da classe falha 0,59–0,68 contra a meta de 0,90 → **não-permutabilidade** temporal |
 | RF-32 | Explicabilidade por alerta | Offline: `explainability.py` (TreeSHAP). Online: oclusão por sensor congelada na abertura de cada evento (`root_cause_service.py`), exibida no drawer do Histórico | ✅ | Fiel (H5 ✅); TreeSHAP instável entre falhas (H6 ❌). Em verificação real, a oclusão online também apontou `Oil_temperature`/`TP2` |
-| RF-33 | Generalização cross-dataset | — | ⏳ | Requer download do C-MAPSS / MetroPT-2 (autorização pendente) |
+| RF-33 | Generalização cross-dataset | MetroPT 2022 (Zenodo 6854240, 3 falhas) via `ingest_metropt2022.py` (md5, amostragem pontual 10 s, GPS fora); `evaluate_cross_dataset.py` (shift adversarial, transferência nos dois sentidos, walk-forward conjunto com 6 folds, ablação do `Flowmeter`) | 🟡 | **Transferência direta falha**: 2020→2022 pega 1/3 falhas, 2022→2020 ≤ 1/4. Dois sensores mudam de significado com o mesmo nome (`Reservoirs` = cópia do `TP3` em 2020; `Oil_level` constante em 2022) e foram excluídos; mesmo assim os períodos são separáveis (AUC adversarial 0,998). **Somar compensa em poder estatístico**: com 6 folds, Friedman p = 0,032 e o gate RN-05 promove XGBoost × LogReg (p = 0,016), os primeiros resultados significativos da tese. As falhas 2 e 3 de 2022 (secador de ar, óleo) não são detectadas por nenhum modelo: modo de falha ausente do treino ([`cross_dataset_evaluation.md`](../cross_dataset_evaluation.md)) |
 | RF-34 | Drift adaptativo | `drift_detectors.py` (Page-Hinkley, ADWIN), `evaluate_drift.py` | ❌ | A regra de produção (PSI > 0,25) gera **28 falsos alarmes/30 dias** em operação normal; calibrados para ≤ 1 alarme/mês, os detectores pegam no máximo 17 % dos drifts ≤ 2σ |
 | RF-35 | Diagnóstico XAI → MCP → RAG | `sensor_semantics.py`, `_build_query`/`_build_prompt` | 🟡 | Ganho de ranking depende do embedder: significativo com mpnet (p = 0,004), não com MiniLM/bge-m3 |
 | RF-36 | Benchmark RAG anotado (≥ 50 casos) | `benchmarks/rag_cases_v1.json` (42 respondíveis + 12 sem resposta), `benchmark_rag.py` | 🟡 | Anotação em rascunho, **pendente de validação por especialista** |
 | RF-37 | Ablação LLM puro × RAG × RAG+XAI, modelos, embedders | `benchmark_rag.py`, `benchmark_rag_retrieval.py` | ✅ | LLM puro alucina em **100 %** das perguntas sem resposta; o RAG em 0–8 %. O embedder de produção recupera o trecho certo em 2,4 % dos casos, o bge-m3 em 28,6 % |
-| RF-38 | Human-in-the-loop | `suggestion_feedback_service.py`, `POST /v1/maintenance/feedback`, migração 0005; veredito da OS (causa confirmada / falso alarme) no drawer do Histórico | 🟡 | O veredito da OS vira rótulo dos KPIs e do re-treino. Falta o voto por trecho citado na UI do assistente |
+| RF-38 | Human-in-the-loop | `suggestion_feedback_service.py`, `POST /v1/maintenance/feedback`, migração 0005; veredito da OS no drawer do Histórico; **voto por trecho citado e utilidade do plano no assistente** (`maintenance-assistant/suggestion-feedback.tsx`) | ✅ | O veredito da OS vira rótulo dos KPIs e do re-treino; os votos por trecho reordenam a recuperação (prior de Laplace) sem tocar no τ do RN-04. `__tests__/suggestion-feedback.test.tsx` |
 
 ## Requisitos não funcionais
 
@@ -46,7 +46,7 @@ versões e hashes: [`reproducibility_manifest.json`](../reproducibility_manifest
 | RNF-80 | Edge / INT8 | `edge_quantization.py` | 🟡 | MLP: −72 % de tamanho, 100 % de concordância. TCN: 1,5× mais rápida. Medido por *proxy* (1 thread), sem hardware real |
 | RNF-81 | Robustez (ruído, sensor faltante, adversarial) | `evaluate_robustness.py` | ❌ | RF: ruído de 5 % σ derruba PR-AUC de 0,94 → 0,23. `DV_pressure` travado zera a detecção nos dois modelos. Viés de 0,25σ esconde a falha do RF |
 | RNF-82 | Alucinação ≤ X % | métricas de `benchmark_rag.py` | 🟡 | Sem resposta: LLM puro 100 %, RAG (bge-m3, τ = 0,6) 8,3 %. X a definir com o orientador |
-| RNF-83 | Energia/CO₂ | — | ⏳ | Requer instalar o CodeCarbon (autorização pendente) |
+| RNF-83 | Energia/CO₂ | `apps/ml/src/evaluate_energy.py` (CodeCarbon 3.3.1 offline, grade BRA ≈ 98 gCO₂/kWh; CPU por Windows EMI e GPU por NVML **medidos**, RAM estimada e excluída; potência ociosa subtraída) | ✅ | Treino: RF 0,15 Wh, XGB 0,11 Wh, LogReg 0,02 Wh. Inferência ONNX: ≈ 0,09 mWh por 1.000 predições (≈ 0,3 Wh por ativo-ano a 0,1 Hz). **Uma sugestão do LLM (0,072 Wh, 0,007 gCO₂) custa o mesmo que ~800 mil predições** — o gasto do sistema está no RAG, não no modelo preditivo (`models/eval_energy.json`) |
 | RNF-84 | Segurança do MCP (prompt injection, red-team) | `safety_guard.py`, `benchmark_redteam.py` | ✅ | Sem guard: o LLM mandou desativar a válvula de segurança em 2/2 casos. Com guard: 0/2, e trechos injetados descartados em 100 % |
 | RNF-85 | Conformidade ISO 13374 / ISO 17359 / IEC 62443 | [`conformidade-normas.md`](conformidade-normas.md) | ✅ (documental) | Maior lacuna: autenticação/RBAC (FR1/FR2) |
 
@@ -66,6 +66,9 @@ versões e hashes: [`reproducibility_manifest.json`](../reproducibility_manifest
 | Estudo com usuários | Protocolo intra-sujeitos (SUS, NASA-TLX, tempo, caso-armadilha) | ⏳ | [`protocolo-estudo-usuarios.md`](protocolo-estudo-usuarios.md) — exige aprovação do CEP |
 | Pacote de replicação | `CITATION.cff`, `.zenodo.json`, script único + manifesto | 🟡 | Falta definir licença, ORCIDs e publicar a release (DOI) |
 | Artigo | [`../artigo/rascunho-artigo.md`](../artigo/rascunho-artigo.md) com os números reais | 🟡 | Faltam trabalhos relacionados (PRISMA) e a conclusão |
+| TimescaleDB | Migração 0009 (`src/core/timescale.py`): `predictions` vira hypertable (chunks de 1 dia, PK `(id, timestamp)`), compressão segmentada por ativo após 7 dias, agregado contínuo `predictions_hourly`. No-op em Postgres puro/SQLite | ✅ | Benchmark real, 2,59 M linhas (`benchmarks/timescale_benchmark.json`): série horária 30 d **77× mais rápida**, alarmes/dia da frota **398×**, disco **−49 %**; custo: ingestão 3,7× mais lenta (35 k linhas/s ≈ 350 mil ativos a 0,1 Hz). Upgrade → downgrade → upgrade verificado com dados preservados |
+| OPC UA (IEC 62541) | `services/opcua_telemetry.py`: gateway simulado (variáveis tipadas por sensor + nó `Sequence` como gatilho) e ingestor por *subscription* que lê a amostra inteira num único `Read`; `TELEMETRY_TRANSPORT=opcua` | 🟡 | `tests/test_opcua_telemetry.py` com servidor e cliente reais (amostra completa, ativo não cadastrado ignorado, `Sequence` repetido descartado, senha errada recusada). Sem criptografia: Basic256Sha256 + certificados fica como lacuna (IEC 62443 FR4) |
+| Painel Grafana dos sinais novos | `infra/grafana/dashboards/predictiq-reliability.json` + 7 contadores novos em `core/metrics.py` (RN-04, RNF-84, RF-38, eventos, telemetria, shadow) | ✅ | `tests/test_metrics_second_round.py` garante que o painel só consulta métricas existentes e sem label de alta cardinalidade |
 
 ## Itens refeitos
 
@@ -78,8 +81,7 @@ versões e hashes: [`reproducibility_manifest.json`](../reproducibility_manifest
 
 ## Decisões que dependem do autor/orientador
 
-1. **Trocar o embedder de produção para bge-m3**: melhora muito a recuperação, mas o modelo tem 568 M parâmetros (≈ 2,2 GB), contra 118 M do MiniLM. Precisa re-medir o RNF-45 (p95 < 500 ms).
+1. **Trocar o embedder de produção para bge-m3**: melhora muito a recuperação (gabarito em 28,6 % × 2,4 %). RNF-45 **re-medido** na imagem do mcp-server, CPU com 8 threads (`apps/mcp-server/embedder_latency_benchmark.json`): MiniLM p95 20,7 ms · mpnet 41,6 ms · **bge-m3 111,8 ms — passa** (< 500 ms), ~5× mais lento que o MiniLM. Custos que sobram: ~1,5 GB a mais de RAM no container, reindexação de ~4 min (524 trechos) e embeddings de 1024 dimensões. Tecnicamente viável; a troca continua sendo decisão sua.
 2. **Validação dos 54 casos do RF-36 por especialista em manutenção.**
-3. **Autorizar o download dos datasets do RF-33 e a instalação do CodeCarbon (RNF-83).**
-4. **Definir o X do RNF-82** (alucinação máxima aceitável).
-5. **Conseguir um manual de *fault finding* do compressor real.** É o maior limitador do RAG hoje.
+3. **Definir o X do RNF-82** (alucinação máxima aceitável).
+4. **Conseguir um manual de *fault finding* do compressor real.** É o maior limitador do RAG hoje.

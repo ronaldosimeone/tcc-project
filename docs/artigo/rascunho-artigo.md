@@ -43,6 +43,7 @@ Axes: validation protocols on MetroPT/MetroPT-2; event-based metrics (Tatbul et 
 ## 3. Data and protocol
 
 - MetroPT-3: 1.52 M samples at 10 s from a Porto metro APU compressor, Feb–Aug 2020, **4 documented air-leak failures**.
+- MetroPT 2022 (Veloso et al., *Sci. Data* 2022; Zenodo 10.5281/zenodo.6854240): same APU family, Jan–Jun 2022, 1 Hz, **3 failures** (two air leaks, one oil leak). Point-sampled to 10 s (1.08 M rows), GPS dropped; used for cross-period transfer and a pooled 7-failure walk-forward (6 test folds).
 - Purged walk-forward: segment boundaries at mid-points between failures; fold *k* tests failure *k*+1 and trains strictly before it (purge 300 s > largest feature window of 150 s). 3 folds × 5 seeds.
 - Alarms: persistence k = 6 samples (RN-03). Lead-time target 2 h (RN-01). Cost C_FN = 100 · C_FP (RN-02). Thresholds: training out-of-fold, cost-optimal.
 
@@ -97,9 +98,17 @@ LLM-only answers produce a procedure for 100 % of the 12 unanswerable questions 
 
 A system prompt is not a security boundary for 3 B-parameter local models; deterministic pre- and post-generation guards are required.
 
+### 4.7 A second recording period (`docs/cross_dataset_evaluation.md`, RF-33)
+
+Matching columns by name is not enough: in MetroPT-3 `Reservoirs` duplicates `TP3` (r = 1.000) while in 2022 it is a different ~1.6 bar signal, and `Oil_level` is constant in 2022; both were excluded. Even then the two periods are separable (adversarial AUC 0.998). **Direct transfer fails in both directions** (2020→2022: 1/3 failures; 2022→2020: ≤ 1/4). Pooling the periods in a purged walk-forward (7 failures, 6 test folds) does not detect the two 2022 failure modes absent from 2020 (air-dryer valve, oil leak), but a few weeks of *normal* 2022 data let the 2020-trained detector catch the first 2022 air leak, and the 6-fold protocol finally gives the statistics power: Friedman p = 0.032, and the RN-05 gate promotes XGBoost over logistic regression (one-sided Wilcoxon p = 0.016, the minimum attainable).
+
+### 4.8 Energy (`models/eval_energy.json`, RNF-83)
+
+CodeCarbon (offline, Brazilian grid ≈ 98 gCO₂/kWh), CPU and GPU energy measured by hardware counters, idle power subtracted. Training a model costs 0.02–0.15 Wh; ONNX inference ≈ 0.09 mWh per 1,000 predictions (≈ 0.3 Wh per asset-year at 0.1 Hz). One grounded repair plan from the local 3 B LLM costs 0.072 Wh (0.007 gCO₂) — **as much as ~800,000 predictions**. The footprint of the system is the advisory layer, not the detector.
+
 ## 5. Threats to validity
 
-See `docs/pesquisa/questoes-e-hipoteses.md` §Ameaças: one compressor and one failure mode, 3 test folds (no comparison can reach p < 0.05), draft RAG annotations pending expert validation, proxy edge measurements.
+See `docs/pesquisa/questoes-e-hipoteses.md` §Ameaças: one compressor family (two periods, and the 2022 recording maps two sensors to different signals under the same names), 3 test folds on MetroPT-3 alone (no comparison can reach p < 0.05; the pooled 6-fold protocol lifts this floor to p = 0.016), draft RAG annotations pending expert validation, proxy edge measurements.
 
 ## 6. Conclusion **[TODO]**
 

@@ -30,8 +30,15 @@
 > RN-01…RN-05), com o status e a evidência de cada um, estão em
 > [`docs/pesquisa/requisitos-doutorado.md`](docs/pesquisa/requisitos-doutorado.md).
 > Resultados: [`docs/temporal_evaluation.md`](docs/temporal_evaluation.md),
-> [`docs/rag_benchmark.md`](docs/rag_benchmark.md). Reproduzir tudo:
+> [`docs/rag_benchmark.md`](docs/rag_benchmark.md),
+> [`docs/cross_dataset_evaluation.md`](docs/cross_dataset_evaluation.md)
+> (MetroPT-3 + MetroPT 2022). Reproduzir tudo:
 > `bash scripts/reproduce-thesis.sh`.
+>
+> **Operação.** Telemetria por MQTT ou OPC UA (`TELEMETRY_TRANSPORT`),
+> série de predições em hypertable TimescaleDB (migração 0009, opcional),
+> painel Grafana `predictiq-reliability` para RN-04/RNF-84/RF-38, eventos,
+> telemetria e shadow.
 
 ---
 

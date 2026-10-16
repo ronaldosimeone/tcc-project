@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-10-15T13:49:10.804785+00:00",
+  "generated_at": "2026-10-16T16:38:24.312613+00:00",
   "git": {
-    "commit": "6c9aa75e30ffd4614f04d413ce916d683a82d1f7",
+    "commit": "a0e0b7e975f8ba031eac11a5e746f46a1acc3070",
     "dirty": true
   },
   "platform": {
@@ -21,9 +21,31 @@
     "lightning": null
   },
   "docker_mcp_server_image": "sha256:eccbd7cfca92b3d9798a8828d014e5ae89ad591fdc2940274d90e609201bc857",
-  "ollama_models": null,
+  "ollama_models": [
+    {
+      "name": "qwen2.5:3b-instruct",
+      "digest": "357c53fb659c5076de1d65ccb0b397446227b71a42be9d1603d46168015c9e4b"
+    },
+    {
+      "name": "llama3.2:3b",
+      "digest": "a80c4f17acd55265feec403c7aef86be0c25983ab279d83f3bcd3abbcb5b8b72"
+    },
+    {
+      "name": "qwen3-vl:8b",
+      "digest": "901cae73216286ea8c5aba8b46d307ff7188f737285ec500c795a12f05225d28"
+    },
+    {
+      "name": "nomic-embed-text:latest",
+      "digest": "0a109f422b47e3a30ba2b10eca18548e944e8a23073ee3f3e947efcf3c45e59f"
+    },
+    {
+      "name": "qwen3:8b",
+      "digest": "500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41"
+    }
+  ],
   "inputs_sha256": {
     "apps/ml/data/processed/metropt3.parquet": "483f0bfd3874e58484f21299d36d9f0b53cf6c96552c9844e6e572c8568cfa80",
+    "apps/ml/data/processed/metropt2022.parquet": "5f8fac70a983e1efe42243566200774d06f310b9387643b38bbe34f677174c92",
     "apps/ml/models/random_forest_v2.onnx": "924fb26f4da4adbdbe7daaafaed87e69f0d4216eb528e44c70aea56129d8ee0d",
     "apps/ml/models/mlp_v1.onnx": "f317e80e2dab87a100d348737643c1373fc2afcf91f48055259400552e3c16d6",
     "apps/ml/models/tcn_v1.onnx": "fb409848e4bcab11fb45c8651f1211f7044493721585b64650c4e71cbb43fe9e",
@@ -38,6 +60,12 @@
     "apps/ml/models/eval_robustness.json": "52ccfdc49d630843084f26a6e955729b6baeaa56a6d6f50496290ad4835d02d2",
     "apps/ml/models/edge_quantization.json": "b3fd6678e6e97577fc7e353a66ea4ca27139977d66c1ce45f2d48bae42f6f8f9",
     "apps/ml/models/eval_twin.json": "fc3ecd762aaa367991ea8db2885de62cfb97889463e309028e35b5f114b623d9",
+    "apps/ml/models/metropt2022_ingest.json": "349903d12b10f9a456287abdc972aa102f00485e7f93e1034da89d3da418f153",
+    "apps/ml/models/eval_cross_dataset.json": "bbff0ec2d040d32c4de4cd6563595fc8f4b0d715670a60928c21b40616694b9b",
+    "apps/ml/models/eval_cross_dataset_harmonized.json": "ebabc090f6f05ea02ff0335833993b7b8bc75cd37bcc64c7fcdb2c3f9b03a194",
+    "apps/ml/models/eval_energy.json": "68c1defbcb8236d247948900d19a6fc1ce1bf34299eee491d19951544f8cbc23",
+    "apps/backend/benchmarks/timescale_benchmark.json": "74eb0a08e84b35f5f0e41786608a9f86124eb1d2ee27415697d787d78e548750",
+    "apps/mcp-server/embedder_latency_benchmark.json": "22b654612296e62edf7cc3b046507f4b0cddfbe5dc4465b17aeadad69c80ac56",
     "apps/backend/benchmarks/rag_cases_v1.json": "aaa3592a19bb71624c2d270bda53491dce12e00f80d83f4f64206d19c9bbb61b",
     "apps/backend/benchmarks/out/rag_retrieval.json": "d274bb47e7dc1d23656b36956b8ebe34c1c76c44e35a363c1aa0660b741d9b50",
     "apps/backend/benchmarks/out/rag_retrieval_mpnet.json": "fec6b5a770f3c4204588c3dc6964b4cd02d435d47731d75295feef835fcc87b5",

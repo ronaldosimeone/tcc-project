@@ -14,7 +14,7 @@ O PredictIQ cobre todos os seis:
 
 | Bloco ISO 13374 | Função | Implementação | Status |
 |---|---|---|---|
-| DA — Data Acquisition | Coletar sinais dos sensores | Replay do MetroPT-3 e frota simulada; **ingestão MQTT** com broker autenticado e validação de tópico/payload (`mqtt_telemetry.py`) | 🟡 Transporte industrial real (MQTT); a fonte ainda é simulada. OPC UA não implementado |
+| DA — Data Acquisition | Coletar sinais dos sensores | Replay do MetroPT-3 e frota simulada; **ingestão MQTT** com broker autenticado e validação de tópico/payload (`mqtt_telemetry.py`) e **OPC UA** por *subscription* (`opcua_telemetry.py`) | 🟡 Os dois transportes industriais existem; a fonte ainda é simulada |
 | DM — Data Manipulation | Filtrar, extrair *features* | `MetroPTPreprocessor` (80 features: janelas, *lags*, razões entre sensores), `feature_buffer.py` | ✅ |
 | SD — State Detection | Normal × anormal | Classificadores ONNX (RF, XGB, DL), autoencoder não supervisionado; persistência k = 6 (RN-03, `event_metrics.persistent_alarms`) | ✅ |
 | HA — Health Assessment | Diagnóstico: qual componente e por quê | SHAP agregado por sensor (`apps/ml/src/explainability.py`) + vocabulário de componente (`sensor_semantics.py`) | 🟡 Explicação validada offline (fidelidade H5); ainda não exibida por alerta no dashboard |
@@ -49,7 +49,7 @@ Mapeamento para os sete *Foundational Requirements* (IEC 62443-3-3):
 | FR1 — IAC | Identificação e autenticação | Contas locais, senha argon2id, JWT com expiração (`src/core/security.py`); a API recusa subir com auth ligada e segredo placeholder | 🟡 Sem MFA nem integração com diretório (LDAP/SSO) |
 | FR2 — UC | Controle de uso | RBAC hierárquico operador < técnico < engenheiro < admin (`require_role`) | ✅ |
 | FR3 — SI | Integridade do sistema | `pip-audit` sem HIGH/CRITICAL (RNF-62), OWASP ZAP, hash SHA-256 dos manuais indexados (RF-20), imagens Docker | ✅ |
-| FR4 — DC | Confidencialidade dos dados | Sanitização de logs (`log_sanitizer.py`, token do bot nunca logado); segredos só via `.env` | 🟡 Sem TLS interno entre containers |
+| FR4 — DC | Confidencialidade dos dados | Sanitização de logs (`log_sanitizer.py`, token do bot nunca logado); segredos só via `.env` | 🟡 Sem TLS interno entre containers; OPC UA em `NoSecurity` (falta Basic256Sha256 + certificados) |
 | FR5 — RDF | Fluxo de dados restrito | Rede Docker interna; MCP e Ollama não expostos; Nginx como único ponto de entrada | ✅ |
 | FR6 — TRE | Resposta oportuna a eventos | Logs estruturados, Prometheus, **tracing OpenTelemetry → Jaeger**, alertas Telegram/e-mail, **trilha de auditoria imutável** (hash encadeado + trigger) | 🟡 Sem SIEM |
 | FR7 — RA | Disponibilidade de recursos | Rate limiting (slowapi), fila Celery para notificações, *health checks* | ✅ |
@@ -64,5 +64,5 @@ o RNF-84.
 
 1. **FR1 — MFA / SSO** (RBAC e auditoria já implementados; `AUTH_ENABLED` precisa ser ligado em produção).
 2. **PA — prognóstico**: o RUL não é confiável com os dados disponíveis. Precisa de dataset *run-to-failure* (RF-33).
-3. **DA — aquisição de campo**: o transporte MQTT existe; falta um gateway real (ou OPC UA) em vez do simulador.
+3. **DA — aquisição de campo**: MQTT e OPC UA existem; falta ligar um gateway real e ativar a criptografia do OPC UA.
 4. **AG — corpus**: falta manual de *fault finding* do equipamento real.

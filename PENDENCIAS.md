@@ -409,3 +409,18 @@ Pendências que dependem de algo externo:
 - **`apps/ml/tests/test_xgboost.py`**: 12 falhas antigas (pickle de versão
   anterior do XGBoost).
 
+
+## Terceira rodada (MetroPT 2022, energia, OPC UA, TimescaleDB)
+
+- **Storybook quebrado (pré-existente)**: `@storybook/react-docgen` falha com
+  Babel 8 ao ler `.storybook/preview.tsx` ("loadPartialConfig expects a
+  callback"). A UI do voto RF-38 foi verificada no app real com uma API stub.
+- **OPC UA sem criptografia**: o gateway simulado roda em `NoSecurity`.
+  Produção exige SecurityPolicy Basic256Sha256 + certificados (IEC 62443 FR4).
+- **TimescaleDB no compose**: a imagem passa a ser `timescale/timescaledb:2.17.2-pg15`
+  (mesmo major 15 do volume existente). Rodar `alembic upgrade head` depois de
+  subir; sem a extensão a migração 0009 não faz nada.
+- **bge-m3 cumpre o RNF-45** (p95 112 ms), mas a troca do embedder segue
+  decisão do autor (+1,5 GB de RAM, reindexação de ~4 min).
+- **Tabela 2 do MetroPT 2022**: a contagem de exemplos da falha 3 (281.800) é
+  maior que o número de segundos do intervalo; usamos início/fim, não a contagem.
