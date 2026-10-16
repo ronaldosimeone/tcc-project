@@ -55,7 +55,11 @@ run_ml() {
     --tag harmonized --only shift cross pooled                  # harmonização semântica
   "$ML_PY" -m src.evaluate_twin_cross --seeds 3                 # twin + fusão entre períodos
   "$ML_PY" -m src.evaluate_production_on_2022                   # modelo implantado no 2022
-  "$ML_PY" -m src.train_challenger                              # xgboost_v3 (challenger)
+  # Retreino sem vazamento de TODOS os modelos servíveis + matrizes de confusão
+  "$ML_PY" -m src.evaluate_all_models                           # 8 modelos, 6 folds fora do tempo
+  "$ML_PY" -m src.train_leakfree --model random_forest --role champion
+  "$ML_PY" -m src.train_leakfree --model xgboost --role challenger
+  "$ML_PY" -m src.train_deep_leakfree                           # mlp/tcn/bilstm/patchtst/autoencoder _v2
   # RNF-83 — rode com a máquina ociosa (mede energia da máquina inteira).
   "$ML_PY" -m src.evaluate_energy
 }
@@ -106,6 +110,7 @@ run_docs() {
   cd "$ROOT/apps/ml"
   "$ML_PY" -m src.render_temporal_report
   "$ML_PY" -m src.render_cross_dataset_report
+  "$ML_PY" -m src.render_all_models_report
   cd "$ROOT/apps/backend"
   "$BE_PY" benchmarks/benchmark_rag.py report
   "$BE_PY" benchmarks/benchmark_redteam.py report
