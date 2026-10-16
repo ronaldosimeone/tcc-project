@@ -14,6 +14,29 @@ services:
     networks:
       - app-network
 
+  # Broker MQTT da telemetria industrial (TELEMETRY_TRANSPORT=mqtt): a frota
+  # simulada publica em predictiq/fleet/<ativo>/telemetry e o backend assina
+  # predictiq/fleet/+/telemetry (src/services/mqtt_telemetry.py). Só rede
+  # interna; usuário/senha vêm do .env (MQTT_USERNAME / MQTT_PASSWORD).
+  mqtt:
+    image: eclipse-mosquitto:2.0.20
+    container_name: mqtt
+    env_file:
+      - .env
+    entrypoint: ["/bin/sh", "/config-src/entrypoint.sh"]
+    volumes:
+      - ./infra/mosquitto:/config-src:ro
+      - mqtt_data:/mosquitto/data
+    expose:
+      - "1883"
+    healthcheck:
+      test: ["CMD-SHELL", "mosquitto_sub -h localhost -u \"$${MQTT_USERNAME}\" -P \"$${MQTT_PASSWORD}\" -t '$$SYS/broker/uptime' -C 1 -W 3 >/dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
+
   api:
     build: ./apps/backend
     container_name: api
@@ -256,6 +279,21 @@ services:
     networks:
       - app-network
 
+  # Tracing distribuído (OTEL_ENABLED=true no `api`): recebe OTLP/HTTP em
+  # 4318 e mostra cada requisição como trace API → MCP → Ollama, com os
+  # atributos de domínio do RAG (RN-04, RNF-84). UI em http://localhost:16686.
+  jaeger:
+    image: jaegertracing/all-in-one:1.62.0
+    container_name: jaeger
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    expose:
+      - "4318"
+    ports:
+      - "16686:16686"
+    networks:
+      - app-network
+
   # RNF-76/77 — observabilidade de produção. Auditado antes desta task:
   # nenhum Prometheus/Grafana/exportador de métricas existia no projeto
   # (grep no repo inteiro) — os 3 serviços abaixo são inteiramente novos,
@@ -337,6 +375,7 @@ networks:
     driver: bridge
 
 volumes:
+  mqtt_data:
   mlflow_artifacts:
   frontend_node_modules:
   postgres_data:

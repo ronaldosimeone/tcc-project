@@ -81,3 +81,14 @@ apps/backend/celerybeat-schedule*
 # gerados localmente em apps/backend/.audit_tmp/zap/. Artefatos de scan,
 # não código — nunca versionar (ver README "Segurança" §17.3).
 apps/backend/.audit_tmp/
+# RNF-80 — modelos INT8 gerados por apps/ml/src/edge_quantization.py (reproduzíveis)
+apps/ml/models/*_int8.onnx
+# Saídas brutas dos benchmarks RAG/red-team: contêm o texto integral de
+# trechos de manuais de terceiros (mesmo motivo de apps/mcp-server/data/ fora
+# do repo). Regeneradas por scripts/reproduce-thesis.sh; os números ficam em
+# docs/rag_benchmark.md e os hashes em docs/reproducibility_manifest.json.
+apps/backend/benchmarks/out/
+
+# Cache do Hypothesis (testes de propriedade) e runs locais do MLflow
+.hypothesis/
+apps/ml/mlruns/
