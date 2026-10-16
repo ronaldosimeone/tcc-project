@@ -53,6 +53,9 @@ run_ml() {
   "$ML_PY" -m src.evaluate_cross_dataset --seeds 3              # RF-33, RN-05 com 6 folds
   "$ML_PY" -m src.evaluate_cross_dataset --seeds 3 --drop-sensors Reservoirs Oil_level \
     --tag harmonized --only shift cross pooled                  # harmonização semântica
+  "$ML_PY" -m src.evaluate_twin_cross --seeds 3                 # twin + fusão entre períodos
+  "$ML_PY" -m src.evaluate_production_on_2022                   # modelo implantado no 2022
+  "$ML_PY" -m src.train_challenger                              # xgboost_v3 (challenger)
   # RNF-83 — rode com a máquina ociosa (mede energia da máquina inteira).
   "$ML_PY" -m src.evaluate_energy
 }
