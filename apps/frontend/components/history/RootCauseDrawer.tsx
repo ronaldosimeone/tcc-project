@@ -1,25 +1,18 @@
 "use client";
 
 /**
- * Root Cause Drawer — análise preditiva de um evento histórico.
+ * Root Cause Drawer — análise de um evento real (`GET /v1/events/{id}`).
  *
- * Abre da direita ao clicar numa linha do EventLogTable. Conteúdo:
- *  1. Cabeçalho — descrição do alerta + badge de severidade.
- *  2. Janela de 2h antes da falha — mini LineChart (Recharts) com
- *     ReferenceLine tracejada marcando o threshold de probabilidade.
- *  3. Causa raiz da IA — bloco indigo com o diagnóstico mockado.
- *  4. Timeline — 3 pontos: Alerta inicial → Degradação crítica → Falha.
- *
- * O drawer é totalmente client-side (puro Tailwind, sem libs extra além
- * do Sheet já existente). Recebe `event` (ou null) e `onClose`.
- *
- * RNF-58: decomposto em `components/history/root-cause-drawer/*` —
- * constants (severidade/mocks/timeline), PredictiveTooltip,
- * PredictiveWindowChart, AiDiagnosis, IncidentTimeline. Nenhuma mudança de
- * comportamento/DOM.
+ *  1. Cabeçalho — descrição + severidade.
+ *  2. P(falha) real de 2 h antes a 30 min depois do episódio.
+ *  3. Contribuição por sensor congelada na abertura (oclusão, RF-32).
+ *  4. Plano sugerido pelo assistente (RAG via MCP) + fundamentação (RN-04).
+ *  5. Linha do tempo real (episódio + OS).
+ *  6. Ordem de serviço — o veredito do técnico vira rótulo (ground truth).
  */
 
 import { AlertOctagon } from "lucide-react";
+
 import { Badge } from "@/components/ui/badge";
 import {
   Sheet,
@@ -28,25 +21,85 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useEventDetail } from "@/hooks/use-event-detail";
+import type {
+  FailureEventDetailDto,
+  WorkOrderUpdatePayload,
+} from "@/lib/history-api";
+import type { HistoryEvent } from "@/lib/history-types";
 import { cn } from "@/lib/utils";
-import type { HistoryEvent } from "@/lib/history-mock";
 import { AiDiagnosis } from "./root-cause-drawer/ai-diagnosis";
 import { SEVERITY_BADGE, SEVERITY_ICON } from "./root-cause-drawer/constants";
 import { IncidentTimeline } from "./root-cause-drawer/incident-timeline";
 import { PredictiveWindowChart } from "./root-cause-drawer/predictive-window-chart";
+import { SensorContributions } from "./root-cause-drawer/sensor-contributions";
+import { WorkOrderPanel } from "./root-cause-drawer/work-order-panel";
 
-// ── Componente principal ────────────────────────────────────────────────────
+interface DrawerBodyProps {
+  detail: FailureEventDetailDto;
+  busy: boolean;
+  actionError: string | null;
+  onOpen: () => void;
+  onChange: (payload: WorkOrderUpdatePayload) => void;
+}
+
+const DrawerBody = ({
+  detail,
+  busy,
+  actionError,
+  onOpen,
+  onChange,
+}: DrawerBodyProps) => (
+  <>
+    <PredictiveWindowChart
+      points={detail.sensor_window}
+      startedAt={detail.event.started_at}
+      threshold={detail.event.threshold}
+    />
+    {detail.root_cause && detail.root_cause.sensor_contributions.length > 0 ? (
+      <SensorContributions
+        contributions={detail.root_cause.sensor_contributions}
+      />
+    ) : (
+      <p className="text-xs text-muted-foreground">
+        Sem snapshot de causa raiz (evento reconstruído do histórico ou buffer
+        ainda frio).
+      </p>
+    )}
+    <AiDiagnosis rootCause={detail.root_cause} />
+    <IncidentTimeline event={detail.event} workOrder={detail.work_order} />
+    <WorkOrderPanel
+      workOrder={detail.work_order}
+      busy={busy}
+      error={actionError}
+      onOpen={onOpen}
+      onChange={onChange}
+    />
+  </>
+);
 
 interface RootCauseDrawerProps {
   event: HistoryEvent | null;
   onClose: () => void;
+  /** Chamado após ações da OS, para recarregar KPIs/tabela. */
+  onChanged?: () => void;
 }
 
 export default function RootCauseDrawer({
   event,
   onClose,
+  onChanged,
 }: RootCauseDrawerProps) {
-  const open = event !== null;
+  const {
+    detail,
+    loading,
+    error,
+    actionError,
+    busy,
+    openWorkOrder,
+    changeWorkOrder,
+  } = useEventDetail(event?.eventId ?? null, onChanged);
   const SevIcon = event ? SEVERITY_ICON[event.severity] : AlertOctagon;
   const badgeCls = event
     ? SEVERITY_BADGE[event.severity]
@@ -54,20 +107,20 @@ export default function RootCauseDrawer({
 
   return (
     <Sheet
-      open={open}
+      open={event !== null}
       onOpenChange={(o) => {
         if (!o) onClose();
       }}
     >
       <SheetContent
         side="right"
-        className="w-full overflow-y-auto sm:max-w-[500px]"
+        className="w-full overflow-y-auto sm:max-w-[520px]"
       >
         <SheetHeader>
           <div className="flex items-start justify-between gap-3 pr-8">
             <div className="min-w-0 flex-1">
               <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                Análise de Causa Raiz
+                Análise de Causa Raiz · {event?.id ?? ""}
               </p>
               <SheetTitle className="mt-0.5 text-base font-semibold text-foreground">
                 {event?.description ?? "—"}
@@ -90,9 +143,27 @@ export default function RootCauseDrawer({
 
         {event && (
           <div className="flex flex-col gap-5 px-6 pb-6">
-            <PredictiveWindowChart />
-            <AiDiagnosis />
-            <IncidentTimeline />
+            {loading && !detail && (
+              <div className="space-y-3" aria-busy="true">
+                <Skeleton className="h-40" />
+                <Skeleton className="h-24" />
+                <Skeleton className="h-32" />
+              </div>
+            )}
+            {error && (
+              <p role="alert" className="text-sm text-destructive">
+                {error}
+              </p>
+            )}
+            {detail && (
+              <DrawerBody
+                detail={detail}
+                busy={busy}
+                actionError={actionError}
+                onOpen={() => void openWorkOrder()}
+                onChange={(payload) => void changeWorkOrder(payload)}
+              />
+            )}
           </div>
         )}
       </SheetContent>

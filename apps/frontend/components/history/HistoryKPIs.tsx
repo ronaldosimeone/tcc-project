@@ -1,25 +1,28 @@
 "use client";
 
 /**
- * KPIs operacionais derivados do array `events` recebido via prop —
- * fonte única (logs filtrados) com a EventLogTable. Sem mocks internos.
+ * KPIs de confiabilidade — calculados pelo backend (`GET /v1/kpis`) a partir
+ * de dados ROTULADOS: só eventos cuja OS foi fechada como falha confirmada
+ * entram em MTBF/MTTR/disponibilidade; falsos alarmes entram na precisão e
+ * na taxa semanal. OEE não é exibido: exige contagens de produção que um
+ * compressor não registra (o backend devolve `oee = null` com a justificativa).
  *
- * Métricas:
- *   - MTTR  : duração média dos eventos CRÍTICO (proxy para tempo de
- *             recuperação a partir de uma falha).
- *   - Top   : equipamento com maior número de ocorrências no recorte.
- *   - Down  : downtime acumulado = soma das durações de CRÍTICO + ALERTA.
+ * "Ativo mais crítico" é derivado dos eventos filtrados (mesma fonte da tabela).
  */
 
 import { useMemo, type ComponentType } from "react";
-import { Activity, AlertTriangle, Clock } from "lucide-react";
+import {
+  Activity,
+  AlertTriangle,
+  Clock,
+  Gauge,
+  ShieldCheck,
+  Timer,
+} from "lucide-react";
 
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  formatMinutes,
-  parseDurationMinutes,
-  type HistoryEvent,
-} from "@/lib/history-mock";
+import type { KpiReportDto } from "@/lib/history-api";
+import { formatHours, type HistoryEvent } from "@/lib/history-types";
 import { cn } from "@/lib/utils";
 
 interface KpiTileProps {
@@ -68,74 +71,103 @@ function KpiTile({
   );
 }
 
+const pct = (v: number | null): string =>
+  v === null ? "—" : `${(v * 100).toFixed(1)}%`;
+
+const topEquipment = (
+  events: HistoryEvent[],
+): { equipment: string; share: number } => {
+  const count = new Map<string, number>();
+  for (const e of events)
+    count.set(e.equipment, (count.get(e.equipment) ?? 0) + 1);
+  let equipment = "—";
+  let n = 0;
+  for (const [eq, c] of count.entries()) {
+    if (c > n) {
+      n = c;
+      equipment = eq;
+    }
+  }
+  return {
+    equipment,
+    share: events.length > 0 ? Math.round((n / events.length) * 100) : 0,
+  };
+};
+
+const reliabilityTiles = (k: KpiReportDto | null): KpiTileProps[] => {
+  const labelled = k ? k.confirmed_failures + k.false_alarms : 0;
+  return [
+    {
+      title: "MTBF",
+      value: formatHours(k?.mtbf_hours ?? null),
+      subtitle: `${
+        k?.confirmed_failures ?? 0
+      } falhas confirmadas em ${formatHours(
+        k?.observed_hours ?? null,
+      )} observadas`,
+      icon: Timer,
+      iconTone: "ok",
+    },
+    {
+      title: "MTTR",
+      value: formatHours(k?.mttr_hours ?? null),
+      subtitle: "Média das OS fechadas de falhas confirmadas",
+      icon: Clock,
+      iconTone: "neutral",
+    },
+    {
+      title: "Disponibilidade",
+      value: pct(k?.availability ?? null),
+      subtitle: "MTBF / (MTBF + MTTR)",
+      icon: Gauge,
+      iconTone: "ok",
+    },
+    {
+      title: "Precisão dos alarmes",
+      value: pct(k?.alarm_precision ?? null),
+      subtitle:
+        labelled > 0
+          ? `${labelled} eventos rotulados · ${
+              k?.unlabeled_events ?? 0
+            } sem rótulo`
+          : "Nenhuma OS fechada com veredito ainda",
+      icon: ShieldCheck,
+      iconTone: "neutral",
+    },
+    {
+      title: "Falsos alarmes / semana",
+      value: k ? k.false_alarms_per_week.toFixed(2) : "—",
+      subtitle: `${k?.false_alarms ?? 0} confirmados pelo técnico`,
+      icon: Activity,
+      iconTone: "warn",
+    },
+  ];
+};
+
 interface HistoryKPIsProps {
   events: HistoryEvent[];
+  kpis: KpiReportDto | null;
 }
 
-export default function HistoryKPIs({ events }: HistoryKPIsProps) {
-  const stats = useMemo(() => {
-    // ── MTTR: média das durações dos eventos CRÍTICO ──
-    const criticalDurations = events
-      .filter((e) => e.severity === "CRÍTICO")
-      .map((e) => parseDurationMinutes(e.duration));
-    const mttrMin =
-      criticalDurations.length > 0
-        ? criticalDurations.reduce((a, b) => a + b, 0) /
-          criticalDurations.length
-        : 0;
-
-    // ── Ativo mais crítico: equipamento com mais ocorrências (qualquer sev) ──
-    const eqCount = new Map<string, number>();
-    for (const e of events) {
-      eqCount.set(e.equipment, (eqCount.get(e.equipment) ?? 0) + 1);
-    }
-    let topEquipment = "—";
-    let topCount = 0;
-    for (const [eq, c] of eqCount.entries()) {
-      if (c > topCount) {
-        topCount = c;
-        topEquipment = eq;
-      }
-    }
-    const topPct =
-      events.length > 0 ? Math.round((topCount / events.length) * 100) : 0;
-
-    // ── Downtime: soma das durações de CRÍTICO + ALERTA ──
-    const downtimeMin = events
-      .filter((e) => e.severity === "CRÍTICO" || e.severity === "ALERTA")
-      .reduce((sum, e) => sum + parseDurationMinutes(e.duration), 0);
-
-    return { mttrMin, topEquipment, topPct, downtimeMin };
-  }, [events]);
+export default function HistoryKPIs({ events, kpis }: HistoryKPIsProps) {
+  const top = useMemo(() => topEquipment(events), [events]);
+  const tiles = useMemo(() => reliabilityTiles(kpis), [kpis]);
 
   return (
-    <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+    <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
+      {tiles.map((t) => (
+        <KpiTile key={t.title} {...t} />
+      ))}
       <KpiTile
-        title="Tempo Médio de Recuperação (MTTR)"
-        value={stats.mttrMin > 0 ? formatMinutes(stats.mttrMin) : "—"}
-        subtitle={`Média de ${
-          events.filter((e) => e.severity === "CRÍTICO").length
-        } eventos críticos`}
-        icon={Clock}
-        iconTone="neutral"
-      />
-      <KpiTile
-        title="Ativo mais Crítico"
-        value={stats.topEquipment}
+        title="Ativo mais crítico"
+        value={top.equipment}
         subtitle={
-          stats.topPct > 0
-            ? `Concentra ${stats.topPct}% das ocorrências`
+          top.share > 0
+            ? `Concentra ${top.share}% dos episódios`
             : "Sem eventos no recorte"
         }
         icon={AlertTriangle}
         iconTone="danger"
-      />
-      <KpiTile
-        title="Total de Downtime"
-        value={stats.downtimeMin > 0 ? formatMinutes(stats.downtimeMin) : "—"}
-        subtitle="Crítico + Alerta no recorte filtrado"
-        icon={Activity}
-        iconTone="warn"
       />
     </div>
   );

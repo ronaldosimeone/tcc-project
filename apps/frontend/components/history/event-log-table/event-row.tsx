@@ -2,7 +2,7 @@
 
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import type { HistoryEvent } from "@/lib/history-mock";
+import type { HistoryEvent } from "@/lib/history-types";
 import { EVENT_TYPE_CONFIG, SEVERITY_CONFIG } from "./constants";
 import { formatTimestamp } from "./helpers";
 

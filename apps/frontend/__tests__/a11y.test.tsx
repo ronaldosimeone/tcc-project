@@ -15,7 +15,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { axe } from "jest-axe";
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import FleetDashboard from "@/components/dashboard/FleetDashboard";
 import FleetHealthTable from "@/components/dashboard/FleetHealthTable";
@@ -27,6 +27,10 @@ import {
   ConnectionBanner,
 } from "@/components/alert-toast-queue";
 import HistoryDashboard from "@/components/history/HistoryDashboard";
+import {
+  installHistoryApiMock,
+  uninstallHistoryApiMock,
+} from "./fixtures/history-api-mock";
 import type { WsAlert } from "@/hooks/use-alert-websocket";
 
 type AxeResults = Awaited<ReturnType<typeof axe>>;
@@ -237,11 +241,15 @@ describe("a11y — AlertToastQueue / ConnectionBanner", () => {
   });
 });
 
-// ── HistoryDashboard (100% mock, sem rede — tabela, filtros, gráficos, drawer) ─
+// ── HistoryDashboard (API de histórico simulada — tabela, filtros, gráficos, drawer) ─
 
 describe("a11y — HistoryDashboard", () => {
+  beforeEach(installHistoryApiMock);
+  afterEach(uninstallHistoryApiMock);
+
   it("não tem violações axe Critical/Serious no estado inicial", async () => {
     const { container } = render(<HistoryDashboard />);
+    await screen.findByText("MTBF");
     const results = await axe(container);
     logViolations("HistoryDashboard (inicial)", results);
     expect(criticalOrSerious(results)).toEqual([]);
@@ -251,12 +259,13 @@ describe("a11y — HistoryDashboard", () => {
     const user = userEvent.setup();
     render(<HistoryDashboard />);
 
-    const openButtons = screen.getAllByRole("button", {
+    const openButtons = await screen.findAllByRole("button", {
       name: /ver detalhes do evento/i,
     });
     await user.click(openButtons[0]);
 
-    await screen.findByText("Análise de Causa Raiz");
+    await screen.findByText(/Análise de Causa Raiz/);
+    await screen.findByText("Linha do tempo do incidente");
     const results = await axe(document.body);
     logViolations("HistoryDashboard (drawer aberto)", results);
     expect(criticalOrSerious(results)).toEqual([]);
@@ -314,11 +323,14 @@ describe("teclado — FleetHealthTable (seleção de linha)", () => {
 });
 
 describe("teclado — EventLogTable (abrir detalhes do evento)", () => {
+  beforeEach(installHistoryApiMock);
+  afterEach(uninstallHistoryApiMock);
+
   it("Tab alcança o botão de timestamp da 1ª linha e Enter abre o drawer", async () => {
     const user = userEvent.setup();
     render(<HistoryDashboard />);
 
-    const [firstOpenButton] = screen.getAllByRole("button", {
+    const [firstOpenButton] = await screen.findAllByRole("button", {
       name: /ver detalhes do evento/i,
     });
     firstOpenButton.focus();
@@ -326,13 +338,13 @@ describe("teclado — EventLogTable (abrir detalhes do evento)", () => {
 
     await user.keyboard("{Enter}");
     expect(
-      await screen.findByText("Análise de Causa Raiz"),
+      await screen.findByText(/Análise de Causa Raiz/),
     ).toBeInTheDocument();
 
-    const closeButton = screen.getByRole("button", { name: /fechar/i });
+    const closeButton = screen.getByRole("button", { name: /^fechar$/i });
     closeButton.focus();
     await user.keyboard("{Enter}");
-    expect(screen.queryByText("Análise de Causa Raiz")).not.toBeInTheDocument();
+    expect(screen.queryByText(/Análise de Causa Raiz/)).not.toBeInTheDocument();
   });
 });
 
@@ -365,9 +377,13 @@ describe("teclado — SimulationPanel (Sheet/dialog)", () => {
 });
 
 describe("teclado — EventLogTable pagination", () => {
+  beforeEach(installHistoryApiMock);
+  afterEach(uninstallHistoryApiMock);
+
   it("botão 'Página 2' é alcançável via Tab e ativável via Enter", async () => {
     const user = userEvent.setup();
     render(<HistoryDashboard />);
+    await screen.findByText("MTBF");
 
     const page2 = screen.getByRole("button", { name: "Página 2" });
     page2.focus();

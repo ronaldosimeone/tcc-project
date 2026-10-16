@@ -7,7 +7,7 @@ import {
   ClipboardCheck,
   Zap,
 } from "lucide-react";
-import type { EventType, Severity } from "@/lib/history-mock";
+import type { EventType, Severity } from "@/lib/history-types";
 
 export const PAGE_SIZE = 10;
 

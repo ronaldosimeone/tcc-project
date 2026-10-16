@@ -1,6 +1,6 @@
 // ── Bucketização diária — RNF-58: extraído de AlertFrequencyChart ───────────
 
-import type { HistoryEvent } from "@/lib/history-mock";
+import type { HistoryEvent } from "@/lib/history-types";
 
 // Literais slate — evita tokens hsl(var(--...)) que renderizam transparente
 // pelo problema conhecido de mistura oklch/hsl no tema.

@@ -143,20 +143,34 @@ describe("AlertFrequencyChart CustomTooltip", () => {
 
 describe("RootCauseDrawer PredictiveTooltip", () => {
   it("não renderiza nada quando inativo", () => {
-    const { container } = render(<PredictiveTooltip active={false} />);
+    const { container } = render(
+      <PredictiveTooltip active={false} threshold={0.65} />,
+    );
     expect(container).toBeEmptyDOMElement();
   });
 
   it("mostra a probabilidade em % com estilo de alerta abaixo do threshold crítico", () => {
     render(
-      <PredictiveTooltip active label="-20min" payload={[{ value: 0.42 }]} />,
+      <PredictiveTooltip
+        active
+        label="-20min"
+        payload={[{ value: 0.42 }]}
+        threshold={0.65}
+      />,
     );
     expect(screen.getByText("-20min")).toBeInTheDocument();
     expect(screen.getByText("42.0% prob.")).toBeInTheDocument();
   });
 
   it("mostra a probabilidade em % no estilo crítico acima do threshold (0.65)", () => {
-    render(<PredictiveTooltip active label="0" payload={[{ value: 0.91 }]} />);
+    render(
+      <PredictiveTooltip
+        active
+        label="0"
+        payload={[{ value: 0.91 }]}
+        threshold={0.65}
+      />,
+    );
     expect(screen.getByText("91.0% prob.")).toBeInTheDocument();
   });
 });

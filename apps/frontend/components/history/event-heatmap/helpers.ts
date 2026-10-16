@@ -1,6 +1,6 @@
 // ── Configuração dos eixos + helpers — RNF-58: extraído de EventHeatmap ─────
 
-import type { HistoryEvent } from "@/lib/history-mock";
+import type { HistoryEvent } from "@/lib/history-types";
 
 export const SHIFTS = ["00h", "06h", "12h", "18h"] as const;
 export const DAYS = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"] as const;

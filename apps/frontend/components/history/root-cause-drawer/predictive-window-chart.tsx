@@ -1,7 +1,7 @@
-// ── Janela preditiva (2h antes da falha) — RNF-58: extraído de
-// RootCauseDrawer ─────────────────────────────────────────────────────────
+// ── Janela real de P(falha) em torno do evento (−2 h … +30 min) ───────────────
 
-import { useMemo } from "react";
+import { memo, useMemo } from "react";
+import dayjs from "dayjs";
 import {
   Area,
   AreaChart,
@@ -11,36 +11,89 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { CRITICAL_THRESHOLD, PREDICTIVE_WINDOW } from "./constants";
+
+import type { SensorPoint } from "@/lib/history-api";
 import { PredictiveTooltip } from "./predictive-tooltip";
 
-export function PredictiveWindowChart() {
-  // Memoizado para evitar re-mount do Recharts a cada hover.
-  const chartData = useMemo(() => [...PREDICTIVE_WINDOW], []);
+interface PredictiveWindowChartProps {
+  points: SensorPoint[];
+  startedAt: string;
+  threshold: number;
+}
+
+/** Rótulo relativo ao início do episódio: segundos em janelas curtas
+ * (episódios recentes, < 10 min de dados), minutos/horas nas longas. */
+const relativeLabel = (
+  ts: string,
+  startedAt: string,
+  shortSpan: boolean,
+): string => {
+  const seconds = dayjs(ts).diff(dayjs(startedAt), "second");
+  if (seconds === 0) return "0";
+  const sign = seconds < 0 ? "-" : "+";
+  const abs = Math.abs(seconds);
+  if (shortSpan) {
+    return abs >= 60
+      ? `${sign}${Math.floor(abs / 60)}m${String(abs % 60).padStart(2, "0")}s`
+      : `${sign}${abs}s`;
+  }
+  const minutes = Math.round(abs / 60);
+  return minutes >= 60
+    ? `${sign}${Math.floor(minutes / 60)}h${String(minutes % 60).padStart(
+        2,
+        "0",
+      )}`
+    : `${sign}${minutes}min`;
+};
+
+export const PredictiveWindowChart = memo(function PredictiveWindowChart({
+  points,
+  startedAt,
+  threshold,
+}: PredictiveWindowChartProps) {
+  const chartData = useMemo(() => {
+    const span =
+      points.length > 1
+        ? dayjs(points[points.length - 1].timestamp).diff(
+            dayjs(points[0].timestamp),
+            "second",
+          )
+        : 0;
+    const shortSpan = span < 600;
+    return points.map((p) => ({
+      t: relativeLabel(p.timestamp, startedAt, shortSpan),
+      p: p.failure_probability,
+    }));
+  }, [points, startedAt]);
+
+  if (chartData.length === 0) {
+    return (
+      <section className="rounded-lg border border-dashed border-border p-4 text-xs text-muted-foreground">
+        Nenhuma leitura armazenada na janela deste evento.
+      </section>
+    );
+  }
 
   return (
     <section>
       <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-        Janela preditiva · 2 horas antes da falha
+        Probabilidade de falha · 2 h antes até 30 min depois (leituras reais)
       </p>
       <div className="rounded-lg border border-border bg-card p-3">
-        {/* Alternativa textual ao gráfico (RNF-66 §12) — série estática (não
-            é stream ao vivo), então uma tabela completa é viável sem gerar
-            ruído de leitor de tela. */}
         <table className="sr-only">
           <caption>
-            Probabilidade de falha ao longo da janela preditiva de 2 horas
-            (limiar crítico: {Math.round(CRITICAL_THRESHOLD * 100)}%)
+            Probabilidade de falha registrada ao redor do evento (limiar{" "}
+            {Math.round(threshold * 100)}%)
           </caption>
           <thead>
             <tr>
-              <th scope="col">Tempo antes da falha</th>
+              <th scope="col">Tempo relativo ao início</th>
               <th scope="col">Probabilidade</th>
             </tr>
           </thead>
           <tbody>
-            {chartData.map((point) => (
-              <tr key={point.t}>
+            {chartData.map((point, i) => (
+              <tr key={`${point.t}-${i}`}>
                 <th scope="row">{point.t}</th>
                 <td>{Math.round(point.p * 100)}%</td>
               </tr>
@@ -52,7 +105,7 @@ export function PredictiveWindowChart() {
             <AreaChart
               accessibilityLayer={false}
               data={chartData}
-              margin={{ top: 8, right: 8, bottom: 0, left: -16 }}
+              margin={{ top: 8, right: 8, bottom: 0, left: 0 }}
             >
               <defs>
                 <linearGradient
@@ -62,44 +115,52 @@ export function PredictiveWindowChart() {
                   x2="0"
                   y2="1"
                 >
-                  <stop offset="0%" stopColor="#f43f5e" stopOpacity={0.35} />
-                  <stop offset="100%" stopColor="#f43f5e" stopOpacity={0} />
+                  <stop
+                    offset="0%"
+                    stopColor="var(--destructive)"
+                    stopOpacity={0.35}
+                  />
+                  <stop
+                    offset="100%"
+                    stopColor="var(--destructive)"
+                    stopOpacity={0}
+                  />
                 </linearGradient>
               </defs>
               <XAxis
                 dataKey="t"
-                stroke="#94a3b8"
+                stroke="var(--muted-foreground)"
                 fontSize={10}
                 tickLine={false}
                 axisLine={false}
-                interval={1}
+                minTickGap={24}
               />
               <YAxis
-                stroke="#94a3b8"
+                stroke="var(--muted-foreground)"
                 fontSize={10}
                 tickLine={false}
                 axisLine={false}
                 domain={[0, 1]}
                 tickFormatter={(v: number) => `${Math.round(v * 100)}%`}
-                width={32}
+                width={40}
               />
-              <Tooltip content={<PredictiveTooltip />} />
+              <Tooltip content={<PredictiveTooltip threshold={threshold} />} />
               <ReferenceLine
-                y={CRITICAL_THRESHOLD}
-                stroke="#ef4444"
+                y={threshold}
+                stroke="var(--destructive)"
                 strokeDasharray="4 3"
                 strokeWidth={1.5}
                 label={{
-                  value: "CRÍTICO 65%",
+                  value: `LIMIAR ${Math.round(threshold * 100)}%`,
                   position: "insideTopRight",
                   fontSize: 9,
-                  fill: "#ef4444",
+                  fill: "var(--destructive)",
                 }}
               />
               <Area
                 type="monotone"
                 dataKey="p"
-                stroke="#f43f5e"
+                stroke="var(--destructive)"
                 strokeWidth={2}
                 fill="url(#drawer-prob-grad)"
                 isAnimationActive={false}
@@ -110,4 +171,4 @@ export function PredictiveWindowChart() {
       </div>
     </section>
   );
-}
+});

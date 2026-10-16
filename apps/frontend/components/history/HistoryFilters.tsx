@@ -3,15 +3,7 @@
 import { Search, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import type { Severity } from "@/lib/history-mock";
-
-const EQUIPMENTS = [
-  "APU-Trem-042",
-  "APU-Trem-015",
-  "APU-Trem-023",
-  "APU-Trem-031",
-  "APU-Trem-055",
-];
+import type { Severity } from "@/lib/history-types";
 
 const PERIODS = [
   { label: "Últimos 7 dias", value: "7" },
@@ -37,11 +29,14 @@ export const DEFAULT_FILTERS: FilterState = {
 interface HistoryFiltersProps {
   filters: FilterState;
   onChange: (filters: FilterState) => void;
+  /** Ativos presentes nos eventos carregados (vêm da API, não de lista fixa). */
+  equipments: string[];
 }
 
 export default function HistoryFilters({
   filters,
   onChange,
+  equipments,
 }: HistoryFiltersProps) {
   const selectBase = cn(
     "h-9 cursor-pointer appearance-none rounded-md border border-border bg-card",
@@ -111,7 +106,6 @@ export default function HistoryFilters({
           <option value="all">Todas as severidades</option>
           <option value="CRÍTICO">Crítico</option>
           <option value="ALERTA">Alerta</option>
-          <option value="NORMAL">Normal</option>
         </select>
         <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
           ▾
@@ -129,7 +123,7 @@ export default function HistoryFilters({
           <option value="all" className="font-sans">
             Todos os equipamentos
           </option>
-          {EQUIPMENTS.map((eq) => (
+          {equipments.map((eq) => (
             <option key={eq} value={eq}>
               {eq}
             </option>

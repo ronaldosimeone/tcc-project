@@ -18,7 +18,7 @@ import {
 } from "recharts";
 import { TrendingUp } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { HistoryEvent } from "@/lib/history-mock";
+import type { HistoryEvent } from "@/lib/history-types";
 import {
   AXIS_TICK,
   bucketEventsByDay,

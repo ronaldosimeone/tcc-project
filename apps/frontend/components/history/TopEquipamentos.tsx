@@ -21,7 +21,7 @@ import { useMemo } from "react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import type { HistoryEvent } from "@/lib/history-mock";
+import type { HistoryEvent } from "@/lib/history-types";
 
 type Tone = "red" | "amber" | "emerald" | "slate";
 
@@ -30,15 +30,6 @@ interface RankedRow {
   count: number;
   tone: Tone;
 }
-
-/** Frota canónica do TCC — garante que todos os ativos apareçam mesmo zerados. */
-const FLEET_ROSTER: ReadonlyArray<string> = [
-  "APU-Trem-015",
-  "APU-Trem-023",
-  "APU-Trem-031",
-  "APU-Trem-042",
-  "APU-Trem-055",
-];
 
 const BAR_BG: Record<Tone, string> = {
   red: "bg-red-500",
@@ -54,14 +45,17 @@ const TEXT_TONE: Record<Tone, string> = {
   slate: "text-muted-foreground/70",
 };
 
-function rankEquipments(events: HistoryEvent[]): RankedRow[] {
+function rankEquipments(
+  events: HistoryEvent[],
+  roster: ReadonlyArray<string>,
+): RankedRow[] {
   // Agrega contagens + flags de severidade por equipamento.
   const acc = new Map<
     string,
     { count: number; hasCritical: boolean; hasAlert: boolean }
   >();
-  // Seed com o roster canónico — assegura ativos zerados na lista final.
-  for (const id of FLEET_ROSTER) {
+  // Seed com a frota cadastrada (GET /v1/assets) — ativos sem eventos aparecem zerados.
+  for (const id of roster) {
     acc.set(id, { count: 0, hasCritical: false, hasAlert: false });
   }
   for (const e of events) {
@@ -100,10 +94,15 @@ function rankEquipments(events: HistoryEvent[]): RankedRow[] {
 
 interface TopEquipamentosProps {
   events: HistoryEvent[];
+  /** Frota cadastrada (ids de GET /v1/assets). */
+  roster: string[];
 }
 
-export default function TopEquipamentos({ events }: TopEquipamentosProps) {
-  const rows = useMemo(() => rankEquipments(events), [events]);
+export default function TopEquipamentos({
+  events,
+  roster,
+}: TopEquipamentosProps) {
+  const rows = useMemo(() => rankEquipments(events, roster), [events, roster]);
   const maxCount = rows[0]?.count ?? 0;
 
   return (

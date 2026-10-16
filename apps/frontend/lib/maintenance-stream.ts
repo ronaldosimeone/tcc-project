@@ -16,6 +16,7 @@
  *   event: error\ndata: {"message": "..."}\n\n
  */
 
+import { apiFetch } from "@/lib/auth";
 import {
   resolveBaseUrl,
   type ManualReference,
@@ -130,7 +131,7 @@ export async function* streamMaintenanceSuggestion(
 
   let response: Response;
   try {
-    response = await fetch(`${baseUrl}/v1/maintenance/suggest/stream`, {
+    response = await apiFetch(`${baseUrl}/v1/maintenance/suggest/stream`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),

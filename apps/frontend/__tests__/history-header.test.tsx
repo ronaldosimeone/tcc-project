@@ -23,21 +23,21 @@ describe("HistoryHeader", () => {
   });
 
   it("mostra a contagem total quando não há filtro ativo", () => {
-    render(<HistoryHeader totalEvents={50} filteredCount={50} />);
+    render(<HistoryHeader totalEvents={50} filteredCount={50} events={[]} />);
     expect(screen.getByText(/50/).closest("p")?.textContent).toContain(
       "50 eventos registrados",
     );
   });
 
   it("mostra 'X de Y eventos' quando o filtro reduz a contagem", () => {
-    render(<HistoryHeader totalEvents={50} filteredCount={7} />);
+    render(<HistoryHeader totalEvents={50} filteredCount={7} events={[]} />);
     expect(screen.getByText(/7/).closest("p")?.textContent).toContain(
       "7 de 50 eventos",
     );
   });
 
   it("exporta CSV: cria o blob, dispara o download e volta ao estado normal após o timeout", () => {
-    render(<HistoryHeader totalEvents={50} filteredCount={50} />);
+    render(<HistoryHeader totalEvents={50} filteredCount={50} events={[]} />);
 
     const csvButton = screen.getByRole("button", { name: /exportar csv/i });
     fireEvent.click(csvButton);
@@ -60,7 +60,7 @@ describe("HistoryHeader", () => {
   });
 
   it("exporta PDF: chama window.print() após o timeout e reabilita os botões", () => {
-    render(<HistoryHeader totalEvents={50} filteredCount={50} />);
+    render(<HistoryHeader totalEvents={50} filteredCount={50} events={[]} />);
 
     const pdfButton = screen.getByRole("button", { name: /exportar pdf/i });
     fireEvent.click(pdfButton);
@@ -78,7 +78,7 @@ describe("HistoryHeader", () => {
   });
 
   it("ignora cliques repetidos enquanto uma exportação já está em andamento", () => {
-    render(<HistoryHeader totalEvents={50} filteredCount={50} />);
+    render(<HistoryHeader totalEvents={50} filteredCount={50} events={[]} />);
 
     const csvButton = screen.getByRole("button", { name: /exportar csv/i });
     const pdfButton = screen.getByRole("button", { name: /exportar pdf/i });

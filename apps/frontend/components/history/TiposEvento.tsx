@@ -9,7 +9,7 @@ import { useMemo } from "react";
 import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { EventType, HistoryEvent } from "@/lib/history-mock";
+import type { EventType, HistoryEvent } from "@/lib/history-types";
 
 interface Slice {
   name: string;

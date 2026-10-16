@@ -4,6 +4,8 @@
  * RNF-13: URL lida exclusivamente de NEXT_PUBLIC_API_URL.
  */
 
+import { apiFetch } from "@/lib/auth";
+
 // ── Tipos exportados ─────────────────────────────────────────────────────────
 
 export interface PredictPayload {
@@ -165,7 +167,7 @@ export async function predict(
 ): Promise<PredictResponse> {
   const baseUrl = resolveBaseUrl();
 
-  const response = await fetch(`${baseUrl}/predict/`, {
+  const response = await apiFetch(`${baseUrl}/predict/`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -188,7 +190,7 @@ export async function predict(
 export async function listModels(): Promise<ModelsListResponse> {
   const baseUrl = resolveBaseUrl();
 
-  const response = await fetch(`${baseUrl}/models`, {
+  const response = await apiFetch(`${baseUrl}/models`, {
     method: "GET",
     cache: "no-store",
   });
@@ -208,7 +210,7 @@ export async function swapActiveModel(
 ): Promise<SwapModelResponse> {
   const baseUrl = resolveBaseUrl();
 
-  const response = await fetch(`${baseUrl}/models/active`, {
+  const response = await apiFetch(`${baseUrl}/models/active`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ model_name: modelName }),
@@ -230,7 +232,7 @@ export async function swapActiveModel(
 export async function getSimulatorMode(): Promise<SimulatorModeResponse> {
   const baseUrl = resolveBaseUrl();
 
-  const response = await fetch(`${baseUrl}/simulator/mode`, {
+  const response = await apiFetch(`${baseUrl}/simulator/mode`, {
     method: "GET",
     cache: "no-store",
   });
@@ -250,7 +252,7 @@ export async function setSimulatorMode(
 ): Promise<SimulatorModeResponse> {
   const baseUrl = resolveBaseUrl();
 
-  const response = await fetch(`${baseUrl}/simulator/mode`, {
+  const response = await apiFetch(`${baseUrl}/simulator/mode`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ mode }),
@@ -272,7 +274,7 @@ export async function setSimulatorMode(
 export async function getAlertSettings(): Promise<AlertSettingsResponse> {
   const baseUrl = resolveBaseUrl();
 
-  const response = await fetch(`${baseUrl}/v1/settings/alerts`, {
+  const response = await apiFetch(`${baseUrl}/v1/settings/alerts`, {
     method: "GET",
     cache: "no-store",
   });
@@ -292,7 +294,7 @@ export async function updateAlertSettings(
 ): Promise<AlertSettingsResponse> {
   const baseUrl = resolveBaseUrl();
 
-  const response = await fetch(`${baseUrl}/v1/settings/alerts`, {
+  const response = await apiFetch(`${baseUrl}/v1/settings/alerts`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -312,7 +314,7 @@ export async function updateAlertSettings(
 export async function testAlertNotification(): Promise<NotificationTestResponse> {
   const baseUrl = resolveBaseUrl();
 
-  const response = await fetch(`${baseUrl}/v1/settings/alerts/test`, {
+  const response = await apiFetch(`${baseUrl}/v1/settings/alerts/test`, {
     method: "POST",
     cache: "no-store",
   });
@@ -334,7 +336,7 @@ export async function testAlertNotification(): Promise<NotificationTestResponse>
 export async function getErrorRateStatus(): Promise<ErrorRateResponse> {
   const baseUrl = resolveBaseUrl();
 
-  const response = await fetch(`${baseUrl}/observability/error-rate`, {
+  const response = await apiFetch(`${baseUrl}/observability/error-rate`, {
     method: "GET",
     cache: "no-store",
   });

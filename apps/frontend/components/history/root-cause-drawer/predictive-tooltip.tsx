@@ -1,35 +1,34 @@
-// ── Tooltip do mini-chart preditivo — RNF-58: extraído de RootCauseDrawer ───
+// ── Tooltip do mini-chart preditivo ─────────────────────────────────────────
 
 import { cn } from "@/lib/utils";
-import { CRITICAL_THRESHOLD } from "./constants";
 
 interface ChartTooltipProps {
   active?: boolean;
   label?: string;
   payload?: Array<{ value: number }>;
+  threshold: number;
 }
 
 export function PredictiveTooltip({
   active,
   label,
   payload,
+  threshold,
 }: ChartTooltipProps) {
   if (!active || !payload?.length) return null;
   const value = payload[0].value;
-  const pct = (value * 100).toFixed(1);
-  const isCritical = value >= CRITICAL_THRESHOLD;
   return (
-    <div className="rounded-md bg-slate-900 px-2 py-1.5 text-white shadow-lg">
-      <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground/70">
+    <div className="rounded-md border border-border bg-popover px-2 py-1.5 text-popover-foreground shadow-lg">
+      <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
         {label}
       </p>
       <p
         className={cn(
           "text-xs font-bold tabular-nums",
-          isCritical ? "text-red-400" : "text-amber-300",
+          value >= threshold ? "text-destructive" : "text-foreground",
         )}
       >
-        {pct}% prob.
+        {(value * 100).toFixed(1)}% prob.
       </p>
     </div>
   );

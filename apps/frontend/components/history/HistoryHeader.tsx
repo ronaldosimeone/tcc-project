@@ -3,16 +3,18 @@
 import { useState } from "react";
 import { Clock, FileDown, FileText, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { HISTORY_EVENTS } from "@/lib/history-mock";
+import type { HistoryEvent } from "@/lib/history-types";
 
 type ExportState = "csv" | "pdf" | null;
 
 interface HistoryHeaderProps {
   totalEvents: number;
   filteredCount: number;
+  /** Eventos exportados no CSV (os do recorte filtrado). */
+  events: HistoryEvent[];
 }
 
-function downloadCsv() {
+function downloadCsv(events: HistoryEvent[]) {
   const SEP = ";";
   const BOM = "﻿"; // UTF-8 BOM — garante leitura correta no Excel
 
@@ -23,10 +25,23 @@ function downloadCsv() {
     "Tipo",
     "Severidade",
     "Duração",
+    "Pico P(falha)",
+    "Status OS",
+    "Causa confirmada",
   ].join(SEP);
 
-  const rows = HISTORY_EVENTS.map((e) =>
-    [e.id, e.timestamp, e.equipment, e.type, e.severity, e.duration].join(SEP),
+  const rows = events.map((e) =>
+    [
+      e.id,
+      e.timestamp,
+      e.equipment,
+      e.type,
+      e.severity,
+      e.duration,
+      e.peakProbability.toFixed(3),
+      e.workOrderStatus ?? "",
+      e.isFalseAlarm === true ? "falso alarme" : e.confirmedCause ?? "",
+    ].join(SEP),
   );
 
   const csv = BOM + [header, ...rows].join("\n");
@@ -45,6 +60,7 @@ function downloadCsv() {
 export default function HistoryHeader({
   totalEvents,
   filteredCount,
+  events,
 }: HistoryHeaderProps) {
   const [isExporting, setIsExporting] = useState<ExportState>(null);
   const isFiltered = filteredCount !== totalEvents;
@@ -54,7 +70,7 @@ export default function HistoryHeader({
     setIsExporting(type);
 
     if (type === "csv") {
-      downloadCsv();
+      downloadCsv(events);
       setTimeout(() => setIsExporting(null), 1500);
     } else {
       setTimeout(() => {
@@ -75,7 +91,7 @@ export default function HistoryHeader({
         </h1>
         <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
           <Clock className="h-3.5 w-3.5 shrink-0" />
-          Últimos 30 dias ·{" "}
+          Período selecionado ·{" "}
           {isFiltered ? (
             <>
               <span className="font-semibold text-foreground">

@@ -27,7 +27,7 @@ import { useMemo } from "react";
 import { Activity } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { HistoryEvent } from "@/lib/history-mock";
+import type { HistoryEvent } from "@/lib/history-types";
 import { buildMatrix, DAYS, SHIFTS } from "./event-heatmap/helpers";
 import { RowGroup } from "./event-heatmap/row-group";
 import { Swatch } from "./event-heatmap/swatch";

@@ -10,7 +10,7 @@
 
 import { useCallback, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { HistoryEvent } from "@/lib/history-mock";
+import type { HistoryEvent } from "@/lib/history-types";
 import {
   PAGE_SIZE,
   SEVERITY_ORDER,
