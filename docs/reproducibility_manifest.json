@@ -1,0 +1,49 @@
+{
+  "generated_at": "2026-10-15T13:49:10.804785+00:00",
+  "git": {
+    "commit": "6c9aa75e30ffd4614f04d413ce916d683a82d1f7",
+    "dirty": true
+  },
+  "platform": {
+    "python": "3.12.10",
+    "system": "Windows-11-10.0.26200-SP0",
+    "machine": "AMD64"
+  },
+  "packages_ml_env": {
+    "numpy": "1.26.4",
+    "pandas": "2.3.3",
+    "scikit-learn": "1.8.0",
+    "xgboost": "3.2.0",
+    "scipy": "1.17.1",
+    "shap": "0.49.1",
+    "onnxruntime": "1.18.1",
+    "torch": "2.3.1",
+    "lightning": null
+  },
+  "docker_mcp_server_image": "sha256:eccbd7cfca92b3d9798a8828d014e5ae89ad591fdc2940274d90e609201bc857",
+  "ollama_models": null,
+  "inputs_sha256": {
+    "apps/ml/data/processed/metropt3.parquet": "483f0bfd3874e58484f21299d36d9f0b53cf6c96552c9844e6e572c8568cfa80",
+    "apps/ml/models/random_forest_v2.onnx": "924fb26f4da4adbdbe7daaafaed87e69f0d4216eb528e44c70aea56129d8ee0d",
+    "apps/ml/models/mlp_v1.onnx": "f317e80e2dab87a100d348737643c1373fc2afcf91f48055259400552e3c16d6",
+    "apps/ml/models/tcn_v1.onnx": "fb409848e4bcab11fb45c8651f1211f7044493721585b64650c4e71cbb43fe9e",
+    "apps/mcp-server/data/manuals/wap5-scheduled-maintenance-vol-b.pdf": "e58b9cc1e7b4a6e1a152247ac861266b1b07a0d96ade7b4b4470e48be257c93f",
+    "apps/mcp-server/data/manuals/wap5-scheduled-maintenance-vol-b.meta.json": "10dc284e1606656a1e1c114ba57bb453b3d7fddd35084f57fca3254d82626b43"
+  },
+  "results_sha256": {
+    "apps/ml/models/eval_temporal.json": "53153b9a675ffca53a3217e38083cf36eb9d7528d0dc3418ff64c507651ac09c",
+    "apps/ml/models/explain_events.json": "59792e149afc20064f9f285bd0b259dc2b1416bca76b5c3437e181a4f2bf9424",
+    "apps/ml/models/eval_rul.json": "ffa228712fe3e01b96cb0a002c379c34583f25b0afaab97b889c0190c4f32e09",
+    "apps/ml/models/eval_drift.json": "f64abfe900f08133a424d6b0b2c7d7f77c7e5888d210df489805c1333ccd7ec1",
+    "apps/ml/models/eval_robustness.json": "52ccfdc49d630843084f26a6e955729b6baeaa56a6d6f50496290ad4835d02d2",
+    "apps/ml/models/edge_quantization.json": "b3fd6678e6e97577fc7e353a66ea4ca27139977d66c1ce45f2d48bae42f6f8f9",
+    "apps/ml/models/eval_twin.json": "fc3ecd762aaa367991ea8db2885de62cfb97889463e309028e35b5f114b623d9",
+    "apps/backend/benchmarks/rag_cases_v1.json": "aaa3592a19bb71624c2d270bda53491dce12e00f80d83f4f64206d19c9bbb61b",
+    "apps/backend/benchmarks/out/rag_retrieval.json": "d274bb47e7dc1d23656b36956b8ebe34c1c76c44e35a363c1aa0660b741d9b50",
+    "apps/backend/benchmarks/out/rag_retrieval_mpnet.json": "fec6b5a770f3c4204588c3dc6964b4cd02d435d47731d75295feef835fcc87b5",
+    "apps/backend/benchmarks/out/rag_retrieval_bge-m3.json": "b046b1038eab659d1a1c846472f512fd35e53cc6e09d566736857c26d10503a4",
+    "apps/backend/benchmarks/out/rag_generation.json": "606852882d9d369cce08a3b7f734691a14259125890d5644f67939dc727e6de0",
+    "apps/backend/benchmarks/out/redteam_results_no_guard.json": "80119a887d02311835d662991b331668fde7ddd952bd2023100ebeaaf6978dc2",
+    "apps/backend/benchmarks/out/redteam_results.json": "2e83bd335fb807f3bac951f07a3b7384beef9cdb2b3be46bc2b1dcad328aca89"
+  }
+}

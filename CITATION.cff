@@ -1,0 +1,31 @@
+cff-version: 1.2.0
+message: "Se usar este software ou os resultados, cite-o conforme abaixo."
+title: "PredictIQ: manutenção preditiva com avaliação temporal por evento, digital twin, XAI e RAG fundamentado via MCP"
+type: software
+authors:
+  - given-names: Raphael
+    family-names: Okuyama
+  - given-names: Ronaldo
+    family-names: Simeone
+repository-code: "https://github.com/ronaldosimeone/tcc-project"
+keywords:
+  - predictive maintenance
+  - MetroPT
+  - temporal validation
+  - event-based evaluation
+  - digital twin
+  - explainable AI
+  - retrieval-augmented generation
+  - Model Context Protocol
+# PENDENTE (decisão dos autores): licença do código, ORCIDs e afiliações.
+# O DOI é atribuído pelo Zenodo na primeira release publicada.
+references:
+  - type: dataset
+    title: "MetroPT-3 Dataset"
+    authors:
+      - family-names: Veloso
+        given-names: Bruno
+    publisher:
+      name: "UCI Machine Learning Repository"
+    url: "https://archive.ics.uci.edu/dataset/791/metropt+3+dataset"
+    license: CC-BY-4.0

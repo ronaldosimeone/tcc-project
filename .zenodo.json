@@ -1,0 +1,27 @@
+{
+  "title": "PredictIQ: manutenção preditiva com avaliação temporal por evento, digital twin, XAI e RAG fundamentado via MCP",
+  "upload_type": "software",
+  "description": "Código, configurações, resultados (JSON) e scripts que regeneram todas as tabelas e figuras da tese (bash scripts/reproduce-thesis.sh). Dados: MetroPT-3 (UCI, CC BY 4.0). Manuais de terceiros e saídas brutas do RAG não são redistribuídos; os hashes estão em docs/reproducibility_manifest.json.",
+  "creators": [
+    { "name": "Okuyama, Raphael" },
+    { "name": "Simeone, Ronaldo" }
+  ],
+  "keywords": [
+    "predictive maintenance",
+    "MetroPT",
+    "temporal validation",
+    "event-based evaluation",
+    "digital twin",
+    "explainable AI",
+    "retrieval-augmented generation",
+    "Model Context Protocol"
+  ],
+  "related_identifiers": [
+    {
+      "identifier": "https://archive.ics.uci.edu/dataset/791/metropt+3+dataset",
+      "relation": "isDerivedFrom",
+      "resource_type": "dataset"
+    }
+  ],
+  "notes": "PENDENTE antes da primeira release: definir a licença do código (campo 'license'), ORCIDs e afiliações dos autores."
+}

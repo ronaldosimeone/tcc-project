@@ -367,3 +367,45 @@ corrigido na origem).
 - `apps/backend/tests/test_simulator.py` falha na coleta com `IndexError: 3`
   — confirmado via `git stash` como pré-existente antes da RF-22. Contorno
   usado em toda validação: `pytest --ignore=tests/test_simulator.py`.
+
+## Requisitos de nível doutorado (RF-28…RF-38, RNF-78…RNF-85)
+
+Status completo em [`docs/pesquisa/requisitos-doutorado.md`](docs/pesquisa/requisitos-doutorado.md).
+Pendências que dependem de algo externo:
+
+- **RF-36 — validação dos 54 casos do benchmark RAG por especialista.** Os
+  casos (`apps/backend/benchmarks/rag_cases_v1.json`) são rascunho escrito a
+  partir do texto do manual; cada caso tem `validation: "pending"`.
+- **RF-33 / RNF-83 — downloads não autorizados ainda**: datasets C-MAPSS /
+  MetroPT-2 e o pacote CodeCarbon.
+- **Embedder de produção**: o benchmark indica trocar `paraphrase-multilingual-
+  MiniLM-L12-v2` por `BAAI/bge-m3` (cobertura do trecho correto 2,4 % → 28,6 %
+  em τ = 0,6). Pendente: re-medir o RNF-45 com o modelo maior e decidir.
+- **RF-32 / RF-38 — UI**: explicação por sensor e voto do técnico existem no
+  backend/ML, mas ainda não aparecem no dashboard.
+- **Testes de integração com Redis** (`test_predict_cache_integration.py`,
+  `TestInferenceCacheRealRedis`) exigem Redis em `localhost:6379`; sem ele
+  aparecem como ERROR na suíte local (não é regressão).
+
+## Segunda rodada (histórico real, RBAC, MQTT, twin, registry, tracing)
+
+- **Licença, ORCIDs e afiliações** antes da release no Zenodo (`CITATION.cff`,
+  `.zenodo.json`). Decisão dos autores (Raphael e Ronaldo).
+- **Estudo com usuários** depende de aprovação do CEP (Plataforma Brasil).
+- **`AUTH_ENABLED=false` por padrão** para não quebrar o ambiente atual. Em
+  produção: `AUTH_ENABLED=true`, `JWT_SECRET` forte e `BOOTSTRAP_ADMIN_*`
+  para o primeiro admin.
+- **Limiar de evento × modelo ativo**: em modo FAILURE o RF v2 chega a
+  P ≈ 0,52, abaixo de `EVENT_THRESHOLD=0.7` (e do alerta WebSocket, também
+  0,7). O RF v2 usa 0,66 internamente. Avaliar alinhar `EVENT_THRESHOLD` ao
+  limiar calibrado do modelo ativo.
+- **Fusão física + ML** foi avaliada offline (`evaluate_twin.py`) mas ainda
+  não roda no backend; o twin precisaria ser servido junto do modelo.
+- **aiomqtt no Windows** exige o event loop *selector*; em Docker/Linux
+  (alvo de deploy) funciona sem ajuste.
+- **Testes de frontend**: 23 falhas antigas em 5 arquivos
+  (connection-resilience, loading-states, sensor-monitor,
+  use-alert-websocket, use-sensor-data), já presentes no HEAD de origem.
+- **`apps/ml/tests/test_xgboost.py`**: 12 falhas antigas (pickle de versão
+  anterior do XGBoost).
+

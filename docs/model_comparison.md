@@ -5,6 +5,25 @@
 **Split**: 80 % train / 20 % test — stratified, `random_state=42`  
 **Feature set**: 34 engineered features (12 raw sensors + 1 pressure delta + 21 rolling stats)
 
+> **⚠️ Superseded metrics (RF-28).** Every number in the hold-out tables
+> below was obtained with a *stratified random* 80/20 split over 10-second
+> samples whose features are rolling windows — consecutive, almost identical
+> rows land in train and test, which leaks the test set (AUC = 1.0000).
+> The leakage-free results (purged walk-forward by failure event, 5 seeds,
+> event-level metrics, 95 % CIs) are in
+> [`temporal_evaluation.md`](temporal_evaluation.md). Summary:
+>
+> | Model | PR-AUC legacy split | PR-AUC walk-forward [95 % CI] | Failures detected (walk-forward) | Expected cost RN-02 |
+> |---|---|---|---|---|
+> | Random Forest | 0.9992 | 0.587 [0.428, 0.739] | 10/15 runs | 50.4 [30.7, 70.3] |
+> | XGBoost | 0.9996 | 0.400 [0.283, 0.543] | 10/15 runs | 35.3 [14.9, 61.1] |
+> | Logistic Regression | 0.7090 | 0.331 [0.155, 0.547] | 10/15 runs | 38.0 [17.8, 63.2] |
+>
+> No model meets RN-01 (lead time ≥ 2 h; observed +0.1 h to +0.9 h), and with
+> 3 walk-forward folds no comparison can reach significance (RN-05 gate:
+> minimum achievable p = 0.125). The original text is kept below for the
+> history of the project.
+
 ---
 
 ## Metrics on Hold-Out Test Set
@@ -57,6 +76,15 @@ This eliminates SMOTE's memory overhead (~1 GB extra RAM) and halves training ti
 ---
 
 ## Model Selection (RF-10)
+
+**Selection criterion (revised).** Point-wise F1 is no longer the criterion.
+A model is selected by the **expected operational cost** of its alarm policy
+(RN-02: missed failure = 100 × false alarm, threshold chosen on training
+out-of-fold scores, never on the test fold), with event lead time (RN-01) as
+tie-breaker, and it replaces the incumbent only if it passes the statistical
+promotion gate (RN-05, `apps/ml/src/promotion_gate.py`: one-sided paired
+Wilcoxon over temporal folds, p < 0.05). On MetroPT-3 the gate currently
+refuses every swap as underpowered — the honest outcome with 3 folds.
 
 Both models are loaded by the same `ModelService` class — no backend code change required.
 

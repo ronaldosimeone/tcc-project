@@ -24,6 +24,15 @@
 16. [Troubleshooting](#16-troubleshooting)
 17. [Autores & Licença](#17-autores--licença)
 
+> **Avaliação científica (nível de tese).** Protocolo temporal sem vazamento,
+> métricas por evento, incerteza, XAI, RAG avaliado (benchmark + ablação +
+> red-team) e todos os requisitos novos (RF-28…RF-38, RNF-78…RNF-85,
+> RN-01…RN-05), com o status e a evidência de cada um, estão em
+> [`docs/pesquisa/requisitos-doutorado.md`](docs/pesquisa/requisitos-doutorado.md).
+> Resultados: [`docs/temporal_evaluation.md`](docs/temporal_evaluation.md),
+> [`docs/rag_benchmark.md`](docs/rag_benchmark.md). Reproduzir tudo:
+> `bash scripts/reproduce-thesis.sh`.
+
 ---
 
 ## 1. Visão Geral
