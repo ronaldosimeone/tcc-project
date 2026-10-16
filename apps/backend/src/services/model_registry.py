@@ -57,6 +57,7 @@ KNOWN_MODELS: frozenset[str] = frozenset(
         "mlp",
         "random_forest_v2",
         "xgboost_v2",
+        "xgboost_v3",
         # Sequential DL models (TCN, BiLSTM, PatchTST) — RNF-24 extension
         "tcn",
         "bilstm",
@@ -77,6 +78,7 @@ _ARTEFACT_PATHS: dict[str, Path] = {
     "mlp": settings.mlp_onnx_path,
     "random_forest_v2": settings.rf_v2_onnx_path,
     "xgboost_v2": settings.xgboost_v2_onnx_path,
+    "xgboost_v3": settings.xgboost_v3_onnx_path,
     # Sequential DL models — RNF-24 extension. O .onnx é o sinal canônico de
     # prontidão; o scaler por canal é sempre produzido junto por
     # train_sequential.py e rastreado via _MODEL_CARDS.

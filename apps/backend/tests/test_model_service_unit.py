@@ -82,6 +82,7 @@ def test_model_cards_maps_every_model_name_to_its_exact_card_filename() -> None:
         "mlp": "mlp_v1_card.json",
         "random_forest_v2": "model_card.json",
         "xgboost_v2": "xgboost_v1_card.json",
+        "xgboost_v3": "xgboost_v3_card.json",
         "tcn": "tcn_v1_card.json",
         "bilstm": "bilstm_v1_card.json",
         "patchtst": "patchtst_v1_card.json",

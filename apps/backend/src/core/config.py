@@ -21,6 +21,8 @@ _DEFAULT_MLP_ONNX_PATH: Path = _ML_MODELS / "mlp_v1.onnx"
 _DEFAULT_MLP_SCALER_PATH: Path = _ML_MODELS / "mlp_scaler.joblib"
 _DEFAULT_RF_V2_ONNX_PATH: Path = _ML_MODELS / "random_forest_v2.onnx"
 _DEFAULT_XGB_V2_ONNX_PATH: Path = _ML_MODELS / "xgboost_v2.onnx"
+# RF-33 challenger: MetroPT-3 + MetroPT 2022, harmonised sensors (train_challenger.py).
+_DEFAULT_XGB_V3_ONNX_PATH: Path = _ML_MODELS / "xgboost_v3.onnx"
 
 # Sequential DL artefact paths — RNF-24 extension (TCN, BiLSTM, PatchTST).
 # Override via TCN_ONNX_PATH / BILSTM_ONNX_PATH / PATCHTST_ONNX_PATH env-vars.
@@ -297,8 +299,8 @@ class Settings(BaseSettings):
         alias="ACTIVE_MODEL",
         description=(
             "Active inference model: 'random_forest', 'xgboost', 'mlp', "
-            "'random_forest_v2', 'xgboost_v2', 'tcn', 'bilstm', 'patchtst', "
-            "or 'autoencoder'."
+            "'random_forest_v2', 'xgboost_v2', 'xgboost_v3', 'tcn', 'bilstm', "
+            "'patchtst', or 'autoencoder'."
         ),
     )
 
@@ -342,6 +344,15 @@ class Settings(BaseSettings):
         default=_DEFAULT_XGB_V2_ONNX_PATH,
         alias="XGBOOST_V2_ONNX_PATH",
         description="Absolute path to the XGBoost V2 .onnx artefact.",
+    )
+
+    xgboost_v3_onnx_path: Path = Field(
+        default=_DEFAULT_XGB_V3_ONNX_PATH,
+        alias="XGBOOST_V3_ONNX_PATH",
+        description=(
+            "XGBoost V3 (RF-33 challenger, trained on MetroPT-3 + MetroPT 2022 "
+            "without Reservoirs/Oil_level)."
+        ),
     )
 
     # ── Sequential DL models (TCN / BiLSTM / PatchTST) ───────────────────

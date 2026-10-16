@@ -16,6 +16,7 @@ ModelName = Literal[
     "mlp",
     "random_forest_v2",
     "xgboost_v2",
+    "xgboost_v3",
     # Sequential DL models — RNF-24 extension
     "tcn",
     "bilstm",

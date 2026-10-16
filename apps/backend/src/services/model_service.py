@@ -81,6 +81,7 @@ _MODEL_CARDS: dict[str, str] = {
     # model_card.json and train_xgboost.py writes xgboost_v1_card.json.
     "random_forest_v2": "model_card.json",
     "xgboost_v2": "xgboost_v1_card.json",
+    "xgboost_v3": "xgboost_v3_card.json",
     # Sequential DL models — RNF-24 extension
     "tcn": "tcn_v1_card.json",
     "bilstm": "bilstm_v1_card.json",
@@ -226,14 +227,14 @@ def load_model_by_name(model_name: str) -> "ModelService":
             adapter, decision_threshold=threshold, model_name=model_name
         )
 
-    if model_name in {"random_forest_v2", "xgboost_v2"}:
+    if model_name in {"random_forest_v2", "xgboost_v2", "xgboost_v3"}:
         from src.services.onnx_tree_adapter import OnnxTreeAdapter
 
-        onnx_path = (
-            settings.rf_v2_onnx_path
-            if model_name == "random_forest_v2"
-            else settings.xgboost_v2_onnx_path
-        )
+        onnx_path = {
+            "random_forest_v2": settings.rf_v2_onnx_path,
+            "xgboost_v2": settings.xgboost_v2_onnx_path,
+            "xgboost_v3": settings.xgboost_v3_onnx_path,
+        }[model_name]
         feature_names = _resolve_feature_names(model_name)
         logger.info(
             "[RF-10] Loading model '%s' | onnx=%s | features=%d",
