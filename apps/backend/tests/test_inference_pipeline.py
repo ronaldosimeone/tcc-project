@@ -188,6 +188,23 @@ def test_infer_with_history_feeds_the_model_only_the_last_engineered_row() -> No
     assert list(model_service.received_row.index) == [0]  # reset_index(drop=True)
 
 
+class _SpyWindowModelService(_SpyModelService):
+    history_rows = 60  # sequence / autoencoder adapters
+
+
+def test_infer_with_history_feeds_windowed_models_the_whole_buffer() -> None:
+    """Sequence models were trained on 60-row windows: they must receive the
+    whole engineered buffer, not one row padded into a constant window."""
+    buffer_df = pd.DataFrame({"TP2": [1.0, 2.0, 3.0]})
+    model_service = _SpyWindowModelService()
+
+    _infer_with_history(model_service, buffer_df, _FakePreprocessor())  # type: ignore[arg-type]
+
+    assert model_service.received_row is not None
+    assert model_service.received_row["TP2"].tolist() == [1.0, 2.0, 3.0]
+    assert list(model_service.received_row.index) == [0, 1, 2]
+
+
 class TestReadingToRequest:
     def test_converte_todos_os_12_campos(self) -> None:
         req = _reading_to_request(FAILURE_READING)

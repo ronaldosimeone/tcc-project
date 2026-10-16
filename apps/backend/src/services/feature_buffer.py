@@ -56,7 +56,11 @@ class SensorBuffer:
         Defaults to 15 — the longest window the V1 preprocessor uses.
     """
 
-    def __init__(self, window_size: int = 30, warmup_size: int = 15) -> None:
+    # 60 = the window the sequence models were trained on (deep_temporal.WINDOW).
+    # With 30 the sequence adapters left-padded half of every window with a
+    # copy of the oldest row — a train/serve skew. Tree features only look
+    # back 15 rows, so they are unchanged.
+    def __init__(self, window_size: int = 60, warmup_size: int = 15) -> None:
         if window_size <= 0:
             raise ValueError("window_size must be positive")
         if warmup_size <= 0 or warmup_size > window_size:
@@ -114,7 +118,7 @@ class SensorBuffer:
 
 
 # Module-level singleton — same pattern as ws_manager.manager.
-buffer: SensorBuffer = SensorBuffer(window_size=30, warmup_size=15)
+buffer: SensorBuffer = SensorBuffer(window_size=60, warmup_size=15)
 
 
 def get_sensor_buffer() -> SensorBuffer:

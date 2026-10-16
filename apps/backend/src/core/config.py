@@ -21,7 +21,7 @@ _DEFAULT_MLP_ONNX_PATH: Path = _ML_MODELS / "mlp_v1.onnx"
 _DEFAULT_MLP_SCALER_PATH: Path = _ML_MODELS / "mlp_scaler.joblib"
 _DEFAULT_RF_V2_ONNX_PATH: Path = _ML_MODELS / "random_forest_v2.onnx"
 _DEFAULT_XGB_V2_ONNX_PATH: Path = _ML_MODELS / "xgboost_v2.onnx"
-# RF-33 challenger: MetroPT-3 + MetroPT 2022, harmonised sensors (train_challenger.py).
+# RF-33 challenger: MetroPT-3 + MetroPT 2022, harmonised sensors (train_leakfree.py).
 _DEFAULT_XGB_V3_ONNX_PATH: Path = _ML_MODELS / "xgboost_v3.onnx"
 
 # Sequential DL artefact paths — RNF-24 extension (TCN, BiLSTM, PatchTST).
@@ -131,7 +131,12 @@ class Settings(BaseSettings):
     # ── Histórico / frota ────────────────────────────────────────────────
     # RN-03 aplicado online: evento abre com k amostras >= limiar e fecha
     # com k amostras abaixo; pico >= critical_at -> severidade "critico".
-    event_threshold: float = Field(default=0.7, ge=0.0, le=1.0, alias="EVENT_THRESHOLD")
+    # None (padrão) = limiar de decisão do modelo que gerou a predição (card,
+    # escolhido sem vazamento). Um valor fixo só sobrepõe para experimentos —
+    # com limiares OOF como 0,90/0,985 um 0,7 fixo abriria eventos falsos.
+    event_threshold: float | None = Field(
+        default=None, ge=0.0, le=1.0, alias="EVENT_THRESHOLD"
+    )
     event_k_open: int = Field(default=6, ge=1, alias="EVENT_K_OPEN")
     event_k_close: int = Field(default=6, ge=1, alias="EVENT_K_CLOSE")
     event_critical_at: float = Field(
@@ -295,7 +300,7 @@ class Settings(BaseSettings):
     # RF-10 — multi-model selection without redeploy.
     # Set ACTIVE_MODEL=xgboost to swap the inference engine at startup.
     active_model: str = Field(
-        default="random_forest",
+        default="random_forest_v3",
         alias="ACTIVE_MODEL",
         description=(
             "Active inference model: 'random_forest', 'xgboost', 'mlp', "

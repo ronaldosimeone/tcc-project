@@ -17,6 +17,7 @@ from fastapi import APIRouter, Depends, Path, Query, status
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.core.config import settings
 from src.core.database import get_db
 from src.core.security import Actor, require_role
 from src.schemas.history import (
@@ -31,6 +32,7 @@ from src.schemas.history import (
 )
 from src.services.audit_service import AuditService
 from src.services.failure_event_service import FailureEventService
+from src.services.model_registry import ModelRegistry, get_model_registry
 from src.services.history_service import HistoryService, resolve_window
 from src.services.shadow_service import ShadowReport, shadow_report
 
@@ -143,8 +145,11 @@ async def rebuild_events(
     asset_id: str,
     actor: Actor = Depends(require_role("admin")),
     db: AsyncSession = Depends(get_db),
+    registry: ModelRegistry = Depends(get_model_registry),
 ) -> dict[str, int]:
-    created = await FailureEventService().rebuild(db, asset_id)
+    created = await FailureEventService(threshold=settings.event_threshold).rebuild(
+        db, asset_id, await registry.active_threshold()
+    )
     await AuditService(db).record(
         actor, "events.rebuild", "asset", asset_id, {"events_created": created}
     )

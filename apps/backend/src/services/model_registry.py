@@ -58,6 +58,14 @@ KNOWN_MODELS: frozenset[str] = frozenset(
         "random_forest_v2",
         "xgboost_v2",
         "xgboost_v3",
+        # Leakage-free retrains (train_leakfree.py / train_deep_leakfree.py):
+        # artefacts and adapter described by each model card ("serving").
+        "random_forest_v3",
+        "mlp_v2",
+        "tcn_v2",
+        "bilstm_v2",
+        "patchtst_v2",
+        "autoencoder_v2",
         # Sequential DL models (TCN, BiLSTM, PatchTST) — RNF-24 extension
         "tcn",
         "bilstm",
@@ -79,6 +87,12 @@ _ARTEFACT_PATHS: dict[str, Path] = {
     "random_forest_v2": settings.rf_v2_onnx_path,
     "xgboost_v2": settings.xgboost_v2_onnx_path,
     "xgboost_v3": settings.xgboost_v3_onnx_path,
+    "random_forest_v3": settings.model_path.parent / "random_forest_v3.onnx",
+    "mlp_v2": settings.model_path.parent / "mlp_v2.onnx",
+    "tcn_v2": settings.model_path.parent / "tcn_v2.onnx",
+    "bilstm_v2": settings.model_path.parent / "bilstm_v2.onnx",
+    "patchtst_v2": settings.model_path.parent / "patchtst_v2.onnx",
+    "autoencoder_v2": settings.model_path.parent / "autoencoder_v2.onnx",
     # Sequential DL models — RNF-24 extension. O .onnx é o sinal canônico de
     # prontidão; o scaler por canal é sempre produzido junto por
     # train_sequential.py e rastreado via _MODEL_CARDS.
@@ -131,6 +145,11 @@ class ModelRegistry:
         if service is None:
             raise ModelNotAvailableError()
         return service
+
+    async def active_threshold(self) -> float | None:
+        """Decision threshold of the active model (its card), or None."""
+        service = self._service
+        return None if service is None else service.decision_threshold
 
     async def swap(self, model_name: str) -> str:
         """

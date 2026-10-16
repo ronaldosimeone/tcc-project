@@ -86,7 +86,12 @@ class OnnxMlpAdapter:
     # build `_expected_features`.
     feature_names_in_: np.ndarray = np.array(_FEATURE_NAMES, dtype=object)
 
-    def __init__(self, onnx_path: Path, scaler_path: Path) -> None:
+    def __init__(
+        self,
+        onnx_path: Path,
+        scaler_path: Path,
+        feature_names: list[str] | None = None,
+    ) -> None:
         if not onnx_path.exists():
             raise FileNotFoundError(
                 f"MLP ONNX artefact not found at {onnx_path}. "
@@ -114,6 +119,10 @@ class OnnxMlpAdapter:
         )
         self._input_name: str = self._session.get_inputs()[0].name
         self._scaler: StandardScaler = joblib.load(scaler_path)
+        # Leakage-free MLP (mlp_v2) is trained on the harmonised feature set
+        # read from its card; the legacy MLP keeps the 34 V1 features.
+        if feature_names is not None:
+            self.feature_names_in_ = np.array(feature_names, dtype=object)
 
         logger.info(
             "[RNF-24] OnnxMlpAdapter loaded | onnx=%s | scaler=%s",

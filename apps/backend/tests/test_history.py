@@ -311,3 +311,30 @@ async def test_unusable_windows_are_400_not_500(
 ) -> None:
     resp = await client.get(path, params=params)
     assert resp.status_code == 400, resp.text
+
+
+@pytest.mark.parametrize(
+    ("override", "model_threshold", "opens"),
+    [
+        (None, 0.9, False),  # the model's own threshold: 0.8 is not an alarm
+        (None, 0.5, True),
+        (0.7, 0.9, True),  # EVENT_THRESHOLD override wins
+    ],
+)
+async def test_event_threshold_follows_the_model_unless_overridden(
+    db: AsyncSession, override: float | None, model_threshold: float, opens: bool
+) -> None:
+    svc = FailureEventService(threshold=override)
+    opened = False
+    for i in range(8):
+        change = await svc.process(
+            db, ASSET, T0 + timedelta(seconds=10 * i), 0.8, "m", model_threshold
+        )
+        opened = opened or (change is not None and change.kind == "opened")
+    assert opened is opens
+    if opens:
+        event = (await db.scalars(select(FailureEvent))).first()
+        assert event is not None
+        assert event.threshold == (
+            override if override is not None else model_threshold
+        )

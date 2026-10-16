@@ -24,7 +24,7 @@ _CARD = settings.model_path.parent / "xgboost_v3_card.json"
 
 pytestmark = pytest.mark.skipif(
     not settings.xgboost_v3_onnx_path.exists() or not _CARD.exists(),
-    reason="xgboost_v3 artefact not built (python -m src.train_challenger)",
+    reason="xgboost_v3 artefact not built (python -m src.train_leakfree --model xgboost --role challenger)",
 )
 
 _SENSORS = (

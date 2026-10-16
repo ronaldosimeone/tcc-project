@@ -17,6 +17,12 @@ ModelName = Literal[
     "random_forest_v2",
     "xgboost_v2",
     "xgboost_v3",
+    "random_forest_v3",
+    "mlp_v2",
+    "tcn_v2",
+    "bilstm_v2",
+    "patchtst_v2",
+    "autoencoder_v2",
     # Sequential DL models — RNF-24 extension
     "tcn",
     "bilstm",

@@ -77,5 +77,6 @@ class AssetProcessor:
             self._registry.active_name,
             window,
             partial(_window_score, model_service, self._preprocessor),
+            getattr(model_service, "decision_threshold", None),
         )
         return result.failure_probability

@@ -65,6 +65,7 @@ class AssetTracking:
         model_name: str | None,
         window: pd.DataFrame | None,
         scorer: WindowScorer | None,
+        model_threshold: float | None = None,
     ) -> None:
         opened_id: int | None = None
         async with AsyncSessionFactory() as db:
@@ -76,6 +77,7 @@ class AssetTracking:
                     datetime.fromisoformat(result.timestamp),
                     result.failure_probability,
                     model_name,
+                    model_threshold,
                 )
                 if (
                     change

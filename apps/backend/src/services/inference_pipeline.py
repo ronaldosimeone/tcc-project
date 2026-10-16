@@ -130,10 +130,15 @@ def _infer_with_history(
     CPU-bound — empacotada num helper para que ``asyncio.to_thread`` despache
     tudo de uma vez sem ping-pong com o event loop.
 
-    A última linha do DataFrame é a leitura mais recente, e é a única que
-    contém todas as rolling/lag features completamente preenchidas.
+    Modelos tabulares recebem só a última linha (a leitura mais recente, a
+    única com todas as rolling/lag features preenchidas). Modelos de sequência
+    e o autoencoder recebem a janela inteira: antes recebiam também só a
+    última linha, e o adapter completava a janela repetindo-a — o modelo via
+    uma janela constante e nenhuma dinâmica temporal.
     """
     engineered = preprocessor.transform(buffer_df)
+    if getattr(model_service, "history_rows", 0):
+        return model_service.predict_from_features(engineered.reset_index(drop=True))
     # iloc[[-1]] (lista) preserva o tipo DataFrame; iloc[-1] (escalar)
     # devolveria uma Series e quebraria o ``X[self._expected_features]``.
     last_row: pd.DataFrame = engineered.iloc[[-1]].reset_index(drop=True)
@@ -321,6 +326,7 @@ class InferencePipelineService:
                     if window is not None
                     else None
                 ),
+                getattr(model_service, "decision_threshold", None),
             )
         else:
             await self._save_only(predict_request, result)

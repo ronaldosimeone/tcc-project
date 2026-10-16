@@ -48,10 +48,14 @@ class EventChange:
     kind: ChangeKind
 
 
+# Used only when neither EVENT_THRESHOLD nor the model's own threshold is known.
+_FALLBACK_THRESHOLD: float = 0.5
+
+
 class FailureEventService:
     def __init__(
         self,
-        threshold: float = 0.7,
+        threshold: float | None = None,
         k_open: int = 6,
         k_close: int = 6,
         critical_at: float = 0.9,
@@ -63,10 +67,15 @@ class FailureEventService:
         self._trackers: dict[str, EventTracker] = {}
         self._open_ids: dict[str, int] = {}
 
+    def effective_threshold(self, model_threshold: float | None) -> float:
+        if self.threshold is not None:
+            return self.threshold
+        return model_threshold if model_threshold is not None else _FALLBACK_THRESHOLD
+
     def _tracker(self, asset_id: str) -> EventTracker:
         if asset_id not in self._trackers:
             self._trackers[asset_id] = EventTracker(
-                self.threshold, self.k_open, self.k_close
+                self.effective_threshold(None), self.k_open, self.k_close
             )
         return self._trackers[asset_id]
 
@@ -90,12 +99,19 @@ class FailureEventService:
         ts: datetime,
         probability: float,
         model_name: str | None = None,
+        model_threshold: float | None = None,
     ) -> EventChange | None:
         """Feed one prediction. Returns the event row touched and how, if any.
-        The caller commits (and takes the RCA snapshot on ``opened``)."""
+        The caller commits (and takes the RCA snapshot on ``opened``).
+
+        Threshold: the fixed override (``EVENT_THRESHOLD``) when configured,
+        else the decision threshold of the model that scored this sample — so
+        an event is exactly a persisted model alarm (RN-03)."""
         if asset_id not in self._trackers:
             await self._close_stale(db, asset_id)
-        upd = self._tracker(asset_id).update(ts, probability)
+        tracker = self._tracker(asset_id)
+        tracker.threshold = self.effective_threshold(model_threshold)
+        upd = tracker.update(ts, probability)
 
         if upd.opened:
             event = FailureEvent(
@@ -107,7 +123,7 @@ class FailureEventService:
                 mean_probability=upd.opened.mean,
                 n_samples=upd.opened.n,
                 model_name=model_name,
-                threshold=self.threshold,
+                threshold=tracker.threshold,
             )
             db.add(event)
             await db.flush()
@@ -140,9 +156,12 @@ class FailureEventService:
             return EventChange(row, "closed")
         return EventChange(row, "extended")
 
-    async def rebuild(self, db: AsyncSession, asset_id: str) -> int:
-        """Recompute all events of ``asset_id`` from stored predictions.
-        Returns the number of events created."""
+    async def rebuild(
+        self, db: AsyncSession, asset_id: str, model_threshold: float | None = None
+    ) -> int:
+        """Recompute all events of ``asset_id`` from stored predictions, with
+        the same threshold policy as ``process`` (``model_threshold`` = the
+        active model's decision threshold). Returns the number of events."""
         has_wo = await db.scalar(
             select(func.count())
             .select_from(WorkOrder)
@@ -158,7 +177,9 @@ class FailureEventService:
         )
         await db.execute(delete(FailureEvent).where(FailureEvent.asset_id == asset_id))
 
-        tracker = EventTracker(self.threshold, self.k_open, self.k_close)
+        tracker = EventTracker(
+            self.effective_threshold(model_threshold), self.k_open, self.k_close
+        )
         result = await db.stream(
             select(Prediction.timestamp, Prediction.failure_probability)
             .where(Prediction.asset_id == asset_id)
@@ -177,7 +198,7 @@ class FailureEventService:
                     peak_probability=upd.opened.peak,
                     mean_probability=upd.opened.mean,
                     n_samples=upd.opened.n,
-                    threshold=self.threshold,
+                    threshold=tracker.threshold,
                 )
                 db.add(current)
                 created += 1

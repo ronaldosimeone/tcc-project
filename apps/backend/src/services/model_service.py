@@ -82,6 +82,12 @@ _MODEL_CARDS: dict[str, str] = {
     "random_forest_v2": "model_card.json",
     "xgboost_v2": "xgboost_v1_card.json",
     "xgboost_v3": "xgboost_v3_card.json",
+    "random_forest_v3": "random_forest_v3_card.json",
+    "mlp_v2": "mlp_v2_card.json",
+    "tcn_v2": "tcn_v2_card.json",
+    "bilstm_v2": "bilstm_v2_card.json",
+    "patchtst_v2": "patchtst_v2_card.json",
+    "autoencoder_v2": "autoencoder_v2_card.json",
     # Sequential DL models — RNF-24 extension
     "tcn": "tcn_v1_card.json",
     "bilstm": "bilstm_v1_card.json",
@@ -227,6 +233,10 @@ def load_model_by_name(model_name: str) -> "ModelService":
             adapter, decision_threshold=threshold, model_name=model_name
         )
 
+    card = _read_model_card(model_name)
+    if card is not None and isinstance(card.get("serving"), dict):
+        return _load_from_serving_card(model_name, card, threshold)
+
     if model_name in {"random_forest_v2", "xgboost_v2", "xgboost_v3"}:
         from src.services.onnx_tree_adapter import OnnxTreeAdapter
 
@@ -361,6 +371,64 @@ def _load_autoencoder_model(threshold: float) -> "ModelService":
     return ModelService(adapter, decision_threshold=threshold, model_name="autoencoder")
 
 
+def _load_from_serving_card(
+    model_name: str, card: dict[str, Any], threshold: float
+) -> "ModelService":
+    """Card-driven loading for the leakage-free retrains.
+
+    ``card["serving"]`` = {"adapter": tree|mlp|sequence|autoencoder,
+    "onnx": file, "scaler": file?, "window_size": int?, "mse_threshold": float?}
+    with files relative to the models directory. Feature/channel order comes
+    from ``card["feature_names"]``.
+    """
+    serving: dict[str, Any] = card["serving"]
+    models_dir = settings.model_path.parent
+    onnx_path = models_dir / str(serving["onnx"])
+    names = [str(n) for n in card.get("feature_names") or []]
+    kind = str(serving["adapter"])
+    logger.info(
+        "[RF-10] Loading model '%s' from card | adapter=%s | onnx=%s | inputs=%d",
+        model_name,
+        kind,
+        onnx_path.name,
+        len(names),
+    )
+    if kind == "tree":
+        from src.services.onnx_tree_adapter import OnnxTreeAdapter
+
+        adapter: Any = OnnxTreeAdapter(onnx_path=onnx_path, feature_names=names)
+    elif kind == "mlp":
+        from src.services.mlp_adapter import OnnxMlpAdapter
+
+        adapter = OnnxMlpAdapter(
+            onnx_path=onnx_path,
+            scaler_path=models_dir / str(serving["scaler"]),
+            feature_names=names,
+        )
+    elif kind == "sequence":
+        from src.services.onnx_sequence_adapter import OnnxSequenceAdapter
+
+        adapter = OnnxSequenceAdapter(
+            onnx_path=onnx_path,
+            scaler_path=models_dir / str(serving["scaler"]),
+            window_size=int(serving.get("window_size", 60)),
+            channel_names=names,
+        )
+    elif kind == "autoencoder":
+        from src.services.onnx_autoencoder_adapter import OnnxAutoencoderAdapter
+
+        adapter = OnnxAutoencoderAdapter(
+            onnx_path=onnx_path,
+            scaler_path=models_dir / str(serving["scaler"]),
+            mse_threshold=float(serving["mse_threshold"]),
+            window_size=int(serving.get("window_size", 60)),
+            channel_names=names,
+        )
+    else:
+        raise ValueError(f"Unknown serving adapter {kind!r} in {model_name} card.")
+    return ModelService(adapter, decision_threshold=threshold, model_name=model_name)
+
+
 def load_active_model() -> "ModelService":
     """
     Load whichever model is selected by ``settings.active_model`` (RF-10).
@@ -416,6 +484,14 @@ class ModelService:
     def decision_threshold(self) -> float:
         """Active classification cut-off."""
         return self._threshold
+
+    @property
+    def history_rows(self) -> int:
+        """Rows of history the model consumes per prediction.
+
+        Sequence and autoencoder adapters read a window (``_window_size``);
+        tabular models read only the most recent engineered row (0)."""
+        return int(getattr(self._model, "_window_size", 0) or 0)
 
     def predict(self, request: PredictRequest) -> PredictResponse:
         """

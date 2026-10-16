@@ -19,13 +19,13 @@ from src.services.feature_buffer import SensorBuffer
 # ---------------------------------------------------------------------------
 # Defaults do construtor + singleton de módulo (RNF-64) — nenhum teste
 # pré-existente construía `SensorBuffer()` sem sobrescrever window_size/
-# warmup_size, então os defaults reais (30/15) nunca eram verificados.
+# warmup_size, então os defaults reais (60/15) nunca eram verificados.
 # ---------------------------------------------------------------------------
 
 
-def test_constructor_defaults_are_window_30_warmup_15() -> None:
+def test_constructor_defaults_are_window_60_warmup_15() -> None:
     buf = SensorBuffer()
-    assert buf.capacity == 30
+    assert buf.capacity == 60  # = training window of the sequence models
     assert buf.warmup_size == 15
 
 
@@ -38,7 +38,7 @@ def test_warmup_size_is_a_property_not_a_bound_method() -> None:
 
 
 def test_module_level_buffer_singleton_uses_the_documented_defaults() -> None:
-    assert feature_buffer_module.buffer.capacity == 30  # noqa: SLF001
+    assert feature_buffer_module.buffer.capacity == 60  # noqa: SLF001
     assert feature_buffer_module.buffer.warmup_size == 15  # noqa: SLF001
 
 
