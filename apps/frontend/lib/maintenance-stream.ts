@@ -22,11 +22,32 @@ import {
   type ManualReference,
   type MaintenanceSuggestionPayload,
 } from "@/lib/api-client";
+import type { GroundingStatus } from "@/lib/suggestion-feedback-api";
+
+const GROUNDING_STATUSES: readonly GroundingStatus[] = [
+  "pending",
+  "grounded",
+  "partially_grounded",
+  "ungrounded",
+];
+
+const parseGroundingStatus = (raw: unknown): GroundingStatus | null => {
+  if (typeof raw !== "object" || raw === null || !("status" in raw))
+    return null;
+  const status = (raw as { status: unknown }).status;
+  return GROUNDING_STATUSES.find((s) => s === status) ?? null;
+};
 
 export type MaintenanceStreamEvent =
   | { type: "searching" }
   | { type: "token"; token: string }
-  | { type: "done"; markdown: string; references: ManualReference[] }
+  | {
+      type: "done";
+      markdown: string;
+      references: ManualReference[];
+      /** RN-04 — `grounding.status` do backend; null se ausente. */
+      groundingStatus?: GroundingStatus | null;
+    }
   | { type: "skipped"; message: string }
   // offline=true → fetch nunca chegou a conectar (rede/servidor fora do ar).
   // offline=false → conectamos, mas o backend/MCP/Ollama reportou uma falha.
@@ -90,6 +111,7 @@ function parseSseBlock(block: string): MaintenanceStreamEvent | null {
         type: "done",
         markdown: typeof data.markdown === "string" ? data.markdown : "",
         references,
+        groundingStatus: parseGroundingStatus(data.grounding),
       };
     }
     case "skipped":

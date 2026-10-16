@@ -82,7 +82,21 @@ describe("streamMaintenanceSuggestion", () => {
       type: "done",
       markdown: "# X Y Z",
       references: [],
+      groundingStatus: null,
     });
+  });
+
+  it("RN-04: lê grounding.status do evento done e ignora valores desconhecidos", async () => {
+    mockFetchWithChunks([
+      'event: done\ndata: {"markdown":"ok","references":[],"grounding":{"status":"partially_grounded"}}\n\n',
+      'event: done\ndata: {"markdown":"ok","references":[],"grounding":{"status":"inventado"}}\n\n',
+    ]);
+
+    const events = await collect(new AbortController().signal);
+
+    expect(
+      events.map((e) => (e.type === "done" ? e.groundingStatus : undefined)),
+    ).toEqual(["partially_grounded", null]);
   });
 
   it("processa múltiplos eventos presentes em um único chunk de rede", async () => {
@@ -95,7 +109,7 @@ describe("streamMaintenanceSuggestion", () => {
     expect(events).toEqual([
       { type: "token", token: "a" },
       { type: "token", token: "b" },
-      { type: "done", markdown: "ab", references: [] },
+      { type: "done", markdown: "ab", references: [], groundingStatus: null },
     ]);
   });
 

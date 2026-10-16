@@ -49,8 +49,16 @@ export function MaintenanceAssistant({
   open,
   onOpenChange,
 }: MaintenanceAssistantProps) {
-  const { status, markdown, references, message, start, cancel } =
-    useMaintenanceStream();
+  const {
+    status,
+    markdown,
+    references,
+    message,
+    groundingStatus,
+    request,
+    start,
+    cancel,
+  } = useMaintenanceStream();
   const isActive = ACTIVE_STATUSES.includes(status);
 
   return (
@@ -106,6 +114,8 @@ export function MaintenanceAssistant({
                 markdown={markdown}
                 references={references}
                 message={message}
+                request={request}
+                groundingStatus={groundingStatus}
               />
             </div>
           </ScrollArea>

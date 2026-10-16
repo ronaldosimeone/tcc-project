@@ -55,6 +55,20 @@ export const WithReferences: Story = {
   },
 };
 
+export const WithTechnicianFeedback: Story = {
+  name: "Done (voto do técnico — RF-38)",
+  args: {
+    ...WithReferences.args,
+    status: "done",
+    request: {
+      failure_probability: 0.91,
+      equipment_name: "Compressor da APU",
+      symptom_description: "queda lenta de pressão",
+    },
+    groundingStatus: "grounded",
+  },
+};
+
 export const Skipped: Story = {
   args: {
     status: "skipped",

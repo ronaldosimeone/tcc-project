@@ -7,9 +7,14 @@ import ReactMarkdown from "react-markdown";
 import { AlertTriangle, Loader2, Search, WifiOff } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { MaintenanceAssistantStatus } from "@/hooks/use-maintenance-stream";
-import type { ManualReference } from "@/lib/api-client";
+import type {
+  ManualReference,
+  MaintenanceSuggestionPayload,
+} from "@/lib/api-client";
+import type { GroundingStatus } from "@/lib/suggestion-feedback-api";
 import { markdownComponents } from "./markdown-components";
 import { ReferencesList } from "./references-list";
+import { SuggestionFeedback } from "./suggestion-feedback";
 
 export const STATUS_LABEL: Record<MaintenanceAssistantStatus, string> = {
   idle: "Pronto",
@@ -27,13 +32,50 @@ export interface AssistantBodyProps {
   markdown: string;
   references: ManualReference[];
   message: string | null;
+  /** RF-38 — quando presente, o plano concluído mostra o voto do técnico. */
+  request?: MaintenanceSuggestionPayload | null;
+  groundingStatus?: GroundingStatus | null;
 }
+
+interface DoneFooterProps {
+  markdown: string;
+  references: ManualReference[];
+  request: MaintenanceSuggestionPayload | null;
+  groundingStatus: GroundingStatus | null;
+}
+
+const DoneFooter = ({
+  markdown,
+  references,
+  request,
+  groundingStatus,
+}: DoneFooterProps) => (
+  <>
+    <div className="flex flex-col gap-2 border-t border-border pt-3">
+      <span className="text-xs font-medium text-muted-foreground">
+        Manuais consultados
+      </span>
+      <ReferencesList references={references} />
+    </div>
+    {request && (
+      // `key`: um novo plano zera os votos do anterior.
+      <SuggestionFeedback
+        key={markdown}
+        request={request}
+        references={references}
+        groundingStatus={groundingStatus}
+      />
+    )}
+  </>
+);
 
 export function AssistantBody({
   status,
   markdown,
   references,
   message,
+  request = null,
+  groundingStatus = null,
 }: AssistantBodyProps) {
   if (status === "idle") {
     return (
@@ -107,12 +149,12 @@ export function AssistantBody({
       </div>
 
       {status === "done" && (
-        <div className="flex flex-col gap-2 border-t border-border pt-3">
-          <span className="text-xs font-medium text-muted-foreground">
-            Manuais consultados
-          </span>
-          <ReferencesList references={references} />
-        </div>
+        <DoneFooter
+          markdown={markdown}
+          references={references}
+          request={request}
+          groundingStatus={groundingStatus}
+        />
       )}
     </div>
   );

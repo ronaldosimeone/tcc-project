@@ -16,6 +16,7 @@ import type {
   MaintenanceSuggestionPayload,
 } from "@/lib/api-client";
 import { streamMaintenanceSuggestion } from "@/lib/maintenance-stream";
+import type { GroundingStatus } from "@/lib/suggestion-feedback-api";
 
 export type MaintenanceAssistantStatus =
   | "idle"
@@ -32,6 +33,10 @@ export interface UseMaintenanceStreamResult {
   markdown: string;
   references: ManualReference[];
   message: string | null;
+  /** RN-04 — status de fundamentação do plano concluído. */
+  groundingStatus: GroundingStatus | null;
+  /** Pedido da última geração (RF-38 — contexto do feedback do técnico). */
+  request: MaintenanceSuggestionPayload | null;
   /** Dispara uma nova geração — cancela a anterior, se ainda em andamento. */
   start: (payload: MaintenanceSuggestionPayload) => void;
   /** Cancela a geração em andamento (RF-23 §11 — AbortController). */
@@ -43,6 +48,11 @@ export function useMaintenanceStream(): UseMaintenanceStreamResult {
   const [markdown, setMarkdown] = useState("");
   const [references, setReferences] = useState<ManualReference[]>([]);
   const [message, setMessage] = useState<string | null>(null);
+  const [groundingStatus, setGroundingStatus] =
+    useState<GroundingStatus | null>(null);
+  const [request, setRequest] = useState<MaintenanceSuggestionPayload | null>(
+    null,
+  );
 
   const controllerRef = useRef<AbortController | null>(null);
   // Evita setState após unmount (ex.: usuário fecha o painel no meio da
@@ -74,6 +84,8 @@ export function useMaintenanceStream(): UseMaintenanceStreamResult {
     setMarkdown("");
     setReferences([]);
     setMessage(null);
+    setGroundingStatus(null);
+    setRequest(payload);
 
     void (async () => {
       try {
@@ -94,6 +106,7 @@ export function useMaintenanceStream(): UseMaintenanceStreamResult {
             case "done":
               setMarkdown(event.markdown);
               setReferences(event.references);
+              setGroundingStatus(event.groundingStatus ?? null);
               setStatus("done");
               break;
             case "skipped":
@@ -118,5 +131,14 @@ export function useMaintenanceStream(): UseMaintenanceStreamResult {
     })();
   }, []);
 
-  return { status, markdown, references, message, start, cancel };
+  return {
+    status,
+    markdown,
+    references,
+    message,
+    groundingStatus,
+    request,
+    start,
+    cancel,
+  };
 }
