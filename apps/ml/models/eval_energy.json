@@ -1,0 +1,141 @@
+{
+  "schema_version": "1.0",
+  "evaluated_at": "2026-10-16T13:51:20.811743+00:00",
+  "requirements": [
+    "RNF-83"
+  ],
+  "method": {
+    "tool": "codecarbon (OfflineEmissionsTracker, tracking_mode=machine)",
+    "country": "BRA",
+    "cpu": "Windows Energy Meter Interface (measured)",
+    "gpu": "NVML (measured)",
+    "ram": "CodeCarbon constant model — estimate, excluded from net figures",
+    "net": "measured CPU+GPU energy minus idle power × duration"
+  },
+  "idle_baseline": {
+    "cpu_w": 83.84059640822916,
+    "gpu_w": 58.87835254288652,
+    "kg_per_kwh": 0.09834800000000002
+  },
+  "training": {
+    "n_rows": 327353,
+    "n_features": 80,
+    "random_forest": {
+      "net_wh": {
+        "mean": 0.14681328716659325,
+        "std": 0.0035827595629479903,
+        "n": 3
+      },
+      "seconds": {
+        "mean": 13.13346226667636,
+        "std": 0.20391535915492362,
+        "n": 3
+      },
+      "gco2": {
+        "mean": 0.014438793166260117,
+        "std": 0.00035235723749680903,
+        "n": 3
+      }
+    },
+    "xgboost": {
+      "net_wh": {
+        "mean": 0.1127986487140646,
+        "std": 0.0018600300271667761,
+        "n": 3
+      },
+      "seconds": {
+        "mean": 8.35380020000351,
+        "std": 0.2620111105486882,
+        "n": 3
+      },
+      "gco2": {
+        "mean": 0.01109352150373083,
+        "std": 0.00018293023311179824,
+        "n": 3
+      }
+    },
+    "logistic_regression": {
+      "net_wh": {
+        "mean": 0.01961507579218655,
+        "std": 0.002768785095513604,
+        "n": 3
+      },
+      "seconds": {
+        "mean": 8.21006486665768,
+        "std": 0.31783522925686775,
+        "n": 3
+      },
+      "gco2": {
+        "mean": 0.0019291034740099636,
+        "std": 0.00027230447657357207,
+        "n": 3
+      }
+    }
+  },
+  "inference": {
+    "batch_size": 1,
+    "workers": 16,
+    "threads_per_session": 1,
+    "random_forest_v2": {
+      "net_mwh_per_1k_predictions": {
+        "mean": 0.15525320201145876,
+        "std": 0.06250845596812127,
+        "n": 3
+      },
+      "asset_year_wh": 0.4896064978633363,
+      "asset_year_gco2": 0.04815181985186341
+    },
+    "xgboost_v2": {
+      "net_mwh_per_1k_predictions": {
+        "mean": 0.09325204431032809,
+        "std": 0.006834609117506435,
+        "n": 3
+      },
+      "asset_year_wh": 0.2940796469370507,
+      "asset_year_gco2": 0.028922145116965066
+    },
+    "mlp_v1": {
+      "net_mwh_per_1k_predictions": {
+        "mean": 0.08824948789750835,
+        "std": 0.014137652929706328,
+        "n": 3
+      },
+      "asset_year_wh": 0.2783035850335823,
+      "asset_year_gco2": 0.02737060098088276
+    },
+    "mlp_v1_int8": {
+      "net_mwh_per_1k_predictions": {
+        "mean": 0.08645938397746449,
+        "std": 0.0020757129047371163,
+        "n": 3
+      },
+      "asset_year_wh": 0.272658313311332,
+      "asset_year_gco2": 0.026815399797542886
+    }
+  },
+  "llm": {
+    "model": "llama3.2:3b",
+    "num_predict": 400,
+    "net_wh_per_suggestion": {
+      "mean": 0.0723325991487371,
+      "std": 0.0045478678320042725,
+      "n": 5
+    },
+    "net_wh_per_1k_tokens": {
+      "mean": 0.08099955111840659,
+      "std": 0.005092797124304898,
+      "n": 5
+    },
+    "seconds": {
+      "mean": 3.4563799000054134,
+      "std": 0.29693612627774574,
+      "n": 5
+    },
+    "tokens_per_call": {
+      "mean": 893.0,
+      "std": 0.0,
+      "n": 5
+    },
+    "gco2_per_suggestion": 0.007113766461079998
+  }
+}

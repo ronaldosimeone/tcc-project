@@ -1,0 +1,43 @@
+{
+  "source": "Veloso et al. 2022, Sci Data 9:764; Zenodo 10.5281/zenodo.6854240",
+  "license": "CC BY 4.0",
+  "md5": "83c713c0f8a6c2f24418cca999b2a8eb",
+  "rows_raw_1hz": 10773588,
+  "rows_10s": 1077495,
+  "period": [
+    "2022-01-01 06:00:00",
+    "2022-06-02 15:49:50"
+  ],
+  "dropped_columns": [
+    "gpsLong",
+    "gpsLat",
+    "gpsSpeed",
+    "gpsQuality"
+  ],
+  "extra_columns_kept_for_ablation": [
+    "Flowmeter"
+  ],
+  "resample": "point sample, first reading per 10s bin",
+  "gaps_over_60s": 152,
+  "failures": [
+    {
+      "start": "2022-02-28 21:53",
+      "end": "2022-03-01 02:00",
+      "component": "air_leak_clients",
+      "rows_10s": 1483
+    },
+    {
+      "start": "2022-03-23 14:54",
+      "end": "2022-03-23 15:24",
+      "component": "air_leak_air_dryer",
+      "rows_10s": 181
+    },
+    {
+      "start": "2022-05-30 12:00",
+      "end": "2022-06-02 06:18",
+      "component": "oil_leak_compressor",
+      "rows_10s": 19552
+    }
+  ],
+  "positive_rows": 21216
+}

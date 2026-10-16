@@ -22,6 +22,7 @@ pyarrow==20.0.0
 xgboost>=2.1.0
 shap==0.49.1                  # RF-32 — TreeSHAP p/ RF. Último shap com suporte a numpy<2 (pin acima);
 numba==0.61.2                 #   XGBoost usa o TreeSHAP nativo (pred_contribs), ver explainability.py
+codecarbon==3.3.1             # RNF-83 — energia/CO2 de treino e inferência (modo offline, grade BRA)
 optuna>=3.6.0
 joblib>=1.4.0
 
