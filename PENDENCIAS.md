@@ -424,3 +424,11 @@ Pendências que dependem de algo externo:
   decisão do autor (+1,5 GB de RAM, reindexação de ~4 min).
 - **Tabela 2 do MetroPT 2022**: a contagem de exemplos da falha 3 (281.800) é
   maior que o número de segundos do intervalo; usamos início/fim, não a contagem.
+- **Modelo de produção (`random_forest_v2`) não generaliza**: PR-AUC 0,058 e
+  0/3 falhas no MetroPT 2022. O challenger `xgboost_v3` está registrado no
+  MLflow; para ligá-lo em shadow/canary use `CHALLENGER_MODEL=xgboost_v3`
+  (e `CANARY_FRACTION>0` para a frota). Promoção só pelo gate RN-05.
+- **Hipótese pré-registrada (não testada)**: um resíduo térmico do óleo no
+  twin poderia detectar o vazamento de óleo de 2022. Não foi criado agora
+  porque seria desenhar a feature olhando a falha de teste.
+

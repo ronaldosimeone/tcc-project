@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-10-16T16:38:24.312613+00:00",
+  "generated_at": "2026-10-16T17:30:38.186099+00:00",
   "git": {
-    "commit": "a0e0b7e975f8ba031eac11a5e746f46a1acc3070",
+    "commit": "c40c788394fbc49edaaec39fa4479e17e3c75af5",
     "dirty": true
   },
   "platform": {
@@ -63,6 +63,9 @@
     "apps/ml/models/metropt2022_ingest.json": "349903d12b10f9a456287abdc972aa102f00485e7f93e1034da89d3da418f153",
     "apps/ml/models/eval_cross_dataset.json": "bbff0ec2d040d32c4de4cd6563595fc8f4b0d715670a60928c21b40616694b9b",
     "apps/ml/models/eval_cross_dataset_harmonized.json": "ebabc090f6f05ea02ff0335833993b7b8bc75cd37bcc64c7fcdb2c3f9b03a194",
+    "apps/ml/models/eval_twin_cross.json": "6878c028135df2621dbc1b1e3375daf795552ba7d1373187d0da5f365bb41ee1",
+    "apps/ml/models/eval_production_2022.json": "0fe7973e383c0aa70bad0c89e0c37a23fa10c93aa427da0ec6d44d75205c5e12",
+    "apps/ml/models/xgboost_v3_card.json": "374371c048f9b68d74b73b9d53d56e40900d71bdc859a5b6e082efd9bd212913",
     "apps/ml/models/eval_energy.json": "68c1defbcb8236d247948900d19a6fc1ce1bf34299eee491d19951544f8cbc23",
     "apps/backend/benchmarks/timescale_benchmark.json": "74eb0a08e84b35f5f0e41786608a9f86124eb1d2ee27415697d787d78e548750",
     "apps/mcp-server/embedder_latency_benchmark.json": "22b654612296e62edf7cc3b046507f4b0cddfbe5dc4465b17aeadad69c80ac56",

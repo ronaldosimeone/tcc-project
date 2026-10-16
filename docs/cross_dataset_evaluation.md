@@ -166,3 +166,53 @@ Custo esperado por período de teste:
 
 Friedman (custo esperado, 6 folds): p = 0.032.
 
+## Q5 — E o modelo que está em produção?
+
+`random_forest_v2.onnx` foi treinado com random 20% hold-out e SMOTE + class_weight='balanced_subsample'. Avaliado **sem retreino**:
+
+| Entrada | PR-AUC | Falhas detectadas (limiar do modelo) | FA/dia |
+|---|---|---|---|
+| 2020 — dados de treino (contaminado) | 1.000 | 4/4 | 0.01 |
+| 2022 — como implantado | 0.058 | 0/3 | 0.00 |
+| 2022 — `Reservoirs`:=`TP3`, `Oil_level`:=moda | 0.057 | 0/3 | 0.00 |
+
+Perfeito nos dados que viu e cego num período novo: é a assinatura de sobreajuste do split aleatório + SMOTE. Corrigir os sensores na entrada não resolve, então o problema está no treino e não na harmonização.
+
+## Q6 — A física generaliza onde o ML não generaliza?
+
+**Transferência sem rótulo de falha de 2022.** Treino = 2020 + semanas normais de 2022 (2022-01-01 06:00:00 → 2022-02-14 00:00:00); teste = resto de 2022.
+
+| Variante | Recall de evento | FA/dia | Custo | Detecção por falha |
+|---|---|---|---|---|
+| ML (XGBoost) só 2020 | 0.33 [0.33; 0.33] | 0.01 [0.00; 0.03] | 201.3 [200.0; 203.0] | 2022-02-28: 100% · 2022-03-23: 0% · 2022-05-30: 0% |
+| ML (XGBoost) 2020 + semanas normais 2022 | 0.00 [0.00; 0.00] | 0.00 [0.00; 0.00] | 300.0 [300.0; 300.0] | 2022-02-28: 0% · 2022-03-23: 0% · 2022-05-30: 0% |
+| Híbrido (features + resíduos físicos) | 0.00 [0.00; 0.00] | 0.00 [0.00; 0.00] | 300.0 [300.0; 300.0] | 2022-02-28: 0% · 2022-03-23: 0% · 2022-05-30: 0% |
+| Física, twin calibrado por período | 0.33 [0.33; 0.33] | 0.03 [0.03; 0.03] | 203.0 [203.0; 203.0] | 2022-02-28: 100% · 2022-03-23: 0% · 2022-05-30: 0% |
+| Física, twin de 2020 sem calibrar | 0.00 [0.00; 0.00] | 0.02 [0.02; 0.02] | 302.0 [302.0; 302.0] | 2022-02-28: 0% · 2022-03-23: 0% · 2022-05-30: 0% |
+| Fusão (ML ou física) | 0.33 [0.33; 0.33] | 0.03 [0.03; 0.03] | 203.0 [203.0; 203.0] | 2022-02-28: 100% · 2022-03-23: 0% · 2022-05-30: 0% |
+
+Resíduos físicos (z médio) dentro de cada falha de 2022:
+
+* 2022-02-28 21:53:00: `fill_residual` +0.6, `idle_decay_residual` -9.4, `current_residual` -2.5, `duty_residual` +4.3
+* 2022-03-23 14:54:00: `fill_residual` -0.1, `idle_decay_residual` -0.3, `current_residual` +0.3, `duty_residual` -0.3
+* 2022-05-30 12:00:00: `fill_residual` -0.0, `idle_decay_residual` -0.1, `current_residual` +0.3, `duty_residual` -0.1
+
+**Walk-forward conjunto (6 folds).** Twin calibrado por período só com as linhas normais do treino de cada fold.
+
+| Variante | Recall (todos) | Custo (todos) | Recall (folds 2022) | Custo (folds 2022) |
+|---|---|---|---|---|
+| ML (XGBoost) | 0.50 [0.28; 0.72] | 51.2 [29.2; 73.1] | 0.33 [0.00; 0.67] | 67.3 [34.7; 100.0] |
+| Física (twin calibrado por período) | 0.17 [0.00; 0.33] | 88.2 [71.8; 103.0] | 0.00 [0.00; 0.00] | 100.3 [100.0; 100.7] |
+| Híbrido (features + resíduos físicos) | 0.67 [0.44; 0.89] | 50.4 [25.8; 75.9] | 0.56 [0.22; 0.89] | 76.8 [40.0; 110.4] |
+| Fusão (ML ou física) | 0.67 [0.44; 0.89] | 39.1 [18.9; 59.8] | 0.33 [0.00; 0.67] | 67.7 [34.8; 100.2] |
+
+Gate RN-05 (custo esperado, pareado por fold):
+
+* fusion × ml_only: melhora mediana -0.5, p = 0.688 → não promove
+* hybrid × ml_only: melhora mediana +0.0, p = 0.562 → não promove
+* fusion × physics_only: melhora mediana +48.3, p = 0.125 → não promove
+
+## Q7 — O que fica em produção
+
+O candidato `xgboost_v3` foi treinado com 2020 + 2022 (68 features, sem Reservoirs, Oil_level). O balanceamento foi feito só no treino (training only: all positives + every 5th negative, scale_pos_weight=9.94; no SMOTE), e o limiar 0.985 saiu de RN-02 cost-optimal on out-of-fold scores (inner_oof_cost_optimal). Contra o RF no walk-forward conjunto, o gate RN-05 deu p = 0.438, e por isso o modelo **não é promovido**. Ele foi registrado no MLflow como `challenger` (shadow + canary, `CHALLENGER_MODEL=xgboost_v3`), e o `random_forest_v2` continua `champion` até haver evidência significativa.
+
