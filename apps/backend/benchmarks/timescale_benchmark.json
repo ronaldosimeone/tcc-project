@@ -1,0 +1,87 @@
+{
+  "evaluated_at": "2026-10-16T13:59:09.021614+00:00",
+  "workload": {
+    "assets": 5,
+    "days": 60,
+    "rate_hz": 0.1,
+    "rows": 2592000,
+    "latency_runs": 30
+  },
+  "postgres": {
+    "server_version": "15.17 (Debian 15.17-1.pgdg13+1)",
+    "ingest": {
+      "rows": 2592000,
+      "seconds": 19.83903759997338,
+      "rows_per_second": 130651.49894183768
+    },
+    "size_mb": 662.044672,
+    "queries": {
+      "event_window_recent": {
+        "p50_ms": 1.1699500028043985,
+        "p95_ms": 1.4568000042345375
+      },
+      "event_window_old": {
+        "p50_ms": 0.9898999996948987,
+        "p95_ms": 1.5611000126227736
+      },
+      "hourly_30d": {
+        "p50_ms": 112.9555499937851,
+        "p95_ms": 128.57819997589104
+      },
+      "fleet_daily_60d": {
+        "p50_ms": 1003.5778500023298,
+        "p95_ms": 1072.5368999992497
+      },
+      "latest_per_asset": {
+        "p50_ms": 2709.525650003343,
+        "p95_ms": 3010.1492000103462
+      }
+    }
+  },
+  "timescaledb": {
+    "server_version": "15.10",
+    "ingest": {
+      "rows": 2592000,
+      "seconds": 73.49611010006629,
+      "rows_per_second": 35267.17259554206
+    },
+    "size_mb": 690.200576,
+    "timescaledb": "2.17.2",
+    "cagg_refresh_s": 0.766451200004667,
+    "compression": {
+      "chunks_compressed": 53,
+      "seconds": 6.989578000007896
+    },
+    "size_mb_after_compression": 340.279296,
+    "queries": {
+      "event_window_recent": {
+        "p50_ms": 1.1967500176979229,
+        "p95_ms": 1.5547999937552959
+      },
+      "event_window_old": {
+        "p50_ms": 1.3647500018123537,
+        "p95_ms": 1.5328000008594245
+      },
+      "hourly_30d": {
+        "p50_ms": 1.4581499999621883,
+        "p95_ms": 1.6031000122893602
+      },
+      "fleet_daily_60d": {
+        "p50_ms": 2.519350018701516,
+        "p95_ms": 2.883899986045435
+      },
+      "latest_per_asset": {
+        "p50_ms": 662.4703499983298,
+        "p95_ms": 733.7441999989096
+      }
+    }
+  },
+  "speedup_p50": {
+    "event_window_recent": 0.9776060041803241,
+    "event_window_old": 0.72533430912646,
+    "hourly_30d": 77.46497273717668,
+    "fleet_daily_60d": 398.3479240886021,
+    "latest_per_asset": 4.090033086024415
+  },
+  "size_ratio_compressed_vs_postgres": 0.5139823797267867
+}

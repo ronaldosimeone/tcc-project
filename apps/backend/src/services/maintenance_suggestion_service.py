@@ -35,6 +35,7 @@ from fastapi import Depends
 from opentelemetry import trace
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.core.metrics import RAG_SAFETY_BLOCKS_TOTAL, record_grounding
 from src.core.config import settings
 from src.core.database import get_db
 from src.core.tracing import get_tracer
@@ -76,6 +77,7 @@ _tracer = get_tracer(__name__)
 
 def _trace_grounding(report: GroundingReport) -> None:
     """RN-04 / RNF-84 decisions as attributes of the current request span."""
+    record_grounding(report.llm_called, report.injection_chunks_dropped)
     span = trace.get_current_span()
     span.set_attribute("rn04.threshold", report.threshold)
     span.set_attribute("rn04.contexts_used", report.contexts_used)
@@ -296,6 +298,7 @@ class MaintenanceSuggestionService:
         violations = safety_violations(markdown)
         trace.get_current_span().set_attribute("safety.violations", len(violations))
         if violations:
+            RAG_SAFETY_BLOCKS_TOTAL.inc()
             log.warning("maintenance_suggestion_safety_blocked", violations=violations)
             markdown = SAFETY_BLOCKED_MARKDOWN
 
@@ -406,6 +409,7 @@ class MaintenanceSuggestionService:
         # parcial no cliente.
         violations = safety_violations(full_markdown)
         if violations:
+            RAG_SAFETY_BLOCKS_TOTAL.inc()
             log.warning("maintenance_stream_safety_blocked", violations=violations)
             full_markdown = SAFETY_BLOCKED_MARKDOWN
 

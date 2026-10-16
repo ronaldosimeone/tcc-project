@@ -9,7 +9,7 @@ state machine) live in ``services/history_service.py`` and
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime
 
 from typing import Annotated, Any
 
@@ -31,7 +31,7 @@ from src.schemas.history import (
 )
 from src.services.audit_service import AuditService
 from src.services.failure_event_service import FailureEventService
-from src.services.history_service import HistoryService
+from src.services.history_service import HistoryService, resolve_window
 from src.services.shadow_service import ShadowReport, shadow_report
 
 router: APIRouter = APIRouter(prefix="/v1", tags=["History"])
@@ -63,17 +63,8 @@ def _errors(*codes: int) -> dict[int | str, dict[str, Any]]:
     return {c: {"model": ErrorBody, "description": _ERROR_TEXT[c]} for c in codes}
 
 
-_DEFAULT_DAYS = 30
-
-
 def get_history_service(db: AsyncSession = Depends(get_db)) -> HistoryService:
     return HistoryService(db)
-
-
-def _window(start: datetime | None, end: datetime | None) -> tuple[datetime, datetime]:
-    end = end or datetime.now(timezone.utc)
-    start = start or end - timedelta(days=_DEFAULT_DAYS)
-    return start, end
 
 
 @router.get(
@@ -112,6 +103,7 @@ async def list_events(
     "/events/daily",
     response_model=list[DailyEventCount],
     summary="Eventos por dia e severidade",
+    responses=_errors(400),
 )
 async def daily_counts(
     asset_id: str | None = Query(default=None, max_length=64),
@@ -119,7 +111,7 @@ async def daily_counts(
     end: datetime | None = None,
     service: HistoryService = Depends(get_history_service),
 ) -> list[DailyEventCount]:
-    lo, hi = _window(start, end)
+    lo, hi = resolve_window(start, end)
     return await service.daily_counts(lo, hi, asset_id)
 
 
@@ -164,6 +156,7 @@ async def rebuild_events(
     "/kpis",
     response_model=KpiReport,
     summary="KPIs de confiabilidade (MTBF, MTTR, disponibilidade)",
+    responses=_errors(400),
 )
 async def kpis(
     asset_id: str | None = Query(default=None, max_length=64),
@@ -171,7 +164,7 @@ async def kpis(
     end: datetime | None = None,
     service: HistoryService = Depends(get_history_service),
 ) -> KpiReport:
-    lo, hi = _window(start, end)
+    lo, hi = resolve_window(start, end)
     return await service.kpis(lo, hi, asset_id)
 
 

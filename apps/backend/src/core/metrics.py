@@ -170,6 +170,68 @@ def record_batch(model: str, status: str, sample_count: int) -> None:
         BATCH_SAMPLES_TOTAL.labels(model=model).inc(sample_count)
 
 
+# ---------------------------------------------------------------------------
+# 3. Sinais da segunda rodada (RN-04, RNF-84, histórico, MQTT, shadow, RF-38)
+# ---------------------------------------------------------------------------
+#
+# Mesma regra de cardinalidade: nenhum id de ativo/evento/usuário vira label.
+# Painel: infra/grafana/dashboards/predictiq-reliability.json.
+
+RAG_GROUNDING_TOTAL = Counter(
+    "predictiq_rag_grounding_total",
+    "RN-04 — decisões do gate de fundamentação (llm_called=false = plano bloqueado).",
+    ["llm_called"],
+)
+
+RAG_INJECTION_CHUNKS_DROPPED_TOTAL = Counter(
+    "predictiq_rag_injection_chunks_dropped_total",
+    "RNF-84 — trechos de manual descartados por parecerem prompt injection.",
+)
+
+RAG_SAFETY_BLOCKS_TOTAL = Counter(
+    "predictiq_rag_safety_blocks_total",
+    "RNF-84 — planos gerados e substituídos pelo safety guard.",
+)
+
+FAILURE_EVENTS_TOTAL = Counter(
+    "predictiq_failure_events_total",
+    "Eventos de falha do histórico por transição (RN-03 online).",
+    ["transition"],
+)
+
+SHADOW_PREDICTIONS_TOTAL = Counter(
+    "predictiq_shadow_predictions_total",
+    "Inferências shadow do challenger, por concordância de classe com o champion.",
+    ["agreement"],
+)
+
+TELEMETRY_MESSAGES_TOTAL = Counter(
+    "predictiq_telemetry_messages_total",
+    "Leituras de telemetria industrial por transporte (mqtt/opcua) e resultado.",
+    ["transport", "result"],
+)
+
+FEEDBACK_VOTES_TOTAL = Counter(
+    "predictiq_feedback_votes_total",
+    "RF-38 — votos do técnico (plano inteiro ou trecho citado).",
+    ["kind", "helpful"],
+)
+
+
+def record_grounding(llm_called: bool, injection_chunks_dropped: int) -> None:
+    RAG_GROUNDING_TOTAL.labels(llm_called=str(llm_called).lower()).inc()
+    if injection_chunks_dropped:
+        RAG_INJECTION_CHUNKS_DROPPED_TOTAL.inc(injection_chunks_dropped)
+
+
+def record_feedback(useful: bool, reference_votes: list[bool]) -> None:
+    FEEDBACK_VOTES_TOTAL.labels(kind="plan", helpful=str(useful).lower()).inc()
+    for helpful in reference_votes:
+        FEEDBACK_VOTES_TOTAL.labels(
+            kind="reference", helpful=str(helpful).lower()
+        ).inc()
+
+
 # Referenciado por `setup_http_instrumentation()` — ver comentário da seção 1.
 _ML_COLLECTORS: tuple[Counter | Histogram, ...] = (
     INFERENCE_TOTAL,
@@ -177,4 +239,11 @@ _ML_COLLECTORS: tuple[Counter | Histogram, ...] = (
     PREDICTIONS_TOTAL,
     BATCH_REQUESTS_TOTAL,
     BATCH_SAMPLES_TOTAL,
+    RAG_GROUNDING_TOTAL,
+    RAG_INJECTION_CHUNKS_DROPPED_TOTAL,
+    RAG_SAFETY_BLOCKS_TOTAL,
+    FAILURE_EVENTS_TOTAL,
+    SHADOW_PREDICTIONS_TOTAL,
+    TELEMETRY_MESSAGES_TOTAL,
+    FEEDBACK_VOTES_TOTAL,
 )

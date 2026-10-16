@@ -25,6 +25,7 @@ import structlog
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.core.metrics import record_feedback
 from src.models.suggestion_feedback import SuggestionFeedback
 from src.schemas.maintenance import (
     ReferencePrior,
@@ -86,6 +87,7 @@ class SuggestionFeedbackService:
         self._db.add(row)
         await self._db.commit()
         await self._db.refresh(row)
+        record_feedback(payload.useful, [v.helpful for v in payload.reference_votes])
         log.info(
             "suggestion_feedback_saved",
             id=row.id,

@@ -36,6 +36,7 @@ import structlog
 from pydantic import ValidationError
 from sqlalchemy import select
 
+from src.core.metrics import TELEMETRY_MESSAGES_TOTAL
 from src.core.database import AsyncSessionFactory
 from src.models.asset import Asset
 from src.schemas.stream import SensorReading
@@ -167,10 +168,14 @@ class MqttTelemetryIngestor:
         except ValueError as exc:
             self.stats.rejected += 1
             self.stats.last_error = str(exc)
+            TELEMETRY_MESSAGES_TOTAL.labels(transport="mqtt", result="rejected").inc()
             log.warning("mqtt_message_rejected", topic=topic, reason=str(exc))
             return False
         if asset_id not in await self._known_assets():
             self.stats.unknown_asset += 1
+            TELEMETRY_MESSAGES_TOTAL.labels(
+                transport="mqtt", result="unknown_asset"
+            ).inc()
             log.warning("mqtt_unknown_asset", asset_id=asset_id)
             return False
         processor = self._processors.get(asset_id)
@@ -178,6 +183,7 @@ class MqttTelemetryIngestor:
             processor = self._processors[asset_id] = self._factory(asset_id)
         await processor.process(reading)
         self.stats.accepted += 1
+        TELEMETRY_MESSAGES_TOTAL.labels(transport="mqtt", result="accepted").inc()
         self.stats.per_asset[asset_id] = self.stats.per_asset.get(asset_id, 0) + 1
         return True
 

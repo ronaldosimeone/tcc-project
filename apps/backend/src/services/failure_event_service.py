@@ -31,6 +31,7 @@ import structlog
 from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.core.metrics import FAILURE_EVENTS_TOTAL
 from src.core.exceptions import ConflictError
 from src.models.failure_event import FailureEvent, RootCauseAnalysis, WorkOrder
 from src.models.prediction import Prediction
@@ -117,6 +118,7 @@ class FailureEventService:
                 event_id=event.id,
                 peak=upd.opened.peak,
             )
+            FAILURE_EVENTS_TOTAL.labels(transition="opened").inc()
             return EventChange(event, "opened")
 
         stats = upd.extended or upd.closed
@@ -134,6 +136,7 @@ class FailureEventService:
             log.info(
                 "failure_event_closed", asset_id=asset_id, event_id=row.id, n=stats.n
             )
+            FAILURE_EVENTS_TOTAL.labels(transition="closed").inc()
             return EventChange(row, "closed")
         return EventChange(row, "extended")
 

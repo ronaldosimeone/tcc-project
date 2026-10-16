@@ -286,3 +286,28 @@ async def test_daily_counts(client: AsyncClient) -> None:
     ).json()
     assert [d["date"] for d in days] == ["2026-03-01", "2026-03-02"]
     assert days[0] == {"date": "2026-03-01", "alerta": 1, "critico": 1}
+
+
+@pytest.mark.parametrize(
+    ("path", "params"),
+    [
+        # Schemathesis: default start = end − 30 d overflowed → 500.
+        ("/v1/events/daily", {"end": "0001-01-01T18:42:00Z"}),
+        ("/v1/kpis", {"end": "0001-01-01T00:00:00Z"}),
+        # Millennia of empty daily rows.
+        (
+            "/v1/events/daily",
+            {"start": "2000-01-01T00:00:00Z", "end": "9392-01-01T00:02:17Z"},
+        ),
+        # Empty / inverted window.
+        (
+            "/v1/kpis",
+            {"start": "2026-03-02T00:00:00Z", "end": "2026-03-01T00:00:00Z"},
+        ),
+    ],
+)
+async def test_unusable_windows_are_400_not_500(
+    client: AsyncClient, path: str, params: dict[str, str]
+) -> None:
+    resp = await client.get(path, params=params)
+    assert resp.status_code == 400, resp.text

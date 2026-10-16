@@ -42,6 +42,11 @@ from src.services.failure_event_service import FailureEventService
 from src.services.asset_processor import AssetProcessor
 from src.services.shadow_service import ShadowEvaluator, is_canary
 from src.services.fleet_service import FleetService
+from src.services.opcua_telemetry import (
+    OpcUaConfig,
+    OpcUaGatewayServer,
+    OpcUaTelemetryIngestor,
+)
 from src.services.mqtt_telemetry import (
     MqttConfig,
     MqttTelemetryIngestor,
@@ -176,9 +181,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     app.state.inference_pipeline = pipeline
     log.info("inference_pipeline_ready")
 
-    # Telemetria da frota: in-process (default) ou via broker MQTT.
-    publisher: MqttTelemetryPublisher | None = None
-    ingestor: MqttTelemetryIngestor | None = None
+    # Telemetria da frota: in-process (default), broker MQTT ou OPC UA.
+    publisher: MqttTelemetryPublisher | OpcUaGatewayServer | None = None
+    ingestor: MqttTelemetryIngestor | OpcUaTelemetryIngestor | None = None
     if settings.telemetry_transport == "mqtt":
         mqtt_config = MqttConfig(
             host=settings.mqtt_host,
@@ -196,7 +201,22 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             except Exception as exc:
                 log.warning("mqtt_publisher_unavailable", error=str(exc))
                 publisher = None
-    app.state.mqtt_ingestor = ingestor
+    elif settings.telemetry_transport == "opcua":
+        opcua_config = OpcUaConfig(
+            endpoint=settings.opcua_endpoint,
+            username=settings.opcua_username,
+            password=settings.opcua_password,
+        )
+        if settings.opcua_simulated_gateway and settings.fleet_size > 0:
+            gateway = OpcUaGatewayServer(opcua_config)
+            try:
+                await gateway.start()
+                publisher = gateway
+            except Exception as exc:
+                log.warning("opcua_gateway_unavailable", error=str(exc))
+        ingestor = OpcUaTelemetryIngestor(opcua_config, processor_for)
+        ingestor.start()
+    app.state.telemetry_ingestor = ingestor
 
     fleet: FleetService | None = None
     if settings.fleet_size > 0:

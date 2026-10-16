@@ -94,6 +94,7 @@ python-multipart==0.0.32
 
 # Ingestão industrial via MQTT (src/services/mqtt_telemetry.py)
 aiomqtt==2.4.0
+asyncua==1.1.5                   # OPC UA (IEC 62541) — ingestão por subscription, alternativa ao MQTT
 
 # Tracing distribuído (src/core/tracing.py) — API → MCP → Ollama via OTLP.
 # api/sdk/proto já vinham transitivos (mesmas versões); fixados aqui.

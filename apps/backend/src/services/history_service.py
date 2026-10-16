@@ -91,6 +91,30 @@ def decode_cursor(cursor: str) -> tuple[datetime, int]:
         raise BadRequestError("Invalid pagination cursor.") from exc
 
 
+DEFAULT_WINDOW_DAYS = 30
+# /v1/events/daily materialises one row per day: cap the window so a request
+# cannot ask for millennia of empty days (found by Schemathesis).
+MAX_DAILY_WINDOW_DAYS = 366
+
+
+def resolve_window(
+    start: datetime | None, end: datetime | None
+) -> tuple[datetime, datetime]:
+    """Default window = last 30 days; rejects unrepresentable or empty ranges.
+
+    ``end=0001-01-01`` used to crash with OverflowError (500) when the default
+    start was computed — Schemathesis found it.
+    """
+    try:
+        end = end or datetime.now(timezone.utc)
+        start = start or end - timedelta(days=DEFAULT_WINDOW_DAYS)
+    except OverflowError as exc:
+        raise BadRequestError("Date out of the supported range.") from exc
+    if _utc(start) >= _utc(end):
+        raise BadRequestError("`start` must be before `end`.")
+    return start, end
+
+
 class HistoryService:
     def __init__(self, db: AsyncSession) -> None:
         self._db = db
@@ -229,6 +253,10 @@ class HistoryService:
     async def daily_counts(
         self, start: datetime, end: datetime, asset_id: str | None = None
     ) -> list[DailyEventCount]:
+        if _utc(end) - _utc(start) > timedelta(days=MAX_DAILY_WINDOW_DAYS):
+            raise BadRequestError(
+                f"Daily window limited to {MAX_DAILY_WINDOW_DAYS} days."
+            )
         q = select(FailureEvent.started_at, FailureEvent.severity).where(
             FailureEvent.started_at >= start, FailureEvent.started_at < end
         )

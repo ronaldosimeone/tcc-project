@@ -25,6 +25,7 @@ from pydantic import BaseModel
 from sqlalchemy import Integer, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.core.metrics import SHADOW_PREDICTIONS_TOTAL
 from src.core.database import AsyncSessionFactory
 from src.core.exceptions import ModelNotAvailableError
 from src.models.shadow_prediction import ShadowPrediction
@@ -102,6 +103,11 @@ class ShadowEvaluator:
                 await db.rollback()
                 log.warning("shadow_save_error", error=str(exc))
                 return None
+        SHADOW_PREDICTIONS_TOTAL.labels(
+            agreement=(
+                "agree" if row.champion_class == row.challenger_class else "disagree"
+            )
+        ).inc()
         return row
 
 

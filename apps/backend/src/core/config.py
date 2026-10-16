@@ -164,7 +164,7 @@ class Settings(BaseSettings):
     # "inprocess" (default): a frota simulada é processada no próprio
     # processo. "mqtt": a frota PUBLICA no broker e o ingestor ASSINA
     # <prefix>/+/telemetry — o mesmo caminho de um gateway de campo real.
-    telemetry_transport: Literal["inprocess", "mqtt"] = Field(
+    telemetry_transport: Literal["inprocess", "mqtt", "opcua"] = Field(
         default="inprocess", alias="TELEMETRY_TRANSPORT"
     )
     mqtt_host: str = Field(default="mqtt", alias="MQTT_HOST")
@@ -172,6 +172,16 @@ class Settings(BaseSettings):
     mqtt_username: str | None = Field(default=None, alias="MQTT_USERNAME")
     mqtt_password: str | None = Field(default=None, alias="MQTT_PASSWORD")
     mqtt_topic_prefix: str = Field(default="predictiq/fleet", alias="MQTT_TOPIC_PREFIX")
+
+    # "opcua": a frota escreve num gateway OPC UA (simulado, dentro do
+    # backend) e o ingestor ASSINA os nós Sequence de cada ativo. Com
+    # OPCUA_SIMULATED_GATEWAY=false o ingestor conecta a um gateway real.
+    opcua_endpoint: str = Field(
+        default="opc.tcp://0.0.0.0:4840/predictiq/", alias="OPCUA_ENDPOINT"
+    )
+    opcua_simulated_gateway: bool = Field(default=True, alias="OPCUA_SIMULATED_GATEWAY")
+    opcua_username: str | None = Field(default=None, alias="OPCUA_USERNAME")
+    opcua_password: str | None = Field(default=None, alias="OPCUA_PASSWORD")
 
     # ── Champion / challenger (shadow + canary) ──────────────────────────
     # CHALLENGER_MODEL definido → o desafiante pontua em SHADOW toda leitura
