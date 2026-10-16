@@ -67,6 +67,9 @@ _FAILURE_WINDOWS: list[tuple[str, str]] = [
 ]
 
 # Column order must stay in sync with SensorReading field order.
+# The first 7 columns of _SENSOR_COLS are analogue; the rest are binary.
+_N_ANALOG: int = 7
+
 _SENSOR_COLS: list[str] = [
     "TP2",
     "TP3",
@@ -106,17 +109,39 @@ class SensorSimulator:
         self,
         mode: SimulatorMode = SimulatorMode.NORMAL,
         parquet_path: Path | None = None,
+        data: tuple[np.ndarray, np.ndarray] | None = None,
+        start_offset: int = 0,
+        noise_frac: float = 0.0,
+        seed: int | None = None,
     ) -> None:
+        """
+        Fleet extension (all optional, defaults keep the original behaviour):
+
+        data         (normal_rows, failure_rows) shared with another simulator,
+                     so N fleet assets do not each load the 1.5 M-row parquet.
+        start_offset replay starts at this row, so assets are out of phase.
+        noise_frac   i.i.d. Gaussian noise on the 7 analogue sensors, std =
+                     noise_frac · per-sensor std of the normal rows.
+        seed         RNG seed for the noise (reproducible fleet).
+        """
         self._mode: SimulatorMode = mode
         self._step: int = 0
 
         resolved_path: Path = parquet_path or settings.simulator_parquet_path
         self._normal: np.ndarray
         self._failure: np.ndarray
-        self._normal, self._failure = _load_and_split(resolved_path)
+        self._normal, self._failure = (
+            data if data is not None else _load_and_split(resolved_path)
+        )
 
-        self._idx_normal: int = 0
-        self._idx_failure: int = 0
+        self._idx_normal: int = start_offset % len(self._normal)
+        self._idx_failure: int = start_offset % len(self._failure)
+        self._rng: np.random.Generator = np.random.default_rng(seed)
+        self._noise: np.ndarray = (
+            noise_frac * self._normal[:, :_N_ANALOG].std(axis=0)
+            if noise_frac > 0
+            else np.zeros(0)
+        )
 
         log.info(
             "simulator_ready",
@@ -145,16 +170,35 @@ class SensorSimulator:
 
     # ── Public API ────────────────────────────────────────────────────────
 
+    def normal_medians(self) -> dict[str, float]:
+        """Per-sensor median of the NORMAL replay rows — neutral reference
+        used by the online root-cause occlusion (RF-32)."""
+        med = np.median(self._normal, axis=0)
+        return {col: float(v) for col, v in zip(_SENSOR_COLS, med)}
+
+    @property
+    def data(self) -> tuple[np.ndarray, np.ndarray]:
+        """(normal_rows, failure_rows) — shared read-only by fleet simulators."""
+        return self._normal, self._failure
+
     def generate_reading(self) -> SensorReading:
         """Return one SensorReading from the current mode's data slice."""
         self._step += 1
         ts: datetime = datetime.now(tz=timezone.utc)
 
         if self._mode == SimulatorMode.NORMAL:
-            return self._read_normal(ts)
-        if self._mode == SimulatorMode.FAILURE:
-            return self._read_failure(ts)
-        return self._read_degradation(ts)
+            reading = self._read_normal(ts)
+        elif self._mode == SimulatorMode.FAILURE:
+            reading = self._read_failure(ts)
+        else:
+            reading = self._read_degradation(ts)
+        if self._noise.size == 0:
+            return reading
+        noise = self._rng.normal(0.0, 1.0, _N_ANALOG) * self._noise
+        values = reading.model_dump()
+        for name, delta in zip(_SENSOR_COLS[:_N_ANALOG], noise):
+            values[name] = float(values[name] + delta)
+        return SensorReading(**values)
 
     # ── Private readers ───────────────────────────────────────────────────
 

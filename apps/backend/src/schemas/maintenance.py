@@ -13,7 +13,34 @@ Markdown e as referências (arquivo/página/score) dos trechos usados.
 
 from __future__ import annotations
 
+from datetime import datetime
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict, Field
+
+MetroPTSensor = Literal[
+    "TP2",
+    "TP3",
+    "H1",
+    "DV_pressure",
+    "Reservoirs",
+    "Oil_temperature",
+    "Motor_current",
+    "COMP",
+    "DV_eletric",
+    "Towers",
+    "MPG",
+    "Oil_level",
+]
+
+
+class SensorContribution(BaseModel):
+    """RF-35 — contribuição de um sensor físico para a probabilidade de falha
+    (SHAP agregado por sensor, ver apps/ml/src/explainability.py). Positivo =
+    empurra para falha."""
+
+    sensor: MetroPTSensor
+    contribution: float = Field(ge=-100.0, le=100.0)
 
 
 class MaintenanceSuggestionRequest(BaseModel):
@@ -59,6 +86,59 @@ class MaintenanceSuggestionRequest(BaseModel):
             "recuperação (RF-21)."
         ),
     )
+    sensor_contributions: list[SensorContribution] | None = Field(
+        default=None,
+        max_length=12,
+        description=(
+            "RF-35 — explicação XAI do alerta, por sensor. Os sensores com "
+            "contribuição positiva entram na consulta ao MCP (vocabulário do "
+            "componente físico, PT + EN) e todos entram no prompt como evidência."
+        ),
+    )
+
+
+class CitedReference(BaseModel):
+    """Uma citação `arquivo.pdf, página N` encontrada no texto gerado."""
+
+    file_name: str
+    page: int
+
+
+GroundingStatus = Literal["pending", "grounded", "partially_grounded", "ungrounded"]
+
+
+class GroundingReport(BaseModel):
+    """RN-04 — quão fundamentado nos manuais está o plano gerado."""
+
+    status: GroundingStatus = Field(
+        description=(
+            "grounded: há contexto ≥ τ e toda citação aponta para um trecho "
+            "recuperado; partially_grounded: há contexto, mas o texto não cita "
+            "nada ou cita arquivo/página não recuperado; ungrounded: nenhum "
+            "trecho atingiu τ."
+        )
+    )
+    threshold: float = Field(
+        description="τ — score mínimo (cosine) para um trecho entrar no prompt."
+    )
+    policy: Literal["block", "flag"]
+    max_score: float | None = None
+    contexts_used: int = 0
+    contexts_discarded: int = 0
+    llm_called: bool = True
+    citations: list[CitedReference] = Field(default_factory=list)
+    invalid_citations: list[CitedReference] = Field(
+        default_factory=list,
+        description="Citações a arquivo/página que NÃO foram recuperados — referência fabricada.",
+    )
+    injection_chunks_dropped: int = Field(
+        default=0,
+        description="RNF-84 — trechos descartados por conterem instruções dirigidas ao modelo.",
+    )
+    safety_violations: list[str] = Field(
+        default_factory=list,
+        description="RNF-84 — trechos do plano que mandavam desativar/contornar dispositivo de segurança (plano bloqueado).",
+    )
 
 
 class ManualReference(BaseModel):
@@ -94,4 +174,70 @@ class MaintenanceSuggestionResponse(BaseModel):
     message: str | None = Field(
         default=None,
         description="Explica por que a sugestão não foi acionada — presente só quando triggered=False.",
+    )
+    grounding: GroundingReport | None = Field(
+        default=None,
+        description="RN-04 — fundamentação do plano. None quando triggered=False.",
+    )
+
+
+# ---------------------------------------------------------------------------
+# RF-38 — feedback do técnico (human-in-the-loop)
+# ---------------------------------------------------------------------------
+
+
+class ReferenceVote(BaseModel):
+    """Voto do técnico sobre um trecho citado: era relevante para a falha?"""
+
+    file_name: str = Field(min_length=1, max_length=255)
+    page: int = Field(ge=0)
+    helpful: bool
+
+
+class SuggestionFeedbackCreate(BaseModel):
+    """Entrada de POST /v1/maintenance/feedback."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "equipment_name": "Compressor de ar da APU",
+                "symptom_description": "dessecante das torres contaminado",
+                "query": "Compressor de ar da APU: dessecante das torres contaminado",
+                "model": "llama3.2:3b",
+                "grounding_status": "grounded",
+                "useful": True,
+                "reference_votes": [
+                    {
+                        "file_name": "wap5-scheduled-maintenance-vol-b.pdf",
+                        "page": 174,
+                        "helpful": True,
+                    }
+                ],
+                "comment": "Procedimento correto, faltou o intervalo de troca.",
+            }
+        }
+    )
+
+    equipment_name: str = Field(min_length=1, max_length=200)
+    symptom_description: str | None = Field(default=None, max_length=500)
+    query: str | None = Field(default=None, max_length=1000)
+    model: str | None = Field(default=None, max_length=100)
+    grounding_status: GroundingStatus | None = None
+    useful: bool
+    reference_votes: list[ReferenceVote] = Field(default_factory=list, max_length=20)
+    comment: str | None = Field(default=None, max_length=1000)
+
+
+class SuggestionFeedbackResponse(BaseModel):
+    id: int
+    created_at: datetime
+
+
+class ReferencePrior(BaseModel):
+    file_name: str
+    page: int
+    helpful_votes: int
+    unhelpful_votes: int
+    prior: float = Field(
+        description="(helpful − unhelpful) / (helpful + unhelpful + 2) ∈ (−1, 1)"
     )

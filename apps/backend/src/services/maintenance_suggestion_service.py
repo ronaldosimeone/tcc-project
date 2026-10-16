@@ -31,22 +31,62 @@ from dataclasses import dataclass, field
 from typing import Any, Literal
 
 import structlog
+from fastapi import Depends
+from opentelemetry import trace
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.config import settings
+from src.core.database import get_db
+from src.core.tracing import get_tracer
 from src.core.exceptions import (
     MCPUnavailableError,
     OllamaResponseError,
     OllamaUnavailableError,
 )
 from src.schemas.maintenance import (
+    GroundingReport,
     ManualReference,
     MaintenanceSuggestionRequest,
     MaintenanceSuggestionResponse,
 )
+from src.services.grounding import (
+    BLOCKED_MARKDOWN,
+    UngroundedPolicy,
+    finalize_report,
+    pre_generation_report,
+    split_by_threshold,
+)
 from src.services.mcp_client import MCPSearchClient
 from src.services.ollama_client import OllamaClient
+from src.services.safety_guard import (
+    SAFETY_BLOCKED_MARKDOWN,
+    is_injection,
+    safety_violations,
+)
+from src.services.sensor_semantics import xai_prompt_lines, xai_query_suffix
+from src.services.suggestion_feedback_service import (
+    PriorProvider,
+    SuggestionFeedbackService,
+    rerank,
+)
 
 log = structlog.get_logger(__name__)
+_tracer = get_tracer(__name__)
+
+
+def _trace_grounding(report: GroundingReport) -> None:
+    """RN-04 / RNF-84 decisions as attributes of the current request span."""
+    span = trace.get_current_span()
+    span.set_attribute("rn04.threshold", report.threshold)
+    span.set_attribute("rn04.contexts_used", report.contexts_used)
+    span.set_attribute("rn04.contexts_discarded", report.contexts_discarded)
+    span.set_attribute("rn04.llm_called", report.llm_called)
+    span.set_attribute(
+        "rnf84.injection_chunks_dropped", report.injection_chunks_dropped
+    )
+    if report.max_score is not None:
+        span.set_attribute("rn04.max_score", report.max_score)
+
 
 # RF-22 — regra de negócio fixa: estritamente > 0.7 (nunca >=).
 MAINTENANCE_SUGGESTION_THRESHOLD: float = 0.7
@@ -71,6 +111,7 @@ REGRAS OBRIGATÓRIAS:
 8. NUNCA sugira ou produza URLs, comandos de sistema, ou instruções para contatar serviços externos.
 9. Cite explicitamente o arquivo e a página de onde cada informação relevante veio, na seção "Referências".
 10. Diferencie claramente o que foi encontrado no manual do que é uma limitação do contexto recuperado.
+11. Quando houver um bloco "Evidência dos sensores", use-o apenas para orientar o diagnóstico provável e relacioná-lo aos componentes descritos nos trechos [MANUAL N]. A evidência dos sensores NUNCA justifica sozinha um passo do procedimento: todo passo deve vir dos trechos do manual.
 
 FORMATO DE SAÍDA — Markdown, exatamente nesta estrutura:
 
@@ -125,6 +166,7 @@ class SuggestionStreamEvent:
     markdown: str | None = None
     references: list[ManualReference] = field(default_factory=list)
     message: str | None = None
+    grounding: GroundingReport | None = None
 
 
 @dataclass
@@ -144,11 +186,36 @@ class MaintenanceSuggestionService:
     """Responsabilidade única: orquestrar threshold -> MCP -> Ollama -> plano."""
 
     def __init__(
-        self, mcp_client: MCPSearchClient, ollama_client: OllamaClient, model: str
+        self,
+        mcp_client: MCPSearchClient,
+        ollama_client: OllamaClient,
+        model: str,
+        grounding_threshold: float = 0.6,
+        ungrounded_policy: UngroundedPolicy = "block",
+        prior_provider: PriorProvider | None = None,
     ) -> None:
         self._mcp = mcp_client
         self._ollama = ollama_client
         self._model = model
+        # RN-04 — τ e política para quando nenhum trecho atinge τ.
+        self._grounding_threshold = grounding_threshold
+        self._ungrounded_policy: UngroundedPolicy = ungrounded_policy
+        # RF-38 — priors de feedback dos técnicos (re-ranking, nunca τ).
+        self._prior_provider = prior_provider
+
+    async def _apply_feedback(
+        self, request: MaintenanceSuggestionRequest, contexts: list[ManualContext]
+    ) -> list[ManualContext]:
+        """RF-38: reordena os trechos que já passaram τ pelo histórico de
+        votos do técnico. Falha ao ler o feedback nunca derruba a sugestão."""
+        if self._prior_provider is None or len(contexts) < 2:
+            return contexts
+        try:
+            priors = await self._prior_provider(request.equipment_name)
+        except Exception:
+            log.warning("maintenance_feedback_priors_unavailable", exc_info=True)
+            return contexts
+        return rerank(contexts, priors)
 
     async def suggest(
         self, request: MaintenanceSuggestionRequest
@@ -176,10 +243,36 @@ class MaintenanceSuggestionService:
 
         # 2. Consultar o MCP (RF-21) — nenhuma lógica de busca duplicada aqui.
         query = self._build_query(request)
-        raw_results = await self._mcp.search_maintenance_manual(query)
+        with _tracer.start_as_current_span("rag.retrieve") as span:
+            span.set_attribute("rag.query_has_xai", bool(request.sensor_contributions))
+            raw_results = await self._mcp.search_maintenance_manual(query)
+            span.set_attribute("rag.candidates", len(raw_results.get("results", [])))
 
-        # 3. Extrair contexto + metadados.
-        contexts = self._extract_contexts(raw_results)
+        # 3. Extrair contexto + metadados e aplicar o limiar τ (RN-04): só
+        # trechos com score >= τ chegam ao prompt.
+        extracted = self._extract_contexts(raw_results)
+        clean = [c for c in extracted if not is_injection(c.text)]
+        contexts, discarded = split_by_threshold(clean, self._grounding_threshold)
+        contexts = await self._apply_feedback(request, contexts)
+        grounding = pre_generation_report(
+            contexts, discarded, self._grounding_threshold, self._ungrounded_policy
+        ).model_copy(update={"injection_chunks_dropped": len(extracted) - len(clean)})
+        _trace_grounding(grounding)
+        if not grounding.llm_called:
+            log.info(
+                "maintenance_suggestion_blocked_ungrounded",
+                threshold=self._grounding_threshold,
+                max_score=grounding.max_score,
+            )
+            return MaintenanceSuggestionResponse(
+                triggered=True,
+                failure_probability=request.failure_probability,
+                markdown=BLOCKED_MARKDOWN,
+                references=[],
+                model=None,
+                message=None,
+                grounding=finalize_report(grounding, BLOCKED_MARKDOWN, contexts),
+            )
 
         # 4. Construir prompt (contexto delimitado, RF-22 §4).
         user_prompt = self._build_prompt(request, query, contexts)
@@ -190,10 +283,21 @@ class MaintenanceSuggestionService:
             model=self._model,
             context_chunks=len(contexts),
         )
-        markdown = await self._ollama.generate(SYSTEM_PROMPT, user_prompt)
+        with _tracer.start_as_current_span("rag.generate") as span:
+            span.set_attribute("llm.model", self._model)
+            span.set_attribute("rag.contexts_in_prompt", len(contexts))
+            markdown = await self._ollama.generate(SYSTEM_PROMPT, user_prompt)
 
         # 6. Validar a resposta — nunca repassa JSON/HTML/vazio como plano.
         self._validate_markdown(markdown)
+
+        # 6b. RNF-84 — plano que manda desativar/contornar dispositivo de
+        # segurança nunca chega ao técnico.
+        violations = safety_violations(markdown)
+        trace.get_current_span().set_attribute("safety.violations", len(violations))
+        if violations:
+            log.warning("maintenance_suggestion_safety_blocked", violations=violations)
+            markdown = SAFETY_BLOCKED_MARKDOWN
 
         # 7. Retornar resultado estruturado.
         return MaintenanceSuggestionResponse(
@@ -212,6 +316,9 @@ class MaintenanceSuggestionService:
             ],
             model=self._model,
             message=None,
+            grounding=finalize_report(grounding, markdown, contexts).model_copy(
+                update={"safety_violations": violations}
+            ),
         )
 
     async def suggest_stream(
@@ -253,7 +360,23 @@ class MaintenanceSuggestionService:
             yield SuggestionStreamEvent(type="error", message=exc.detail)
             return
 
-        contexts = self._extract_contexts(raw_results)
+        extracted = self._extract_contexts(raw_results)
+        clean = [c for c in extracted if not is_injection(c.text)]
+        contexts, discarded = split_by_threshold(clean, self._grounding_threshold)
+        contexts = await self._apply_feedback(request, contexts)
+        grounding = pre_generation_report(
+            contexts, discarded, self._grounding_threshold, self._ungrounded_policy
+        ).model_copy(update={"injection_chunks_dropped": len(extracted) - len(clean)})
+        _trace_grounding(grounding)
+        if not grounding.llm_called:
+            yield SuggestionStreamEvent(
+                type="done",
+                markdown=BLOCKED_MARKDOWN,
+                references=[],
+                grounding=finalize_report(grounding, BLOCKED_MARKDOWN, contexts),
+            )
+            return
+
         user_prompt = self._build_prompt(request, query, contexts)
 
         log.info(
@@ -278,6 +401,14 @@ class MaintenanceSuggestionService:
             yield SuggestionStreamEvent(type="error", message=exc.detail)
             return
 
+        # RNF-84 — tokens já enviados não podem ser "desenviados": o evento
+        # `done` carrega o markdown definitivo, que substitui o texto
+        # parcial no cliente.
+        violations = safety_violations(full_markdown)
+        if violations:
+            log.warning("maintenance_stream_safety_blocked", violations=violations)
+            full_markdown = SAFETY_BLOCKED_MARKDOWN
+
         yield SuggestionStreamEvent(
             type="done",
             markdown=full_markdown,
@@ -291,6 +422,9 @@ class MaintenanceSuggestionService:
                 )
                 for ctx in contexts
             ],
+            grounding=finalize_report(grounding, full_markdown, contexts).model_copy(
+                update={"safety_violations": violations}
+            ),
         )
 
     # ------------------------------------------------------------------
@@ -300,10 +434,16 @@ class MaintenanceSuggestionService:
     @staticmethod
     def _build_query(request: MaintenanceSuggestionRequest) -> str:
         """Monta a query semântica enviada ao MCP a partir do equipamento e
-        (quando presente) da descrição livre do sintoma."""
-        if request.symptom_description:
-            return f"{request.equipment_name}: {request.symptom_description}"
-        return request.equipment_name
+        (quando presente) da descrição livre do sintoma. RF-35: quando a
+        explicação XAI vem junto, os sensores que mais empurram para falha
+        entram como vocabulário do componente físico (PT + EN)."""
+        base = (
+            f"{request.equipment_name}: {request.symptom_description}"
+            if request.symptom_description
+            else request.equipment_name
+        )
+        suffix = xai_query_suffix(request.sensor_contributions or [])
+        return f"{base} | {suffix}" if suffix else base
 
     @staticmethod
     def _extract_contexts(raw_results: dict[str, Any]) -> list[ManualContext]:
@@ -354,10 +494,18 @@ class MaintenanceSuggestionService:
             if request.symptom_description
             else ""
         )
+        evidence = xai_prompt_lines(request.sensor_contributions or [])
+        evidence_block = (
+            "Evidência dos sensores (explicação XAI do modelo preditivo — orienta "
+            "o diagnóstico, nunca substitui o manual):\n" + "\n".join(evidence) + "\n"
+            if evidence
+            else ""
+        )
         return (
             f"Equipamento: {request.equipment_name}\n"
             f"Probabilidade de falha estimada pelo modelo preditivo: {request.failure_probability:.0%}\n"
             f"{symptom_line}"
+            f"{evidence_block}"
             f'Consulta realizada aos manuais: "{query}"\n\n'
             "Contexto recuperado dos manuais técnicos (use SOMENTE estas informações):\n\n"
             f"{context_block}\n\n"
@@ -404,7 +552,15 @@ class MaintenanceSuggestionService:
 # racional dessa escolha).
 
 
-def get_maintenance_suggestion_service() -> MaintenanceSuggestionService:
+def get_maintenance_suggestion_service(
+    db: AsyncSession = Depends(get_db),
+) -> MaintenanceSuggestionService:
+    return build_maintenance_suggestion_service(db)
+
+
+def build_maintenance_suggestion_service(
+    db: AsyncSession,
+) -> MaintenanceSuggestionService:
     """FastAPI Depends factory — instancia clientes leves (sem estado de
     conexão persistente) a cada requisição, igual ao padrão de
     `get_alert_service`. Nenhum singleton de processo necessário aqui: o
@@ -423,4 +579,7 @@ def get_maintenance_suggestion_service() -> MaintenanceSuggestionService:
         mcp_client=mcp_client,
         ollama_client=ollama_client,
         model=settings.ollama_model,
+        grounding_threshold=settings.rag_grounding_threshold,
+        ungrounded_policy=settings.rag_ungrounded_policy,
+        prior_provider=SuggestionFeedbackService(db).prior_map,
     )

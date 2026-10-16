@@ -29,3 +29,9 @@ pytest-cov>=7.0.0
 # problemas neste projeto - confirmado empiricamente.
 mutmut==2.5.1
 toml>=0.10.2
+
+# Testes de propriedade e de contrato (tests/test_properties.py,
+# tests/test_contract_schemathesis.py). schemathesis 3.x rebaixa o starlette
+# para <1.0 (quebra o FastAPI/instrumentator) — usar a série 4.
+hypothesis>=6.130.12,<7
+schemathesis==4.31.1

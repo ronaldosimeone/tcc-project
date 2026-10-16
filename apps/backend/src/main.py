@@ -31,6 +31,24 @@ from src.core.logging import configure_logging
 from src.core.metrics import setup_http_instrumentation
 from src.core.rate_limit import limiter, rate_limit_exceeded_handler
 from src.routers import health as health_router
+from src.core.database import AsyncSessionFactory
+from src.core.security import ensure_secure_config
+from src.core.tracing import setup_tracing
+from src.routers import auth as auth_router
+from src.routers import history as history_router
+from src.services.auth_service import AuthService
+from src.services.asset_tracking import AssetTracking
+from src.services.failure_event_service import FailureEventService
+from src.services.asset_processor import AssetProcessor
+from src.services.shadow_service import ShadowEvaluator, is_canary
+from src.services.fleet_service import FleetService
+from src.services.mqtt_telemetry import (
+    MqttConfig,
+    MqttTelemetryIngestor,
+    MqttTelemetryPublisher,
+)
+from src.services.root_cause_service import RootCauseService
+from src.services.simulator import get_simulator
 from src.routers import maintenance as maintenance_router
 from src.routers import models as models_router
 from src.routers import monitoring as monitoring_router
@@ -72,6 +90,15 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         - Dispose the SQLAlchemy async connection pool gracefully.
     """
     # ── Startup ──────────────────────────────────────────────────────────
+    ensure_secure_config()  # AUTH_ENABLED=true exige JWT_SECRET real
+    if settings.bootstrap_admin_username and settings.bootstrap_admin_password:
+        try:
+            async with AsyncSessionFactory() as db:
+                await AuthService(db).bootstrap_admin(
+                    settings.bootstrap_admin_username, settings.bootstrap_admin_password
+                )
+        except Exception as exc:  # banco ainda sem a migração 0007, etc.
+            log.warning("auth_bootstrap_skipped", error=str(exc))
     app.state.limiter = limiter
 
     # RNF-70/71 — cliente Redis do InferenceCache, singleton do lifespan
@@ -99,19 +126,105 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # O pipeline subscreve ao mesmo SensorStreamService que o frontend SSE usa,
     # garantindo que mudanças de modo (PUT /simulator/mode) sejam refletidas
     # imediatamente nas predições e nos alertas WebSocket.
+    # Histórico real: o mesmo rastreador RN-03 + causa raiz serve o ativo
+    # principal e a frota simulada (cada ativo com seu tracker interno).
+    events = FailureEventService(
+        threshold=settings.event_threshold,
+        k_open=settings.event_k_open,
+        k_close=settings.event_k_close,
+        critical_at=settings.event_critical_at,
+    )
+    tracking = AssetTracking(
+        events, RootCauseService(), lambda: get_simulator().normal_medians()
+    )
+    app.state.asset_tracking = tracking
+
+    # Champion / challenger: shadow no ativo principal + canary na frota.
+    challenger: ModelRegistry | None = None
+    if settings.challenger_model:
+        challenger = ModelRegistry()
+        try:
+            await challenger.swap(settings.challenger_model)
+            log.info("challenger_loaded", model=settings.challenger_model)
+        except Exception as exc:
+            log.warning(
+                "challenger_unavailable",
+                model=settings.challenger_model,
+                error=str(exc),
+            )
+            challenger = None
+    app.state.challenger_registry = challenger
+
+    def processor_for(asset_id: str) -> AssetProcessor:
+        use_challenger = challenger is not None and is_canary(
+            asset_id, settings.canary_fraction
+        )
+        return AssetProcessor(
+            asset_id,
+            challenger if use_challenger and challenger else registry,
+            tracking,
+        )
+
     pipeline = InferencePipelineService(
         stream_service=get_sensor_stream_service(),
         registry=registry,
         alert_service=get_alert_service(),
+        tracking=tracking,
+        shadow=ShadowEvaluator(challenger) if challenger is not None else None,
     )
     pipeline.start()
     app.state.inference_pipeline = pipeline
     log.info("inference_pipeline_ready")
 
+    # Telemetria da frota: in-process (default) ou via broker MQTT.
+    publisher: MqttTelemetryPublisher | None = None
+    ingestor: MqttTelemetryIngestor | None = None
+    if settings.telemetry_transport == "mqtt":
+        mqtt_config = MqttConfig(
+            host=settings.mqtt_host,
+            port=settings.mqtt_port,
+            username=settings.mqtt_username,
+            password=settings.mqtt_password,
+            prefix=settings.mqtt_topic_prefix,
+        )
+        ingestor = MqttTelemetryIngestor(mqtt_config, processor_for)
+        ingestor.start()
+        if settings.fleet_size > 0:
+            publisher = MqttTelemetryPublisher(mqtt_config)
+            try:
+                await publisher.start()
+            except Exception as exc:
+                log.warning("mqtt_publisher_unavailable", error=str(exc))
+                publisher = None
+    app.state.mqtt_ingestor = ingestor
+
+    fleet: FleetService | None = None
+    if settings.fleet_size > 0:
+        fleet = FleetService(
+            settings.fleet_size,
+            registry,
+            tracking,
+            get_simulator(),
+            noise_frac=settings.fleet_noise,
+            seed=settings.fleet_seed,
+            publisher=publisher,
+            canary_registry=challenger,
+            canary_fraction=settings.canary_fraction,
+        )
+        fleet.start()
+    app.state.fleet = fleet
+
     yield
 
     # ── Shutdown ─────────────────────────────────────────────────────────
     await pipeline.stop()
+    if fleet is not None:
+        await fleet.stop()
+    if ingestor is not None:
+        await ingestor.stop()
+    if publisher is not None:
+        await publisher.stop()
+    await tracking.aclose()
     await engine.dispose()
     log.info("db_pool_disposed")
     await app.state.inference_cache.close()
@@ -184,9 +297,13 @@ def create_app() -> FastAPI:
     app.include_router(simulator_router.router)
     app.include_router(alerts_ws.router)
     app.include_router(maintenance_router.router)
+    app.include_router(history_router.router)
+    app.include_router(auth_router.router)
     app.include_router(settings_router.router)
     app.include_router(monitoring_router.router)
     app.include_router(observability_router.router)
+
+    setup_tracing(app)  # OTEL_ENABLED=true → traces OTLP (API → MCP → Ollama)
 
     return app
 

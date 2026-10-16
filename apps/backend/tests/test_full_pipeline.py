@@ -557,21 +557,42 @@ async def test_fallback_mcp_unavailable_raises_structured_error() -> None:
     assert ollama.calls == []  # nunca gasta uma chamada de LLM sem contexto
 
 
-async def test_fallback_no_manual_indexed_llm_still_called_with_empty_context() -> None:
+async def test_fallback_no_manual_indexed_blocks_llm_by_default() -> None:
     """
-    Chroma vazio / nenhum manual indexado -> MCP real devolveria
-    `{"results": []}` (RF-21: nenhum candidato ultrapassa o threshold de
-    similaridade). Auditoria confirmou que `MaintenanceSuggestionService`
-    NÃO tem um curto-circuito para contexto vazio — `_build_prompt` insere
-    o placeholder "(Nenhum trecho de manual relevante foi recuperado...)" e
-    o Ollama É chamado mesmo assim (a System Prompt, Regra 4, instrui o LLM
-    a declarar isso na seção "Limitações" em vez de inventar). Este teste
-    confirma exatamente esse comportamento real — não um "não chamar o LLM"
-    que o código não implementa.
+    RN-04 (política padrão "block"): Chroma vazio / nenhum manual indexado ->
+    MCP devolve `{"results": []}` -> nenhum trecho atinge τ -> o Ollama NÃO é
+    chamado e o plano é o texto fixo de "Limitações", marcado `ungrounded`.
+    """
+    mcp = fake_mcp_client({})
+    ollama = fake_ollama_client(response=LIMITATION_MARKDOWN)
+    service = MaintenanceSuggestionService(mcp, ollama, "llama3.2:3b")
+    request = MaintenanceSuggestionRequest(
+        failure_probability=0.90,
+        equipment_name="Equipamento sem manual indexado",
+        symptom_description="falha não catalogada",
+    )
+
+    response = await service.suggest(request)
+
+    assert response.triggered is True
+    assert response.references == []
+    assert ollama.calls == []
+    assert response.markdown is not None and "## Limitações" in response.markdown
+    assert response.grounding is not None and response.grounding.status == "ungrounded"
+
+
+async def test_fallback_no_manual_indexed_llm_still_called_with_flag_policy() -> None:
+    """
+    RN-04 com política "flag" — preserva o comportamento anterior: o
+    `_build_prompt` insere o placeholder "(Nenhum trecho de manual relevante
+    foi recuperado...)" e o Ollama É chamado (a System Prompt, Regra 4,
+    instrui o LLM a declarar "Limitações"); a resposta sai marcada `ungrounded`.
     """
     mcp = fake_mcp_client({})  # nenhuma palavra-chave nunca combina -> []
     ollama = fake_ollama_client(response=LIMITATION_MARKDOWN)
-    service = MaintenanceSuggestionService(mcp, ollama, "llama3.2:3b")
+    service = MaintenanceSuggestionService(
+        mcp, ollama, "llama3.2:3b", ungrounded_policy="flag"
+    )
     request = MaintenanceSuggestionRequest(
         failure_probability=0.90,
         equipment_name="Equipamento sem manual indexado",

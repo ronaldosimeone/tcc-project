@@ -1,0 +1,1630 @@
+{
+  "version": "1.0",
+  "requirement": "RF-36",
+  "corpus": [
+    "wap5-scheduled-maintenance-vol-b.pdf (sidecar p.170-177)",
+    "manual-compressor-cx500.pdf",
+    "manual-motor-eletrico.pdf",
+    "manual-bomba-centrifuga.pdf"
+  ],
+  "annotation": "draft — pending maintenance-specialist validation",
+  "n_answerable": 42,
+  "n_unanswerable": 12,
+  "cases": [
+    {
+      "id": "A01",
+      "equipment_name": "Compressor de ar da unidade de produção de ar (APU)",
+      "symptom_description": "nível de óleo do compressor baixo",
+      "sensor_contributions": [
+        {
+          "sensor": "Oil_level",
+          "contribution": 0.35
+        }
+      ],
+      "answerable": true,
+      "gold_refs": [
+        {
+          "file_name": "wap5-scheduled-maintenance-vol-b.pdf",
+          "page": 170
+        }
+      ],
+      "gold_facts": [
+        [
+          "top-up",
+          "completar"
+        ],
+        [
+          "do not over fill",
+          "não encher demais",
+          "não exceder"
+        ]
+      ],
+      "source_task": "601.1W.02",
+      "validation": "pending",
+      "validated_by": null,
+      "validation_notes": null
+    },
+    {
+      "id": "A02",
+      "equipment_name": "Compressor de ar da unidade de produção de ar (APU)",
+      "symptom_description": "vazamento de óleo no compressor principal",
+      "sensor_contributions": [
+        {
+          "sensor": "Oil_level",
+          "contribution": 0.2
+        },
+        {
+          "sensor": "Oil_temperature",
+          "contribution": 0.15
+        }
+      ],
+      "answerable": true,
+      "gold_refs": [
+        {
+          "file_name": "wap5-scheduled-maintenance-vol-b.pdf",
+          "page": 170
+        }
+      ],
+      "gold_facts": [
+        [
+          "oil leakage",
+          "vazamento de óleo"
+        ],
+        [
+          "replace the compressor",
+          "substituir o compressor"
+        ]
+      ],
+      "source_task": "601.1W.03",
+      "validation": "pending",
+      "validated_by": null,
+      "validation_notes": null
+    },
+    {
+      "id": "A03",
+      "equipment_name": "Compressor de ar da unidade de produção de ar (APU)",
+      "symptom_description": "motor do compressor superaquecendo, ventilação obstruída",
+      "sensor_contributions": [
+        {
+          "sensor": "Motor_current",
+          "contribution": 0.3
+        },
+        {
+          "sensor": "Oil_temperature",
+          "contribution": 0.2
+        }
+      ],
+      "answerable": true,
+      "gold_refs": [
+        {
+          "file_name": "wap5-scheduled-maintenance-vol-b.pdf",
+          "page": 170
+        }
+      ],
+      "gold_facts": [
+        [
+          "cooling vents",
+          "aberturas de ventilação",
+          "ventilação"
+        ],
+        [
+          "dirt",
+          "sujeira"
+        ],
+        [
+          "bearings",
+          "rolamentos"
+        ]
+      ],
+      "source_task": "601.1M.01",
+      "validation": "pending",
+      "validated_by": null,
+      "validation_notes": null
+    },
+    {
+      "id": "A04",
+      "equipment_name": "Compressor de ar da unidade de produção de ar (APU)",
+      "symptom_description": "pressão de óleo do compressor fora da especificação",
+      "sensor_contributions": [
+        {
+          "sensor": "Oil_temperature",
+          "contribution": 0.25
+        }
+      ],
+      "answerable": true,
+      "gold_refs": [
+        {
+          "file_name": "wap5-scheduled-maintenance-vol-b.pdf",
+          "page": 170
+        }
+      ],
+      "gold_facts": [
+        [
+          "oil pressure",
+          "pressão do óleo"
+        ],
+        [
+          "adjust",
+          "ajustar"
+        ]
+      ],
+      "source_task": "601.1M.02",
+      "validation": "pending",
+      "validated_by": null,
+      "validation_notes": null
+    },
+    {
+      "id": "A05",
+      "equipment_name": "Compressor de ar da unidade de produção de ar (APU)",
+      "symptom_description": "ruído anormal no compressor durante operação",
+      "sensor_contributions": [
+        {
+          "sensor": "Motor_current",
+          "contribution": 0.2
+        },
+        {
+          "sensor": "COMP",
+          "contribution": 0.1
+        }
+      ],
+      "answerable": true,
+      "gold_refs": [
+        {
+          "file_name": "wap5-scheduled-maintenance-vol-b.pdf",
+          "page": 170
+        }
+      ],
+      "gold_facts": [
+        [
+          "unusual noises",
+          "ruídos anormais",
+          "ruído"
+        ],
+        [
+          "replace",
+          "substituir"
+        ]
+      ],
+      "source_task": "601.1M.03",
+      "validation": "pending",
+      "validated_by": null,
+      "validation_notes": null
+    },
+    {
+      "id": "A06",
+      "equipment_name": "Compressor de ar da unidade de produção de ar (APU)",
+      "symptom_description": "vibração do compressor, coxins desgastados",
+      "sensor_contributions": [
+        {
+          "sensor": "Motor_current",
+          "contribution": 0.1
+        }
+      ],
+      "answerable": true,
+      "gold_refs": [
+        {
+          "file_name": "wap5-scheduled-maintenance-vol-b.pdf",
+          "page": 170
+        }
+      ],
+      "gold_facts": [
+        [
+          "resilient mounting",
+          "coxins",
+          "suportes resilientes"
+        ],
+        [
+          "worn",
+          "desgastad"
+        ]
+      ],
+      "source_task": "601.3M.01",
+      "validation": "pending",
+      "validated_by": null,
+      "validation_notes": null
+    },
+    {
+      "id": "A07",
+      "equipment_name": "Compressor de ar da unidade de produção de ar (APU)",
+      "symptom_description": "mangueira de descarga do compressor danificada",
+      "sensor_contributions": [
+        {
+          "sensor": "TP2",
+          "contribution": 0.3
+        },
+        {
+          "sensor": "Reservoirs",
+          "contribution": 0.2
+        }
+      ],
+      "answerable": true,
+      "gold_refs": [
+        {
+          "file_name": "wap5-scheduled-maintenance-vol-b.pdf",
+          "page": 170
+        }
+      ],
+      "gold_facts": [
+        [
+          "delivery hose",
+          "mangueira de descarga"
+        ],
+        [
+          "replace",
+          "substituir"
+        ]
+      ],
+      "source_task": "601.3M.02",
+      "validation": "pending",
+      "validated_by": null,
+      "validation_notes": null
+    },
+    {
+      "id": "A08",
+      "equipment_name": "Compressor de ar da unidade de produção de ar (APU)",
+      "symptom_description": "filtro de admissão de ar do compressor sujo",
+      "sensor_contributions": [
+        {
+          "sensor": "COMP",
+          "contribution": 0.3
+        },
+        {
+          "sensor": "Motor_current",
+          "contribution": 0.2
+        }
+      ],
+      "answerable": true,
+      "gold_refs": [
+        {
+          "file_name": "wap5-scheduled-maintenance-vol-b.pdf",
+          "page": 171
+        }
+      ],
+      "gold_facts": [
+        [
+          "air intake filter",
+          "filtro de admissão"
+        ],
+        [
+          "clean",
+          "limpar"
+        ]
+      ],
+      "source_task": "601.3M.04",
+      "validation": "pending",
+      "validated_by": null,
+      "validation_notes": null
+    },
+    {
+      "id": "A09",
+      "equipment_name": "Compressor de ar da unidade de produção de ar (APU)",
+      "symptom_description": "respiro do cárter do compressor obstruído",
+      "sensor_contributions": [
+        {
+          "sensor": "Oil_temperature",
+          "contribution": 0.2
+        }
+      ],
+      "answerable": true,
+      "gold_refs": [
+        {
+          "file_name": "wap5-scheduled-maintenance-vol-b.pdf",
+          "page": 171
+        }
+      ],
+      "gold_facts": [
+        [
+          "crankcase breather",
+          "respiro do cárter"
+        ],
+        [
+          "clean",
+          "limpar"
+        ]
+      ],
+      "source_task": "601.3M.05",
+      "validation": "pending",
+      "validated_by": null,
+      "validation_notes": null
+    },
+    {
+      "id": "A10",
+      "equipment_name": "Compressor de ar da unidade de produção de ar (APU)",
+      "symptom_description": "compressor demora para encher os reservatórios",
+      "sensor_contributions": [
+        {
+          "sensor": "Reservoirs",
+          "contribution": 0.4
+        },
+        {
+          "sensor": "TP2",
+          "contribution": 0.3
+        }
+      ],
+      "answerable": true,
+      "gold_refs": [
+        {
+          "file_name": "wap5-scheduled-maintenance-vol-b.pdf",
+          "page": 171
+        }
+      ],
+      "gold_facts": [
+        [
+          "time taken",
+          "tempo"
+        ],
+        [
+          "fill the main reservoirs",
+          "encher os reservatórios"
+        ],
+        [
+          "replace the compressor",
+          "substituir o compressor"
+        ]
+      ],
+      "source_task": "601.3M.07",
+      "validation": "pending",
+      "validated_by": null,
+      "validation_notes": null
+    },
+    {
+      "id": "A11",
+      "equipment_name": "Compressor de ar da unidade de produção de ar (APU)",
+      "symptom_description": "fixações do compressor soltas",
+      "sensor_contributions": [
+        {
+          "sensor": "Motor_current",
+          "contribution": 0.1
+        }
+      ],
+      "answerable": true,
+      "gold_refs": [
+        {
+          "file_name": "wap5-scheduled-maintenance-vol-b.pdf",
+          "page": 171
+        }
+      ],
+      "gold_facts": [
+        [
+          "fasteners",
+          "fixações",
+          "parafusos"
+        ],
+        [
+          "tighten",
+          "apertar"
+        ]
+      ],
+      "source_task": "601.3M.08",
+      "validation": "pending",
+      "validated_by": null,
+      "validation_notes": null
+    },
+    {
+      "id": "A12",
+      "equipment_name": "Compressor de ar da unidade de produção de ar (APU)",
+      "symptom_description": "filtro do copo de dreno (drip cup) sujo",
+      "sensor_contributions": [
+        {
+          "sensor": "H1",
+          "contribution": 0.3
+        }
+      ],
+      "answerable": true,
+      "gold_refs": [
+        {
+          "file_name": "wap5-scheduled-maintenance-vol-b.pdf",
+          "page": 171
+        }
+      ],
+      "gold_facts": [
+        [
+          "drip cup filter",
+          "copo de dreno",
+          "drip cup"
+        ],
+        [
+          "clean",
+          "limpar"
+        ]
+      ],
+      "source_task": "601.6M.01",
+      "validation": "pending",
+      "validated_by": null,
+      "validation_notes": null
+    },
+    {
+      "id": "A13",
+      "equipment_name": "Compressor de ar da unidade de produção de ar (APU)",
+      "symptom_description": "inspeção anual do compressor: motor, ventilador e cárter",
+      "sensor_contributions": [],
+      "answerable": true,
+      "gold_refs": [
+        {
+          "file_name": "wap5-scheduled-maintenance-vol-b.pdf",
+          "page": 171
+        }
+      ],
+      "gold_facts": [
+        [
+          "cooling fan",
+          "ventilador"
+        ],
+        [
+          "oil sump",
+          "cárter"
+        ]
+      ],
+      "source_task": "601.1Y.01",
+      "validation": "pending",
+      "validated_by": null,
+      "validation_notes": null
+    },
+    {
+      "id": "A14",
+      "equipment_name": "Compressor de ar da unidade de produção de ar (APU)",
+      "symptom_description": "filtro de óleo primário do compressor entupido",
+      "sensor_contributions": [
+        {
+          "sensor": "Oil_temperature",
+          "contribution": 0.3
+        }
+      ],
+      "answerable": true,
+      "gold_refs": [
+        {
+          "file_name": "wap5-scheduled-maintenance-vol-b.pdf",
+          "page": 171
+        }
+      ],
+      "gold_facts": [
+        [
+          "primary oil filter",
+          "filtro de óleo primário"
+        ],
+        [
+          "clean",
+          "limpar"
+        ]
+      ],
+      "source_task": "601.1Y.02",
+      "validation": "pending",
+      "validated_by": null,
+      "validation_notes": null
+    },
+    {
+      "id": "A15",
+      "equipment_name": "Compressor de ar da unidade de produção de ar (APU)",
+      "symptom_description": "trocar filtro de óleo secundário do compressor",
+      "sensor_contributions": [
+        {
+          "sensor": "Oil_temperature",
+          "contribution": 0.2
+        }
+      ],
+      "answerable": true,
+      "gold_refs": [
+        {
+          "file_name": "wap5-scheduled-maintenance-vol-b.pdf",
+          "page": 171
+        }
+      ],
+      "gold_facts": [
+        [
+          "secondary oil filter",
+          "filtro de óleo secundário"
+        ],
+        [
+          "change",
+          "trocar"
+        ]
+      ],
+      "source_task": "601.1Y.03",
+      "validation": "pending",
+      "validated_by": null,
+      "validation_notes": null
+    },
+    {
+      "id": "A16",
+      "equipment_name": "Compressor de ar da unidade de produção de ar (APU)",
+      "symptom_description": "válvulas concêntricas do compressor com depósitos",
+      "sensor_contributions": [
+        {
+          "sensor": "TP2",
+          "contribution": 0.25
+        },
+        {
+          "sensor": "COMP",
+          "contribution": 0.2
+        }
+      ],
+      "answerable": true,
+      "gold_refs": [
+        {
+          "file_name": "wap5-scheduled-maintenance-vol-b.pdf",
+          "page": 172
+        }
+      ],
+      "gold_facts": [
+        [
+          "concentric valves",
+          "válvulas concêntricas"
+        ],
+        [
+          "clean",
+          "limpar"
+        ]
+      ],
+      "source_task": "601.1Y.04",
+      "validation": "pending",
+      "validated_by": null,
+      "validation_notes": null
+    },
+    {
+      "id": "A17",
+      "equipment_name": "Compressor de ar da unidade de produção de ar (APU)",
+      "symptom_description": "válvulas de dreno automático de baixa pressão sujas",
+      "sensor_contributions": [
+        {
+          "sensor": "H1",
+          "contribution": 0.3
+        },
+        {
+          "sensor": "DV_pressure",
+          "contribution": 0.1
+        }
+      ],
+      "answerable": true,
+      "gold_refs": [
+        {
+          "file_name": "wap5-scheduled-maintenance-vol-b.pdf",
+          "page": 172
+        }
+      ],
+      "gold_facts": [
+        [
+          "low pressure automatic drain valves",
+          "dreno automático"
+        ],
+        [
+          "clean",
+          "limpar"
+        ]
+      ],
+      "source_task": "601.1Y.06",
+      "validation": "pending",
+      "validated_by": null,
+      "validation_notes": null
+    },
+    {
+      "id": "A18",
+      "equipment_name": "Compressor de ar da unidade de produção de ar (APU)",
+      "symptom_description": "lubrificar rolamentos do motor do compressor",
+      "sensor_contributions": [
+        {
+          "sensor": "Motor_current",
+          "contribution": 0.25
+        }
+      ],
+      "answerable": true,
+      "gold_refs": [
+        {
+          "file_name": "wap5-scheduled-maintenance-vol-b.pdf",
+          "page": 172
+        }
+      ],
+      "gold_facts": [
+        [
+          "motor bearings",
+          "rolamentos do motor"
+        ],
+        [
+          "lubricate",
+          "lubrificar"
+        ]
+      ],
+      "source_task": "601.18M.01",
+      "validation": "pending",
+      "validated_by": null,
+      "validation_notes": null
+    },
+    {
+      "id": "A19",
+      "equipment_name": "Compressor de ar da unidade de produção de ar (APU)",
+      "symptom_description": "pressostato do compressor não aciona",
+      "sensor_contributions": [
+        {
+          "sensor": "MPG",
+          "contribution": 0.4
+        },
+        {
+          "sensor": "Reservoirs",
+          "contribution": 0.2
+        }
+      ],
+      "answerable": true,
+      "gold_refs": [
+        {
+          "file_name": "wap5-scheduled-maintenance-vol-b.pdf",
+          "page": 172
+        }
+      ],
+      "gold_facts": [
+        [
+          "pressure switches",
+          "pressostato"
+        ],
+        [
+          "test",
+          "testar"
+        ],
+        [
+          "brake unit",
+          "unidade de freio"
+        ]
+      ],
+      "source_task": "601.4Y.01",
+      "validation": "pending",
+      "validated_by": null,
+      "validation_notes": null
+    },
+    {
+      "id": "A20",
+      "equipment_name": "Compressor de ar da unidade de produção de ar (APU)",
+      "symptom_description": "trinca no ponto de fixação do compressor no chassi",
+      "sensor_contributions": [],
+      "answerable": true,
+      "gold_refs": [
+        {
+          "file_name": "wap5-scheduled-maintenance-vol-b.pdf",
+          "page": 173
+        }
+      ],
+      "gold_facts": [
+        [
+          "mounting points",
+          "pontos de fixação"
+        ],
+        [
+          "cracks",
+          "trincas"
+        ]
+      ],
+      "source_task": "601.5Y.01",
+      "validation": "pending",
+      "validated_by": null,
+      "validation_notes": null
+    },
+    {
+      "id": "A21",
+      "equipment_name": "Compressor de ar da unidade de produção de ar (APU)",
+      "symptom_description": "vazamento na saída do compressor, junta de cobre",
+      "sensor_contributions": [
+        {
+          "sensor": "TP2",
+          "contribution": 0.3
+        },
+        {
+          "sensor": "Reservoirs",
+          "contribution": 0.25
+        }
+      ],
+      "answerable": true,
+      "gold_refs": [
+        {
+          "file_name": "wap5-scheduled-maintenance-vol-b.pdf",
+          "page": 173
+        }
+      ],
+      "gold_facts": [
+        [
+          "copper gasket",
+          "junta de cobre"
+        ],
+        [
+          "replace",
+          "substituir"
+        ]
+      ],
+      "source_task": "601.5Y.02",
+      "validation": "pending",
+      "validated_by": null,
+      "validation_notes": null
+    },
+    {
+      "id": "A22",
+      "equipment_name": "Compressor de ar da unidade de produção de ar (APU)",
+      "symptom_description": "secador de ar com dano visível",
+      "sensor_contributions": [
+        {
+          "sensor": "Towers",
+          "contribution": 0.3
+        },
+        {
+          "sensor": "DV_pressure",
+          "contribution": 0.2
+        }
+      ],
+      "answerable": true,
+      "gold_refs": [
+        {
+          "file_name": "wap5-scheduled-maintenance-vol-b.pdf",
+          "page": 173
+        }
+      ],
+      "gold_facts": [
+        [
+          "air drier",
+          "secador de ar"
+        ],
+        [
+          "replace the air drier",
+          "substituir o secador"
+        ]
+      ],
+      "source_task": "602.1W.O1",
+      "validation": "pending",
+      "validated_by": null,
+      "validation_notes": null
+    },
+    {
+      "id": "A23",
+      "equipment_name": "Compressor de ar da unidade de produção de ar (APU)",
+      "symptom_description": "secador de ar não funciona com o compressor ligado",
+      "sensor_contributions": [
+        {
+          "sensor": "Towers",
+          "contribution": 0.4
+        },
+        {
+          "sensor": "DV_pressure",
+          "contribution": 0.3
+        }
+      ],
+      "answerable": true,
+      "gold_refs": [
+        {
+          "file_name": "wap5-scheduled-maintenance-vol-b.pdf",
+          "page": 173
+        }
+      ],
+      "gold_facts": [
+        [
+          "compressor operating",
+          "compressor em operação",
+          "compressor ligado"
+        ],
+        [
+          "operation of the air drier",
+          "funcionamento do secador"
+        ]
+      ],
+      "source_task": "602.1M.01",
+      "validation": "pending",
+      "validated_by": null,
+      "validation_notes": null
+    },
+    {
+      "id": "A24",
+      "equipment_name": "Compressor de ar da unidade de produção de ar (APU)",
+      "symptom_description": "vazamento de ar nas tubulações do secador",
+      "sensor_contributions": [
+        {
+          "sensor": "DV_pressure",
+          "contribution": 0.35
+        },
+        {
+          "sensor": "Reservoirs",
+          "contribution": 0.3
+        }
+      ],
+      "answerable": true,
+      "gold_refs": [
+        {
+          "file_name": "wap5-scheduled-maintenance-vol-b.pdf",
+          "page": 173
+        }
+      ],
+      "gold_facts": [
+        [
+          "pneumatic pipes",
+          "tubulações pneumáticas"
+        ],
+        [
+          "leakage",
+          "vazamento"
+        ]
+      ],
+      "source_task": "602.3M.01",
+      "validation": "pending",
+      "validated_by": null,
+      "validation_notes": null
+    },
+    {
+      "id": "A25",
+      "equipment_name": "Compressor de ar da unidade de produção de ar (APU)",
+      "symptom_description": "aletas de resfriamento do secador sujas",
+      "sensor_contributions": [
+        {
+          "sensor": "Towers",
+          "contribution": 0.2
+        }
+      ],
+      "answerable": true,
+      "gold_refs": [
+        {
+          "file_name": "wap5-scheduled-maintenance-vol-b.pdf",
+          "page": 173
+        }
+      ],
+      "gold_facts": [
+        [
+          "cooling fins",
+          "aletas"
+        ],
+        [
+          "steam clean",
+          "limpeza a vapor",
+          "vapor"
+        ]
+      ],
+      "source_task": "602.1Y.01",
+      "validation": "pending",
+      "validated_by": null,
+      "validation_notes": null
+    },
+    {
+      "id": "A26",
+      "equipment_name": "Compressor de ar da unidade de produção de ar (APU)",
+      "symptom_description": "conduíte elétrico do secador danificado",
+      "sensor_contributions": [
+        {
+          "sensor": "Towers",
+          "contribution": 0.15
+        }
+      ],
+      "answerable": true,
+      "gold_refs": [
+        {
+          "file_name": "wap5-scheduled-maintenance-vol-b.pdf",
+          "page": 174
+        }
+      ],
+      "gold_facts": [
+        [
+          "electrical conduit",
+          "conduíte"
+        ],
+        [
+          "replace",
+          "substituir"
+        ]
+      ],
+      "source_task": "602.1Y.02",
+      "validation": "pending",
+      "validated_by": null,
+      "validation_notes": null
+    },
+    {
+      "id": "A27",
+      "equipment_name": "Compressor de ar da unidade de produção de ar (APU)",
+      "symptom_description": "pré-filtro coalescente do secador de torre dupla sujo",
+      "sensor_contributions": [
+        {
+          "sensor": "Towers",
+          "contribution": 0.35
+        },
+        {
+          "sensor": "H1",
+          "contribution": 0.2
+        }
+      ],
+      "answerable": true,
+      "gold_refs": [
+        {
+          "file_name": "wap5-scheduled-maintenance-vol-b.pdf",
+          "page": 174
+        }
+      ],
+      "gold_facts": [
+        [
+          "pre-coalescer",
+          "coalescente"
+        ],
+        [
+          "regenerating orifice",
+          "orifício de regeneração"
+        ]
+      ],
+      "source_task": "602.1Y.03",
+      "validation": "pending",
+      "validated_by": null,
+      "validation_notes": null
+    },
+    {
+      "id": "A28",
+      "equipment_name": "Compressor de ar da unidade de produção de ar (APU)",
+      "symptom_description": "registros de isolamento do secador defeituosos",
+      "sensor_contributions": [
+        {
+          "sensor": "Towers",
+          "contribution": 0.2
+        }
+      ],
+      "answerable": true,
+      "gold_refs": [
+        {
+          "file_name": "wap5-scheduled-maintenance-vol-b.pdf",
+          "page": 174
+        }
+      ],
+      "gold_facts": [
+        [
+          "isolating cocks",
+          "registros de isolamento",
+          "torneiras de isolamento"
+        ],
+        [
+          "replace",
+          "substituir"
+        ]
+      ],
+      "source_task": "602.1Y.04",
+      "validation": "pending",
+      "validated_by": null,
+      "validation_notes": null
+    },
+    {
+      "id": "A29",
+      "equipment_name": "Compressor de ar da unidade de produção de ar (APU)",
+      "symptom_description": "dessecante das torres contaminado, umidade no ar comprimido",
+      "sensor_contributions": [
+        {
+          "sensor": "Towers",
+          "contribution": 0.5
+        },
+        {
+          "sensor": "DV_pressure",
+          "contribution": 0.2
+        }
+      ],
+      "answerable": true,
+      "gold_refs": [
+        {
+          "file_name": "wap5-scheduled-maintenance-vol-b.pdf",
+          "page": 174
+        }
+      ],
+      "gold_facts": [
+        [
+          "desiccant",
+          "dessecante"
+        ],
+        [
+          "oil or water",
+          "óleo ou água"
+        ]
+      ],
+      "source_task": "602.2Y.01",
+      "validation": "pending",
+      "validated_by": null,
+      "validation_notes": null
+    },
+    {
+      "id": "A30",
+      "equipment_name": "Compressor de ar da unidade de produção de ar (APU)",
+      "symptom_description": "água e óleo acumulados nos reservatórios",
+      "sensor_contributions": [
+        {
+          "sensor": "Reservoirs",
+          "contribution": 0.3
+        },
+        {
+          "sensor": "H1",
+          "contribution": 0.2
+        }
+      ],
+      "answerable": true,
+      "gold_refs": [
+        {
+          "file_name": "wap5-scheduled-maintenance-vol-b.pdf",
+          "page": 174
+        }
+      ],
+      "gold_facts": [
+        [
+          "drain cocks",
+          "torneiras de dreno",
+          "drenos"
+        ],
+        [
+          "water and oil",
+          "água e óleo"
+        ]
+      ],
+      "source_task": "603.1W.O1",
+      "validation": "pending",
+      "validated_by": null,
+      "validation_notes": null
+    },
+    {
+      "id": "A31",
+      "equipment_name": "Compressor de ar da unidade de produção de ar (APU)",
+      "symptom_description": "vazamento nas tubulações pneumáticas dos reservatórios",
+      "sensor_contributions": [
+        {
+          "sensor": "Reservoirs",
+          "contribution": 0.45
+        },
+        {
+          "sensor": "TP3",
+          "contribution": 0.2
+        }
+      ],
+      "answerable": true,
+      "gold_refs": [
+        {
+          "file_name": "wap5-scheduled-maintenance-vol-b.pdf",
+          "page": 174
+        }
+      ],
+      "gold_facts": [
+        [
+          "pneumatic pipes",
+          "tubulações pneumáticas"
+        ],
+        [
+          "leakage",
+          "vazamento"
+        ]
+      ],
+      "source_task": "603.3M.01",
+      "validation": "pending",
+      "validated_by": null,
+      "validation_notes": null
+    },
+    {
+      "id": "A32",
+      "equipment_name": "Compressor de ar da unidade de produção de ar (APU)",
+      "symptom_description": "válvula de dreno automático do reservatório faltando ou com defeito",
+      "sensor_contributions": [
+        {
+          "sensor": "Reservoirs",
+          "contribution": 0.3
+        }
+      ],
+      "answerable": true,
+      "gold_refs": [
+        {
+          "file_name": "wap5-scheduled-maintenance-vol-b.pdf",
+          "page": 174
+        }
+      ],
+      "gold_facts": [
+        [
+          "automatic drain valves",
+          "dreno automático"
+        ],
+        [
+          "missing or defective",
+          "faltando ou defeituos",
+          "ausente"
+        ]
+      ],
+      "source_task": "603.3M.02",
+      "validation": "pending",
+      "validated_by": null,
+      "validation_notes": null
+    },
+    {
+      "id": "A33",
+      "equipment_name": "Compressor de ar da unidade de produção de ar (APU)",
+      "symptom_description": "registro de isolamento do reservatório principal desgastado",
+      "sensor_contributions": [
+        {
+          "sensor": "Reservoirs",
+          "contribution": 0.25
+        }
+      ],
+      "answerable": true,
+      "gold_refs": [
+        {
+          "file_name": "wap5-scheduled-maintenance-vol-b.pdf",
+          "page": 175
+        }
+      ],
+      "gold_facts": [
+        [
+          "isolating cocks",
+          "registros de isolamento"
+        ],
+        [
+          "worn",
+          "desgastad"
+        ]
+      ],
+      "source_task": "603.3M.03",
+      "validation": "pending",
+      "validated_by": null,
+      "validation_notes": null
+    },
+    {
+      "id": "A34",
+      "equipment_name": "Compressor de ar da unidade de produção de ar (APU)",
+      "symptom_description": "correntes de segurança do reservatório soltas",
+      "sensor_contributions": [],
+      "answerable": true,
+      "gold_refs": [
+        {
+          "file_name": "wap5-scheduled-maintenance-vol-b.pdf",
+          "page": 175
+        }
+      ],
+      "gold_facts": [
+        [
+          "safety chains",
+          "correntes de segurança"
+        ]
+      ],
+      "source_task": "603.3M.05",
+      "validation": "pending",
+      "validated_by": null,
+      "validation_notes": null
+    },
+    {
+      "id": "A35",
+      "equipment_name": "Compressor de ar da unidade de produção de ar (APU)",
+      "symptom_description": "filtro de peneira da linha de ar sujo",
+      "sensor_contributions": [
+        {
+          "sensor": "TP3",
+          "contribution": 0.3
+        },
+        {
+          "sensor": "H1",
+          "contribution": 0.2
+        }
+      ],
+      "answerable": true,
+      "gold_refs": [
+        {
+          "file_name": "wap5-scheduled-maintenance-vol-b.pdf",
+          "page": 175
+        }
+      ],
+      "gold_facts": [
+        [
+          "air line sieve",
+          "peneira da linha de ar",
+          "filtro de peneira"
+        ],
+        [
+          "clean",
+          "limpar"
+        ]
+      ],
+      "source_task": "603.6M.02",
+      "validation": "pending",
+      "validated_by": null,
+      "validation_notes": null
+    },
+    {
+      "id": "A36",
+      "equipment_name": "Compressor de ar da unidade de produção de ar (APU)",
+      "symptom_description": "válvulas de dreno automático não drenam",
+      "sensor_contributions": [
+        {
+          "sensor": "H1",
+          "contribution": 0.3
+        },
+        {
+          "sensor": "Reservoirs",
+          "contribution": 0.2
+        }
+      ],
+      "answerable": true,
+      "gold_refs": [
+        {
+          "file_name": "wap5-scheduled-maintenance-vol-b.pdf",
+          "page": 175
+        }
+      ],
+      "gold_facts": [
+        [
+          "automatic drain valves",
+          "dreno automático"
+        ],
+        [
+          "test",
+          "testar"
+        ],
+        [
+          "replace",
+          "substituir"
+        ]
+      ],
+      "source_task": "603.6M.03",
+      "validation": "pending",
+      "validated_by": null,
+      "validation_notes": null
+    },
+    {
+      "id": "A37",
+      "equipment_name": "Compressor de ar da unidade de produção de ar (APU)",
+      "symptom_description": "pressão do reservatório cai com o compressor desligado (válvula de retenção)",
+      "sensor_contributions": [
+        {
+          "sensor": "Reservoirs",
+          "contribution": 0.5
+        },
+        {
+          "sensor": "TP2",
+          "contribution": 0.2
+        }
+      ],
+      "answerable": true,
+      "gold_refs": [
+        {
+          "file_name": "wap5-scheduled-maintenance-vol-b.pdf",
+          "page": 175
+        }
+      ],
+      "gold_facts": [
+        [
+          "check valves",
+          "válvulas de retenção"
+        ],
+        [
+          "test",
+          "testar"
+        ]
+      ],
+      "source_task": "603.1Y.01",
+      "validation": "pending",
+      "validated_by": null,
+      "validation_notes": null
+    },
+    {
+      "id": "A38",
+      "equipment_name": "Compressor de ar da unidade de produção de ar (APU)",
+      "symptom_description": "válvula de segurança do reservatório principal precisa de revisão",
+      "sensor_contributions": [
+        {
+          "sensor": "Reservoirs",
+          "contribution": 0.3
+        }
+      ],
+      "answerable": true,
+      "gold_refs": [
+        {
+          "file_name": "wap5-scheduled-maintenance-vol-b.pdf",
+          "page": 176
+        }
+      ],
+      "gold_facts": [
+        [
+          "safety valves",
+          "válvulas de segurança"
+        ],
+        [
+          "overhaul",
+          "revis"
+        ]
+      ],
+      "source_task": "603.4Y.05",
+      "validation": "pending",
+      "validated_by": null,
+      "validation_notes": null
+    },
+    {
+      "id": "A39",
+      "equipment_name": "Compressor de ar da unidade de produção de ar (APU)",
+      "symptom_description": "nível de óleo do compressor auxiliar baixo",
+      "sensor_contributions": [],
+      "answerable": true,
+      "gold_refs": [
+        {
+          "file_name": "wap5-scheduled-maintenance-vol-b.pdf",
+          "page": 176
+        }
+      ],
+      "gold_facts": [
+        [
+          "auxiliary",
+          "auxiliar"
+        ],
+        [
+          "oil level",
+          "nível de óleo"
+        ],
+        [
+          "top-up",
+          "completar"
+        ]
+      ],
+      "source_task": "604.3M.01",
+      "validation": "pending",
+      "validated_by": null,
+      "validation_notes": null
+    },
+    {
+      "id": "A40",
+      "equipment_name": "Compressor de ar da unidade de produção de ar (APU)",
+      "symptom_description": "escovas do motor do compressor auxiliar gastas",
+      "sensor_contributions": [],
+      "answerable": true,
+      "gold_refs": [
+        {
+          "file_name": "wap5-scheduled-maintenance-vol-b.pdf",
+          "page": 177
+        }
+      ],
+      "gold_facts": [
+        [
+          "brushes",
+          "escovas"
+        ],
+        [
+          "worn",
+          "gastas",
+          "desgastad"
+        ]
+      ],
+      "source_task": "604.1Y.02",
+      "validation": "pending",
+      "validated_by": null,
+      "validation_notes": null
+    },
+    {
+      "id": "A41",
+      "equipment_name": "Compressor de ar da unidade de produção de ar (APU)",
+      "symptom_description": "trocar o óleo do compressor CX-500",
+      "sensor_contributions": [
+        {
+          "sensor": "Oil_temperature",
+          "contribution": 0.2
+        }
+      ],
+      "answerable": true,
+      "gold_refs": [
+        {
+          "file_name": "manual-compressor-cx500.pdf",
+          "page": 2
+        }
+      ],
+      "gold_facts": [
+        [
+          "400 horas",
+          "400 hours"
+        ]
+      ],
+      "source_task": "CX500-p2",
+      "validation": "pending",
+      "validated_by": null,
+      "validation_notes": null
+    },
+    {
+      "id": "A42",
+      "equipment_name": "Compressor de ar da unidade de produção de ar (APU)",
+      "symptom_description": "filtro de ar do compressor CX-500",
+      "sensor_contributions": [
+        {
+          "sensor": "COMP",
+          "contribution": 0.2
+        }
+      ],
+      "answerable": true,
+      "gold_refs": [
+        {
+          "file_name": "manual-compressor-cx500.pdf",
+          "page": 3
+        }
+      ],
+      "gold_facts": [
+        [
+          "semanalmente",
+          "weekly"
+        ]
+      ],
+      "source_task": "CX500-p3",
+      "validation": "pending",
+      "validated_by": null,
+      "validation_notes": null
+    },
+    {
+      "id": "U01",
+      "equipment_name": "Compressor de ar da unidade de produção de ar (APU)",
+      "symptom_description": "qual o torque de aperto dos parafusos do cabeçote do compressor?",
+      "sensor_contributions": [],
+      "answerable": false,
+      "gold_refs": [],
+      "gold_facts": [],
+      "source_task": null,
+      "validation": "pending",
+      "validated_by": null,
+      "validation_notes": null
+    },
+    {
+      "id": "U02",
+      "equipment_name": "Compressor de ar da unidade de produção de ar (APU)",
+      "symptom_description": "pressão de abertura exata da válvula de segurança em bar",
+      "sensor_contributions": [
+        {
+          "sensor": "Reservoirs",
+          "contribution": 0.3
+        }
+      ],
+      "answerable": false,
+      "gold_refs": [],
+      "gold_facts": [],
+      "source_task": null,
+      "validation": "pending",
+      "validated_by": null,
+      "validation_notes": null
+    },
+    {
+      "id": "U03",
+      "equipment_name": "Compressor de ar da unidade de produção de ar (APU)",
+      "symptom_description": "temperatura máxima admissível do óleo do compressor em °C",
+      "sensor_contributions": [
+        {
+          "sensor": "Oil_temperature",
+          "contribution": 0.5
+        }
+      ],
+      "answerable": false,
+      "gold_refs": [],
+      "gold_facts": [],
+      "source_task": null,
+      "validation": "pending",
+      "validated_by": null,
+      "validation_notes": null
+    },
+    {
+      "id": "U04",
+      "equipment_name": "Compressor de ar da unidade de produção de ar (APU)",
+      "symptom_description": "corrente nominal do motor do compressor em ampères",
+      "sensor_contributions": [
+        {
+          "sensor": "Motor_current",
+          "contribution": 0.4
+        }
+      ],
+      "answerable": false,
+      "gold_refs": [],
+      "gold_facts": [],
+      "source_task": null,
+      "validation": "pending",
+      "validated_by": null,
+      "validation_notes": null
+    },
+    {
+      "id": "U05",
+      "equipment_name": "Compressor de ar da unidade de produção de ar (APU)",
+      "symptom_description": "procedimento para regenerar o dessecante em campo sem trocar",
+      "sensor_contributions": [
+        {
+          "sensor": "Towers",
+          "contribution": 0.4
+        }
+      ],
+      "answerable": false,
+      "gold_refs": [],
+      "gold_facts": [],
+      "source_task": null,
+      "validation": "pending",
+      "validated_by": null,
+      "validation_notes": null
+    },
+    {
+      "id": "U06",
+      "equipment_name": "Compressor de ar da unidade de produção de ar (APU)",
+      "symptom_description": "qual o part number do kit de vedação do compressor?",
+      "sensor_contributions": [],
+      "answerable": false,
+      "gold_refs": [],
+      "gold_facts": [],
+      "source_task": null,
+      "validation": "pending",
+      "validated_by": null,
+      "validation_notes": null
+    },
+    {
+      "id": "U07",
+      "equipment_name": "Compressor de ar da unidade de produção de ar (APU)",
+      "symptom_description": "intervalo de troca do elemento separador ar-óleo do compressor de parafuso",
+      "sensor_contributions": [],
+      "answerable": false,
+      "gold_refs": [],
+      "gold_facts": [],
+      "source_task": null,
+      "validation": "pending",
+      "validated_by": null,
+      "validation_notes": null
+    },
+    {
+      "id": "U08",
+      "equipment_name": "Compressor de ar da unidade de produção de ar (APU)",
+      "symptom_description": "como calibrar o sensor de pressão TP2",
+      "sensor_contributions": [
+        {
+          "sensor": "TP2",
+          "contribution": 0.4
+        }
+      ],
+      "answerable": false,
+      "gold_refs": [],
+      "gold_facts": [],
+      "source_task": null,
+      "validation": "pending",
+      "validated_by": null,
+      "validation_notes": null
+    },
+    {
+      "id": "U09",
+      "equipment_name": "Compressor de ar da unidade de produção de ar (APU)",
+      "symptom_description": "folga de válvulas do compressor alternativo em milímetros",
+      "sensor_contributions": [],
+      "answerable": false,
+      "gold_refs": [],
+      "gold_facts": [],
+      "source_task": null,
+      "validation": "pending",
+      "validated_by": null,
+      "validation_notes": null
+    },
+    {
+      "id": "U10",
+      "equipment_name": "Compressor de ar da unidade de produção de ar (APU)",
+      "symptom_description": "procedimento de descarte do óleo usado conforme norma ambiental",
+      "sensor_contributions": [],
+      "answerable": false,
+      "gold_refs": [],
+      "gold_facts": [],
+      "source_task": null,
+      "validation": "pending",
+      "validated_by": null,
+      "validation_notes": null
+    },
+    {
+      "id": "U11",
+      "equipment_name": "Compressor de ar da unidade de produção de ar (APU)",
+      "symptom_description": "especificação do fusível do circuito do secador de ar",
+      "sensor_contributions": [
+        {
+          "sensor": "Towers",
+          "contribution": 0.2
+        }
+      ],
+      "answerable": false,
+      "gold_refs": [],
+      "gold_facts": [],
+      "source_task": null,
+      "validation": "pending",
+      "validated_by": null,
+      "validation_notes": null
+    },
+    {
+      "id": "U12",
+      "equipment_name": "Compressor de ar da unidade de produção de ar (APU)",
+      "symptom_description": "tempo de ciclo de comutação entre as torres do secador",
+      "sensor_contributions": [
+        {
+          "sensor": "Towers",
+          "contribution": 0.5
+        },
+        {
+          "sensor": "DV_pressure",
+          "contribution": 0.2
+        }
+      ],
+      "answerable": false,
+      "gold_refs": [],
+      "gold_facts": [],
+      "source_task": null,
+      "validation": "pending",
+      "validated_by": null,
+      "validation_notes": null
+    }
+  ]
+}

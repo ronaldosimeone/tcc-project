@@ -43,15 +43,18 @@ from __future__ import annotations
 
 import asyncio
 import time
+from typing import Protocol
 
 import pandas as pd
 import structlog
 
 from src.core.database import AsyncSessionFactory
 from src.core.exceptions import ModelNotAvailableError
+from src.models.prediction import DEFAULT_ASSET_ID
 from src.schemas.predict import PredictRequest, PredictResponse
 from src.schemas.stream import SensorReading
 from src.services.alert_service import AlertService
+from src.services.asset_tracking import AssetTracking
 from src.services.feature_buffer import SensorBuffer, get_sensor_buffer
 from src.services.model_registry import ModelRegistry
 from src.services.model_service import ModelService
@@ -63,6 +66,16 @@ log = structlog.get_logger(__name__)
 
 # Tempo máximo aguardando dado na fila antes de re-verificar cancelamento
 _QUEUE_TIMEOUT: float = 5.0
+
+
+class ShadowObserver(Protocol):
+    async def observe(
+        self,
+        asset_id: str,
+        window: pd.DataFrame,
+        champion: PredictResponse,
+        champion_model: str,
+    ) -> object: ...
 
 
 def _reading_to_request(reading: SensorReading) -> PredictRequest:
@@ -156,6 +169,10 @@ class InferencePipelineService:
         alert_service: AlertService,
         sensor_buffer: SensorBuffer | None = None,
         preprocessor: MetroPTPreprocessor | None = None,
+        tracking: AssetTracking | None = None,
+        shadow: ShadowObserver | None = None,
+        asset_id: str = DEFAULT_ASSET_ID,
+        equipment_name: str = "Compressor de ar da APU",
     ) -> None:
         self._stream = stream_service
         self._registry = registry
@@ -171,6 +188,13 @@ class InferencePipelineService:
             sensor_buffer if sensor_buffer is not None else get_sensor_buffer()
         )
         self._preprocessor: MetroPTPreprocessor = preprocessor or MetroPTPreprocessor()
+        # Histórico real: eventos RN-03 + causa raiz por ativo. None = só
+        # persiste a predição (comportamento anterior, usado nos testes).
+        self._tracking = tracking
+        # Shadow deployment: o desafiante pontua a mesma janela, sem agir.
+        self._shadow = shadow
+        self._asset_id = asset_id
+        self._equipment_name = equipment_name
         self._task: asyncio.Task[None] | None = None
         # Loga só uma vez quando o buffer aquece — evita spam por leitura.
         self._warm_logged: bool = False
@@ -254,6 +278,7 @@ class InferencePipelineService:
         # post-processing). Reportada ao frontend via campo
         # `inference_latency_ms` no alerta WebSocket — alimenta o KPI 4.
         start_ns = time.perf_counter_ns()
+        buffer_df: pd.DataFrame | None = None
         try:
             if warm:
                 # Snapshot do buffer fora do thread (lock de leitura curto).
@@ -278,6 +303,38 @@ class InferencePipelineService:
 
         # 4. Persiste no banco — sessão própria por leitura (RF-09)
         predict_request = _reading_to_request(reading)
+        if self._tracking is not None:
+            window = buffer_df
+            await self._tracking.record(
+                self._asset_id,
+                self._equipment_name,
+                predict_request,
+                result,
+                self._registry.active_name,
+                window,
+                (
+                    (
+                        lambda w: _infer_with_history(
+                            model_service, w, self._preprocessor
+                        ).failure_probability
+                    )
+                    if window is not None
+                    else None
+                ),
+            )
+        else:
+            await self._save_only(predict_request, result)
+
+        if self._shadow is not None and buffer_df is not None:
+            await self._shadow.observe(
+                self._asset_id, buffer_df, result, self._registry.active_name
+            )
+
+        await self._alert_and_log(result, inference_latency_ms, warm)
+
+    async def _save_only(
+        self, predict_request: PredictRequest, result: PredictResponse
+    ) -> None:
         async with AsyncSessionFactory() as db:
             try:
                 await save_prediction(db, predict_request, result)
@@ -286,6 +343,9 @@ class InferencePipelineService:
                 await db.rollback()
                 log.warning("inference_save_error", error=str(exc))
 
+    async def _alert_and_log(
+        self, result: PredictResponse, inference_latency_ms: float, warm: bool
+    ) -> None:
         # 5. Dispara alerta WebSocket se probabilidade > 0.70 (RF-14)
         await self._alert.process_prediction(
             {

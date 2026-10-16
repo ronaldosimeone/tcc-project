@@ -8,6 +8,7 @@ placed at the project root.  Variable names are case-insensitive.
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Literal
 
 from pydantic import Field, PostgresDsn
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -107,6 +108,82 @@ class Settings(BaseSettings):
     mcp_client_timeout_seconds: float = Field(
         default=60.0,
         alias="MCP_CLIENT_TIMEOUT_SECONDS",
+    )
+
+    # RN-04 — fundamentação do plano de manutenção. Só trechos com cosine
+    # >= τ entram no prompt. Default igual ao corte do próprio mcp-server
+    # (0.6); o valor definitivo é calibrado no benchmark anotado (RF-36).
+    # "block": sem trecho >= τ o LLM não é chamado (plano de "Limitações"
+    # fixo); "flag": o LLM é chamado e a resposta sai marcada `ungrounded`.
+    rag_grounding_threshold: float = Field(
+        default=0.6,
+        ge=-1.0,
+        le=1.0,
+        alias="RAG_GROUNDING_THRESHOLD",
+    )
+    rag_ungrounded_policy: Literal["block", "flag"] = Field(
+        default="block",
+        alias="RAG_UNGROUNDED_POLICY",
+    )
+
+    # ── Histórico / frota ────────────────────────────────────────────────
+    # RN-03 aplicado online: evento abre com k amostras >= limiar e fecha
+    # com k amostras abaixo; pico >= critical_at -> severidade "critico".
+    event_threshold: float = Field(default=0.7, ge=0.0, le=1.0, alias="EVENT_THRESHOLD")
+    event_k_open: int = Field(default=6, ge=1, alias="EVENT_K_OPEN")
+    event_k_close: int = Field(default=6, ge=1, alias="EVENT_K_CLOSE")
+    event_critical_at: float = Field(
+        default=0.9, ge=0.0, le=1.0, alias="EVENT_CRITICAL_AT"
+    )
+    # Gera o plano RAG (MCP + Ollama) em background quando um evento abre.
+    rca_llm_enabled: bool = Field(default=True, alias="RCA_LLM_ENABLED")
+    # Ativos simulados além do APU-Trem-042 (0 = frota desligada).
+    fleet_size: int = Field(default=0, ge=0, le=1000, alias="FLEET_SIZE")
+    fleet_noise: float = Field(default=0.02, ge=0.0, le=1.0, alias="FLEET_NOISE")
+    fleet_seed: int = Field(default=42, alias="FLEET_SEED")
+
+    # ── Autenticação / RBAC / auditoria ──────────────────────────────────
+    # false (default) mantém o comportamento anterior (sem login); as ações
+    # ainda entram na trilha de auditoria como "anonymous (auth disabled)".
+    # Em produção: AUTH_ENABLED=true + JWT_SECRET forte (a app recusa subir
+    # com o placeholder).
+    auth_enabled: bool = Field(default=False, alias="AUTH_ENABLED")
+    jwt_secret: str = Field(default="dev-only-jwt-secret-change-me", alias="JWT_SECRET")
+    jwt_expire_minutes: int = Field(
+        default=480, ge=5, le=7 * 24 * 60, alias="JWT_EXPIRE_MINUTES"
+    )
+    # Cria o primeiro admin no startup se não existir nenhum usuário.
+    bootstrap_admin_username: str | None = Field(
+        default=None, alias="BOOTSTRAP_ADMIN_USERNAME"
+    )
+    bootstrap_admin_password: str | None = Field(
+        default=None, alias="BOOTSTRAP_ADMIN_PASSWORD"
+    )
+
+    # ── Telemetria industrial (MQTT) ─────────────────────────────────────
+    # "inprocess" (default): a frota simulada é processada no próprio
+    # processo. "mqtt": a frota PUBLICA no broker e o ingestor ASSINA
+    # <prefix>/+/telemetry — o mesmo caminho de um gateway de campo real.
+    telemetry_transport: Literal["inprocess", "mqtt"] = Field(
+        default="inprocess", alias="TELEMETRY_TRANSPORT"
+    )
+    mqtt_host: str = Field(default="mqtt", alias="MQTT_HOST")
+    mqtt_port: int = Field(default=1883, alias="MQTT_PORT")
+    mqtt_username: str | None = Field(default=None, alias="MQTT_USERNAME")
+    mqtt_password: str | None = Field(default=None, alias="MQTT_PASSWORD")
+    mqtt_topic_prefix: str = Field(default="predictiq/fleet", alias="MQTT_TOPIC_PREFIX")
+
+    # ── Champion / challenger (shadow + canary) ──────────────────────────
+    # CHALLENGER_MODEL definido → o desafiante pontua em SHADOW toda leitura
+    # do ativo principal (sem agir) e age nos ativos da fração canary.
+    challenger_model: str | None = Field(default=None, alias="CHALLENGER_MODEL")
+    canary_fraction: float = Field(default=0.0, ge=0.0, le=1.0, alias="CANARY_FRACTION")
+
+    # ── OpenTelemetry (tracing distribuído) ──────────────────────────────
+    otel_enabled: bool = Field(default=False, alias="OTEL_ENABLED")
+    otel_service_name: str = Field(default="predictiq-api", alias="OTEL_SERVICE_NAME")
+    otel_exporter_otlp_endpoint: str = Field(
+        default="http://jaeger:4318", alias="OTEL_EXPORTER_OTLP_ENDPOINT"
     )
 
     # ── Notificações críticas via Telegram — RF-24 / RNF-48 ─────────────────

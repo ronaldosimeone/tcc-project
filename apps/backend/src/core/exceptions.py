@@ -36,6 +36,11 @@ class AppError(Exception):
         super().__init__(self.detail)
 
 
+class BadRequestError(AppError):
+    status_code = status.HTTP_400_BAD_REQUEST
+    detail = "Malformed request."
+
+
 class NotFoundError(AppError):
     status_code = status.HTTP_404_NOT_FOUND
     detail = "Resource not found."

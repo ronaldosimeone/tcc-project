@@ -31,18 +31,26 @@ from collections.abc import AsyncGenerator
 from typing import Any
 
 import structlog
-from fastapi import APIRouter, Depends, Request, status
+from fastapi import APIRouter, Depends, Query, Request, status
+from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi.responses import StreamingResponse
 
+from src.core.database import get_db
+from src.core.security import Actor, require_role
+from src.services.audit_service import AuditService
 from src.schemas.maintenance import (
     MaintenanceSuggestionRequest,
     MaintenanceSuggestionResponse,
+    ReferencePrior,
+    SuggestionFeedbackCreate,
+    SuggestionFeedbackResponse,
 )
 from src.services.maintenance_suggestion_service import (
     SuggestionStreamEvent,
     get_maintenance_suggestion_service,
 )
 from src.services.protocols import MaintenanceSuggestionServiceProtocol
+from src.services.suggestion_feedback_service import SuggestionFeedbackService
 
 log = structlog.get_logger(__name__)
 
@@ -100,6 +108,7 @@ def _format_sse_event(event: SuggestionStreamEvent) -> str:
         data = {
             "markdown": event.markdown,
             "references": [ref.model_dump() for ref in event.references],
+            "grounding": event.grounding.model_dump() if event.grounding else None,
         }
     else:  # "skipped" | "error"
         data = {"message": event.message}
@@ -156,3 +165,56 @@ async def suggest_maintenance_stream(
         media_type="text/event-stream",
         headers=_SSE_HEADERS,
     )
+
+
+# ---------------------------------------------------------------------------
+# RF-38 — feedback do técnico (human-in-the-loop)
+# ---------------------------------------------------------------------------
+
+
+def get_suggestion_feedback_service(
+    db: AsyncSession = Depends(get_db),
+) -> SuggestionFeedbackService:
+    return SuggestionFeedbackService(db)
+
+
+@router.post(
+    "/feedback",
+    response_model=SuggestionFeedbackResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Feedback do técnico sobre um plano de manutenção (RF-38)",
+    description=(
+        "Registra se o plano foi útil e, por trecho de manual citado, se ele era "
+        "relevante. Os votos reordenam a recuperação para o mesmo equipamento "
+        "(nunca alteram o limiar de fundamentação RN-04) e servem de rótulo para "
+        "o benchmark RAG (RF-36)."
+    ),
+)
+async def create_suggestion_feedback(
+    payload: SuggestionFeedbackCreate,
+    actor: Actor = Depends(require_role("technician")),
+    service: SuggestionFeedbackService = Depends(get_suggestion_feedback_service),
+    db: AsyncSession = Depends(get_db),
+) -> SuggestionFeedbackResponse:
+    created = await service.create(payload)
+    await AuditService(db).record(
+        actor,
+        "suggestion.feedback",
+        "suggestion_feedback",
+        created.id,
+        {"useful": payload.useful},
+    )
+    await db.commit()
+    return created
+
+
+@router.get(
+    "/feedback/priors",
+    response_model=list[ReferencePrior],
+    summary="Priors de relevância por trecho de manual, derivados do feedback (RF-38)",
+)
+async def list_reference_priors(
+    equipment_name: str = Query(min_length=1, max_length=200),
+    service: SuggestionFeedbackService = Depends(get_suggestion_feedback_service),
+) -> list[ReferencePrior]:
+    return await service.reference_priors(equipment_name)

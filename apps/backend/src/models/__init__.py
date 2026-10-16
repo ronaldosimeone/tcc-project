@@ -8,3 +8,12 @@ from src.models.alert_settings import AlertSettings  # noqa: F401
 from src.models.drift_report import DriftReport  # noqa: F401
 from src.models.prediction import Prediction  # noqa: F401
 from src.models.telegram_alert_lock import TelegramAlertLock  # noqa: F401
+from src.models.suggestion_feedback import SuggestionFeedback  # noqa: F401
+from src.models.asset import Asset  # noqa: F401
+from src.models.failure_event import (  # noqa: F401
+    FailureEvent,
+    RootCauseAnalysis,
+    WorkOrder,
+)
+from src.models.user import AuditLog, User  # noqa: F401
+from src.models.shadow_prediction import ShadowPrediction  # noqa: F401

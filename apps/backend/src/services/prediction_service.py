@@ -20,7 +20,7 @@ from datetime import datetime
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.models.prediction import Prediction
+from src.models.prediction import DEFAULT_ASSET_ID, Prediction
 from src.schemas.predict import PredictRequest, PredictResponse
 from src.schemas.prediction import Page, PredictionResponse, make_page
 
@@ -29,6 +29,7 @@ async def save_prediction(
     db: AsyncSession,
     request: PredictRequest,
     response: PredictResponse,
+    asset_id: str = DEFAULT_ASSET_ID,
 ) -> Prediction:
     """
     Persist the completed inference to the database — RF-09.
@@ -41,6 +42,7 @@ async def save_prediction(
     committing — commit happens when the request scope closes.
     """
     record = Prediction(
+        asset_id=asset_id,
         timestamp=datetime.fromisoformat(response.timestamp),
         TP2=request.TP2,
         TP3=request.TP3,

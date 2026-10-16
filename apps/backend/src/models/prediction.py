@@ -10,10 +10,12 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, Float, Integer
+from sqlalchemy import DateTime, Float, ForeignKey, Index, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from src.core.database import Base
+
+DEFAULT_ASSET_ID: str = "APU-Trem-042"
 
 
 class Prediction(Base):
@@ -30,8 +32,18 @@ class Prediction(Base):
     """
 
     __tablename__ = "predictions"
+    __table_args__ = (Index("ix_predictions_asset_timestamp", "asset_id", "timestamp"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    # Fleet (migração 0006): qual ativo gerou a leitura. Default = o ativo
+    # histórico único, para manter compatíveis as linhas e chamadores antigos.
+    asset_id: Mapped[str] = mapped_column(
+        String(64),
+        ForeignKey("assets.id"),
+        nullable=False,
+        default=DEFAULT_ASSET_ID,
+        server_default=DEFAULT_ASSET_ID,
+    )
 
     # UTC timestamp — indexed for ORDER BY timestamp DESC queries
     timestamp: Mapped[datetime] = mapped_column(
