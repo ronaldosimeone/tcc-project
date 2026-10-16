@@ -3,15 +3,21 @@
  *
  * 1. O backend devolve uma lista de modelos brutos (ex.: `random_forest`,
  *    `random_forest_v2`, `xgboost`, `xgboost_v2`, `bilstm`).
- * 2. Quando coexiste uma `_v2`, a versão base é descartada — só a v2 sobrevive.
+ * 2. Para cada modelo só a maior versão sobrevive (`_v3` > `_v2` > sem sufixo).
  * 3. O `value` enviado para a API mantém-se EXATAMENTE igual ao nome bruto.
  *    Apenas o texto exibido é higienizado por `formatModelName`.
  *
  * Tudo aqui é puro/sincrono para facilitar testes unitários.
  */
 
-/** Sufixo de versão reconhecido na nomenclatura do backend. */
-const VERSION_SUFFIXES = ["_v2", "_v1"] as const;
+/** Sufixo de versão da nomenclatura do backend (`_v2`, `_v3`, …). */
+const VERSION_RE = /_v(\d+)$/;
+
+/** Versão numérica do nome bruto; o nome sem sufixo é a versão 0 (legado). */
+export const versionOf = (rawName: string): number => {
+  const match = VERSION_RE.exec(rawName);
+  return match ? Number(match[1]) : 0;
+};
 
 /**
  * Acrónimos preservados na sua forma idiomática.
@@ -38,12 +44,7 @@ export interface DisplayModel {
  * Ex.: `random_forest_v2` → `random_forest`.
  */
 export function stripVersionSuffix(rawName: string): string {
-  for (const suffix of VERSION_SUFFIXES) {
-    if (rawName.endsWith(suffix)) {
-      return rawName.slice(0, -suffix.length);
-    }
-  }
-  return rawName;
+  return rawName.replace(VERSION_RE, "");
 }
 
 /**
@@ -68,36 +69,26 @@ export function formatModelName(rawName: string): string {
 /**
  * Aplica o filtro de versão e devolve a lista pronta para o `<Select>`.
  *
- * Regra: se existir `<stem>_v2` na lista bruta, qualquer entrada cujo stem
- * coincide e que NÃO seja a `_v2` é descartada. Em caso de duplicatas
- * residuais, mantemos a primeira ocorrência (ordem do backend é preservada).
+ * Regra: para cada stem, só a MAIOR versão sobrevive (ex.: `random_forest`,
+ * `random_forest_v2` e `random_forest_v3` → só `random_forest_v3`, o modelo
+ * retreinado sem vazamento). A ordem do backend é preservada.
  */
 export function filterAndFormatModels(
   rawNames: readonly string[],
 ): DisplayModel[] {
-  // 1. Indexa quais "stems" possuem versão v2 no payload.
-  const stemsWithV2 = new Set<string>();
+  const best = new Map<string, number>();
   for (const name of rawNames) {
-    if (name.endsWith("_v2")) {
-      stemsWithV2.add(stripVersionSuffix(name));
-    }
+    const stem = stripVersionSuffix(name);
+    best.set(stem, Math.max(best.get(stem) ?? -1, versionOf(name)));
   }
 
-  // 2. Filtra fora qualquer entrada não-v2 cujo stem tenha um v2 concorrente.
-  // 3. Deduplica preservando a primeira ocorrência.
   const seen = new Set<string>();
   const result: DisplayModel[] = [];
-
   for (const rawName of rawNames) {
-    const stem = stripVersionSuffix(rawName);
-    const isV2 = rawName.endsWith("_v2");
-
-    if (stemsWithV2.has(stem) && !isV2) continue;
+    if (versionOf(rawName) !== best.get(stripVersionSuffix(rawName))) continue;
     if (seen.has(rawName)) continue;
-
     seen.add(rawName);
     result.push({ value: rawName, label: formatModelName(rawName) });
   }
-
   return result;
 }
