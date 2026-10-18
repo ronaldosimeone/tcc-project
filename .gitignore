@@ -92,3 +92,7 @@ apps/backend/benchmarks/out/
 # Cache do Hypothesis (testes de propriedade) e runs locais do MLflow
 .hypothesis/
 apps/ml/mlruns/
+
+# venv de treino em GPU (torch CUDA), separado do .venv com numpy fixado
+apps/ml/.venv-gpu/
+apps/ml/models/nested/scores/

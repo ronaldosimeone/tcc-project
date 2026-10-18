@@ -32,6 +32,8 @@ ML_PY="$ROOT/apps/ml/.venv/Scripts/python.exe"
 BE_PY="$ROOT/apps/backend/.venv/Scripts/python.exe"
 [ -x "$ML_PY" ] || ML_PY="$ROOT/apps/ml/.venv/bin/python"
 [ -x "$BE_PY" ] || BE_PY="$ROOT/apps/backend/.venv/bin/python"
+GPU_PY="$ROOT/apps/ml/.venv-gpu/Scripts/python.exe"
+[ -x "$GPU_PY" ] || GPU_PY="$ML_PY"
 
 STAGES=("$@")
 [ ${#STAGES[@]} -eq 0 ] && STAGES=(ml rag infra docs manifest)
@@ -43,6 +45,7 @@ run_ml() {
   "$ML_PY" -m src.evaluate_temporal --seeds 5 --neg-stride 5   # RF-28/29/31, RNF-79
   "$ML_PY" -m src.explain_events --max-rows 600                 # RF-32
   "$ML_PY" -m src.evaluate_rul                                  # RF-30
+  "$ML_PY" -m src.evaluate_rul --pooled                         # RF-30 com 7 falhas
   "$ML_PY" -m src.evaluate_drift --trials 30 --calib-trials 30  # RF-34
   "$ML_PY" -m src.evaluate_robustness --search 40               # RNF-81
   "$ML_PY" -m src.edge_quantization                             # RNF-80
@@ -56,10 +59,13 @@ run_ml() {
   "$ML_PY" -m src.evaluate_twin_cross --seeds 3                 # twin + fusão entre períodos
   "$ML_PY" -m src.evaluate_production_on_2022                   # modelo implantado no 2022
   # Retreino sem vazamento de TODOS os modelos servíveis + matrizes de confusão
-  "$ML_PY" -m src.evaluate_all_models                           # 8 modelos, 6 folds fora do tempo
-  "$ML_PY" -m src.train_leakfree --model random_forest --role champion
-  "$ML_PY" -m src.train_leakfree --model xgboost --role challenger
-  "$ML_PY" -m src.train_deep_leakfree                           # mlp/tcn/bilstm/patchtst/autoencoder _v2
+  # Protocolo aninhado (tuning + calibração + limiar sem vazamento), 3 seeds.
+  # Árvores na CPU; redes no venv de GPU (apps/ml/.venv-gpu, torch CUDA) se existir.
+  "$ML_PY" -m src.evaluate_nested --models random_forest logistic_regression
+  "$GPU_PY" -m src.evaluate_nested --models xgboost autoencoder patchtst bilstm tcn mlp
+  "$GPU_PY" -m src.train_production                             # todos os artefatos servíveis
+  "$ML_PY" -m src.evaluate_sensitivity                          # k × horizonte × razão de custo
+  "$ML_PY" -m src.evaluate_conformal_aci                        # conformal estático × ACI
   # RNF-83 — rode com a máquina ociosa (mede energia da máquina inteira).
   "$ML_PY" -m src.evaluate_energy
 }
@@ -110,7 +116,7 @@ run_docs() {
   cd "$ROOT/apps/ml"
   "$ML_PY" -m src.render_temporal_report
   "$ML_PY" -m src.render_cross_dataset_report
-  "$ML_PY" -m src.render_all_models_report
+  "$ML_PY" -m src.render_nested_report
   cd "$ROOT/apps/backend"
   "$BE_PY" benchmarks/benchmark_rag.py report
   "$BE_PY" benchmarks/benchmark_redteam.py report

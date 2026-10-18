@@ -26,7 +26,18 @@ ROOT: Path = Path(__file__).resolve().parents[1]
 OUT: Path = ROOT / "docs" / "reproducibility_manifest.json"
 
 RESULT_FILES: list[str] = [
+    "apps/ml/models/nested/random_forest.json",
+    "apps/ml/models/nested/xgboost.json",
+    "apps/ml/models/nested/logistic_regression.json",
+    "apps/ml/models/nested/mlp.json",
+    "apps/ml/models/nested/tcn.json",
+    "apps/ml/models/nested/bilstm.json",
+    "apps/ml/models/nested/patchtst.json",
+    "apps/ml/models/nested/autoencoder.json",
     "apps/ml/models/eval_temporal.json",
+    "apps/ml/models/eval_sensitivity.json",
+    "apps/ml/models/eval_conformal_aci.json",
+    "apps/ml/models/eval_rul_pooled.json",
     "apps/ml/models/explain_events.json",
     "apps/ml/models/eval_rul.json",
     "apps/ml/models/eval_drift.json",
@@ -39,7 +50,6 @@ RESULT_FILES: list[str] = [
     "apps/ml/models/eval_twin_cross.json",
     "apps/ml/models/eval_production_2022.json",
     "apps/ml/models/xgboost_v3_card.json",
-    "apps/ml/models/eval_all_models.json",
     "apps/ml/models/random_forest_v3_card.json",
     "apps/ml/models/mlp_v2_card.json",
     "apps/ml/models/tcn_v2_card.json",
