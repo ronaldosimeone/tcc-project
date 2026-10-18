@@ -21,7 +21,7 @@ _DEFAULT_MLP_ONNX_PATH: Path = _ML_MODELS / "mlp_v1.onnx"
 _DEFAULT_MLP_SCALER_PATH: Path = _ML_MODELS / "mlp_scaler.joblib"
 _DEFAULT_RF_V2_ONNX_PATH: Path = _ML_MODELS / "random_forest_v2.onnx"
 _DEFAULT_XGB_V2_ONNX_PATH: Path = _ML_MODELS / "xgboost_v2.onnx"
-# RF-33 challenger: MetroPT-3 + MetroPT 2022, harmonised sensors (train_leakfree.py).
+# RF-33 challenger: MetroPT-3 + MetroPT 2022, harmonised sensors (train_production.py).
 _DEFAULT_XGB_V3_ONNX_PATH: Path = _ML_MODELS / "xgboost_v3.onnx"
 
 # Sequential DL artefact paths — RNF-24 extension (TCN, BiLSTM, PatchTST).

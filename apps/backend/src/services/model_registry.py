@@ -58,7 +58,7 @@ KNOWN_MODELS: frozenset[str] = frozenset(
         "random_forest_v2",
         "xgboost_v2",
         "xgboost_v3",
-        # Leakage-free retrains (train_leakfree.py / train_deep_leakfree.py):
+        # Leakage-free retrains (apps/ml/src/train_production.py):
         # artefacts and adapter described by each model card ("serving").
         "random_forest_v3",
         "mlp_v2",

@@ -5,7 +5,7 @@ RF-33 challenger ``xgboost_v3`` (MetroPT-3 + MetroPT 2022, harmonised).
 2. Its card excludes the sensors whose meaning differs across datasets.
 3. The live pipeline's 80 V2 features are aligned by NAME to its 68 inputs —
    no extra pipeline needed to serve it as challenger.
-4. The card records why it is not champion (RN-05 gate).
+4. The card records the nested selection and its out-of-time evidence.
 """
 
 from __future__ import annotations
@@ -24,7 +24,7 @@ _CARD = settings.model_path.parent / "xgboost_v3_card.json"
 
 pytestmark = pytest.mark.skipif(
     not settings.xgboost_v3_onnx_path.exists() or not _CARD.exists(),
-    reason="xgboost_v3 artefact not built (python -m src.train_leakfree --model xgboost --role challenger)",
+    reason="xgboost_v3 not built (python -m src.train_production --models xgboost)",
 )
 
 _SENSORS = (
@@ -58,11 +58,13 @@ def test_card_excludes_semantically_mismatched_sensors() -> None:
     assert card["feature_count"] == len(names)
 
 
-def test_card_records_rn05_decision() -> None:
+def test_card_records_nested_selection_and_evidence() -> None:
     card = json.loads(_CARD.read_text(encoding="utf-8"))
-    gate = card["evidence"]["rn05_gate_vs_random_forest"]
     assert card["status"] == "challenger"
-    assert gate["promote"] is False and gate["n_blocks"] == 6
+    assert card["validation"]["leakage_free"] is True
+    assert card["hyperparameters"]  # chosen by the nested inner search
+    assert card["calibration"] is None or card["calibration"]["method"] == "platt"
+    assert "failures_detected_mean_of_6" in card["evidence"]
 
 
 def test_serves_from_the_live_v2_feature_row() -> None:
