@@ -1,32 +1,52 @@
 {
-  "schema_version": "2.0",
+  "schema_version": "3.0",
   "model_name": "bilstm_v2",
   "status": "candidate",
-  "trained_at": "2026-10-16T19:00:38.859339+00:00",
-  "architecture": "bilstm",
+  "trained_at": "2026-10-17T02:03:21.981322+00:00",
+  "algorithm": "bilstm",
   "validation": {
     "leakage_free": true,
-    "protocol": "purged walk-forward by failure event (RF-28), pooled MetroPT-3 + MetroPT 2022",
-    "threshold_selection": "temporal validation on the most recent training failure"
+    "protocol": "nested: outer purged walk-forward \u00d7 inner leave-one-failure-out",
+    "hyperparameters": "selected on inner OOF expected cost (RN-02)",
+    "threshold_selection": "nested LOFO OOF (7 inner folds)"
   },
   "dropped_sensors": [
     "Reservoirs",
     "Oil_level"
   ],
-  "training": {
-    "window": 60,
+  "hyperparameters": {
     "epochs": 8,
-    "batch": 512,
-    "lr": 0.001,
-    "train_windows": "every 2nd positive + every 20th negative",
-    "mlp_rows": "all positives + every 5th negative",
-    "labels": "row-level: window ending at row r has the label of row r",
-    "threshold": "cost-optimal on temporal validation (most recent training failure); fallback 0.5 / AE 99th pct healthy MSE when <2 failures",
-    "device": "cpu"
+    "lr": 0.001
   },
+  "search": [
+    {
+      "params": {
+        "epochs": 8,
+        "lr": 0.001
+      },
+      "oof_cost": 330.0,
+      "oof_pr_auc": 0.10663450832967715,
+      "threshold": 0.27
+    },
+    {
+      "params": {
+        "epochs": 16,
+        "lr": 0.0003
+      },
+      "oof_cost": 353.0,
+      "oof_pr_auc": 0.1095964539741691,
+      "threshold": 0.19
+    }
+  ],
+  "calibration": {
+    "method": "platt",
+    "a": 0.25936631343877553,
+    "b": -2.627730921190986
+  },
+  "threshold_calibrated_probability": 0.27,
+  "decision_threshold": 0.27,
   "seed": 0,
-  "decision_threshold": 0.35,
-  "onnx_parity_max_abs_diff": 3.337860107421875e-06,
+  "onnx_parity_max_abs_diff": 1.430511474609375e-06,
   "feature_count": 10,
   "feature_names": [
     "TP2",
@@ -47,26 +67,20 @@
     "window_size": 60
   },
   "evidence": {
-    "source": "models/eval_all_models.json",
-    "protocol": "pooled purged walk-forward, 6 folds, out-of-time",
-    "events": {
-      "failures": 6,
-      "detected": 3,
-      "missed": 3,
-      "false_alarm_episodes": 12
-    },
-    "confusion_alarms": {
-      "tn": 1834075,
-      "fp": 13526,
-      "fn": 38787,
-      "tp": 3726
-    },
-    "metrics_alarms": {
-      "precision": 0.2159749594249942,
-      "recall": 0.08764377954978478,
-      "f1": 0.1246883627541203,
-      "specificity": 0.9926791552938107
-    },
-    "expected_cost_mean": 52.0
+    "source": "models/nested/bilstm.json",
+    "protocol": "outer purged walk-forward (6 folds) \u00d7 inner leave-one-failure-out, 3 seeds, out-of-time",
+    "failures_detected_mean_of_6": 3.0,
+    "failures_detected_range": [
+      3,
+      3
+    ],
+    "false_alarm_episodes_mean": 19.333333333333332,
+    "expected_cost_mean": 53.22222222222222,
+    "confusion_alarms_seed0": {
+      "tn": 1834208,
+      "fp": 13393,
+      "fn": 37133,
+      "tp": 5380
+    }
   }
 }

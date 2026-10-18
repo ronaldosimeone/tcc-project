@@ -1,32 +1,52 @@
 {
-  "schema_version": "2.0",
+  "schema_version": "3.0",
   "model_name": "mlp_v2",
   "status": "candidate",
-  "trained_at": "2026-10-16T18:11:17.951759+00:00",
-  "architecture": "mlp",
+  "trained_at": "2026-10-17T01:40:37.549564+00:00",
+  "algorithm": "mlp",
   "validation": {
     "leakage_free": true,
-    "protocol": "purged walk-forward by failure event (RF-28), pooled MetroPT-3 + MetroPT 2022",
-    "threshold_selection": "temporal validation on the most recent training failure"
+    "protocol": "nested: outer purged walk-forward \u00d7 inner leave-one-failure-out",
+    "hyperparameters": "selected on inner OOF expected cost (RN-02)",
+    "threshold_selection": "nested LOFO OOF (7 inner folds)"
   },
   "dropped_sensors": [
     "Reservoirs",
     "Oil_level"
   ],
-  "training": {
-    "window": 60,
+  "hyperparameters": {
     "epochs": 8,
-    "batch": 512,
-    "lr": 0.001,
-    "train_windows": "every 2nd positive + every 20th negative",
-    "mlp_rows": "all positives + every 5th negative",
-    "labels": "row-level: window ending at row r has the label of row r",
-    "threshold": "cost-optimal on temporal validation (most recent training failure); fallback 0.5 / AE 99th pct healthy MSE when <2 failures",
-    "device": "cpu"
+    "lr": 0.001
   },
+  "search": [
+    {
+      "params": {
+        "epochs": 8,
+        "lr": 0.001
+      },
+      "oof_cost": 267.0,
+      "oof_pr_auc": 0.12510517391844153,
+      "threshold": 0.08
+    },
+    {
+      "params": {
+        "epochs": 16,
+        "lr": 0.0003
+      },
+      "oof_cost": 307.0,
+      "oof_pr_auc": 0.12313569462590633,
+      "threshold": 0.07
+    }
+  ],
+  "calibration": {
+    "method": "platt",
+    "a": 0.23974040378316372,
+    "b": -3.2358938987379804
+  },
+  "threshold_calibrated_probability": 0.08,
+  "decision_threshold": 0.08,
   "seed": 0,
-  "decision_threshold": 0.65,
-  "onnx_parity_max_abs_diff": 9.5367431640625e-07,
+  "onnx_parity_max_abs_diff": 4.76837158203125e-07,
   "feature_count": 68,
   "feature_names": [
     "TP2",
@@ -104,26 +124,20 @@
     "scaler": "mlp_v2_scaler.joblib"
   },
   "evidence": {
-    "source": "models/eval_all_models.json",
-    "protocol": "pooled purged walk-forward, 6 folds, out-of-time",
-    "events": {
-      "failures": 6,
-      "detected": 3,
-      "missed": 3,
-      "false_alarm_episodes": 99
-    },
-    "confusion_alarms": {
-      "tn": 1833093,
-      "fp": 14508,
-      "fn": 39370,
-      "tp": 3143
-    },
-    "metrics_alarms": {
-      "precision": 0.1780635658036372,
-      "recall": 0.07393032719403476,
-      "f1": 0.10448108503423975,
-      "specificity": 0.9921476552567356
-    },
-    "expected_cost_mean": 66.5
+    "source": "models/nested/mlp.json",
+    "protocol": "outer purged walk-forward (6 folds) \u00d7 inner leave-one-failure-out, 3 seeds, out-of-time",
+    "failures_detected_mean_of_6": 3.0,
+    "failures_detected_range": [
+      3,
+      3
+    ],
+    "false_alarm_episodes_mean": 10.333333333333334,
+    "expected_cost_mean": 51.72222222222223,
+    "confusion_alarms_seed0": {
+      "tn": 1835321,
+      "fp": 12280,
+      "fn": 39455,
+      "tp": 3058
+    }
   }
 }

@@ -37,7 +37,12 @@ sys.path.insert(0, str(_ML_ROOT))
 
 from src.evaluate_temporal import EMBARGO_S, PURGE_S, load_features  # noqa: E402
 from src.ingest_metropt import FAILURE_INTERVALS  # noqa: E402
-from src.rul import concordance_index, mae_near_failure, survival_labels  # noqa: E402
+from src.rul import (  # noqa: E402
+    SurvivalLabels,
+    concordance_index,
+    mae_near_failure,
+    survival_labels,
+)
 from src.stat_tests import bootstrap_ci  # noqa: E402
 from src.temporal_validation import (  # noqa: E402
     PurgedWalkForwardSplit,
@@ -91,17 +96,52 @@ def main() -> None:
     )
     parser.add_argument("--rounds", type=int, default=400)
     parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument(
+        "--pooled",
+        action="store_true",
+        help="MetroPT-3 + MetroPT 2022, harmonised sensors (7 failures, 6 folds)",
+    )
     args = parser.parse_args()
 
-    X, _, ts = load_features()
-    events = events_from_intervals(FAILURE_INTERVALS)
-    truth = survival_labels(ts, events)
+    if args.pooled:
+        import src.evaluate_cross_dataset as xd
+        from src.ingest_metropt2022 import FAILURE_INTERVALS_2022
+
+        xd.configure(["Reservoirs", "Oil_level"])
+        X, _, ts, is22 = xd.load_pooled()
+        events = events_from_intervals([*FAILURE_INTERVALS, *FAILURE_INTERVALS_2022])
+    else:
+        X, _, ts = load_features()
+        is22 = np.zeros(len(ts), dtype=bool)
+        events = events_from_intervals(FAILURE_INTERVALS)
+
+    def labels(idx: np.ndarray, end: pd.Timestamp | None = None) -> SurvivalLabels:
+        """Per-dataset survival labels: a 2020 row is censored at the end of
+        the 2020 recording, never 'failing' at a 2022 failure 1.5 years later."""
+        parts = []
+        for flag in (False, True):
+            sub = idx[is22[idx] == flag]
+            if sub.size == 0:
+                continue
+            t = ts.iloc[sub]
+            seg_end = t.max() if end is None else min(t.max(), end)
+            evs = [e for e in events if t.min() <= e.start <= t.max()]
+            parts.append((sub, survival_labels(t, evs, end=seg_end)))
+        order = np.argsort(np.concatenate([p[0] for p in parts]))
+        cat = {
+            k: np.concatenate([getattr(p[1], k) for p in parts])[order]
+            for k in ("lower", "upper", "observed", "valid")
+        }
+        return SurvivalLabels(**cat)
+
+    all_idx = np.arange(len(ts))
+    truth = labels(all_idx)
 
     folds_out: list[dict[str, Any]] = []
     for fold in PurgedWalkForwardSplit(events, PURGE_S, EMBARGO_S).split(ts):
         cutoff: pd.Timestamp = ts.iloc[fold.train_idx].max()
         train_events = [ev for ev in events if ev.start <= cutoff]
-        tr_lab = survival_labels(ts.iloc[fold.train_idx], train_events, end=cutoff)
+        tr_lab = labels(fold.train_idx, end=cutoff)
         keep = np.flatnonzero(tr_lab.valid)[:: args.stride]
         tr_idx = fold.train_idx[keep]
 
@@ -137,7 +177,14 @@ def main() -> None:
             }
         folds_out.append(res)
         log.info("fold=%d %s", fold.fold, json.dumps(res["models"]))
-        _plot(ts_te, t_true, e_true, pred_aft, pred_ren, fold.fold)
+        _plot(
+            ts_te,
+            t_true,
+            e_true,
+            pred_aft,
+            pred_ren,
+            f"pooled_{fold.fold}" if args.pooled else str(fold.fold),
+        )
 
     summary: dict[str, Any] = {}
     for name in ("xgb_aft", "renewal"):
@@ -151,6 +198,11 @@ def main() -> None:
         "schema_version": "1.0",
         "evaluated_at": datetime.now(timezone.utc).isoformat(),
         "requirements": ["RF-30"],
+        "data": (
+            "MetroPT-3 + MetroPT 2022 (pooled, harmonised)"
+            if args.pooled
+            else "MetroPT-3"
+        ),
         "config": {
             "stride": args.stride,
             "rounds": args.rounds,
@@ -160,8 +212,9 @@ def main() -> None:
         "folds": folds_out,
         "summary": summary,
     }
-    OUT_JSON.write_text(json.dumps(out, indent=2), encoding="utf-8")
-    log.info("Wrote %s", OUT_JSON)
+    out_json = OUT_JSON.with_name("eval_rul_pooled.json") if args.pooled else OUT_JSON
+    out_json.write_text(json.dumps(out, indent=2), encoding="utf-8")
+    log.info("Wrote %s", out_json)
 
 
 def _plot(
@@ -170,7 +223,7 @@ def _plot(
     e_true: np.ndarray,
     aft: np.ndarray,
     ren: np.ndarray,
-    fold: int,
+    fold: int | str,
 ) -> None:
     import matplotlib
 

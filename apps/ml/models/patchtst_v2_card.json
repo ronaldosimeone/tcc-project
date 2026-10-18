@@ -1,32 +1,52 @@
 {
-  "schema_version": "2.0",
+  "schema_version": "3.0",
   "model_name": "patchtst_v2",
   "status": "candidate",
-  "trained_at": "2026-10-16T19:08:46.069147+00:00",
-  "architecture": "patchtst",
+  "trained_at": "2026-10-17T02:13:21.286436+00:00",
+  "algorithm": "patchtst",
   "validation": {
     "leakage_free": true,
-    "protocol": "purged walk-forward by failure event (RF-28), pooled MetroPT-3 + MetroPT 2022",
-    "threshold_selection": "temporal validation on the most recent training failure"
+    "protocol": "nested: outer purged walk-forward \u00d7 inner leave-one-failure-out",
+    "hyperparameters": "selected on inner OOF expected cost (RN-02)",
+    "threshold_selection": "nested LOFO OOF (7 inner folds)"
   },
   "dropped_sensors": [
     "Reservoirs",
     "Oil_level"
   ],
-  "training": {
-    "window": 60,
+  "hyperparameters": {
     "epochs": 8,
-    "batch": 512,
-    "lr": 0.001,
-    "train_windows": "every 2nd positive + every 20th negative",
-    "mlp_rows": "all positives + every 5th negative",
-    "labels": "row-level: window ending at row r has the label of row r",
-    "threshold": "cost-optimal on temporal validation (most recent training failure); fallback 0.5 / AE 99th pct healthy MSE when <2 failures",
-    "device": "cpu"
+    "lr": 0.001
   },
+  "search": [
+    {
+      "params": {
+        "epochs": 8,
+        "lr": 0.001
+      },
+      "oof_cost": 229.0,
+      "oof_pr_auc": 0.19918225159271682,
+      "threshold": 0.46
+    },
+    {
+      "params": {
+        "epochs": 16,
+        "lr": 0.0003
+      },
+      "oof_cost": 231.0,
+      "oof_pr_auc": 0.11341348234358987,
+      "threshold": 0.27
+    }
+  ],
+  "calibration": {
+    "method": "platt",
+    "a": 0.3282774943407124,
+    "b": -2.1660800749214166
+  },
+  "threshold_calibrated_probability": 0.46,
+  "decision_threshold": 0.46,
   "seed": 0,
-  "decision_threshold": 0.15,
-  "onnx_parity_max_abs_diff": 1.430511474609375e-06,
+  "onnx_parity_max_abs_diff": 9.5367431640625e-07,
   "feature_count": 10,
   "feature_names": [
     "TP2",
@@ -47,26 +67,20 @@
     "window_size": 60
   },
   "evidence": {
-    "source": "models/eval_all_models.json",
-    "protocol": "pooled purged walk-forward, 6 folds, out-of-time",
-    "events": {
-      "failures": 6,
-      "detected": 3,
-      "missed": 3,
-      "false_alarm_episodes": 272
-    },
-    "confusion_alarms": {
-      "tn": 1832504,
-      "fp": 15097,
-      "fn": 39433,
-      "tp": 3080
-    },
-    "metrics_alarms": {
-      "precision": 0.1694449028992683,
-      "recall": 0.07244842753981136,
-      "f1": 0.10149942329873127,
-      "specificity": 0.9918288634829706
-    },
-    "expected_cost_mean": 95.33333333333333
+    "source": "models/nested/patchtst.json",
+    "protocol": "outer purged walk-forward (6 folds) \u00d7 inner leave-one-failure-out, 3 seeds, out-of-time",
+    "failures_detected_mean_of_6": 3.0,
+    "failures_detected_range": [
+      3,
+      3
+    ],
+    "false_alarm_episodes_mean": 127.33333333333333,
+    "expected_cost_mean": 71.22222222222221,
+    "confusion_alarms_seed0": {
+      "tn": 1825819,
+      "fp": 21782,
+      "fn": 39507,
+      "tp": 3006
+    }
   }
 }

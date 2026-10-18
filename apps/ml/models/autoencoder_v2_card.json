@@ -1,32 +1,52 @@
 {
-  "schema_version": "2.0",
+  "schema_version": "3.0",
   "model_name": "autoencoder_v2",
   "status": "candidate",
-  "trained_at": "2026-10-16T19:15:15.071945+00:00",
-  "architecture": "autoencoder",
+  "trained_at": "2026-10-17T02:20:51.791018+00:00",
+  "algorithm": "autoencoder",
   "validation": {
     "leakage_free": true,
-    "protocol": "purged walk-forward by failure event (RF-28), pooled MetroPT-3 + MetroPT 2022",
-    "threshold_selection": "temporal validation on the most recent training failure"
+    "protocol": "nested: outer purged walk-forward \u00d7 inner leave-one-failure-out",
+    "hyperparameters": "selected on inner OOF expected cost (RN-02)",
+    "threshold_selection": "nested LOFO OOF (7 inner folds)"
   },
   "dropped_sensors": [
     "Reservoirs",
     "Oil_level"
   ],
-  "training": {
-    "window": 60,
+  "hyperparameters": {
     "epochs": 8,
-    "batch": 512,
-    "lr": 0.001,
-    "train_windows": "every 2nd positive + every 20th negative",
-    "mlp_rows": "all positives + every 5th negative",
-    "labels": "row-level: window ending at row r has the label of row r",
-    "threshold": "cost-optimal on temporal validation (most recent training failure); fallback 0.5 / AE 99th pct healthy MSE when <2 failures",
-    "device": "cpu"
+    "lr": 0.001
   },
-  "seed": 0,
+  "search": [
+    {
+      "params": {
+        "epochs": 8,
+        "lr": 0.001
+      },
+      "oof_cost": 478.0,
+      "oof_pr_auc": 0.09088786520773641,
+      "threshold": 0.2
+    },
+    {
+      "params": {
+        "epochs": 16,
+        "lr": 0.0003
+      },
+      "oof_cost": 509.0,
+      "oof_pr_auc": 0.09483803901954785,
+      "threshold": 0.2
+    }
+  ],
+  "calibration": {
+    "method": "platt",
+    "a": 0.83571326972836,
+    "b": 0.265647795830168
+  },
+  "threshold_calibrated_probability": 0.2,
   "decision_threshold": 0.5,
-  "onnx_parity_max_abs_diff": 4.76837158203125e-06,
+  "seed": 0,
+  "onnx_parity_max_abs_diff": 6.67572021484375e-06,
   "feature_count": 10,
   "feature_names": [
     "TP2",
@@ -43,31 +63,25 @@
   "serving": {
     "adapter": "autoencoder",
     "onnx": "autoencoder_v2.onnx",
+    "mse_threshold": 0.13852765115935545,
     "scaler": "autoencoder_v2_scaler.joblib",
-    "window_size": 60,
-    "mse_threshold": 0.0991885277256369
+    "window_size": 60
   },
   "evidence": {
-    "source": "models/eval_all_models.json",
-    "protocol": "pooled purged walk-forward, 6 folds, out-of-time",
-    "events": {
-      "failures": 6,
-      "detected": 1,
-      "missed": 5,
-      "false_alarm_episodes": 179
-    },
-    "confusion_alarms": {
-      "tn": 1832357,
-      "fp": 15244,
-      "fn": 41449,
-      "tp": 1064
-    },
-    "metrics_alarms": {
-      "precision": 0.06524405199901889,
-      "recall": 0.025027638604662103,
-      "f1": 0.0361775556348923,
-      "specificity": 0.9917493008501295
-    },
-    "expected_cost_mean": 113.16666666666667
+    "source": "models/nested/autoencoder.json",
+    "protocol": "outer purged walk-forward (6 folds) \u00d7 inner leave-one-failure-out, 3 seeds, out-of-time",
+    "failures_detected_mean_of_6": 2.0,
+    "failures_detected_range": [
+      2,
+      2
+    ],
+    "false_alarm_episodes_mean": 216.33333333333334,
+    "expected_cost_mean": 102.72222222222223,
+    "confusion_alarms_seed0": {
+      "tn": 1365954,
+      "fp": 481647,
+      "fn": 39827,
+      "tp": 2686
+    }
   }
 }

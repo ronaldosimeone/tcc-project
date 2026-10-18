@@ -1,0 +1,223 @@
+{
+  "schema_version": "1.0",
+  "evaluated_at": "2026-10-16T21:24:32.209723+00:00",
+  "requirements": [
+    "RF-30"
+  ],
+  "data": "MetroPT-3 + MetroPT 2022 (pooled, harmonised)",
+  "config": {
+    "stride": 20,
+    "rounds": 400,
+    "seed": 0,
+    "objective": "survival:aft",
+    "eval_metric": "aft-nloglik",
+    "aft_loss_distribution": "normal",
+    "aft_loss_distribution_scale": 1.2,
+    "tree_method": "hist",
+    "learning_rate": 0.05,
+    "max_depth": 6,
+    "min_child_weight": 5,
+    "subsample": 0.8,
+    "colsample_bytree": 0.8
+  },
+  "folds": [
+    {
+      "fold": 1,
+      "test_event": [
+        "2020-05-29 23:30:00",
+        "2020-05-30 06:00:00"
+      ],
+      "n_train": 34783,
+      "n_train_observed": 28129,
+      "n_test": 161536,
+      "models": {
+        "xgb_aft": {
+          "c_index": 0.42837977756067985,
+          "mae_h_within_24h": 755.2637107911424,
+          "mae_h_within_72h": 792.6365650092952,
+          "mae_h_within_168h": 614.6926156780719
+        },
+        "renewal": {
+          "c_index": 0.5,
+          "mae_h_within_24h": 9.566384662321038,
+          "mae_h_within_72h": 34.01903064324939,
+          "mae_h_within_168h": 87.34555407419198
+        }
+      }
+    },
+    {
+      "fold": 2,
+      "test_event": [
+        "2020-06-05 10:00:00",
+        "2020-06-07 14:30:00"
+      ],
+      "n_train": 42859,
+      "n_train_observed": 41605,
+      "n_test": 163491,
+      "models": {
+        "xgb_aft": {
+          "c_index": 0.5060455353670056,
+          "mae_h_within_24h": 259.72426691800405,
+          "mae_h_within_72h": 210.7072293071335,
+          "mae_h_within_168h": 208.94593021280707
+        },
+        "renewal": {
+          "c_index": 0.7565261432460966,
+          "mae_h_within_24h": 853.0,
+          "mae_h_within_72h": 853.0,
+          "mae_h_within_168h": 853.0
+        }
+      }
+    },
+    {
+      "fold": 3,
+      "test_event": [
+        "2020-07-15 14:30:00",
+        "2020-07-15 19:00:00"
+      ],
+      "n_train": 51034,
+      "n_train_observed": 43990,
+      "n_test": 466295,
+      "models": {
+        "xgb_aft": {
+          "c_index": 0.49816594607414033,
+          "mae_h_within_24h": 344.6084118809523,
+          "mae_h_within_72h": 350.22363204738065,
+          "mae_h_within_168h": 406.38658858605805
+        },
+        "renewal": {
+          "c_index": 0.4814874713681889,
+          "mae_h_within_24h": 7.5756378334680665,
+          "mae_h_within_72h": 34.81992114567739,
+          "mae_h_within_168h": 87.07079911370417
+        }
+      }
+    },
+    {
+      "fold": 4,
+      "test_event": [
+        "2022-02-28 21:53:00",
+        "2022-03-01 02:00:00"
+      ],
+      "n_train": 74350,
+      "n_train_observed": 57139,
+      "n_test": 492543,
+      "models": {
+        "xgb_aft": {
+          "c_index": 0.44811783567855834,
+          "mae_h_within_24h": 840.962455398008,
+          "mae_h_within_72h": 1046.5158708371173,
+          "mae_h_within_168h": 973.2373894767551
+        },
+        "renewal": {
+          "c_index": 0.5,
+          "mae_h_within_24h": 9.875834374855344,
+          "mae_h_within_72h": 33.84259825024302,
+          "mae_h_within_168h": 81.83310221463951
+        }
+      }
+    },
+    {
+      "fold": 5,
+      "test_event": [
+        "2022-03-23 14:54:00",
+        "2022-03-23 15:24:00"
+      ],
+      "n_train": 98976,
+      "n_train_observed": 78303,
+      "n_test": 316083,
+      "models": {
+        "xgb_aft": {
+          "c_index": 0.4822689059287659,
+          "mae_h_within_24h": 329.8172223271813,
+          "mae_h_within_72h": 364.0538821865525,
+          "mae_h_within_168h": 347.1673603034023
+        },
+        "renewal": {
+          "c_index": 0.632723009390454,
+          "mae_h_within_24h": 3546.4541666666664,
+          "mae_h_within_72h": 3546.4541666666664,
+          "mae_h_within_168h": 3546.4541666666664
+        }
+      }
+    },
+    {
+      "fold": 6,
+      "test_event": [
+        "2022-05-30 12:00:00",
+        "2022-06-02 06:18:00"
+      ],
+      "n_train": 114780,
+      "n_train_observed": 85598,
+      "n_test": 247653,
+      "models": {
+        "xgb_aft": {
+          "c_index": 0.5298770783006559,
+          "mae_h_within_24h": 15734.133920100345,
+          "mae_h_within_72h": 14333.642249096545,
+          "mae_h_within_168h": 25262.652987617203
+        },
+        "renewal": {
+          "c_index": 0.9998018664693222,
+          "mae_h_within_24h": 1753.0799999999997,
+          "mae_h_within_72h": 1753.0799999999997,
+          "mae_h_within_168h": 1753.0799999999997
+        }
+      }
+    }
+  ],
+  "summary": {
+    "xgb_aft": {
+      "c_index": {
+        "mean": 0.4821425131516343,
+        "low": 0.4535952682760616,
+        "high": 0.5087133465563715,
+        "n": 6
+      },
+      "mae_h_within_24h": {
+        "mean": 3044.0849979026057,
+        "low": 379.8258501937442,
+        "high": 8176.256265627378,
+        "n": 6
+      },
+      "mae_h_within_72h": {
+        "mean": 2849.629904747337,
+        "low": 379.75869498414596,
+        "high": 7491.708959915796,
+        "n": 6
+      },
+      "mae_h_within_168h": {
+        "mean": 4635.513811979049,
+        "low": 355.5509642160915,
+        "high": 12928.994921583413,
+        "n": 6
+      }
+    },
+    "renewal": {
+      "c_index": {
+        "mean": 0.6450897484123436,
+        "low": 0.5159496586878053,
+        "high": 0.8116903705687845,
+        "n": 6
+      },
+      "mae_h_within_24h": {
+        "mean": 1029.9253372562184,
+        "low": 149.52664656107228,
+        "high": 2199.727083333333,
+        "n": 6
+      },
+      "mae_h_within_72h": {
+        "mean": 1042.535952784306,
+        "low": 170.61993522094477,
+        "high": 2199.727083333333,
+        "n": 6
+      },
+      "mae_h_within_168h": {
+        "mean": 1068.1306036782005,
+        "low": 213.0713519485612,
+        "high": 2199.727083333333,
+        "n": 6
+      }
+    }
+  }
+}

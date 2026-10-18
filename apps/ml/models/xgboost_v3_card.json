@@ -1,29 +1,85 @@
 {
-  "schema_version": "2.0",
+  "schema_version": "3.0",
   "model_name": "xgboost_v3",
   "status": "challenger",
-  "trained_at": "2026-10-16T17:06:38.663729+00:00",
-  "model_type": "XGBClassifier",
-  "datasets": {
-    "metropt3_2020": {
-      "failures": 4
-    },
-    "metropt_2022": {
-      "failures": 3,
-      "source": "doi:10.5281/zenodo.6854240"
-    }
+  "trained_at": "2026-10-17T01:36:00.228558+00:00",
+  "algorithm": "xgboost",
+  "validation": {
+    "leakage_free": true,
+    "protocol": "nested: outer purged walk-forward \u00d7 inner leave-one-failure-out",
+    "hyperparameters": "selected on inner OOF expected cost (RN-02)",
+    "threshold_selection": "nested LOFO OOF (7 inner folds)"
   },
   "dropped_sensors": [
     "Reservoirs",
     "Oil_level"
   ],
-  "class_balancing": "training only: all positives + every 5th negative, scale_pos_weight=9.94; no SMOTE",
-  "n_train_rows": 559825,
-  "n_train_positives": 51170,
-  "decision_threshold": 0.985,
-  "threshold_strategy": "RN-02 cost-optimal on out-of-fold scores (inner_oof_cost_optimal)",
+  "hyperparameters": {
+    "max_depth": 4,
+    "learning_rate": 0.05,
+    "n_estimators": 600,
+    "subsample": 0.8,
+    "colsample_bytree": 0.6
+  },
+  "search": [
+    {
+      "params": {
+        "max_depth": 6,
+        "learning_rate": 0.1,
+        "n_estimators": 300,
+        "subsample": 0.9,
+        "colsample_bytree": 0.8
+      },
+      "oof_cost": 321.0,
+      "oof_pr_auc": 0.14484450308187233,
+      "threshold": 0.18
+    },
+    {
+      "params": {
+        "max_depth": 4,
+        "learning_rate": 0.05,
+        "n_estimators": 600,
+        "subsample": 0.8,
+        "colsample_bytree": 0.6
+      },
+      "oof_cost": 293.0,
+      "oof_pr_auc": 0.14599664060995027,
+      "threshold": 0.13
+    },
+    {
+      "params": {
+        "max_depth": 8,
+        "learning_rate": 0.1,
+        "n_estimators": 300,
+        "subsample": 0.9,
+        "colsample_bytree": 0.8
+      },
+      "oof_cost": 302.0,
+      "oof_pr_auc": 0.15817541515485972,
+      "threshold": 0.16
+    },
+    {
+      "params": {
+        "max_depth": 6,
+        "learning_rate": 0.2,
+        "n_estimators": 150,
+        "subsample": 0.7,
+        "colsample_bytree": 0.5
+      },
+      "oof_cost": 319.0,
+      "oof_pr_auc": 0.17295750080140762,
+      "threshold": 0.21
+    }
+  ],
+  "calibration": {
+    "method": "platt",
+    "a": 0.24473094723371314,
+    "b": -2.452712242255583
+  },
+  "threshold_calibrated_probability": 0.13,
+  "decision_threshold": 0.905041,
   "seed": 0,
-  "onnx_parity_max_abs_diff": 2.384185791015625e-07,
+  "onnx_parity_max_abs_diff": 3.5762786865234375e-07,
   "feature_count": 68,
   "feature_names": [
     "TP2",
@@ -95,56 +151,25 @@
     "Motor_current_max_15",
     "Motor_current_range_15"
   ],
-  "evidence": {
-    "source": "models/eval_cross_dataset_harmonized.json",
-    "protocol": "pooled purged walk-forward, 6 folds, 7 failures",
-    "expected_cost_inner": {
-      "mean": 51.22222222222222,
-      "low": 29.22222222222222,
-      "high": 73.05555555555556,
-      "n": 18
-    },
-    "event_recall_inner": {
-      "mean": 0.5,
-      "low": 0.2777777777777778,
-      "high": 0.7222222222222222,
-      "n": 18
-    },
-    "false_alarms_per_day_inner": {
-      "mean": 0.042034378159973435,
-      "low": 0.0055474746607537635,
-      "high": 0.08630366551667466,
-      "n": 18
-    },
-    "pr_auc": {
-      "mean": 0.31056482430460686,
-      "low": 0.19477543440609071,
-      "high": 0.4390478925064225,
-      "n": 18
-    },
-    "rn05_gate_vs_random_forest": {
-      "candidate": "xgboost",
-      "baseline": "random_forest",
-      "metric": "expected_cost_inner",
-      "protocol": "pooled_walk_forward_harmonized",
-      "pairing": "fold",
-      "n_blocks": 6,
-      "median_improvement": 0.0,
-      "p_value": 0.4375,
-      "min_achievable_p": 0.015625,
-      "alpha": 0.05,
-      "promote": false,
-      "reason": "Not significant (p = 0.4375) or no median improvement (+0.0000)."
-    }
-  },
-  "promotion": "not promoted: RN-05 gate requires p < 0.05 over the pooled folds; serve as CHALLENGER (shadow + canary).",
   "serving": {
     "adapter": "tree",
     "onnx": "xgboost_v3.onnx"
   },
-  "validation": {
-    "leakage_free": true,
-    "protocol": "purged walk-forward by failure event (RF-28), pooled MetroPT-3 + MetroPT 2022",
-    "threshold_selection": "training out-of-fold only"
+  "evidence": {
+    "source": "models/nested/xgboost.json",
+    "protocol": "outer purged walk-forward (6 folds) \u00d7 inner leave-one-failure-out, 3 seeds, out-of-time",
+    "failures_detected_mean_of_6": 3.3333333333333335,
+    "failures_detected_range": [
+      3,
+      4
+    ],
+    "false_alarm_episodes_mean": 12.333333333333334,
+    "expected_cost_mean": 46.5,
+    "confusion_alarms_seed0": {
+      "tn": 1835594,
+      "fp": 12007,
+      "fn": 40124,
+      "tp": 2389
+    }
   }
 }

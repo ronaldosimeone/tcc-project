@@ -1,34 +1,75 @@
 {
-  "schema_version": "2.0",
+  "schema_version": "3.0",
   "model_name": "random_forest_v3",
   "status": "champion",
-  "trained_at": "2026-10-16T17:43:56.131352+00:00",
-  "model_type": "RandomForestClassifier",
+  "trained_at": "2026-10-17T01:27:50.180314+00:00",
+  "algorithm": "random_forest",
   "validation": {
     "leakage_free": true,
-    "protocol": "purged walk-forward by failure event (RF-28), pooled MetroPT-3 + MetroPT 2022",
-    "threshold_selection": "training out-of-fold only"
-  },
-  "datasets": {
-    "metropt3_2020": {
-      "failures": 4
-    },
-    "metropt_2022": {
-      "failures": 3,
-      "source": "doi:10.5281/zenodo.6854240"
-    }
+    "protocol": "nested: outer purged walk-forward \u00d7 inner leave-one-failure-out",
+    "hyperparameters": "selected on inner OOF expected cost (RN-02)",
+    "threshold_selection": "nested LOFO OOF (7 inner folds)"
   },
   "dropped_sensors": [
     "Reservoirs",
     "Oil_level"
   ],
-  "class_balancing": "training only: all positives + every 5th negative, class_weight='balanced_subsample'; no SMOTE",
-  "n_train_rows": 559825,
-  "n_train_positives": 51170,
-  "decision_threshold": 0.9,
-  "threshold_strategy": "RN-02 cost-optimal on out-of-fold scores (inner_oof_cost_optimal)",
+  "hyperparameters": {
+    "max_depth": 20,
+    "min_samples_leaf": 5,
+    "max_features": 0.3
+  },
+  "search": [
+    {
+      "params": {
+        "max_depth": 20,
+        "min_samples_leaf": 1,
+        "max_features": "sqrt"
+      },
+      "oof_cost": 471.0,
+      "oof_pr_auc": 0.12625504544109115,
+      "threshold": 0.002
+    },
+    {
+      "params": {
+        "max_depth": 10,
+        "min_samples_leaf": 1,
+        "max_features": "sqrt"
+      },
+      "oof_cost": 471.0,
+      "oof_pr_auc": 0.10953896664534618,
+      "threshold": 0.002
+    },
+    {
+      "params": {
+        "max_depth": null,
+        "min_samples_leaf": 20,
+        "max_features": "sqrt"
+      },
+      "oof_cost": 471.0,
+      "oof_pr_auc": 0.11133407235186231,
+      "threshold": 0.002
+    },
+    {
+      "params": {
+        "max_depth": 20,
+        "min_samples_leaf": 5,
+        "max_features": 0.3
+      },
+      "oof_cost": 360.0,
+      "oof_pr_auc": 0.0990227398859171,
+      "threshold": 0.09
+    }
+  ],
+  "calibration": {
+    "method": "platt",
+    "a": 0.20144710070913008,
+    "b": -2.612043871194215
+  },
+  "threshold_calibrated_probability": 0.09,
+  "decision_threshold": 0.814773,
   "seed": 0,
-  "onnx_parity_max_abs_diff": 2.6650654949555985e-07,
+  "onnx_parity_max_abs_diff": 2.2519696674105916e-07,
   "feature_count": 68,
   "feature_names": [
     "TP2",
@@ -100,51 +141,25 @@
     "Motor_current_max_15",
     "Motor_current_range_15"
   ],
-  "evidence": {
-    "source": "models/eval_cross_dataset_harmonized.json",
-    "protocol": "pooled purged walk-forward, 6 folds, 7 failures",
-    "expected_cost_inner": {
-      "mean": 59.333333333333336,
-      "low": 38.887499999999996,
-      "high": 78.77777777777777,
-      "n": 18
-    },
-    "event_recall_inner": {
-      "mean": 0.5,
-      "low": 0.2777777777777778,
-      "high": 0.7222222222222222,
-      "n": 18
-    },
-    "false_alarms_per_day_inner": {
-      "mean": 0.1576154701265012,
-      "low": 0.05014944855251057,
-      "high": 0.28777453160594585,
-      "n": 18
-    },
-    "pr_auc": {
-      "mean": 0.4115956150072584,
-      "low": 0.2665206153159838,
-      "high": 0.568195137337999,
-      "n": 18
-    },
-    "rn05_gate_xgboost_vs_random_forest": {
-      "candidate": "xgboost",
-      "baseline": "random_forest",
-      "metric": "expected_cost_inner",
-      "protocol": "pooled_walk_forward_harmonized",
-      "pairing": "fold",
-      "n_blocks": 6,
-      "median_improvement": 0.0,
-      "p_value": 0.4375,
-      "min_achievable_p": 0.015625,
-      "alpha": 0.05,
-      "promote": false,
-      "reason": "Not significant (p = 0.4375) or no median improvement (+0.0000)."
-    }
-  },
-  "role_rationale": "corrective rebuild of the legacy champion (random split + SMOTE, no valid evidence) with the validated recipe",
   "serving": {
     "adapter": "tree",
     "onnx": "random_forest_v3.onnx"
+  },
+  "evidence": {
+    "source": "models/nested/random_forest.json",
+    "protocol": "outer purged walk-forward (6 folds) \u00d7 inner leave-one-failure-out, 3 seeds, out-of-time",
+    "failures_detected_mean_of_6": 2.0,
+    "failures_detected_range": [
+      2,
+      2
+    ],
+    "false_alarm_episodes_mean": 29.666666666666668,
+    "expected_cost_mean": 71.61111111111113,
+    "confusion_alarms_seed0": {
+      "tn": 1833503,
+      "fp": 14098,
+      "fn": 39154,
+      "tp": 3359
+    }
   }
 }
