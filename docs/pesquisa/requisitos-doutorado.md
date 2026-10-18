@@ -74,11 +74,23 @@ versões e hashes: [`reproducibility_manifest.json`](../reproducibility_manifest
 
 | Achado | Onde | Correção | Evidência |
 |---|---|---|---|
-| Os 7 modelos legados (RF, XGB, MLP, TCN, BiLSTM, PatchTST, AE) usavam split aleatório estratificado e escolhiam o limiar por F2 **no próprio teste**; RF ainda com SMOTE | `train_*.py`, cards `*_v1` | Todos retreinados pela mesma receita sem vazamento: `train_leakfree.py` (árvores → `random_forest_v3`, `xgboost_v3`) e `train_deep_leakfree.py` (redes → `*_v2`); champion passa a ser `random_forest_v3` | [`model_evaluation_leakfree.md`](../model_evaluation_leakfree.md) |
+| Os 7 modelos legados (RF, XGB, MLP, TCN, BiLSTM, PatchTST, AE) usavam split aleatório estratificado e escolhiam o limiar por F2 **no próprio teste**; RF ainda com SMOTE | `train_*.py`, cards `*_v1` | Todos retreinados pelo protocolo aninhado: `train_production.py` (árvores → `random_forest_v3`, `xgboost_v3`; redes → `*_v2`); champion passa a ser `random_forest_v3` | [`model_evaluation_leakfree.md`](../model_evaluation_leakfree.md) |
 | Limiar de evento fixo em 0,7 para qualquer modelo | `EVENT_THRESHOLD` | Evento = alarme persistido **no limiar do próprio modelo** (card); `EVENT_THRESHOLD` vira override opcional | `tests/test_history.py` |
 | Modelos de sequência recebiam **uma única linha** e o adapter repetia essa linha 60 vezes: viam uma janela constante | `inference_pipeline._infer_with_history` | Modelos com janela recebem o buffer inteiro | `tests/test_inference_pipeline.py` |
 | Buffer de 30 leituras para modelos treinados com janelas de 60 | `feature_buffer.SensorBuffer` | Buffer de 60 (as features das árvores olham no máximo 15 para trás) | `tests/test_feature_buffer.py` |
 | Seletor de modelos escondia só a versão base quando havia `_v2` | `frontend/lib/model-name.ts` | Mostra só a maior versão de cada modelo | `__tests__/model-name.test.ts` |
+
+## Protocolo aninhado (quarta rodada) — todos os modelos sob o mesmo rigor
+
+| Lacuna fechada | Implementação | Resultado | Evidência |
+|---|---|---|---|
+| Hiperparâmetros do XGBoost vinham do Optuna num **split aleatório** (vazamento na seleção) | `nested_protocol.py`: busca dentro do treino de cada fold (leave-one-failure-out), objetivo = custo RN-02 out-of-fold | O RF cai de 3 para 2 falhas sem os hiperparâmetros vazados; o XGBoost escolhe árvores rasas (profundidade 4, 600 árvores) | `models/nested/*.json` |
+| Redes com 1 seed e limiar por método diferente do das árvores | Mesmo protocolo para os 8 modelos, 3 seeds; redes em GPU (`apps/ml/.venv-gpu`, torch CUDA) | **XGBoost: 3,3/6 falhas, 12 episódios de falso alarme, custo 46,5** (melhor); RF 2,0/6, custo 71,6 | [`model_evaluation_leakfree.md`](../model_evaluation_leakfree.md) |
+| Gate RN-05 com 6 folds | Wilcoxon pareado por fold, custo médio das seeds | XGBoost × RF: melhora mediana +12,8, **p = 0,125 → não promove**; o RF segue champion e o XGBoost, challenger em shadow | idem |
+| Redes superconfiantes, probabilidade sem significado | Calibração Platt nas predições out-of-fold; nas redes, embutida no ONNX | ECE já baixo (0,02–0,03) e a calibração **não melhora no teste** (0,028 → 0,033 no RF): o shift entre períodos impede a calibração de transferir | idem |
+| Cobertura conformal 0,59–0,68 (não-permutabilidade) | `evaluate_conformal_aci.py`: conformal adaptativo (ACI, Gibbs & Candès 2021), por classe | Cobertura da classe falha **0,12–0,54 (estático) → 0,88–0,91 (ACI)** nos 8 modelos, conjuntos de tamanho médio 1,03–1,26 | `models/eval_conformal_aci.json` |
+| RUL avaliado com só 4 falhas | `evaluate_rul.py --pooled`, rótulos de sobrevivência censurados por dataset | XGBoost AFT C-index **0,48** × 0,65 do baseline de calendário: RUL não aprendível com 7 falhas | `models/eval_rul_pooled.json` |
+| Conclusões dependem de k, horizonte e razão de custo? | `evaluate_sensitivity.py`: k ∈ {3, 6, 12} × horizonte ∈ {2, 6, 12} h × C_FN/C_FP ∈ {10, 100, 1000}, limiar re-escolhido nas predições out-of-fold | **XGBoost é o melhor em 13 de 27 configurações** (BiLSTM e MLP em 6 cada); ranking moderadamente estável (τ de Kendall mediano 0,50, mínimo 0,21). O número de falhas detectadas depende bastante da configuração (XGBoost 1,7–4,3), por isso RN-01/02/03 precisam ficar declarados | `models/eval_sensitivity.json` |
 
 ## Itens refeitos
 
