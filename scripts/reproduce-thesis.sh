@@ -66,6 +66,10 @@ run_ml() {
   "$GPU_PY" -m src.train_production                             # todos os artefatos servíveis
   "$ML_PY" -m src.evaluate_sensitivity                          # k × horizonte × razão de custo
   "$ML_PY" -m src.evaluate_conformal_aci                        # conformal estático × ACI
+  # MetroPT2 (Zenodo 7766691) em data/raw/metropt2/MetroPT2.csv — falhas inéditas.
+  "$ML_PY" -m src.ingest_metropt2
+  "$GPU_PY" -m src.evaluate_metropt2 --no-oil-models            # servidos + twin + sem óleo
+  "$ML_PY" -m src.build_diagnosis_cases                         # evidência XAI das 9 falhas
   # RNF-83 — rode com a máquina ociosa (mede energia da máquina inteira).
   "$ML_PY" -m src.evaluate_energy
 }
@@ -110,6 +114,14 @@ run_rag() {
     "python redteam_build_corpus.py --base /src/data/manuals --out /bench/out/redteam_manuals && \
      python benchmark_rag_retrieval.py --queries /bench/out/redteam_queries.json --manuals /bench/out/redteam_manuals --out /bench/out/redteam_retrieval.json"
   "$BE_PY" benchmarks/benchmark_redteam.py run --models llama3.2:3b qwen2.5:3b-instruct --tau 0.6
+  # Diagnóstico RAG nas falhas reais (casos de apps/ml/src/build_diagnosis_cases.py).
+  "$BE_PY" benchmarks/benchmark_rag_diagnosis.py queries
+  mcp_docker "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"     python benchmark_rag_retrieval.py --queries /bench/out/rag_diag_queries.json --manuals /src/data/manuals --out /bench/out/rag_diag_retrieval.json
+  mcp_docker "BAAI/bge-m3"     python benchmark_rag_retrieval.py --queries /bench/out/rag_diag_queries.json --manuals /src/data/manuals --out /bench/out/rag_diag_retrieval_bge-m3.json
+  rm -f benchmarks/out/rag_diag_generation.json
+  "$BE_PY" benchmarks/benchmark_rag_diagnosis.py generate --model llama3.2:3b
+  # Paridade offline × ao vivo: cenários reais pelo caminho de serving exato.
+  MSYS_NO_PATHCONV=1 docker exec -w /app api python benchmarks/benchmark_live_replay.py
 }
 
 run_docs() {
@@ -120,6 +132,7 @@ run_docs() {
   cd "$ROOT/apps/backend"
   "$BE_PY" benchmarks/benchmark_rag.py report
   "$BE_PY" benchmarks/benchmark_redteam.py report
+  "$BE_PY" benchmarks/benchmark_rag_diagnosis.py report
 }
 
 run_manifest() {
