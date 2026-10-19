@@ -1,0 +1,47 @@
+{
+  "source": "Zenodo 10.5281/zenodo.7766691 (MetroPT2); labels: arXiv:2502.07394 Table 1",
+  "license": "CC BY 4.0",
+  "md5": "056e04fd1874eaef4697d6b6657502c3",
+  "rows_raw_1hz": 7116940,
+  "rows_10s": 705563,
+  "period": [
+    "2022-04-28 12:33:20",
+    "2022-07-28 12:24:30"
+  ],
+  "training_end": "2022-06-02 15:49:50",
+  "rows_after_training_end": 427639,
+  "failures": [
+    {
+      "start": "2022-06-04 10:19:24",
+      "end": "2022-06-04 14:22:39",
+      "type": "air_leak",
+      "lps_alarm": "2022-06-04 11:26:01",
+      "rows_10s": 1459
+    },
+    {
+      "start": "2022-07-11 10:10:18",
+      "end": "2022-07-14 10:22:08",
+      "type": "oil_leak",
+      "lps_alarm": "2022-07-13 19:43:52",
+      "rows_10s": 21697
+    }
+  ],
+  "same_apu_check": {
+    "common_period": [
+      "2022-04-28 12:33:20",
+      "2022-06-02 15:49:50"
+    ],
+    "aligned_rows": 238508,
+    "tp3_correlation": 0.004363224716922907,
+    "tp3_mean_abs_diff_bar": 0.6711138486862183,
+    "reservoirs_mean": {
+      "metropt2": 8.978865623474121,
+      "metropt_2022": 1.4702340364456177
+    },
+    "oil_level_mean": {
+      "metropt2": 1.0,
+      "metropt_2022": 0.0
+    },
+    "reservoirs_tp3_correlation_metropt2": 0.9999912439361779
+  }
+}
