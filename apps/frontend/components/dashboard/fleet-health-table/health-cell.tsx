@@ -4,15 +4,18 @@ import { ArrowDownRight, ArrowUpRight } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import type { RiskLevel } from "@/lib/risk-thresholds";
 import { healthBarClass, healthTextClass } from "./mock-assets";
 
 export interface HealthCellProps {
   health: number;
   /** Variação 24h em pontos percentuais; positivo melhora, negativo piora. */
   trendPp: number;
+  /** Nível de risco já calculado (ativo ao vivo); senão deriva da saúde. */
+  riskLevel?: RiskLevel;
 }
 
-export function HealthCell({ health, trendPp }: HealthCellProps) {
+export function HealthCell({ health, trendPp, riskLevel }: HealthCellProps) {
   const TrendIcon = trendPp >= 0 ? ArrowUpRight : ArrowDownRight;
   // Seta da tendência: verde se melhorando, vermelho se piorando.
   // Aqui o vermelho é semântico ("piora") e não denota nível CRÍTICO.
@@ -25,12 +28,12 @@ export function HealthCell({ health, trendPp }: HealthCellProps) {
       <Progress
         value={health}
         aria-label={`Saúde do ativo: ${health}%`}
-        className={cn("h-1.5 w-24 bg-muted", healthBarClass(health))}
+        className={cn("h-1.5 w-24 bg-muted", healthBarClass(health, riskLevel))}
       />
       <span
         className={cn(
           "min-w-[3ch] font-mono text-xs font-semibold tabular-nums",
-          healthTextClass(health),
+          healthTextClass(health, riskLevel),
         )}
       >
         {health}%

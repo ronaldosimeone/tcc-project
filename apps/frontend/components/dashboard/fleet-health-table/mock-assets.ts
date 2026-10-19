@@ -66,17 +66,19 @@ export function healthToRiskLevel(health: number): RiskLevel {
   return "CRÍTICO";
 }
 
-/** Cor da barra de progresso por nível de risco. */
-export function healthBarClass(health: number): string {
-  const level = healthToRiskLevel(health);
+/** Cor da barra de progresso por nível de risco. O ativo ao vivo passa o
+ * nível já calculado com o limiar do modelo, para a barra nunca contradizer
+ * o badge da mesma linha. */
+export function healthBarClass(health: number, riskLevel?: RiskLevel): string {
+  const level = riskLevel ?? healthToRiskLevel(health);
   if (level === "NORMAL") return "[&>*]:bg-emerald-500";
   if (level === "ALERTA") return "[&>*]:bg-amber-500";
   return "[&>*]:bg-red-500";
 }
 
 /** Cor do texto do percentual por nível de risco. */
-export function healthTextClass(health: number): string {
-  const level = healthToRiskLevel(health);
+export function healthTextClass(health: number, riskLevel?: RiskLevel): string {
+  const level = riskLevel ?? healthToRiskLevel(health);
   if (level === "NORMAL") return "text-emerald-600 dark:text-emerald-400";
   if (level === "ALERTA") return "text-amber-700 dark:text-amber-400";
   return "text-red-700 dark:text-red-400";

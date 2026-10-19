@@ -63,7 +63,10 @@ interface AlertToastProps {
 
 function AlertToast({ alert, onAcknowledge }: AlertToastProps) {
   const pct = (alert.probability * 100).toFixed(1);
-  const isCritical = isCriticalProb(alert.probability);
+  const isCritical = isCriticalProb(
+    alert.probability,
+    alert.decision_threshold,
+  );
 
   const time = new Date(alert.timestamp).toLocaleTimeString("pt-BR", {
     hour: "2-digit",

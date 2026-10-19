@@ -15,7 +15,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { RISK_THRESHOLDS } from "@/lib/risk-thresholds";
+import { isCriticalProb } from "@/lib/risk-thresholds";
 
 // ── Tipos do protocolo ─────────────────────────────────────────────────────
 
@@ -27,6 +27,8 @@ interface WsAlertFrame {
   timestamp: string;
   /** Latência da inferência ponta-a-ponta em ms (RNF: telemetria MLOps). */
   inference_latency_ms?: number;
+  /** Limiar calibrado do modelo que pontuou (card) — ausente em payloads antigos. */
+  decision_threshold?: number | null;
 }
 
 interface WsPingFrame {
@@ -45,6 +47,8 @@ export interface WsAlert {
   receivedAt: number;
   /** Latência da inferência ponta-a-ponta em ms — opcional para retro-compat. */
   inference_latency_ms?: number;
+  /** Limiar calibrado do modelo que pontuou — `null`/ausente = faixas fixas. */
+  decision_threshold?: number | null;
 }
 
 export type WsStatus =
@@ -76,9 +80,8 @@ const BACKOFF_MAX_MS = 30_000;
  */
 const DEDUPE_WINDOW_MS = 5_000;
 
-function isCritical(p: number): boolean {
-  return p >= RISK_THRESHOLDS.CRITICAL;
-}
+const isCritical = (alert: WsAlert): boolean =>
+  isCriticalProb(alert.probability, alert.decision_threshold);
 
 // ── Helpers internos ───────────────────────────────────────────────────────
 
@@ -176,6 +179,7 @@ export function useAlertWebSocket(): UseAlertWebSocketReturn {
               timestamp: frame.timestamp,
               receivedAt: Date.now(),
               inference_latency_ms: frame.inference_latency_ms,
+              decision_threshold: frame.decision_threshold ?? null,
             };
 
             // Dedupe equivalente a `toast({ id: 'critical-anomaly' })`:
@@ -186,8 +190,7 @@ export function useAlertWebSocket(): UseAlertWebSocketReturn {
             const head = prev[0];
             const shouldMerge =
               head !== undefined &&
-              isCritical(head.probability) ===
-                isCritical(incoming.probability) &&
+              isCritical(head) === isCritical(incoming) &&
               incoming.receivedAt - head.receivedAt < DEDUPE_WINDOW_MS;
 
             const next: WsAlert[] = shouldMerge

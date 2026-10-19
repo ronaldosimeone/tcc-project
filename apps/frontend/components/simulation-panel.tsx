@@ -26,6 +26,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { ModelSection } from "./simulation-panel/model-section";
+import { RealFailureSection } from "./simulation-panel/real-failure-section";
 import { ScenarioSection } from "./simulation-panel/scenario-section";
 
 interface SimulationPanelProps {
@@ -51,6 +52,7 @@ export function SimulationPanel({ open, onOpenChange }: SimulationPanelProps) {
         <div className="flex flex-1 flex-col gap-6 overflow-y-auto px-6 py-4">
           <ModelSection />
           <ScenarioSection />
+          <RealFailureSection />
         </div>
       </SheetContent>
     </Sheet>

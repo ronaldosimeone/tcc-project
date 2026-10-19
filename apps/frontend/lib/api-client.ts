@@ -59,6 +59,8 @@ export interface ModelSummary {
 /** Resposta de `GET /models`. */
 export interface ModelsListResponse {
   active_model: string;
+  /** Limiar de decisão calibrado do modelo ativo (card); null se nenhum. */
+  active_threshold?: number | null;
   models: ModelSummary[];
 }
 

@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { CircleAlert, Loader2 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
+import { publishActiveThreshold } from "@/hooks/use-active-threshold";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -42,6 +43,9 @@ export function ModelSection() {
       const fresh = await listModels();
       setData(fresh);
       setSelected(fresh.active_model);
+      // Reaproveita a mesma resposta: o limiar do novo modelo chega à UI
+      // sem esperar o próximo poll (e sem requisição extra).
+      publishActiveThreshold(fresh.active_threshold ?? null);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Falha ao carregar modelos",

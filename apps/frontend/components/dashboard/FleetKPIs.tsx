@@ -24,7 +24,7 @@ import {
   useLatencyHistory,
   type LatencyTelemetry,
 } from "@/hooks/use-latency-history";
-import { getRiskLevel, type RiskLevel } from "@/lib/risk-thresholds";
+import { type RiskLevel } from "@/lib/risk-thresholds";
 import { AndonBoard } from "./fleet-kpis/andon-board";
 import {
   LATENCY_HISTORY_SIZE,
@@ -64,9 +64,9 @@ export default function FleetKPIs({
   // tanto no ícone como na sparkline. Único ponto de verdade — qualquer
   // mudança nos limiares (lib/risk-thresholds) propaga automaticamente.
   const anomalyTone: SparkTone =
-    getRiskLevel(liveProbability) === "CRÍTICO"
+    effectiveRiskLevel === "CRÍTICO"
       ? "danger"
-      : getRiskLevel(liveProbability) === "ALERTA"
+      : effectiveRiskLevel === "ALERTA"
       ? "warn"
       : "ok";
 

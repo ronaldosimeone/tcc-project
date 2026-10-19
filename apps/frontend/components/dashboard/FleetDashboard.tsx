@@ -32,12 +32,13 @@ const LIVE_ASSET_ID = "APU-Trem-042";
 export default function FleetDashboard() {
   // currentLatency vem da stream SSE contínua (1 Hz) — atualiza-se em modo
   // NORMAL também, ao contrário do canal WS que só dispara em alertas.
-  const { latest, currentLatency, isLoading, sseStatus } = useSensorData();
+  const { latest, currentLatency, isLoading, sseStatus, decisionThreshold } =
+    useSensorData();
 
   const [selectedAssetId, setSelectedAssetId] = useState<string>(LIVE_ASSET_ID);
 
   const effectiveProb = latest?.failure_probability ?? 0;
-  const effectiveRiskLevel = getRiskLevel(effectiveProb);
+  const effectiveRiskLevel = getRiskLevel(effectiveProb, decisionThreshold);
 
   // Adapta o shape de `currentLatency` ({ key, latencyMs }) para a prop do
   // FleetKPIs ({ messageId, latencyMs }) — o nome do campo identificador é

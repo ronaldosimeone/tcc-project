@@ -39,6 +39,7 @@ export default function SensorMonitor() {
     error,
     sseStatus,
     sseReconnectAttempt,
+    decisionThreshold,
   } = useSensorData();
 
   const { alerts, status: wsStatus, acknowledge } = useAlertWebSocket();
@@ -51,7 +52,7 @@ export default function SensorMonitor() {
   // A única fonte de verdade para o estado actual do compressor é o
   // último pacote SSE (`latest.failure_probability`).
   const effectiveProb = latest?.failure_probability ?? 0;
-  const effectiveRiskLevel = getRiskLevel(effectiveProb);
+  const effectiveRiskLevel = getRiskLevel(effectiveProb, decisionThreshold);
   const anomalyScoreStr = (effectiveProb * 100).toFixed(1);
 
   const isOffline = error !== null && !isLoading;
@@ -61,7 +62,7 @@ export default function SensorMonitor() {
 
   // Modo "imersivo" 3-tier: cores estritamente por nível de risco oficial.
   // CRÍTICO → vermelho (reservado), ALERTA → âmbar, NORMAL → branco neutro.
-  const isCriticalState = isCriticalProb(effectiveProb);
+  const isCriticalState = isCriticalProb(effectiveProb, decisionThreshold);
   const isAlertState = effectiveRiskLevel === "ALERTA";
 
   return (

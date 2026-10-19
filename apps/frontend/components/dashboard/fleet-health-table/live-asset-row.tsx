@@ -111,7 +111,11 @@ export function LiveAssetRow({
       </td>
 
       <td className="py-3 pr-4">
-        <HealthCell health={liveHealth} trendPp={liveTrendPp} />
+        <HealthCell
+          health={liveHealth}
+          trendPp={liveTrendPp}
+          riskLevel={effectiveRiskLevel}
+        />
       </td>
 
       <td className="py-3 pr-4 text-right font-mono text-xs tabular-nums text-foreground">

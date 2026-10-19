@@ -29,6 +29,10 @@ const SSE_URL = "/api/stream/sensors";
 
 // Re-exporta RiskLevel/getRiskLevel da fonte única (lib/risk-thresholds) para
 // manter a API histórica dos consumidores que importam `from "@/hooks/use-sensor-data"`.
+import {
+  publishActiveThreshold,
+  useActiveThreshold,
+} from "@/hooks/use-active-threshold";
 import { getRiskLevel } from "@/lib/risk-thresholds";
 import type { RiskLevel } from "@/lib/risk-thresholds";
 export { getRiskLevel };
@@ -53,6 +57,8 @@ export interface SensorDataState {
   isLoading: boolean;
   isAnomaly: boolean;
   riskLevel: RiskLevel;
+  /** Limiar calibrado do modelo ativo — `null` = faixas fixas. */
+  decisionThreshold: number | null;
   error: Error | null;
   sseStatus: SSEStatus;
   sseReconnectAttempt: number;
@@ -100,7 +106,16 @@ interface HistoryPage {
   page: number;
   size: number;
   pages: number;
+  /** Limiar calibrado do modelo ativo (ausente em backends antigos). */
+  active_threshold?: number | null;
 }
+
+/** Publica o limiar do modelo ativo quando o backend o informa. */
+const publishThreshold = (page: HistoryPage): void => {
+  if (typeof page.active_threshold === "number") {
+    publishActiveThreshold(page.active_threshold);
+  }
+};
 
 interface WsAlertFrame {
   type: "alert";
@@ -261,6 +276,7 @@ export function useSensorData(): SensorDataState {
 
         const page = (await res.json()) as HistoryPage;
         if (cancelled) return;
+        publishThreshold(page);
 
         if (page.items.length === 0) {
           setIsLoading(false);
@@ -304,6 +320,7 @@ export function useSensorData(): SensorDataState {
         if (!res.ok) return;
 
         const page = (await res.json()) as HistoryPage;
+        publishThreshold(page);
         if (page.items.length === 0) return;
 
         const newest = page.items[0];
@@ -383,7 +400,8 @@ export function useSensorData(): SensorDataState {
   }, []);
 
   const prob = latest?.failure_probability ?? 0;
-  const riskLevel = getRiskLevel(prob);
+  const decisionThreshold = useActiveThreshold();
+  const riskLevel = getRiskLevel(prob, decisionThreshold);
 
   return {
     history,
@@ -393,6 +411,7 @@ export function useSensorData(): SensorDataState {
     isLoading,
     isAnomaly: riskLevel !== "NORMAL",
     riskLevel,
+    decisionThreshold,
     error,
     sseStatus,
     sseReconnectAttempt,

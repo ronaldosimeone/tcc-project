@@ -1,13 +1,18 @@
 /**
  * Limiares oficiais de risco de falha — fonte única de verdade.
  *
- * Faixas (probabilidade [0–1]):
- *   NORMAL   : 0.00 ≤ p < 0.35
- *   ALERTA   : 0.35 ≤ p < 0.65
- *   CRÍTICO  : 0.65 ≤ p ≤ 1.00
+ * Cada modelo é calibrado com o PRÓPRIO limiar de decisão (card do modelo,
+ * escolhido sem vazamento: MLP 0,08 … XGBoost 0,905). O risco é, portanto,
+ * relativo a esse limiar:
+ *   CRÍTICO  : p ≥ limiar                 (o modelo decide "falha")
+ *   ALERTA   : p ≥ limiar · ALERT_RATIO   (mesma proporção 0,35/0,65)
+ *   NORMAL   : abaixo disso
+ *
+ * Sem limiar conhecido (modelo não carregado, payload antigo) valem as
+ * faixas fixas: NORMAL < 0,35 ≤ ALERTA < 0,65 ≤ CRÍTICO.
  *
  * Toda a UI (cards, badges, cores, gating de explicabilidade, dedupe de
- * toasts) DEVE importar `RISK_THRESHOLDS` daqui. Não duplicar magic numbers.
+ * toasts) DEVE importar daqui. Não duplicar magic numbers.
  */
 
 export type RiskLevel = "NORMAL" | "ALERTA" | "CRÍTICO";
@@ -19,19 +24,43 @@ export const RISK_THRESHOLDS = {
   CRITICAL: 0.65,
 } as const;
 
-/** Classifica uma probabilidade [0–1] nas 3 faixas oficiais. */
-export function getRiskLevel(prob: number): RiskLevel {
-  if (prob < RISK_THRESHOLDS.ALERT) return "NORMAL";
-  if (prob < RISK_THRESHOLDS.CRITICAL) return "ALERTA";
+/** Fração do limiar do modelo a partir da qual o risco é ALERTA. */
+export const ALERT_RATIO: number =
+  RISK_THRESHOLDS.ALERT / RISK_THRESHOLDS.CRITICAL;
+
+const bounds = (
+  decisionThreshold?: number | null,
+): { alert: number; critical: number } =>
+  decisionThreshold == null
+    ? { alert: RISK_THRESHOLDS.ALERT, critical: RISK_THRESHOLDS.CRITICAL }
+    : {
+        alert: decisionThreshold * ALERT_RATIO,
+        critical: decisionThreshold,
+      };
+
+/** Classifica uma probabilidade [0–1] relativa ao limiar do modelo. */
+export function getRiskLevel(
+  prob: number,
+  decisionThreshold?: number | null,
+): RiskLevel {
+  const { alert, critical } = bounds(decisionThreshold);
+  if (prob < alert) return "NORMAL";
+  if (prob < critical) return "ALERTA";
   return "CRÍTICO";
 }
 
-/** `true` se a probabilidade está no patamar CRÍTICO (≥ 65%). */
-export function isCriticalProb(prob: number): boolean {
-  return prob >= RISK_THRESHOLDS.CRITICAL;
+/** `true` se a probabilidade está no patamar CRÍTICO. */
+export function isCriticalProb(
+  prob: number,
+  decisionThreshold?: number | null,
+): boolean {
+  return getRiskLevel(prob, decisionThreshold) === "CRÍTICO";
 }
 
-/** `true` se a probabilidade está no patamar ALERTA (35–64.99%). */
-export function isAlertProb(prob: number): boolean {
-  return prob >= RISK_THRESHOLDS.ALERT && prob < RISK_THRESHOLDS.CRITICAL;
+/** `true` se a probabilidade está no patamar ALERTA. */
+export function isAlertProb(
+  prob: number,
+  decisionThreshold?: number | null,
+): boolean {
+  return getRiskLevel(prob, decisionThreshold) === "ALERTA";
 }

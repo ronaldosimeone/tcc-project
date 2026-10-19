@@ -17,6 +17,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { PredictResponse } from "@/lib/api-client";
 import { getRiskLevel, type RiskLevel } from "@/hooks/use-sensor-data";
+import { useActiveThreshold } from "@/hooks/use-active-threshold";
 
 // ── Constantes ────────────────────────────────────────────────────────────
 
@@ -109,6 +110,7 @@ export function usePredictionHistory(
   latest: PredictResponse | null,
 ): UsePredictionHistoryReturn {
   const [isMounted, setIsMounted] = useState(false);
+  const decisionThreshold = useActiveThreshold();
   const [history, setHistory] = useState<PredictionHistoryEntry[]>([]);
 
   // Rastreia o último timestamp processado para impedir duplicatas
@@ -144,7 +146,7 @@ export function usePredictionHistory(
       timestamp: latest.timestamp,
       failure_probability: prob,
       predicted_class: latest.predicted_class,
-      riskLevel: getRiskLevel(prob),
+      riskLevel: getRiskLevel(prob, decisionThreshold),
     };
 
     setTimeout(() => {
@@ -154,7 +156,7 @@ export function usePredictionHistory(
         return next;
       });
     }, 0);
-  }, [isMounted, latest]);
+  }, [isMounted, latest, decisionThreshold]);
 
   const clearHistory = useCallback((): void => {
     setHistory([]);
