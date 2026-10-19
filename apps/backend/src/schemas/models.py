@@ -44,6 +44,9 @@ class ModelsListResponse(BaseModel):
     """Response for GET /models."""
 
     active_model: str
+    # Limiar de decisão calibrado do modelo ativo (card): a UI classifica o
+    # risco relativo a ele. None quando nenhum modelo está carregado.
+    active_threshold: float | None = None
     models: list[ModelSummary]
 
 

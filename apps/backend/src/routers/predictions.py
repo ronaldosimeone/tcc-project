@@ -12,7 +12,8 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.database import get_db
-from src.schemas.prediction import Page, PredictionResponse
+from src.schemas.prediction import PredictionPage
+from src.services.model_registry import get_active_threshold
 from src.services.prediction_service import list_predictions
 
 router: APIRouter = APIRouter(prefix="/v1", tags=["Predictions History"])
@@ -20,7 +21,7 @@ router: APIRouter = APIRouter(prefix="/v1", tags=["Predictions History"])
 
 @router.get(
     "/predictions",
-    response_model=Page[PredictionResponse],
+    response_model=PredictionPage,
     summary="Paginated prediction history",
     description=(
         "[RF-09 / RNF-15] Returns all persisted predictions ordered by "
@@ -41,6 +42,8 @@ async def get_predictions(
         description="Number of items per page (max 100).",
     ),
     db: AsyncSession = Depends(get_db),
-) -> Page[PredictionResponse]:
+    active_threshold: float | None = Depends(get_active_threshold),
+) -> PredictionPage:
     """Retrieve paginated prediction history, newest first."""
-    return await list_predictions(db, page, size)
+    result = await list_predictions(db, page, size)
+    return PredictionPage(**result.model_dump(), active_threshold=active_threshold)

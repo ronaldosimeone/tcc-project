@@ -200,6 +200,11 @@ _MODEL_REGISTRY: dict[str, Path] = {
 }
 
 
+def resolve_threshold(model_name: str) -> float:
+    """Public read of a model's calibrated decision threshold (model card)."""
+    return _resolve_threshold(model_name.lower().strip())
+
+
 def load_model_by_name(model_name: str) -> "ModelService":
     """
     Load a ModelService by explicit name (RF-10, RNF-25).

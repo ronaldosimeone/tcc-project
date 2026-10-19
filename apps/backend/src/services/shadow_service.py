@@ -30,7 +30,7 @@ from src.core.database import AsyncSessionFactory
 from src.core.exceptions import ModelNotAvailableError
 from src.models.shadow_prediction import ShadowPrediction
 from src.schemas.predict import PredictResponse
-from src.services.inference_pipeline import _infer_with_history
+from src.services.inference_pipeline import _infer_with_history, has_full_window
 from src.services.model_registry import ModelRegistry
 from src.services.preprocessing import MetroPTPreprocessor
 
@@ -77,6 +77,8 @@ class ShadowEvaluator:
         try:
             model = await self._challenger.get()
         except ModelNotAvailableError:
+            return None
+        if not has_full_window(model, len(window)):
             return None
         try:
             result = await asyncio.to_thread(

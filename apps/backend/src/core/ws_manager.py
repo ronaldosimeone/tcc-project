@@ -23,6 +23,18 @@ HEARTBEAT_INTERVAL: int = 30  # seconds — RNF-30
 ALERT_PROBABILITY_THRESHOLD: float = 0.70  # RF-14 (strict >)
 
 
+def alert_fires(probability: float, decision_threshold: float | None) -> bool:
+    """RF-14 gate. With the scoring model's calibrated threshold (model card)
+    the alert fires exactly when the model decides "failure" (``>=``, same
+    rule as ``predicted_class``): models are calibrated on very different
+    scales (MLP 0.08 … XGBoost 0.905), so a fixed 0.70 hid every detection
+    of the low-threshold models and pre-empted the high-threshold ones.
+    Without it (legacy payloads), the fixed strict ``> 0.70`` still applies."""
+    if decision_threshold is None:
+        return probability > ALERT_PROBABILITY_THRESHOLD
+    return probability >= decision_threshold
+
+
 class ConnectionManager:
     """
     Registry of active WebSocket connections.
@@ -109,13 +121,16 @@ class ConnectionManager:
         Silently skips when probability <= ALERT_PROBABILITY_THRESHOLD.
         """
         probability: float = float(payload.get("probability", 0.0))
-        if probability <= ALERT_PROBABILITY_THRESHOLD:
+        threshold = payload.get("decision_threshold")
+        if not alert_fires(probability, threshold):
             return
 
         log.info(
             "ws_alert_broadcast",
             probability=probability,
-            threshold=ALERT_PROBABILITY_THRESHOLD,
+            threshold=(
+                threshold if threshold is not None else ALERT_PROBABILITY_THRESHOLD
+            ),
             active_clients=len(self._active),
         )
         await self.broadcast(payload)

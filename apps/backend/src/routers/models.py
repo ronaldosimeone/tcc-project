@@ -21,6 +21,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, status
 from src.core.auth import require_admin_token
 from src.schemas.models import ModelsListResponse, SwapModelRequest, SwapModelResponse
 from src.services.model_registry import get_model_registry
+from src.services.model_service import resolve_threshold
 from src.services.protocols import ModelRegistryProtocol
 
 router: APIRouter = APIRouter(
@@ -42,8 +43,11 @@ router: APIRouter = APIRouter(
 async def list_models(
     registry: ModelRegistryProtocol = Depends(get_model_registry),
 ) -> ModelsListResponse:
+    active = registry.active_name
     return ModelsListResponse(
-        active_model=registry.active_name, models=registry.list_summaries()
+        active_model=active,
+        active_threshold=resolve_threshold(active) if active else None,
+        models=registry.list_summaries(),
     )
 
 

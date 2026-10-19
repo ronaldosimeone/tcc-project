@@ -136,6 +136,10 @@ class SensorSimulator:
 
         self._idx_normal: int = start_offset % len(self._normal)
         self._idx_failure: int = start_offset % len(self._failure)
+        self._scenario_rows: np.ndarray | None = None
+        self._scenario_id: str | None = None
+        self._scenario_lead_rows: int = 0
+        self._idx_scenario: int = 0
         self._rng: np.random.Generator = np.random.default_rng(seed)
         self._noise: np.ndarray = (
             noise_frac * self._normal[:, :_N_ANALOG].std(axis=0)
@@ -208,9 +212,47 @@ class SensorSimulator:
         return _row_to_reading(row, ts)
 
     def _read_failure(self, ts: datetime) -> SensorReading:
+        if self._scenario_rows is not None:
+            scenario_row: np.ndarray = self._scenario_rows[self._idx_scenario]
+            self._idx_scenario = (self._idx_scenario + 1) % len(self._scenario_rows)
+            return _row_to_reading(scenario_row, ts)
         row: np.ndarray = self._failure[self._idx_failure]
         self._idx_failure = (self._idx_failure + 1) % len(self._failure)
         return _row_to_reading(row, ts)
+
+    # ── Real failure scenarios (failure_scenarios.py) ─────────────────────
+
+    def set_scenario(self, scenario_id: str | None, lead_minutes: int = 30) -> None:
+        """Replay one real failure (from ``lead_minutes`` before it) in FAILURE
+        mode; ``None`` restores the legacy MetroPT-3 failure windows."""
+        if scenario_id is None:
+            self._scenario_rows, self._scenario_id = None, None
+            self._scenario_lead_rows = 0
+        else:
+            from src.services.failure_scenarios import load_rows
+
+            self._scenario_rows = load_rows(scenario_id, lead_minutes)
+            self._scenario_id = scenario_id
+            # 10 s rows: lead window length in rows (clipped to what exists).
+            self._scenario_lead_rows = min(
+                lead_minutes * 6, len(self._scenario_rows) - 1
+            )
+        self._idx_scenario = 0
+        self.mode = SimulatorMode.FAILURE
+
+    def scenario_status(self) -> dict[str, object] | None:
+        if self._scenario_rows is None:
+            return None
+        return {
+            "id": self._scenario_id,
+            "step": self._idx_scenario,
+            "total": len(self._scenario_rows),
+            "phase": (
+                "pre_failure"
+                if self._idx_scenario < self._scenario_lead_rows
+                else "failure"
+            ),
+        }
 
     def _read_degradation(self, ts: datetime) -> SensorReading:
         """

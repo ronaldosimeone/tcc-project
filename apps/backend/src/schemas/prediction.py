@@ -68,6 +68,14 @@ class Page(BaseModel, Generic[T]):
     pages: int = Field(ge=0)
 
 
+class PredictionPage(Page[PredictionResponse]):
+    """``Page`` of predictions plus the decision threshold of the model that
+    is active when the page is served (model card). The dashboard classifies
+    risk relative to it; ``None`` when no model is loaded."""
+
+    active_threshold: float | None = None
+
+
 def make_page(
     items: list[T],
     total: int,

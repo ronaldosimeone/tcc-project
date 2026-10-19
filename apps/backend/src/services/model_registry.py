@@ -260,3 +260,15 @@ def get_model_registry(request: Request) -> ModelRegistry:
             "Check the FastAPI lifespan."
         )
     return registry
+
+
+def get_active_threshold(request: Request) -> float | None:
+    """FastAPI dependency — calibrated decision threshold (model card) of the
+    active model, or ``None`` when no registry/model is loaded (read-only
+    endpoints keep working without the ML lifespan)."""
+    from src.services.model_service import resolve_threshold
+
+    registry: ModelRegistry | None = getattr(request.app.state, "model_registry", None)
+    if registry is None or not registry.active_name:
+        return None
+    return resolve_threshold(registry.active_name)

@@ -20,6 +20,7 @@ from src.services.asset_tracking import AssetTracking
 from src.services.feature_buffer import SensorBuffer
 from src.services.inference_pipeline import (
     _infer_with_history,
+    has_full_window,
     _reading_to_dict,
     _reading_to_request,
 )
@@ -59,7 +60,9 @@ class AssetProcessor:
         except ModelNotAvailableError:
             return None
         self.buffer.append(_reading_to_dict(reading))
-        if not self.buffer.is_warm():
+        if not self.buffer.is_warm() or not has_full_window(
+            model_service, len(self.buffer)
+        ):
             return None
         window = self.buffer.to_dataframe()
         try:

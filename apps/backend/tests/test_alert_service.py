@@ -50,6 +50,7 @@ async def test_payload_has_exactly_the_7_expected_keys() -> None:
         "sensor_id",
         "triggered",
         "inference_latency_ms",
+        "decision_threshold",
     }
 
 

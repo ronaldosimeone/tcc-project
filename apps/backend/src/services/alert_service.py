@@ -30,6 +30,7 @@ from src.core.config import settings
 from src.core.ws_manager import (
     ALERT_PROBABILITY_THRESHOLD,
     ConnectionManager,
+    alert_fires,
     manager as _ws_manager,
 )
 from src.services.alert_settings_service import AlertSettingsService
@@ -90,6 +91,10 @@ class AlertService:
         inference_latency_ms: float | None = (
             round(float(raw_latency), 2) if raw_latency is not None else None
         )
+        raw_threshold = prediction.get("decision_threshold")
+        decision_threshold: float | None = (
+            float(raw_threshold) if raw_threshold is not None else None
+        )
         alert_payload: dict[str, Any] = {
             "type": "alert",
             "message_id": str(uuid.uuid4()),
@@ -97,8 +102,11 @@ class AlertService:
             "probability": probability,
             "label": prediction.get("label", "unknown"),
             "sensor_id": prediction.get("sensor_id"),
-            "triggered": probability > ALERT_PROBABILITY_THRESHOLD,
+            "triggered": alert_fires(probability, decision_threshold),
             "inference_latency_ms": inference_latency_ms,
+            # Limiar calibrado do modelo que pontuou (card) — o frontend
+            # classifica o risco relativo a ele, não a faixas fixas.
+            "decision_threshold": decision_threshold,
         }
 
         if alert_payload["triggered"]:
@@ -113,7 +121,11 @@ class AlertService:
             log.debug(
                 "alert_skipped",
                 probability=probability,
-                threshold=ALERT_PROBABILITY_THRESHOLD,
+                threshold=(
+                    decision_threshold
+                    if decision_threshold is not None
+                    else ALERT_PROBABILITY_THRESHOLD
+                ),
             )
 
         # RF-24 — mesmo `prediction` já usado para o alerta WS acima; nenhuma

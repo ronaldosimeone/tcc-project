@@ -120,6 +120,15 @@ def _reading_to_dict(reading: SensorReading) -> dict[str, float]:
     }
 
 
+def has_full_window(model_service: object, buffered: int) -> bool:
+    """Training/serving parity: a model that reads a window (sequence,
+    autoencoder) is scored only on a REAL full window — left-padding with a
+    repeated row is a constant segment never seen in training and raised
+    false alarms right after every (re)start. Tabular models need none."""
+    history = getattr(model_service, "history_rows", 0)
+    return not (isinstance(history, int) and history > 0 and buffered < history)
+
+
 def _infer_with_history(
     model_service: ModelService,
     buffer_df: pd.DataFrame,
@@ -277,6 +286,10 @@ class InferencePipelineService:
             )
             self._warm_logged = True
 
+        if not has_full_window(model_service, len(self._buffer)):
+            log.debug("inference_skipped_short_window", buffered=len(self._buffer))
+            return
+
         # 3. Inferência — CPU-bound; despachada para a threadpool para não
         # bloquear o event loop (SSE broadcast, WebSocket, health checks).
         # Mede latência ponta-a-ponta da chamada (preprocess + ONNX run +
@@ -336,7 +349,12 @@ class InferencePipelineService:
                 self._asset_id, buffer_df, result, self._registry.active_name
             )
 
-        await self._alert_and_log(result, inference_latency_ms, warm)
+        await self._alert_and_log(
+            result,
+            inference_latency_ms,
+            warm,
+            getattr(model_service, "decision_threshold", None),
+        )
 
     async def _save_only(
         self, predict_request: PredictRequest, result: PredictResponse
@@ -350,15 +368,25 @@ class InferencePipelineService:
                 log.warning("inference_save_error", error=str(exc))
 
     async def _alert_and_log(
-        self, result: PredictResponse, inference_latency_ms: float, warm: bool
+        self,
+        result: PredictResponse,
+        inference_latency_ms: float,
+        warm: bool,
+        decision_threshold: float | None = None,
     ) -> None:
-        # 5. Dispara alerta WebSocket se probabilidade > 0.70 (RF-14)
+        # 5. Dispara alerta WebSocket quando o modelo decide "falha" — limiar
+        # calibrado do card (RF-14; fallback > 0.70 sem limiar).
         await self._alert.process_prediction(
             {
                 "probability": result.failure_probability,
                 "predicted_class": result.predicted_class,
                 "timestamp": result.timestamp,
                 "inference_latency_ms": inference_latency_ms,
+                "decision_threshold": (
+                    float(decision_threshold)
+                    if isinstance(decision_threshold, int | float)
+                    else None
+                ),
             }
         )
 

@@ -23,6 +23,8 @@ Estratégia de mock:
 
 from __future__ import annotations
 
+from collections.abc import Iterator
+
 import asyncio
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -130,6 +132,18 @@ def _make_alert_service() -> MagicMock:
 # ---------------------------------------------------------------------------
 # _reading_to_request
 # ---------------------------------------------------------------------------
+
+
+@pytest.fixture(autouse=True)
+def _empty_global_buffer() -> Iterator[None]:
+    """Tests that use the process-wide SensorBuffer assume it starts empty
+    (cold-start path). Any earlier test that ran the app lifespan leaves it
+    warm, which silently switched these tests to the windowed path."""
+    from src.services.feature_buffer import get_sensor_buffer
+
+    get_sensor_buffer().clear()
+    yield
+    get_sensor_buffer().clear()
 
 
 def test_queue_timeout_is_5_seconds() -> None:
@@ -543,6 +557,7 @@ class TestAlertThreshold:
             "predicted_class",
             "timestamp",
             "inference_latency_ms",
+            "decision_threshold",
         }
 
 
