@@ -21,21 +21,21 @@ Persistence k = 6, early horizon 6 h: a failure counts as detected when a persis
 
 | Variant | Model | Air leak | lead vs start | lead vs LPS | sustained vs LPS | Oil leak | lead vs start | lead vs LPS | sustained vs LPS | False alarms / day | PR-AUC (rows) |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| production (served) | random_forest | ✓ | -23 min | +43 min | +34 min | ✗ | — | — | — | 0.00 | 0.105 |
-| production (served) | xgboost | ✓ | -33 min | +34 min | +34 min | ✗ | — | — | — | 0.00 | 0.096 |
-| production (served) | mlp | ✓ | +119 min | +3.1 h | +33 min | ✓ | -28 min | +57.1 h | +55.7 h | 0.09 | 0.324 |
-| production (served) | tcn | ✓ | +116 min | +3.0 h | +40 min | ✓ | -54 min | +56.7 h | +55.3 h | 0.05 | 0.563 |
-| production (served) | bilstm | ✓ | -41 min | +25 min | +25 min | ✓ | -56 min | +56.6 h | +55.5 h | 0.07 | 0.319 |
-| production (served) | patchtst | ✓ | -36 min | +30 min | +30 min | ✓ | -55 min | +56.6 h | +55.3 h | 0.05 | 0.440 |
-| production (served) | autoencoder | ✓ | -71 min | -4 min | -4 min | ✗ | — | — | — | 0.00 | 0.074 |
-| physics twin | physics_twin | ✓ | -34 min | +32 min | +32 min | ✓ | -4.3 h | +53.3 h | +26.4 h | 0.13 | 0.105 |
-| no oil in training | random_forest | ✓ | -10 min | +56 min | +56 min | ✗ | — | — | — | 0.00 | 0.104 |
-| no oil in training | xgboost | ✓ | -14 min | +52 min | +52 min | ✗ | — | — | — | 0.00 | 0.105 |
-| no oil in training | mlp | ✓ | -34 min | +32 min | +32 min | ✗ | — | — | — | 0.00 | 0.090 |
-| no oil in training | tcn | ✓ | -36 min | +31 min | +31 min | ✗ | — | — | — | 0.02 | 0.074 |
-| no oil in training | bilstm | ✓ | -37 min | +30 min | +30 min | ✗ | — | — | — | 0.00 | 0.092 |
-| no oil in training | patchtst | ✓ | -38 min | +29 min | -17 min | ✗ | — | — | — | 0.00 | 0.076 |
-| no oil in training | autoencoder | ✓ | -70 min | -3 min | -3 min | ✗ | — | — | — | 0.00 | 0.075 |
+| production (served) | random_forest | ✓ | -24 min | +42 min | +42 min | ✗ | — | — | — | 0.00 | 0.105 |
+| production (served) | xgboost | ✓ | -25 min | +42 min | +42 min | ✗ | — | — | — | 0.00 | 0.105 |
+| production (served) | mlp | ✓ | +119 min | +3.1 h | +34 min | ✓ | +119 min | +59.5 h | +55.9 h | 0.09 | 0.450 |
+| production (served) | tcn | ✓ | -36 min | +31 min | +31 min | ✓ | -2.3 h | +55.3 h | +55.3 h | 0.00 | 0.268 |
+| production (served) | bilstm | ✓ | -34 min | +32 min | +32 min | ✓ | -63 min | +56.5 h | +55.3 h | 0.05 | 0.442 |
+| production (served) | patchtst | ✓ | +117 min | +3.1 h | +34 min | ✓ | -28 min | +57.1 h | +56.7 h | 0.20 | 0.704 |
+| production (served) | autoencoder | ✓ | -74 min | -8 min | -8 min | ✗ | — | — | — | 0.00 | 0.073 |
+| physics twin | physics_twin | ✓ | -34 min | +32 min | +32 min | ✓ | -4.3 h | +53.3 h | +26.4 h | 0.14 | 0.105 |
+| no oil in training | random_forest | ✓ | -14 min | +52 min | +52 min | ✗ | — | — | — | 0.00 | 0.104 |
+| no oil in training | xgboost | ✓ | +37 min | +103 min | +56 min | ✗ | — | — | — | 0.00 | 0.106 |
+| no oil in training | mlp | ✓ | -35 min | +32 min | +32 min | ✗ | — | — | — | 0.00 | 0.089 |
+| no oil in training | tcn | ✓ | -34 min | +32 min | +32 min | ✗ | — | — | — | 0.00 | 0.083 |
+| no oil in training | bilstm | ✓ | -40 min | +26 min | +26 min | ✗ | — | — | — | 0.00 | 0.090 |
+| no oil in training | patchtst | ✓ | -49 min | +18 min | +18 min | ✗ | — | — | — | 0.00 | 0.077 |
+| no oil in training | autoencoder | ✓ | -88 min | -22 min | -22 min | ✗ | — | — | — | 0.00 | 0.069 |
 
 ## Reading
 

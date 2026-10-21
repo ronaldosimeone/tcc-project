@@ -63,9 +63,18 @@ run_ml() {
   # Árvores na CPU; redes no venv de GPU (apps/ml/.venv-gpu, torch CUDA) se existir.
   "$ML_PY" -m src.evaluate_nested --models random_forest logistic_regression
   "$GPU_PY" -m src.evaluate_nested --models xgboost autoencoder patchtst bilstm tcn mlp
-  "$GPU_PY" -m src.train_production                             # todos os artefatos servíveis
+  "$GPU_PY" -m src.train_production                             # os 7 artefatos *_v3 servidos
   "$ML_PY" -m src.evaluate_sensitivity                          # k × horizonte × razão de custo
   "$ML_PY" -m src.evaluate_conformal_aci                        # conformal estático × ACI
+  # Auditoria da validação e das features (revisão técnica, rodada 6)
+  "$ML_PY" -m src.fold_chronology                               # datas de cada fold externo/interno
+  "$ML_PY" -m src.event_correlation                             # associação sensor × falha por evento
+  for v in "--drop-sensors DV_pressure --tag no_dv_pressure" "--only-sensors DV_pressure --tag dv_pressure_only"; do
+    "$ML_PY" -m src.evaluate_nested --models random_forest logistic_regression --seeds 1 $v
+    "$GPU_PY" -m src.evaluate_nested --models xgboost --seeds 1 $v
+  done
+  "$ML_PY" -m src.render_ablation_report                        # ablação DV_pressure
+  "$GPU_PY" -m src.evaluate_anticipation                        # alvo "falha nas próximas H"
   # MetroPT2 (Zenodo 7766691) em data/raw/metropt2/MetroPT2.csv — falhas inéditas.
   "$ML_PY" -m src.ingest_metropt2
   "$GPU_PY" -m src.evaluate_metropt2 --no-oil-models            # servidos + twin + sem óleo

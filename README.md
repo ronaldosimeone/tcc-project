@@ -1376,7 +1376,7 @@ flowchart TD
 
 - **Celery**: `src/core/celery_app.py` já existia (RNF-50/51, notificações críticas) — reaproveitado integralmente, nenhuma segunda aplicação Celery criada. Adicionado só `beat_schedule` à configuração existente + um novo import de task no final do módulo (mesmo padrão de `notification_tasks`). **Celery Beat não existia** — só `celery-worker` (consumidor). `timezone="UTC"`/`enable_utc=True` já configurados pelo RNF-50, reaproveitados sem alteração.
 - **Dados**: tabela `predictions` (RF-09, `src/models/prediction.py`) já persiste as 12 features de entrada de TODA predição real — usada como fonte de "current" sem nenhuma tabela nova para isso. Dataset de referência: `apps/ml/data/processed/metropt3.parquet` (o MESMO parquet que `SensorSimulator` já usa para replay, `settings.simulator_parquet_path` já existente — nenhum caminho/config novo).
-- **Modelo**: `src/services/preprocessing.py::MetroPTPreprocessor._DEFAULT_SENSOR_COLS` — os 7 sensores analógicos que o pipeline de feature engineering REAL usa como base — é a fonte da lista `MONITORED_FEATURES`, não uma escolha arbitrária. O modelo ativo (`ACTIVE_MODEL=random_forest_v2`, confirmado via log de boot `features=80`) consome um vetor de 80 features ENGENHEIRADAS (rolling/lag/ratio) derivadas dessas 7 — monitorar drift nas 7 features de entrada RAW (persistidas verbatim, sem precisar recomputar janelas rolantes históricas numa task em batch) é a escolha defensável e rastreável ao pipeline real.
+- **Modelo**: `src/services/preprocessing.py::MetroPTPreprocessor._DEFAULT_SENSOR_COLS` — os 7 sensores analógicos que o pipeline de feature engineering REAL usa como base — é a fonte da lista `MONITORED_FEATURES`, não uma escolha arbitrária. O modelo ativo consome um vetor de features ENGENHEIRADAS (rolling/lag/ratio) derivadas dessas 7 — monitorar drift nas 7 features de entrada RAW (persistidas verbatim, sem precisar recomputar janelas rolantes históricas numa task em batch) é a escolha defensável e rastreável ao pipeline real.
 - **Evidently**: não estava instalado. Versão mais recente disponível para Python 3.11 confirmada via `pip index versions` (`0.7.21`) e testada de verdade dentro do container antes de escrever qualquer código — API real é `evidently.Dataset`/`evidently.DataDefinition`/`evidently.Report`/`evidently.metrics.ValueDrift(method="psi")`, NÃO a API legada (`Report(metrics=[...])`/`Dashboard`) de tutoriais antigos.
 
 #### Reference (baseline) e Current — RF-27 §Fase 4
@@ -1490,19 +1490,21 @@ Ver seção "RF-27 / RNF-55" em [PENDENCIAS.md](PENDENCIAS.md) — PSI observado
 
 ## 5. Modelos de Machine Learning
 
-### Modelos disponíveis (9 — todos via `PUT /models/active` sem reiniciar)
+### Modelos servidos (7, geração única `*_v3` — todos via `PUT /models/active` sem reiniciar)
 
-| `model_name` | Família | Artefato | Pré-processamento | Observação |
+Todos treinados por `apps/ml/src/train_production.py` com o **protocolo aninhado sem vazamento**: hiperparâmetros por *leave-one-failure-out* sobre as falhas de treino (custo RN-02), calibração Platt nas predições fora da amostra, limiar RN-02 na escala calibrada, refit em todos os dados (MetroPT-3 + MetroPT 2022), export ONNX com checagem de paridade. Cada card (`<nome>_card.json`) traz o bloco `serving` (como carregar) e o `decision_threshold` calibrado — que a tela e os alertas usam.
+
+| `model_name` | Família | Artefato | Entrada | Papel |
 |---|---|---|---|---|
-| `random_forest` | Tree (supervisionado) | `.joblib` | feature engineering (rolling) | Baseline; F2-threshold tuning na PR curve |
-| `xgboost` | GBM (supervisionado) | `.joblib` | mesmo | Otimizado via Optuna |
-| `mlp` | DL feed-forward | `.onnx` + StandardScaler `.joblib` | scaler per-feature | PyTorch Lightning → ONNX (opset 17) |
-| `random_forest_v2` | Tree | `.onnx` | feature engineering | Export skl2onnx (paridade com tree models) |
-| `xgboost_v2` | GBM | `.onnx` | feature engineering | Export onnxmltools |
-| `tcn` | Sequencial DL | `.onnx` + scaler | janela (B, T=60, C=12) | Temporal Convolutional Network |
-| `bilstm` | Sequencial DL | `.onnx` + scaler | mesmo | Bidirectional LSTM |
-| `patchtst` | Sequencial DL | `.onnx` + scaler | mesmo | Transformer com patching |
-| `autoencoder` | **Não-supervisionado** | `.onnx` + scaler | janela (B, T=60, C=12) | Conv1D — score por erro de reconstrução |
+| `random_forest_v3` | Árvores | `.onnx` | features de engenharia (rolling/lag/razões) | **Champion** (gate RN-05) |
+| `xgboost_v3` | GBM | `.onnx` | mesmo | Challenger (shadow) |
+| `mlp_v3` | DL feed-forward | `.onnx` + scaler | mesmo, padronizado | Candidato |
+| `tcn_v3` | Sequencial DL | `.onnx` + scaler | janela de 60 leituras | Candidato |
+| `bilstm_v3` | Sequencial DL | `.onnx` + scaler | mesmo | Candidato |
+| `patchtst_v3` | Sequencial DL (Transformer) | `.onnx` + scaler | mesmo | Candidato |
+| `autoencoder_v3` | **Não-supervisionado** | `.onnx` + scaler | mesmo | Erro de reconstrução |
+
+A geração anterior (split aleatório + SMOTE, com vazamento) foi arquivada em `apps/ml/models/legacy/` — não é servida; fica só para reproduzir a comparação "antes × depois" da tese. Um `ACTIVE_MODEL` antigo cai automaticamente em `random_forest_v3` (com aviso no log).
 
 ### Autoencoder Conv1D — Detecção Não-Supervisionada
 
@@ -1606,7 +1608,7 @@ cp apps/frontend/.env.local.example apps/frontend/.env.local
 | `POSTGRES_PASSWORD` | Sim | — | Senha do Postgres |
 | `POSTGRES_DB` | Sim | — | Nome do banco (`tcc_db`) |
 | `DATABASE_URL` | Sim | `postgresql+asyncpg://postgres:postgres@localhost:5432/tcc_db` (fallback do `Settings`, não usável em Docker) | String de conexão async — hostname `db` dentro da rede Docker, `localhost` se rodando o backend fora do Docker |
-| `ACTIVE_MODEL` | Não | `random_forest` | RF-10 — modelo ativo no startup. Valores válidos: `random_forest`, `xgboost`, `mlp`, `random_forest_v2`, `xgboost_v2`, `tcn`, `bilstm`, `patchtst`, `autoencoder` (ver [`model_registry.py`](apps/backend/src/services/model_registry.py):`KNOWN_MODELS`). Hot-swap em runtime via `PUT /models/active` sem precisar mudar esta variável |
+| `ACTIVE_MODEL` | Não | `random_forest_v3` | RF-10 — modelo ativo no startup. Valores válidos: `random_forest_v3`, `xgboost_v3`, `mlp_v3`, `tcn_v3`, `bilstm_v3`, `patchtst_v3`, `autoencoder_v3` (ver [`model_service.py`](apps/backend/src/services/model_service.py):`SERVED_MODELS`). Nome desconhecido/antigo cai em `random_forest_v3` com aviso. Hot-swap em runtime via `PUT /models/active` |
 | `ADMIN_API_TOKEN` | Não | `change-me-in-production` | RF-11 — token do header `X-Admin-Token` em `/models/*`. **Com o valor default, a autenticação é desativada** (modo dev — ver [`auth.py`](apps/backend/src/core/auth.py)) |
 | `SMOTE_SAMPLING_STRATEGY` | Não | `auto` | Só usado pelos scripts de treino em `apps/ml/src/train_*.py` (via `balancing.py`) — **não afeta o runtime da API** |
 | `UVICORN_WORKERS` | Não | `1` | RNF-37 — nº de processos Uvicorn do serviço `api`, interpolado no `command:` do `docker-compose.yml` (`--workers ${UVICORN_WORKERS:-1}`). Mudar exige `docker compose up -d --force-recreate api`. **Testado e mantido em 1** — ver §14.7 |
@@ -1775,7 +1777,7 @@ Crie `apps/backend/.env` apontando para `localhost`:
 
 ```dotenv
 DATABASE_URL=postgresql+asyncpg://user:password@localhost:5432/tcc_db
-ACTIVE_MODEL=random_forest
+ACTIVE_MODEL=random_forest_v3
 ADMIN_API_TOKEN=change-me
 ```
 
@@ -1948,57 +1950,31 @@ apps/ml/data/raw/MetroPT3(AirCompressor).csv
 Todos os comandos rodam a partir de `apps/ml/` com o venv ativo:
 
 ```powershell
-# 1. Ingestão e geração do Parquet (rotulando anomalias via janelas de falha)
-python -m src.ingest_metropt
+# 1. Ingestão (rótulos = intervalos de falha dos relatórios de manutenção)
+python -m src.ingest_metropt          # MetroPT-3 (2020)
+python -m src.ingest_metropt2022      # MetroPT 2022 (Zenodo 6854240)
 
-# 2a. Random Forest baseline (SMOTE + GridSearchCV + F2-threshold)
-python -m src.train_random_forest
+# 2. Avaliação sem vazamento — walk-forward purgado (6 folds) × LOFO interno
+python -m src.evaluate_nested --models random_forest logistic_regression
+.venv-gpu/Scripts/python -m src.evaluate_nested --models xgboost autoencoder patchtst bilstm tcn mlp
 
-# 2b. XGBoost com tuning Optuna
-python src/train_xgboost.py --n-trials 100
-# Smoke run: --n-trials 5  (~2 min)
-
-# 2c. MLP via PyTorch Lightning → ONNX
-python src/train_mlp.py --max-epochs 50
-# Smoke run: --max-epochs 10  (~5 min)
-
-# 2d. Modelos sequenciais (TCN / BiLSTM / PatchTST)
-python src/train_sequential.py --arch tcn       --max-epochs 30
-python src/train_sequential.py --arch bilstm    --max-epochs 30
-python src/train_sequential.py --arch patchtst  --max-epochs 30 --batch-size 128
-
-# Smoke run em 200 mil linhas
-python src/train_sequential.py --arch tcn --max-epochs 3 --subsample-rows 200000
-
-# 2e. Autoencoder Conv1D (não-supervisionado — apenas janelas saudáveis)
-python src/train_autoencoder.py --max-epochs 50
+# 3. Artefatos servidos — os 7 modelos *_v3 (GPU para as redes)
+.venv-gpu/Scripts/python -m src.train_production
 ```
+
+O roteiro completo da tese (todas as avaliações, relatórios e manifesto) está em `scripts/reproduce-thesis.sh`.
 
 ### 12.4. Artefatos gerados
 
-Em `apps/ml/models/`:
+Em `apps/ml/models/` (os únicos servidos):
 
 ```
-random_forest_final.joblib       ← ACTIVE_MODEL=random_forest
-random_forest_v2.onnx            ← ACTIVE_MODEL=random_forest_v2
-
-xgboost_v1.joblib                ← ACTIVE_MODEL=xgboost
-xgboost_v2.onnx                  ← ACTIVE_MODEL=xgboost_v2
-xgboost_v1_card.json
-
-mlp_v1.onnx + mlp_v1.onnx.data   ← ACTIVE_MODEL=mlp
-mlp_scaler.joblib
-mlp_v1_card.json
-
-tcn_v1.onnx + tcn_scaler.joblib + tcn_v1_card.json        ← ACTIVE_MODEL=tcn
-bilstm_v1.onnx + bilstm_scaler.joblib + bilstm_v1_card.json
-patchtst_v1.onnx + patchtst_scaler.joblib + patchtst_v1_card.json
-
-autoencoder_v1.onnx + autoencoder_scaler.joblib
-autoencoder_v1_card.json         ← contém o mse_threshold (p99)
-
-model_card.json                  ← Random Forest baseline
-eval_*_cv.json                   ← Cross-validation temporal por arquitetura
+<nome>_v3.onnx            ← random_forest, xgboost, mlp, tcn, bilstm, patchtst, autoencoder
+<nome>_v3_scaler.joblib   ← redes (padronização ajustada só no treino)
+<nome>_v3_card.json       ← serving + decision_threshold + evidência fora do tempo
+nested/<modelo>.json      ← avaliação aninhada (6 folds × 3 seeds)
+eval_*.json               ← demais avaliações (temporal, cross-dataset, MetroPT2, …)
+legacy/                   ← geração anterior arquivada (não servida)
 ```
 
 ### 12.5. Feature engineering
