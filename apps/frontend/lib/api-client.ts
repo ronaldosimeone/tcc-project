@@ -48,7 +48,7 @@ export interface PredictResponse {
 
 /** Status de um único modelo registado (RF-11). */
 export interface ModelSummary {
-  /** Nome bruto enviado pelo backend (ex.: `random_forest_v2`). */
+  /** Nome bruto enviado pelo backend (ex.: `random_forest_v3`). */
   name: string;
   /** `true` se for o modelo activo na inferência. */
   active: boolean;

@@ -8,7 +8,7 @@
  *  - Trocar o cenário de dados do simulador (RNF-29)
  *
  * Regra crítica: o `value` enviado para a API é SEMPRE o nome bruto
- * (`random_forest_v2`), enquanto o utilizador vê apenas a label limpa
+ * (`random_forest_v3`), enquanto o utilizador vê apenas a label limpa
  * (`Random Forest`). Toda a lógica de filtragem/formatação vive em
  * `lib/model-name.ts` e é puramente sincrona.
  *
