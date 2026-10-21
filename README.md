@@ -144,7 +144,7 @@ projeto-tcc/
 │   │   │       ├── feature_buffer.py     # Deque thread-safe (janela=30)
 │   │   │       ├── preprocessing.py      # Mirror do MetroPTPreprocessor
 │   │   │       ├── prediction_service.py # save_prediction + list_predictions
-│   │   │       ├── alert_service.py      # Push WS quando prob > 0.70
+│   │   │       ├── alert_service.py      # Push WS quando P ≥ limiar do modelo ativo
 │   │   │       └── health_service.py
 │   │   ├── tests/                        # pytest + SQLite em memória
 │   │   ├── alembic.ini
@@ -252,7 +252,7 @@ projeto-tcc/
         │                        │     │  → MetroPTPreprocessor     │
         │  → Frontend Next.js    │     │  → ModelService.predict()  │
         │  (useSensorData @1Hz)  │     │  → save_prediction (DB)    │
-        └────────────────────────┘     │  → AlertService (prob>0.70)│
+        └────────────────────────┘     │  → AlertService (P≥limiar)  │
                                        └──────────────┬─────────────┘
                                                       ▼
                                           ┌────────────────────────┐
@@ -289,7 +289,7 @@ flowchart TB
     SS -->|subscribe| IP
     IP -->|"predict + save_prediction"| DB
     IP --> AS
-    AS -->|"probability > 0.70"| CM
+    AS -->|"probability ≥ limiar calibrado do modelo"| CM
     CM --> WR
 
     B ==>|"① GET /api/stream/sensors<br/>Accept: text/event-stream"| N
@@ -410,7 +410,7 @@ docker compose logs api --tail=50 | grep -i sse
 | Gerenciador | [`ConnectionManager`](apps/backend/src/core/ws_manager.py) — singleton `manager`, registro em `set[WebSocket]` |
 | Autenticação | **Nenhuma** — endpoint público, sem `Depends`/token. Não confundir com `X-Admin-Token` (usado só em `/models`, REST) |
 | Conexão | Frontend: [`useAlertWebSocket`](apps/frontend/hooks/use-alert-websocket.ts) monta `ws://`/`wss://` a partir de `window.location` |
-| Mensagens servidor→cliente | `{"type": "alert", "message_id", "probability", "predicted_class", "timestamp", "inference_latency_ms"}` (RF-14, quando `probability > 0.70`) e `{"type": "ping"}` (heartbeat, a cada 30s) |
+| Mensagens servidor→cliente | `{"type": "alert", "message_id", "probability", "predicted_class", "timestamp", "inference_latency_ms"}` (RF-14, quando `probability ≥ decision_threshold` do modelo que pontuou — campo `decision_threshold` no próprio frame; sem limiar, `> 0.70`) e `{"type": "ping"}` (heartbeat, a cada 30s) |
 | Mensagens cliente→servidor | `{"type": "ack", "message_id"}` (confirmação de entrega) e `{"type": "pong"}` (resposta ao heartbeat) |
 | Desconexão | Qualquer fechamento (limpo ou abrupto) cai no bloco `finally` de `alerts_ws.py` → `ws_manager.disconnect()` — sem vazamento de referência |
 | Reconexão | [`useAlertWebSocket.ts`](apps/frontend/hooks/use-alert-websocket.ts) — mesmo padrão do SSE: backoff exponencial 1s→30s, jitter ±20% |
@@ -437,7 +437,7 @@ sequenceDiagram
         NG->>FE: frame ping
         FE->>NG: {"type":"pong"}
         NG->>API: frame pong
-    and alerta quando probability > 0.70
+    and alerta quando probability ≥ limiar calibrado do modelo
         Note over CM: AlertService.process_prediction()
         CM->>API: {"type":"alert", message_id, probability, ...}
         API->>NG: frame alert
@@ -485,7 +485,7 @@ docker compose logs api --tail=200 | grep alert_triggered
 | Conexão encerrando sem motivo aparente | Nenhum `pong` no timeout esperado NÃO fecha a conexão neste código (não há enforcement ativo) — se está caindo, é mais provável rede/proxy | `docker compose logs api \| grep ws_disconnected` (ver o `client=` e correlacionar com hora) | Verificar se é o browser fechando a aba, não o servidor |
 | Erro no proxy | `location /ws/` ausente/mal configurado, ou `proxy_pass http://api;` alterado para incluir path (mudaria a URI encaminhada) | Comparar a URI recebida pela API: `docker compose logs api \| grep ws_connected` mostra o `client`, não a URI — usar diagnóstico #3 para confirmar a URI final | Restaurar `nginx.conf` original do repo |
 | Erro de autenticação | **Não existe autenticação neste endpoint** — se um cliente está recebendo 401/403, o erro não vem de `/ws/alerts` | Confirmar a URL exata sendo chamada (não confundir com `/api/models`, que exige `X-Admin-Token`) | Corrigir a URL no cliente |
-| Mensagens não chegando | `probability <= 0.70` (não é bug — `broadcast_alert` silenciosamente ignora, é a regra RF-14); ou 0 clientes conectados no momento do broadcast | `docker compose logs api \| grep alert_skipped` vs `alert_triggered` | Esperado — só dispara acima do limiar. Para forçar, use `PUT /api/simulator/mode {"mode":"FAILURE"}` (§15) |
+| Mensagens não chegando | probabilidade abaixo do limiar calibrado do modelo ativo (não é bug — `broadcast_alert` ignora; o limiar vem do card: MLP 0,06 … XGBoost 0,98); ou 0 clientes conectados no momento do broadcast | `docker compose logs api \| grep alert_skipped` vs `alert_triggered` | Esperado — só dispara acima do limiar. Para forçar, use `PUT /api/simulator/mode {"mode":"FAILURE"}` (§15) |
 | Problemas específicos do Nginx | `proxy_read_timeout`/`proxy_send_timeout` menores que o necessário fechariam conexões idle | Medir tempo até a queda | Já mitigado: `3600s` para ambos no bloco `/ws/` |
 
 ### 4.5. Papel do Nginx na arquitetura real-time
@@ -752,7 +752,7 @@ Todos os testes mockam o `SentenceTransformer` (nenhum download de modelo real n
 
 ```mermaid
 flowchart TD
-    REQ["POST /v1/maintenance/suggest<br/>failure_probability + equipamento/sintoma"] --> THR{"probability > 0.7 ?"}
+    REQ["POST /v1/maintenance/suggest<br/>failure_probability + equipamento/sintoma"] --> THR{"probability > 0.7 ?<br/>(evento: ≥ limiar do modelo)"}
     THR -->|"não"| SKIP["triggered=false<br/>MCP e Ollama NÃO são chamados"]
     THR -->|"sim"| MCP["MCPSearchClient<br/>-> search_maintenance_manual (RF-21)"]
     MCP --> CTX["contexto: trechos + file_name/page/score"]
@@ -765,7 +765,7 @@ flowchart TD
 | Aspecto | Valor real |
 |---|---|
 | Endpoint | `POST /v1/maintenance/suggest` (via Nginx: `POST /api/v1/maintenance/suggest`) |
-| Threshold (RF-22) | `failure_probability > 0.7` — **estrito**, `MAINTENANCE_SUGGESTION_THRESHOLD` em `maintenance_suggestion_service.py`. `0.70` exato **não** dispara |
+| Threshold (RF-22) | Pedido manual: `failure_probability > 0.7` — **estrito**, `MAINTENANCE_SUGGESTION_THRESHOLD` em `maintenance_suggestion_service.py`. Plano automático de um **evento de falha** (RCA): segue a decisão do modelo — `failure_probability ≥ decision_threshold` (limiar do card, gravado no evento); sem isso o pico de um evento de modelo com limiar baixo (≈ 0,3–0,5) nunca recebia plano |
 | Tool MCP usada | `search_maintenance_manual` (nome real confirmado no código — CLAUDE.md/AGENTS.md mencionam "search_manuals" como nome conceitual) |
 | Cliente MCP | `MCPSearchClient` (`apps/backend/src/services/mcp_client.py`) — SDK oficial `mcp` (mesmo pacote do mcp-server), transporte `streamable-http`, `initialize` → `call_tool` |
 | Modelo Ollama | `OLLAMA_MODEL` — default `llama3.2:3b` (Llama 3.2 3B, CLAUDE.md §4) |
@@ -936,15 +936,15 @@ Evidência: [`apps/backend/maintenance_stream_e2e_metrics.json`](apps/backend/ma
 
 ### 4.10. Notificações críticas via Telegram (RF-24 / RNF-48)
 
-**O que é**: quando o modelo preditivo reporta `probability > 0.85` (falha **crítica** — limiar próprio, independente do `ALERT_PROBABILITY_THRESHOLD` de 0.70 da RF-14/§4.3 e do `MAINTENANCE_SUGGESTION_THRESHOLD` de 0.70 da RF-22/§4.8), o backend envia uma mensagem de texto simples para um chat do Telegram via `TelegramNotificationAdapter`, respeitando um rate limit de **1 alerta por equipamento a cada 15 minutos**. Reaproveita o mesmo ponto de integração da RF-14 (`AlertService.process_prediction`) — nenhuma segunda inferência, nenhum novo hook no pipeline de ML.
+**O que é**: quando o risco do modelo ativo atinge o **nível crítico configurado** (padrão 0,85; ver §4.11 — com o limiar calibrado do modelo, é um risco relativo a ele, `src/core/risk.py`: 0,65 = o modelo decide falha; sem limiar, a regra original `probability > 0.85`) (falha **crítica** — limiar próprio, independente do `ALERT_PROBABILITY_THRESHOLD` de 0.70 da RF-14/§4.3 e do `MAINTENANCE_SUGGESTION_THRESHOLD` de 0.70 da RF-22/§4.8), o backend envia uma mensagem de texto simples para um chat do Telegram via `TelegramNotificationAdapter`, respeitando um rate limit de **1 alerta por equipamento a cada 15 minutos**. Reaproveita o mesmo ponto de integração da RF-14 (`AlertService.process_prediction`) — nenhuma segunda inferência, nenhum novo hook no pipeline de ML.
 
 ```mermaid
 flowchart TD
     PRED["InferencePipelineService / predict.py<br/>(mesma predição da RF-14)"] --> ALERT["AlertService.process_prediction()"]
     ALERT -->|"probability > 0.70 (RF-14)"| WS["ConnectionManager.broadcast_alert()"]
     ALERT -->|"sempre (RF-24)"| CRIT["CriticalFailureNotificationService.notify_if_critical()"]
-    CRIT -->|"probability <= 0.85"| SKIP["nada acontece"]
-    CRIT -->|"probability > 0.85"| LOCK["TelegramAlertRateLimiter.try_acquire(equipment_id)<br/>(UPSERT atômico no Postgres)"]
+    CRIT -->|"risco < nível (§4.11)"| SKIP["nada acontece"]
+    CRIT -->|"risco ≥ nível"| LOCK["TelegramAlertRateLimiter.try_acquire(equipment_id)<br/>(UPSERT atômico no Postgres)"]
     LOCK -->|"já bloqueado (< 15 min)"| SKIP2["nada acontece — sem 2ª mensagem"]
     LOCK -->|"lock adquirido"| SEND["TelegramNotificationAdapter.send_critical_failure()"]
     SEND -->|"falha (timeout/HTTP/etc.)"| RELEASE["rate_limiter.release() — permite retry"]
@@ -957,7 +957,7 @@ flowchart TD
 |---|---|---|
 | `ALERT_PROBABILITY_THRESHOLD` (RF-14) | `0.70` | `apps/backend/src/core/ws_manager.py` |
 | `MAINTENANCE_SUGGESTION_THRESHOLD` (RF-22) | `0.70` | `apps/backend/src/services/maintenance_suggestion_service.py` |
-| `CRITICAL_FAILURE_THRESHOLD` (RF-24) | **`0.85`** | `apps/backend/src/services/critical_failure_notification_service.py` |
+| `CRITICAL_FAILURE_THRESHOLD` (RF-24) | **`0.85`** (nível de risco quando há limiar do modelo; probabilidade bruta sem ele) | `apps/backend/src/services/critical_failure_notification_service.py` |
 
 As três constantes têm o mesmo valor numérico só por coincidência em dois casos — cada task pediu explicitamente uma constante própria, não reutilização. `probability == 0.85` exato **não** dispara (regra estrita `>`), validado em `test_notifications.py` com os quatro valores do critério de aceite (`0.0`/`0.5`/`0.84`/`0.85` → nunca chama o adapter; `0.8501`/`0.90`/`0.9999` → sempre chama).
 
@@ -1062,6 +1062,8 @@ flowchart TD
 ```
 
 #### Threshold — o que o slider representa
+
+**Escala do slider — risco relativo ao modelo ativo.** Cada modelo tem o próprio limiar calibrado (MLP 0,06 … XGBoost 0,98), então uma probabilidade bruta fixa (85 %) nunca era atingida por modelos de limiar baixo e o aviso crítico não saía. O valor configurado é um **nível de risco** na mesma escala do painel (`apps/backend/src/core/risk.py` e `apps/frontend/lib/risk-thresholds.ts`): `risco = 0,65·p/limiar` abaixo do limiar e `0,65 + 0,35·(p − limiar)/(1 − limiar)` acima. **65 % = o modelo decide falha** (o painel mostra CRÍTICO); 85 % exige evidência mais forte; 50 % ainda notifica na faixa de ALERTA. A tela mostra a probabilidade equivalente para o modelo ativo (ex.: Random Forest v3, limiar 0,694 → 85 % ≈ P ≥ 0,87, próximo da regra antiga). Recomendado: **65 %** quando o modelo ativo é uma rede (MLP/BiLSTM/PatchTST/TCN). Sem limiar do modelo (chamadas antigas), vale a regra original `probability > nível`.
 
 O slider (`0.5`–`0.95`) configura o **mesmo limiar de falha crítica do RF-24** (`CRITICAL_FAILURE_THRESHOLD`) — não um novo tipo de alerta. Essa decisão vem diretamente do enunciado da task (que amarra o RF-25 ao `CRITICAL_FAILURE_THRESHOLD = 0.85` do RF-24 e manda preservar `0.85` como default) e do fato de o botão "Testar Notificação" só fazer sentido para os canais Telegram/e-mail. `CriticalFailureNotificationService._resolve_settings()` agora lê `AlertSettingsService.get_settings()` a cada predição: usa o valor salvo (threshold + canais) se existir, ou os defaults do RF-24 (`0.85`, Telegram ligado, e-mail desligado) se nunca configurado — o comportamento do RF-14 (alerta WebSocket, `ALERT_PROBABILITY_THRESHOLD = 0.70`) **não é afetado** por esta task.
 
@@ -1228,12 +1230,12 @@ flowchart TD
     SENSOR["Sensor Data<br/>(determinístico)"] --> DETECT["Detecção<br/>(contrato exato de InferencePipelineService)"]
     DETECT --> AS["AlertService.process_prediction()"]
     AS -->|"RF-14: > 0.70"| WS["broadcast_alert() — WebSocket"]
-    AS --> CFS["CriticalFailureNotificationService<br/>RF-24/25: > 0.85"]
+    AS --> CFS["CriticalFailureNotificationService<br/>RF-24/25: risco ≥ nível (§4.11)"]
     CFS -->|"RNF-50"| ENQ["enqueue_notification() — NUNCA síncrono"]
     ENQ -.->|"testado via chamada direta e controlada"| TASK["celery-worker task"]
     TASK --> ADAPT["Telegram/EmailNotificationAdapter (mockados)"]
 
-    DETECT -.->|"ramo independente, mesma detecção"| MS["MaintenanceSuggestionService.suggest()<br/>RF-22/23: > 0.70"]
+    DETECT -.->|"ramo independente, mesma detecção"| MS["MaintenanceSuggestionService.suggest()<br/>RF-22/23: evento ≥ limiar do modelo"]
     MS --> MCP["MCPSearchClient (mockado na fronteira real)"]
     MCP --> LLM["OllamaClient (mockado)"]
     LLM --> PLAN["Markdown validado + referências"]
@@ -1503,6 +1505,40 @@ Todos treinados por `apps/ml/src/train_production.py` com o **protocolo aninhado
 | `bilstm_v3` | Sequencial DL | `.onnx` + scaler | mesmo | Candidato |
 | `patchtst_v3` | Sequencial DL (Transformer) | `.onnx` + scaler | mesmo | Candidato |
 | `autoencoder_v3` | **Não-supervisionado** | `.onnx` + scaler | mesmo | Erro de reconstrução |
+
+#### Métricas dos modelos retreinados (geração v3, rodada 6)
+
+Avaliação **sem vazamento**: walk-forward purgado (6 folds, cada um testando uma falha inédita para aquele treino) × seleção interna leave-one-failure-out, 3 seeds; métrica de eventos com falso alarme contado por hora em alarme fora da falha. Detalhe por fold em [`docs/model_evaluation_leakfree.md`](docs/model_evaluation_leakfree.md).
+
+| Modelo | Falhas detectadas (de 6, média 3 seeds) | Falsos alarmes (notif./6 folds) | Falsos alarmes / dia | **Custo esperado** (RN-02) | PR-AUC | Precisão / recall (alarmes) | ECE calibrado | Limiar (card) | MetroPT2 inédito (ar / óleo) | Replay ao vivo | ONNX |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| **BiLSTM** | 3,0 | 45 | 0,29 | **57,6** | 0,312 | 0,38 / 0,18 | 0,034 | 0,24 | ✓ / ✓ | 5/6 | 0,6 MB |
+| PatchTST | 3,0 | 66 | 0,45 | 61,0 | 0,395 | 0,19 / 0,07 | 0,038 | 0,17 | ✓ / ✓ | **6/6** | 0,7 MB |
+| XGBoost | 2,7 | 37 | 0,26 | 61,7 | 0,352 | 0,19 / 0,07 | 0,036 | 0,984 | ✓ / ✗ | 4/6 | 3,0 MB |
+| Random Forest (*champion*) | 2,0 | 48 | 0,28 | 74,7 | 0,436 | 0,19 / 0,08 | 0,033 | 0,694 | ✓ / ✗ | 4/6 | 62,7 MB |
+| Regressão logística (baseline, não servida) | 2,0 | 63 | 0,36 | 77,2 | 0,280 | 0,20 / 0,08 | 0,039 | — | — | — | — |
+| MLP | 3,0 | 179 | 0,60 | 79,8 | 0,257 | 0,17 / 0,07 | 0,037 | 0,06 | ✓ / ✓ | 5/6 | 0,2 MB |
+| TCN | 2,0 | 154 | 0,79 | 92,3 | 0,249 | 0,11 / 0,07 | 0,035 | 0,54 | ✓ / ✓ | 4/6 | 0,6 MB |
+| Autoencoder | 1,0 | 203 | 1,04 | 117,1 | 0,202 | 0,04 / 0,02 | 0,037 | 0,5 | ✓ / ✗ | 2/6 | 0,4 MB |
+
+Leitura: **custo** = 100 × falhas perdidas + 1 × falso alarme (menor é melhor). **Nenhum candidato passa no gate estatístico RN-05** contra o RF (melhor: BiLSTM, p = 0,19 — com 7 falhas, a diferença não é significativa), por isso o RF segue *champion*. O melhor modelo **depende da razão de custo** (10:1 → regressão logística/MLP; 100:1 → BiLSTM/XGBoost; 1000:1 → autoencoder/PatchTST). *MetroPT2 inédito* = as 2 falhas posteriores a todo o treino, em outra APU. *Replay ao vivo* = os 6 cenários reais do simulador pelo caminho exato de produção (4 deles vistos no treino). Nenhum modelo antecipa falhas de forma aprendível (estudo com controle de acaso em [`docs/anticipation_study.md`](docs/anticipation_study.md)): o sistema é um detector de falha em andamento.
+
+#### Métricas clássicas de classificação (nível de alarme, após persistência de 6 leituras)
+
+Matrizes de confusão somadas nas 18 rodadas fora do tempo (6 folds × 3 seeds), no limiar calibrado de cada modelo. Relatório completo (também por leitura, média ± desvio por rodada e F0,5/kappa) em [`docs/classification_metrics.md`](docs/classification_metrics.md).
+
+| Modelo | Acurácia | Acurácia balanceada | Precisão | Recall | Especificidade | F1 | **F2** | MCC | ROC-AUC | PR-AUC |
+|---|---|---|---|---|---|---|---|---|---|---|
+| **BiLSTM** | 0,975 | 0,587 | 0,381 | 0,180 | 0,993 | 0,245 | **0,201** | 0,251 | 0,753 | 0,312 |
+| PatchTST | 0,972 | 0,532 | 0,192 | 0,070 | 0,993 | 0,103 | **0,080** | 0,104 | 0,701 | 0,395 |
+| XGBoost | 0,973 | 0,529 | 0,189 | 0,065 | 0,994 | 0,097 | **0,075** | 0,099 | 0,806 | 0,352 |
+| Random Forest (*champion*) | 0,972 | 0,535 | 0,193 | 0,078 | 0,992 | 0,111 | **0,089** | 0,110 | 0,830 | 0,436 |
+| Regressão logística (baseline) | 0,972 | 0,538 | 0,196 | 0,084 | 0,992 | 0,118 | **0,095** | 0,116 | 0,764 | 0,280 |
+| MLP | 0,971 | 0,533 | 0,172 | 0,073 | 0,992 | 0,103 | **0,083** | 0,099 | 0,635 | 0,257 |
+| TCN | 0,965 | 0,530 | 0,106 | 0,073 | 0,986 | 0,087 | **0,078** | 0,071 | 0,663 | 0,249 |
+| Autoencoder | 0,968 | 0,505 | 0,044 | 0,021 | 0,989 | 0,029 | **0,024** | 0,015 | 0,809 | 0,202 |
+
+**Atenção à acurácia:** cerca de 98% das leituras são normais, então um modelo que sempre diz "normal" teria acurácia ≈ 0,98. Por isso ela não serve para comparar. As métricas que importam são **F2** (pesa mais o recall, a prioridade do negócio), **MCC**, **acurácia balanceada** e as métricas de **evento** da tabela anterior (falhas detectadas, falsos alarmes/dia, custo). O recall por leitura é baixo porque o alarme liga dentro da falha, mas não cobre toda a sua duração (a falha F22_3 dura 3 dias). Detectar o **evento** é o que conta para a manutenção.
 
 A geração anterior (split aleatório + SMOTE, com vazamento) foi arquivada em `apps/ml/models/legacy/` — não é servida; fica só para reproduzir a comparação "antes × depois" da tese. Um `ACTIVE_MODEL` antigo cai automaticamente em `random_forest_v3` (com aviso no log).
 

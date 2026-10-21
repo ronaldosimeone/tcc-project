@@ -74,6 +74,7 @@ run_ml() {
     "$GPU_PY" -m src.evaluate_nested --models xgboost --seeds 1 $v
   done
   "$ML_PY" -m src.render_ablation_report                        # ablação DV_pressure
+  "$ML_PY" -m src.classification_metrics                        # acurácia, F1, F2, MCC, ROC/PR-AUC
   "$GPU_PY" -m src.evaluate_anticipation                        # alvo "falha nas próximas H"
   # MetroPT2 (Zenodo 7766691) em data/raw/metropt2/MetroPT2.csv — falhas inéditas.
   "$ML_PY" -m src.ingest_metropt2
