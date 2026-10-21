@@ -66,6 +66,17 @@ class MaintenanceSuggestionRequest(BaseModel):
             "quando > 0.7 — RF-22."
         ),
     )
+    decision_threshold: float | None = Field(
+        default=None,
+        gt=0.0,
+        lt=1.0,
+        description=(
+            "Limiar calibrado do modelo que gerou a probabilidade (card). "
+            "Quando informado (eventos de falha abertos pelo pipeline), a "
+            "sugestão segue a decisão do modelo: aciona com probabilidade >= "
+            "limiar. Ausente (pedido manual): regra RF-22, > 0.7."
+        ),
+    )
     equipment_name: str = Field(
         default="Compressor de ar industrial",
         min_length=1,

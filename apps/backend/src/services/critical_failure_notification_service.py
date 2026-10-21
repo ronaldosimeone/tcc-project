@@ -68,6 +68,7 @@ from typing import Any
 
 import structlog
 
+from src.core.risk import risk_index
 from src.core.exceptions import EmailNotificationError, TelegramNotificationError
 from src.services.alert_settings_service import (
     AlertSettingsService,
@@ -146,6 +147,19 @@ class CriticalFailureNotificationService:
             )
             return _RF24_DEFAULT_SNAPSHOT
 
+    @staticmethod
+    def _is_critical(
+        probability: float, decision_threshold: float | None, level: float
+    ) -> bool:
+        """Com o limiar calibrado do modelo que pontuou, o nível configurado
+        é um RISCO relativo a ele (``src/core/risk.py``: 0,65 = o modelo decide
+        falha) — uma probabilidade bruta fixa nunca era atingida por modelos
+        de limiar baixo (MLP 0,06). Sem limiar (chamadas antigas), mantém a
+        regra original do RF-24: probabilidade estritamente > nível."""
+        if decision_threshold is None:
+            return probability > level
+        return risk_index(probability, decision_threshold) >= level
+
     async def notify_if_critical(
         self,
         *,
@@ -153,6 +167,7 @@ class CriticalFailureNotificationService:
         equipment_name: str,
         probability: float,
         timestamp: str,
+        decision_threshold: float | None = None,
     ) -> None:
         """Nunca lança — qualquer falha (rate limit, canal de notificação,
         ou erro inesperado) é logada e engolida aqui. Chamador nunca
@@ -163,7 +178,9 @@ class CriticalFailureNotificationService:
         e adquire o rate limit (Postgres, atômico, síncrono — RF-24
         inalterado), depois enfileira e retorna imediatamente."""
         config = await self._resolve_settings()
-        if probability <= config.alert_threshold:
+        if not self._is_critical(
+            probability, decision_threshold, config.alert_threshold
+        ):
             return
 
         try:

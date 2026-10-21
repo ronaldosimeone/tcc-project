@@ -222,13 +222,24 @@ class MaintenanceSuggestionService:
     async def suggest(
         self, request: MaintenanceSuggestionRequest
     ) -> MaintenanceSuggestionResponse:
-        # 1. Validar threshold — RF-22, estrito > 0.7. Abaixo/igual: nem MCP
-        # nem Ollama são chamados.
-        if request.failure_probability <= MAINTENANCE_SUGGESTION_THRESHOLD:
+        # 1. Validar threshold. Com o limiar calibrado do modelo (evento de
+        # falha aberto pelo pipeline) a sugestão segue a decisão do modelo —
+        # o pico de um evento de modelo com limiar baixo (MLP 0,06; BiLSTM
+        # 0,24) fica bem abaixo de 0,7 e nunca recebia plano. Sem limiar
+        # (pedido manual): RF-22, estrito > 0.7. Abaixo: nem MCP nem Ollama.
+        gate = request.decision_threshold
+        fires = (
+            request.failure_probability >= gate
+            if gate is not None
+            else request.failure_probability > MAINTENANCE_SUGGESTION_THRESHOLD
+        )
+        if not fires:
             log.info(
                 "maintenance_suggestion_skipped",
                 probability=request.failure_probability,
-                threshold=MAINTENANCE_SUGGESTION_THRESHOLD,
+                threshold=(
+                    gate if gate is not None else MAINTENANCE_SUGGESTION_THRESHOLD
+                ),
             )
             return MaintenanceSuggestionResponse(
                 triggered=False,

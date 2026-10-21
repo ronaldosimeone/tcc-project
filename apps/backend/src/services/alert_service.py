@@ -138,6 +138,7 @@ class AlertService:
                 or settings.default_equipment_name,
                 probability=probability,
                 timestamp=alert_payload["timestamp"],
+                decision_threshold=decision_threshold,
             )
 
         return alert_payload

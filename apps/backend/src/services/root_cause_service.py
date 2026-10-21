@@ -103,6 +103,11 @@ class RootCauseService:
             return
         request = MaintenanceSuggestionRequest(
             failure_probability=min(max(event.peak_probability, 0.0), 1.0),
+            # The event opened because the model decided "failure" at its own
+            # calibrated threshold: the plan follows that same decision.
+            decision_threshold=(
+                float(event.threshold) if 0.0 < float(event.threshold) < 1.0 else None
+            ),
             equipment_name=equipment_name,
             sensor_contributions=[
                 SensorContribution(

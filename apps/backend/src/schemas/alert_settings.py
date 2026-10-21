@@ -26,7 +26,12 @@ class AlertSettingsResponse(BaseModel):
     alert_threshold: float = Field(
         ge=ALERT_THRESHOLD_MIN,
         le=ALERT_THRESHOLD_MAX,
-        description="Limiar efetivo de alerta crítico — usado por CriticalFailureNotificationService (RF-24).",
+        description=(
+            "Nível de alerta crítico (RF-24/RF-25). Com o limiar calibrado do "
+            "modelo ativo é um RISCO relativo a ele (0,65 = o modelo decide "
+            "falha; 1,0 = probabilidade 1 — src/core/risk.py); sem limiar, "
+            "probabilidade bruta."
+        ),
     )
     telegram_enabled: bool = Field(
         description="Se a notificação crítica também é enviada via Telegram."
