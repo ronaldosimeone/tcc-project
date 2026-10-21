@@ -102,14 +102,17 @@ def _report(
 
 
 def main() -> None:
-    card = json.loads((MODELS_DIR / "model_card.json").read_text(encoding="utf-8"))
+    card = json.loads(
+        (MODELS_DIR / "legacy" / "model_card.json").read_text(encoding="utf-8")
+    )
     names: list[str] = card["feature_names"]
     thresholds = {
         "model_threshold": float(card["decision_threshold"]),
         "backend_event_threshold": BACKEND_EVENT_THRESHOLD,
     }
     sess = ort.InferenceSession(
-        str(MODELS_DIR / "random_forest_v2.onnx"), providers=["CPUExecutionProvider"]
+        str(MODELS_DIR / "legacy" / "random_forest_v2.onnx"),
+        providers=["CPUExecutionProvider"],
     )
 
     d20 = pd.read_parquet(P2020).sort_values("timestamp").reset_index(drop=True)

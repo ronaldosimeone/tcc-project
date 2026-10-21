@@ -10,7 +10,7 @@ set), two failures from maintenance reports — air leak 04/06 and oil leak
 
 Variants
 --------
-* ``production``  — the served artefacts (``models/*_v3|_v2`` + cards),
+* ``production``  — the served artefacts (``models/*_v3`` + cards),
   scored exactly as the backend does: ONNX, scalers, card thresholds, k = 6.
   They were trained on all data, which contains ONE oil leak (MetroPT 2022).
 * ``no_oil``      — same nested recipe, trained only on data BEFORE the 2022
@@ -67,11 +67,11 @@ SCORES: dict[str, np.ndarray] = {}
 ARTEFACTS: dict[str, str] = {
     "random_forest": "random_forest_v3",
     "xgboost": "xgboost_v3",
-    "mlp": "mlp_v2",
-    "tcn": "tcn_v2",
-    "bilstm": "bilstm_v2",
-    "patchtst": "patchtst_v2",
-    "autoencoder": "autoencoder_v2",
+    "mlp": "mlp_v3",
+    "tcn": "tcn_v3",
+    "bilstm": "bilstm_v3",
+    "patchtst": "patchtst_v3",
+    "autoencoder": "autoencoder_v3",
 }
 OIL_2022_START: pd.Timestamp = pd.Timestamp("2022-05-30 12:00")
 WINDOW: int = 60

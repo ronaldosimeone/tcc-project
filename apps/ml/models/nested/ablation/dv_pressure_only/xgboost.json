@@ -1,0 +1,747 @@
+{
+  "model": "xgboost",
+  "runs": [
+    {
+      "threshold": 0.5,
+      "pr_auc": 0.18837469563089915,
+      "samples": {
+        "tn": 149492,
+        "fp": 12044,
+        "fn": 33,
+        "tp": 2327
+      },
+      "alarms": {
+        "tn": 149532,
+        "fp": 12004,
+        "fn": 33,
+        "tp": 2327
+      },
+      "events": {
+        "failures": 1,
+        "detected": 1,
+        "missed": 0,
+        "false_alarm_episodes": 37,
+        "false_alarms_per_day": 1.5517550199770012,
+        "mean_lead_time_s": 676.0,
+        "expected_cost": 37.0
+      },
+      "seed": 0,
+      "fold": 1,
+      "test_dataset": "2020",
+      "params": {
+        "max_depth": 6,
+        "learning_rate": 0.1,
+        "n_estimators": 300,
+        "subsample": 0.9,
+        "colsample_bytree": 0.8
+      },
+      "threshold_calibrated": 0.5,
+      "threshold_raw": 0.0,
+      "threshold_source": "fallback (<2 failures in training: a-priori threshold, uncalibrated)",
+      "ece_raw": 0.07429263891085813,
+      "ece_calibrated": null,
+      "search": [],
+      "seconds": 0.9
+    },
+    {
+      "threshold": 0.5,
+      "pr_auc": 0.5144929675100276,
+      "samples": {
+        "tn": 163472,
+        "fp": 19,
+        "fn": 12965,
+        "tp": 4350
+      },
+      "alarms": {
+        "tn": 163485,
+        "fp": 6,
+        "fn": 13651,
+        "tp": 3664
+      },
+      "events": {
+        "failures": 1,
+        "detected": 1,
+        "missed": 0,
+        "false_alarm_episodes": 1,
+        "false_alarms_per_day": 0.04120195251474973,
+        "mean_lead_time_s": -24488.0,
+        "expected_cost": 1.0
+      },
+      "seed": 0,
+      "fold": 2,
+      "test_dataset": "2020",
+      "params": {
+        "max_depth": 6,
+        "learning_rate": 0.1,
+        "n_estimators": 300,
+        "subsample": 0.9,
+        "colsample_bytree": 0.8,
+        "neg_stride": 1
+      },
+      "threshold_calibrated": 0.18,
+      "threshold_raw": 2.0508778310282767,
+      "threshold_source": "nested LOFO OOF (2 inner folds)",
+      "ece_raw": 0.07763588124420916,
+      "ece_calibrated": 0.07644511644895054,
+      "search": [
+        {
+          "params": {
+            "max_depth": 6,
+            "learning_rate": 0.1,
+            "n_estimators": 300,
+            "subsample": 0.9,
+            "colsample_bytree": 0.8
+          },
+          "oof_cost": 61.0,
+          "oof_pr_auc": 0.2529157597607325,
+          "threshold": 0.08
+        },
+        {
+          "params": {
+            "max_depth": 4,
+            "learning_rate": 0.05,
+            "n_estimators": 600,
+            "subsample": 0.8,
+            "colsample_bytree": 0.6
+          },
+          "oof_cost": 58.0,
+          "oof_pr_auc": 0.2670271022537206,
+          "threshold": 0.1
+        },
+        {
+          "params": {
+            "max_depth": 8,
+            "learning_rate": 0.1,
+            "n_estimators": 300,
+            "subsample": 0.9,
+            "colsample_bytree": 0.8
+          },
+          "oof_cost": 63.0,
+          "oof_pr_auc": 0.25069500742854856,
+          "threshold": 0.08
+        },
+        {
+          "params": {
+            "max_depth": 6,
+            "learning_rate": 0.2,
+            "n_estimators": 150,
+            "subsample": 0.7,
+            "colsample_bytree": 0.5
+          },
+          "oof_cost": 65.0,
+          "oof_pr_auc": 0.2618201911462097,
+          "threshold": 0.1
+        },
+        {
+          "params": {
+            "max_depth": 6,
+            "learning_rate": 0.1,
+            "n_estimators": 300,
+            "subsample": 0.9,
+            "colsample_bytree": 0.8,
+            "neg_stride": 1
+          },
+          "oof_cost": 57.0,
+          "oof_pr_auc": 0.2379667181674947,
+          "threshold": 0.18
+        },
+        {
+          "params": {
+            "max_depth": 6,
+            "learning_rate": 0.1,
+            "n_estimators": 300,
+            "subsample": 0.9,
+            "colsample_bytree": 0.8,
+            "pos_weight_scale": 0.25
+          },
+          "oof_cost": 61.0,
+          "oof_pr_auc": 0.2510763279956392,
+          "threshold": 0.08
+        }
+      ],
+      "seconds": 181.0
+    },
+    {
+      "threshold": 0.5,
+      "pr_auc": 0.17564918999682472,
+      "samples": {
+        "tn": 466295,
+        "fp": 0,
+        "fn": 1622,
+        "tp": 0
+      },
+      "alarms": {
+        "tn": 466295,
+        "fp": 0,
+        "fn": 1622,
+        "tp": 0
+      },
+      "events": {
+        "failures": 1,
+        "detected": 0,
+        "missed": 1,
+        "false_alarm_episodes": 0,
+        "false_alarms_per_day": 0.0,
+        "mean_lead_time_s": null,
+        "expected_cost": 100.0
+      },
+      "seed": 0,
+      "fold": 3,
+      "test_dataset": "2020",
+      "params": {
+        "max_depth": 4,
+        "learning_rate": 0.05,
+        "n_estimators": 600,
+        "subsample": 0.8,
+        "colsample_bytree": 0.6
+      },
+      "threshold_calibrated": 0.48,
+      "threshold_raw": 3.7898199474394167,
+      "threshold_source": "nested LOFO OOF (3 inner folds)",
+      "ece_raw": 0.003605124613599697,
+      "ece_calibrated": 0.010283534451242998,
+      "search": [
+        {
+          "params": {
+            "max_depth": 6,
+            "learning_rate": 0.1,
+            "n_estimators": 300,
+            "subsample": 0.9,
+            "colsample_bytree": 0.8
+          },
+          "oof_cost": 48.0,
+          "oof_pr_auc": 0.35742360971877524,
+          "threshold": 0.49
+        },
+        {
+          "params": {
+            "max_depth": 4,
+            "learning_rate": 0.05,
+            "n_estimators": 600,
+            "subsample": 0.8,
+            "colsample_bytree": 0.6
+          },
+          "oof_cost": 41.0,
+          "oof_pr_auc": 0.3727785027985212,
+          "threshold": 0.48
+        },
+        {
+          "params": {
+            "max_depth": 8,
+            "learning_rate": 0.1,
+            "n_estimators": 300,
+            "subsample": 0.9,
+            "colsample_bytree": 0.8
+          },
+          "oof_cost": 51.0,
+          "oof_pr_auc": 0.355925941353763,
+          "threshold": 0.38
+        },
+        {
+          "params": {
+            "max_depth": 6,
+            "learning_rate": 0.2,
+            "n_estimators": 150,
+            "subsample": 0.7,
+            "colsample_bytree": 0.5
+          },
+          "oof_cost": 45.0,
+          "oof_pr_auc": 0.3618169119931277,
+          "threshold": 0.41
+        },
+        {
+          "params": {
+            "max_depth": 6,
+            "learning_rate": 0.1,
+            "n_estimators": 300,
+            "subsample": 0.9,
+            "colsample_bytree": 0.8,
+            "neg_stride": 1
+          },
+          "oof_cost": 62.0,
+          "oof_pr_auc": 0.2953455000781432,
+          "threshold": 0.39
+        },
+        {
+          "params": {
+            "max_depth": 6,
+            "learning_rate": 0.1,
+            "n_estimators": 300,
+            "subsample": 0.9,
+            "colsample_bytree": 0.8,
+            "pos_weight_scale": 0.25
+          },
+          "oof_cost": 49.0,
+          "oof_pr_auc": 0.3677149678115964,
+          "threshold": 0.46
+        }
+      ],
+      "seconds": 253.4
+    },
+    {
+      "threshold": 0.5,
+      "pr_auc": 0.001945662702345451,
+      "samples": {
+        "tn": 492543,
+        "fp": 0,
+        "fn": 1483,
+        "tp": 0
+      },
+      "alarms": {
+        "tn": 492543,
+        "fp": 0,
+        "fn": 1483,
+        "tp": 0
+      },
+      "events": {
+        "failures": 1,
+        "detected": 0,
+        "missed": 1,
+        "false_alarm_episodes": 0,
+        "false_alarms_per_day": 0.0,
+        "mean_lead_time_s": null,
+        "expected_cost": 100.0
+      },
+      "seed": 0,
+      "fold": 4,
+      "test_dataset": "2022",
+      "params": {
+        "max_depth": 6,
+        "learning_rate": 0.2,
+        "n_estimators": 150,
+        "subsample": 0.7,
+        "colsample_bytree": 0.5
+      },
+      "threshold_calibrated": 0.24,
+      "threshold_raw": 1.0411780473934953,
+      "threshold_source": "nested LOFO OOF (4 inner folds)",
+      "ece_raw": 0.003035737207522049,
+      "ece_calibrated": 0.00654842872383111,
+      "search": [
+        {
+          "params": {
+            "max_depth": 6,
+            "learning_rate": 0.1,
+            "n_estimators": 300,
+            "subsample": 0.9,
+            "colsample_bytree": 0.8
+          },
+          "oof_cost": 144.0,
+          "oof_pr_auc": 0.29452778026110127,
+          "threshold": 0.31
+        },
+        {
+          "params": {
+            "max_depth": 4,
+            "learning_rate": 0.05,
+            "n_estimators": 600,
+            "subsample": 0.8,
+            "colsample_bytree": 0.6
+          },
+          "oof_cost": 132.0,
+          "oof_pr_auc": 0.3018716668174393,
+          "threshold": 0.36
+        },
+        {
+          "params": {
+            "max_depth": 8,
+            "learning_rate": 0.1,
+            "n_estimators": 300,
+            "subsample": 0.9,
+            "colsample_bytree": 0.8
+          },
+          "oof_cost": 126.0,
+          "oof_pr_auc": 0.31192520861005824,
+          "threshold": 0.23
+        },
+        {
+          "params": {
+            "max_depth": 6,
+            "learning_rate": 0.2,
+            "n_estimators": 150,
+            "subsample": 0.7,
+            "colsample_bytree": 0.5
+          },
+          "oof_cost": 121.0,
+          "oof_pr_auc": 0.32253123423682467,
+          "threshold": 0.24
+        },
+        {
+          "params": {
+            "max_depth": 6,
+            "learning_rate": 0.1,
+            "n_estimators": 300,
+            "subsample": 0.9,
+            "colsample_bytree": 0.8,
+            "neg_stride": 1
+          },
+          "oof_cost": 139.0,
+          "oof_pr_auc": 0.3170997158894336,
+          "threshold": 0.41
+        },
+        {
+          "params": {
+            "max_depth": 6,
+            "learning_rate": 0.1,
+            "n_estimators": 300,
+            "subsample": 0.9,
+            "colsample_bytree": 0.8,
+            "pos_weight_scale": 0.25
+          },
+          "oof_cost": 144.0,
+          "oof_pr_auc": 0.3097452913049255,
+          "threshold": 0.35
+        }
+      ],
+      "seconds": 427.4
+    },
+    {
+      "threshold": 0.5,
+      "pr_auc": 0.0005583791170888352,
+      "samples": {
+        "tn": 316083,
+        "fp": 0,
+        "fn": 181,
+        "tp": 0
+      },
+      "alarms": {
+        "tn": 316083,
+        "fp": 0,
+        "fn": 181,
+        "tp": 0
+      },
+      "events": {
+        "failures": 1,
+        "detected": 0,
+        "missed": 1,
+        "false_alarm_episodes": 0,
+        "false_alarms_per_day": 0.0,
+        "mean_lead_time_s": null,
+        "expected_cost": 100.0
+      },
+      "seed": 0,
+      "fold": 5,
+      "test_dataset": "2022",
+      "params": {
+        "max_depth": 6,
+        "learning_rate": 0.2,
+        "n_estimators": 150,
+        "subsample": 0.7,
+        "colsample_bytree": 0.5
+      },
+      "threshold_calibrated": 0.08,
+      "threshold_raw": 1.6079395027300807,
+      "threshold_source": "nested LOFO OOF (5 inner folds)",
+      "ece_raw": 0.0007023954576242659,
+      "ece_calibrated": 3.249294275753205e-05,
+      "search": [
+        {
+          "params": {
+            "max_depth": 6,
+            "learning_rate": 0.1,
+            "n_estimators": 300,
+            "subsample": 0.9,
+            "colsample_bytree": 0.8
+          },
+          "oof_cost": 234.0,
+          "oof_pr_auc": 0.23709395868481348,
+          "threshold": 0.14
+        },
+        {
+          "params": {
+            "max_depth": 4,
+            "learning_rate": 0.05,
+            "n_estimators": 600,
+            "subsample": 0.8,
+            "colsample_bytree": 0.6
+          },
+          "oof_cost": 230.0,
+          "oof_pr_auc": 0.2520772327360605,
+          "threshold": 0.3
+        },
+        {
+          "params": {
+            "max_depth": 8,
+            "learning_rate": 0.1,
+            "n_estimators": 300,
+            "subsample": 0.9,
+            "colsample_bytree": 0.8
+          },
+          "oof_cost": 239.0,
+          "oof_pr_auc": 0.21827015531489047,
+          "threshold": 0.12
+        },
+        {
+          "params": {
+            "max_depth": 6,
+            "learning_rate": 0.2,
+            "n_estimators": 150,
+            "subsample": 0.7,
+            "colsample_bytree": 0.5
+          },
+          "oof_cost": 199.0,
+          "oof_pr_auc": 0.24452239726263245,
+          "threshold": 0.08
+        },
+        {
+          "params": {
+            "max_depth": 6,
+            "learning_rate": 0.1,
+            "n_estimators": 300,
+            "subsample": 0.9,
+            "colsample_bytree": 0.8,
+            "neg_stride": 1
+          },
+          "oof_cost": 238.0,
+          "oof_pr_auc": 0.23748692609668495,
+          "threshold": 0.2
+        },
+        {
+          "params": {
+            "max_depth": 6,
+            "learning_rate": 0.1,
+            "n_estimators": 300,
+            "subsample": 0.9,
+            "colsample_bytree": 0.8,
+            "pos_weight_scale": 0.25
+          },
+          "oof_cost": 235.0,
+          "oof_pr_auc": 0.24632656752644316,
+          "threshold": 0.15
+        }
+      ],
+      "seconds": 501.3
+    },
+    {
+      "threshold": 0.5,
+      "pr_auc": 0.07730424842131799,
+      "samples": {
+        "tn": 247653,
+        "fp": 0,
+        "fn": 19552,
+        "tp": 0
+      },
+      "alarms": {
+        "tn": 247653,
+        "fp": 0,
+        "fn": 19552,
+        "tp": 0
+      },
+      "events": {
+        "failures": 1,
+        "detected": 0,
+        "missed": 1,
+        "false_alarm_episodes": 0,
+        "false_alarms_per_day": 0.0,
+        "mean_lead_time_s": null,
+        "expected_cost": 100.0
+      },
+      "seed": 0,
+      "fold": 6,
+      "test_dataset": "2022",
+      "params": {
+        "max_depth": 6,
+        "learning_rate": 0.2,
+        "n_estimators": 150,
+        "subsample": 0.7,
+        "colsample_bytree": 0.5
+      },
+      "threshold_calibrated": 0.06,
+      "threshold_raw": 1.7023033450767453,
+      "threshold_source": "nested LOFO OOF (6 inner folds)",
+      "ece_raw": 0.07316925713221303,
+      "ece_calibrated": 0.07255958913101003,
+      "search": [
+        {
+          "params": {
+            "max_depth": 6,
+            "learning_rate": 0.1,
+            "n_estimators": 300,
+            "subsample": 0.9,
+            "colsample_bytree": 0.8
+          },
+          "oof_cost": 332.0,
+          "oof_pr_auc": 0.2288031351740319,
+          "threshold": 0.12
+        },
+        {
+          "params": {
+            "max_depth": 4,
+            "learning_rate": 0.05,
+            "n_estimators": 600,
+            "subsample": 0.8,
+            "colsample_bytree": 0.6
+          },
+          "oof_cost": 327.0,
+          "oof_pr_auc": 0.23915682894803225,
+          "threshold": 0.21
+        },
+        {
+          "params": {
+            "max_depth": 8,
+            "learning_rate": 0.1,
+            "n_estimators": 300,
+            "subsample": 0.9,
+            "colsample_bytree": 0.8
+          },
+          "oof_cost": 334.0,
+          "oof_pr_auc": 0.2098136480740738,
+          "threshold": 0.11
+        },
+        {
+          "params": {
+            "max_depth": 6,
+            "learning_rate": 0.2,
+            "n_estimators": 150,
+            "subsample": 0.7,
+            "colsample_bytree": 0.5
+          },
+          "oof_cost": 304.0,
+          "oof_pr_auc": 0.22735676826548085,
+          "threshold": 0.06
+        },
+        {
+          "params": {
+            "max_depth": 6,
+            "learning_rate": 0.1,
+            "n_estimators": 300,
+            "subsample": 0.9,
+            "colsample_bytree": 0.8,
+            "neg_stride": 1
+          },
+          "oof_cost": 345.0,
+          "oof_pr_auc": 0.21362311803223655,
+          "threshold": 0.27
+        },
+        {
+          "params": {
+            "max_depth": 6,
+            "learning_rate": 0.1,
+            "n_estimators": 300,
+            "subsample": 0.9,
+            "colsample_bytree": 0.8,
+            "pos_weight_scale": 0.25
+          },
+          "oof_cost": 331.0,
+          "oof_pr_auc": 0.22654546535844713,
+          "threshold": 0.12
+        }
+      ],
+      "seconds": 602.8
+    }
+  ],
+  "summary": {
+    "per_seed": [
+      {
+        "seed": 0,
+        "samples": {
+          "tn": 1835538,
+          "fp": 12063,
+          "fn": 35836,
+          "tp": 6677
+        },
+        "alarms": {
+          "tn": 1835591,
+          "fp": 12010,
+          "fn": 36522,
+          "tp": 5991
+        },
+        "events": {
+          "failures": 6,
+          "detected": 2,
+          "missed": 4,
+          "false_alarm_episodes": 38
+        },
+        "expected_cost_mean": 73.0,
+        "metrics_alarms": {
+          "precision": 0.3328148436197989,
+          "recall": 0.14092160045162655,
+          "f1": 0.1980037677231715,
+          "specificity": 0.9934996787726355
+        },
+        "metrics_samples": {
+          "precision": 0.3562966915688367,
+          "recall": 0.15705784113094817,
+          "f1": 0.21801381156841299,
+          "specificity": 0.9934709929254206
+        },
+        "ece_raw_mean": 0.031629679131033636,
+        "ece_calibrated_mean": 0.03317383233955844
+      }
+    ],
+    "detected_mean": 2.0,
+    "detected_min": 2,
+    "detected_max": 2,
+    "expected_cost_mean": 73.0,
+    "false_alarm_episodes_mean": 38.0
+  },
+  "schema_version": "1.0",
+  "evaluated_at": "2026-10-21T00:32:34.197052+00:00",
+  "protocol": "outer purged walk-forward (6 folds) \u00d7 inner leave-one-failure-out; Platt calibration; RN-02 threshold",
+  "seeds": 1,
+  "search_space": [
+    {
+      "max_depth": 6,
+      "learning_rate": 0.1,
+      "n_estimators": 300,
+      "subsample": 0.9,
+      "colsample_bytree": 0.8
+    },
+    {
+      "max_depth": 4,
+      "learning_rate": 0.05,
+      "n_estimators": 600,
+      "subsample": 0.8,
+      "colsample_bytree": 0.6
+    },
+    {
+      "max_depth": 8,
+      "learning_rate": 0.1,
+      "n_estimators": 300,
+      "subsample": 0.9,
+      "colsample_bytree": 0.8
+    },
+    {
+      "max_depth": 6,
+      "learning_rate": 0.2,
+      "n_estimators": 150,
+      "subsample": 0.7,
+      "colsample_bytree": 0.5
+    },
+    {
+      "max_depth": 6,
+      "learning_rate": 0.1,
+      "n_estimators": 300,
+      "subsample": 0.9,
+      "colsample_bytree": 0.8,
+      "neg_stride": 1
+    },
+    {
+      "max_depth": 6,
+      "learning_rate": 0.1,
+      "n_estimators": 300,
+      "subsample": 0.9,
+      "colsample_bytree": 0.8,
+      "pos_weight_scale": 0.25
+    }
+  ],
+  "dropped_sensors": [
+    "TP2",
+    "TP3",
+    "H1",
+    "Reservoirs",
+    "Motor_current",
+    "Oil_temperature",
+    "COMP",
+    "DV_eletric",
+    "Towers",
+    "MPG",
+    "Oil_level"
+  ],
+  "sensors": [
+    "DV_pressure"
+  ],
+  "ablation_tag": "dv_pressure_only",
+  "deep_config": null,
+  "elapsed_s": 1966.9
+}

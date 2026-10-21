@@ -1,0 +1,106 @@
+{
+  "schema_version": "3.0",
+  "model_name": "patchtst_v3",
+  "status": "candidate",
+  "trained_at": "2026-10-20T22:33:21.316637+00:00",
+  "algorithm": "patchtst",
+  "validation": {
+    "leakage_free": true,
+    "protocol": "nested: outer purged walk-forward \u00d7 inner leave-one-failure-out",
+    "hyperparameters": "selected on inner OOF expected cost (RN-02)",
+    "threshold_selection": "nested LOFO OOF (7 inner folds)"
+  },
+  "dropped_sensors": [
+    "Reservoirs",
+    "Oil_level"
+  ],
+  "hyperparameters": {
+    "epochs": 16,
+    "lr": 0.0003
+  },
+  "search": [
+    {
+      "params": {
+        "epochs": 8,
+        "lr": 0.001
+      },
+      "oof_cost": 278.0,
+      "oof_pr_auc": 0.14494165892019462,
+      "threshold": 0.29
+    },
+    {
+      "params": {
+        "epochs": 16,
+        "lr": 0.0003
+      },
+      "oof_cost": 232.0,
+      "oof_pr_auc": 0.15284055963675813,
+      "threshold": 0.17
+    },
+    {
+      "params": {
+        "epochs": 8,
+        "lr": 0.001,
+        "neg_stride": 5
+      },
+      "oof_cost": 237.0,
+      "oof_pr_auc": 0.13246455441352234,
+      "threshold": 0.16
+    },
+    {
+      "params": {
+        "epochs": 8,
+        "lr": 0.001,
+        "pos_weight_scale": 0.25
+      },
+      "oof_cost": 282.0,
+      "oof_pr_auc": 0.22380531770282525,
+      "threshold": 0.33
+    }
+  ],
+  "calibration": {
+    "method": "platt",
+    "a": 0.263936304193707,
+    "b": -2.39175838764478
+  },
+  "threshold_calibrated_probability": 0.17,
+  "decision_threshold": 0.17,
+  "seed": 0,
+  "onnx_parity_max_abs_diff": 9.5367431640625e-07,
+  "feature_count": 10,
+  "feature_names": [
+    "TP2",
+    "TP3",
+    "H1",
+    "DV_pressure",
+    "Motor_current",
+    "Oil_temperature",
+    "COMP",
+    "DV_eletric",
+    "Towers",
+    "MPG"
+  ],
+  "serving": {
+    "adapter": "sequence",
+    "onnx": "patchtst_v3.onnx",
+    "scaler": "patchtst_v3_scaler.joblib",
+    "window_size": 60
+  },
+  "evidence": {
+    "source": "models/nested/patchtst.json",
+    "protocol": "outer purged walk-forward (6 folds) \u00d7 inner leave-one-failure-out, 3 seeds, out-of-time",
+    "failures_detected_mean_of_6": 3.0,
+    "failures_detected_range": [
+      3,
+      3
+    ],
+    "false_alarm_episodes_mean": 66.0,
+    "expected_cost_mean": 61.0,
+    "confusion_alarms_seed0": {
+      "tn": 1834016,
+      "fp": 13585,
+      "fn": 39639,
+      "tp": 2874
+    }
+  }
+}

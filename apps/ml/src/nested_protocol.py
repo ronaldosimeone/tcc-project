@@ -99,6 +99,30 @@ SPACES: dict[str, list[dict[str, Any]]] = {
     },
 }
 
+# Imbalance handling is selected by the same inner validation, not fixed:
+# two variants of the a-priori default per model — denser sampling of the
+# normal class (all normal rows for tabular learners) and a softer class
+# weight (0.25 x balanced). The autoencoder sees no failure rows, so only
+# its sampling varies.
+DENSE_NEG_STRIDE: dict[str, int] = {
+    "random_forest": 1,
+    "xgboost": 1,
+    "logistic_regression": 1,
+    "mlp": 1,
+    "tcn": 5,
+    "bilstm": 5,
+    "patchtst": 5,
+    "autoencoder": 2,
+}
+SOFT_POS_WEIGHT: float = 0.25
+for _name, _space in SPACES.items():
+    _space.append({**_space[0], "neg_stride": DENSE_NEG_STRIDE[_name]})
+    if _name != "autoencoder":
+        _space.append({**_space[0], "pos_weight_scale": SOFT_POS_WEIGHT})
+
+# Keys that configure sampling/weighting, not the learner itself.
+_BALANCE_KEYS: frozenset[str] = frozenset({"neg_stride", "pos_weight_scale"})
+
 
 @dataclass
 class Context:
@@ -123,11 +147,17 @@ def _xgb_device() -> str:
         return "cpu"
 
 
-def _tree_model(name: str, params: dict[str, Any], seed: int, pos_weight: float) -> Any:
+def _tree_model(
+    name: str, params: dict[str, Any], seed: int, pos_weight: float, scale: float
+) -> Any:
+    # scale == 1 keeps the balanced weighting; otherwise an explicit weight
+    # pos_weight * scale on the failure class (pos_weight is the balanced
+    # ratio on the rows actually trained on).
+    explicit = {0: 1.0, 1: pos_weight * scale}
     if name == "random_forest":
         return RandomForestClassifier(
             n_estimators=200,
-            class_weight="balanced_subsample",
+            class_weight="balanced_subsample" if scale == 1.0 else explicit,
             n_jobs=-1,
             random_state=seed,
             **params,
@@ -135,7 +165,7 @@ def _tree_model(name: str, params: dict[str, Any], seed: int, pos_weight: float)
     if name == "xgboost":
         return XGBClassifier(
             **params,
-            scale_pos_weight=pos_weight,
+            scale_pos_weight=pos_weight * scale,
             tree_method="hist",
             device=_xgb_device(),
             n_jobs=-1,
@@ -146,7 +176,10 @@ def _tree_model(name: str, params: dict[str, Any], seed: int, pos_weight: float)
         return make_pipeline(
             StandardScaler(),
             LogisticRegression(
-                C=params["C"], class_weight="balanced", max_iter=2000, random_state=seed
+                C=params["C"],
+                class_weight="balanced" if scale == 1.0 else explicit,
+                max_iter=2000,
+                random_state=seed,
             ),
         )
     raise ValueError(name)
@@ -157,10 +190,12 @@ def fit_model(
 ) -> Any:
     if name in dt.ARCHS:
         return dt.fit(ctx.data, name, train_idx, seed, params)
-    tr = _subsample(train_idx, ctx.y, NEG_STRIDE)
+    tr = _subsample(train_idx, ctx.y, int(params.get("neg_stride", NEG_STRIDE)))
     y_tr = ctx.y.to_numpy()[tr]
     pos_weight = float((len(y_tr) - y_tr.sum()) / max(y_tr.sum(), 1))
-    model = _tree_model(name, params, seed, pos_weight)
+    learner = {k: v for k, v in params.items() if k not in _BALANCE_KEYS}
+    scale = float(params.get("pos_weight_scale", 1.0))
+    model = _tree_model(name, learner, seed, pos_weight, scale)
     model.fit(ctx.X.iloc[tr].to_numpy(np.float32), y_tr)
     return model
 
@@ -248,13 +283,21 @@ def oof_scores(
 
 
 def cost_threshold(
-    ctx: Context, rows: np.ndarray, prob: np.ndarray
+    ctx: Context,
+    rows: np.ndarray,
+    prob: np.ndarray,
+    eval_kw: dict[str, Any] | None = None,
 ) -> tuple[float, float]:
     ts = ctx.ts.iloc[rows].reset_index(drop=True)
     lo, hi = ts.min(), ts.max()
     events = [e for e in ctx.events if e.end >= lo and e.start <= hi]
     return cost_optimal_threshold(
-        ts, prob, events, k=PERSISTENCE_K, candidates=THRESHOLD_GRID, **EVAL_KW
+        ts,
+        prob,
+        events,
+        k=PERSISTENCE_K,
+        candidates=THRESHOLD_GRID,
+        **(EVAL_KW if eval_kw is None else eval_kw),
     )
 
 
@@ -279,8 +322,11 @@ def select(
     seed: int,
     tune: bool = True,
     fixed_params: dict[str, Any] | None = None,
+    eval_kw: dict[str, Any] | None = None,
 ) -> Selection:
-    """Steps 1–4. ``tune=False`` reuses ``fixed_params`` (extra seeds)."""
+    """Steps 1–4. ``tune=False`` reuses ``fixed_params`` (extra seeds).
+    ``eval_kw`` overrides the event-evaluation rule used by the cost (e.g. no
+    early horizon for the anticipation study)."""
     space = SPACES[name] if tune else [fixed_params or SPACES[name][0]]
     splits = inner_splits(ctx, train_idx)
     if not splits:
@@ -293,7 +339,7 @@ def select(
     for i, params in enumerate(space):
         rows, raw = oof_scores(ctx, name, splits, seed, params)
         cal = Platt.fit(raw, y[rows])
-        thr, cost = cost_threshold(ctx, rows, cal.prob(raw))
+        thr, cost = cost_threshold(ctx, rows, cal.prob(raw), eval_kw)
         ap = float(average_precision_score(y[rows], raw)) if y[rows].any() else 0.0
         search.append(
             {"params": params, "oof_cost": cost, "oof_pr_auc": ap, "threshold": thr}

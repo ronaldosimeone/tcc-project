@@ -32,11 +32,11 @@ ARTEFACT: dict[str, str] = {
     "random_forest": "random_forest_v3",
     "xgboost": "xgboost_v3",
     "logistic_regression": "—",
-    "mlp": "mlp_v2",
-    "tcn": "tcn_v2",
-    "bilstm": "bilstm_v2",
-    "patchtst": "patchtst_v2",
-    "autoencoder": "autoencoder_v2",
+    "mlp": "mlp_v3",
+    "tcn": "tcn_v3",
+    "bilstm": "bilstm_v3",
+    "patchtst": "patchtst_v3",
+    "autoencoder": "autoencoder_v3",
 }
 
 

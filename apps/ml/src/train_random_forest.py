@@ -1,4 +1,8 @@
 """
+DEPRECATED — previous generation (random split / SMOTE; leaked). Kept only to
+reproduce the before/after comparison of the thesis; writes to models/legacy.
+Served models come from ``src.train_production`` (``*_v3``).
+
 Random Forest Training Pipeline — RF-04 / RNF-10.
 
 Entry point:
@@ -77,7 +81,7 @@ FEATURE_COLS: list[str] = [
 ]
 
 PARQUET_PATH: Path = _ML_ROOT / "data" / "processed" / "metropt3.parquet"
-MODELS_DIR: Path = _ML_ROOT / "models"
+MODELS_DIR: Path = _ML_ROOT / "models" / "legacy"  # previous generation, not served
 MODEL_PATH: Path = MODELS_DIR / "random_forest_final.joblib"
 MODEL_CARD_PATH: Path = MODELS_DIR / "model_card.json"
 

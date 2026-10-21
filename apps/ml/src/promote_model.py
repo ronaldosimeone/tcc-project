@@ -38,7 +38,7 @@ from mlflow.tracking import MlflowClient
 
 _HERE: Path = Path(__file__).resolve().parent  # apps/ml/src/
 _ML_ROOT: Path = _HERE.parent  # apps/ml/
-_DEFAULT_DEST: Path = _ML_ROOT / "models"
+_DEFAULT_DEST: Path = _ML_ROOT / "models" / "legacy"  # previous generation
 _DEFAULT_EXPERIMENT: str = "mlp_metropt3"
 _DEFAULT_METRIC: str = "test_f1_class1"
 _DEFAULT_TRACKING_URI: str = "http://localhost:5000"

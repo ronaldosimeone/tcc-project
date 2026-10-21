@@ -2,7 +2,7 @@
   "schema_version": "3.0",
   "model_name": "xgboost_v3",
   "status": "challenger",
-  "trained_at": "2026-10-17T01:36:00.228558+00:00",
+  "trained_at": "2026-10-20T20:05:31.541200+00:00",
   "algorithm": "xgboost",
   "validation": {
     "leakage_free": true,
@@ -15,11 +15,11 @@
     "Oil_level"
   ],
   "hyperparameters": {
-    "max_depth": 4,
-    "learning_rate": 0.05,
-    "n_estimators": 600,
-    "subsample": 0.8,
-    "colsample_bytree": 0.6
+    "max_depth": 8,
+    "learning_rate": 0.1,
+    "n_estimators": 300,
+    "subsample": 0.9,
+    "colsample_bytree": 0.8
   },
   "search": [
     {
@@ -30,9 +30,9 @@
         "subsample": 0.9,
         "colsample_bytree": 0.8
       },
-      "oof_cost": 321.0,
-      "oof_pr_auc": 0.14484450308187233,
-      "threshold": 0.18
+      "oof_cost": 354.0,
+      "oof_pr_auc": 0.12723144139670134,
+      "threshold": 0.16
     },
     {
       "params": {
@@ -42,9 +42,9 @@
         "subsample": 0.8,
         "colsample_bytree": 0.6
       },
-      "oof_cost": 293.0,
-      "oof_pr_auc": 0.14599664060995027,
-      "threshold": 0.13
+      "oof_cost": 316.0,
+      "oof_pr_auc": 0.1519504679601766,
+      "threshold": 0.11
     },
     {
       "params": {
@@ -54,9 +54,9 @@
         "subsample": 0.9,
         "colsample_bytree": 0.8
       },
-      "oof_cost": 302.0,
-      "oof_pr_auc": 0.15817541515485972,
-      "threshold": 0.16
+      "oof_cost": 265.0,
+      "oof_pr_auc": 0.1381262043497894,
+      "threshold": 0.18
     },
     {
       "params": {
@@ -66,20 +66,46 @@
         "subsample": 0.7,
         "colsample_bytree": 0.5
       },
-      "oof_cost": 319.0,
-      "oof_pr_auc": 0.17295750080140762,
-      "threshold": 0.21
+      "oof_cost": 353.0,
+      "oof_pr_auc": 0.1456171783360629,
+      "threshold": 0.18
+    },
+    {
+      "params": {
+        "max_depth": 6,
+        "learning_rate": 0.1,
+        "n_estimators": 300,
+        "subsample": 0.9,
+        "colsample_bytree": 0.8,
+        "neg_stride": 1
+      },
+      "oof_cost": 352.0,
+      "oof_pr_auc": 0.12483112133917623,
+      "threshold": 0.15
+    },
+    {
+      "params": {
+        "max_depth": 6,
+        "learning_rate": 0.1,
+        "n_estimators": 300,
+        "subsample": 0.9,
+        "colsample_bytree": 0.8,
+        "pos_weight_scale": 0.25
+      },
+      "oof_cost": 354.0,
+      "oof_pr_auc": 0.14674173264469725,
+      "threshold": 0.17
     }
   ],
   "calibration": {
     "method": "platt",
-    "a": 0.24473094723371314,
-    "b": -2.452712242255583
+    "a": 0.19270174211628321,
+    "b": -2.3051801695451903
   },
-  "threshold_calibrated_probability": 0.13,
-  "decision_threshold": 0.905041,
+  "threshold_calibrated_probability": 0.18,
+  "decision_threshold": 0.983594,
   "seed": 0,
-  "onnx_parity_max_abs_diff": 3.5762786865234375e-07,
+  "onnx_parity_max_abs_diff": 2.980232238769531e-07,
   "feature_count": 68,
   "feature_names": [
     "TP2",
@@ -158,18 +184,18 @@
   "evidence": {
     "source": "models/nested/xgboost.json",
     "protocol": "outer purged walk-forward (6 folds) \u00d7 inner leave-one-failure-out, 3 seeds, out-of-time",
-    "failures_detected_mean_of_6": 3.3333333333333335,
+    "failures_detected_mean_of_6": 2.6666666666666665,
     "failures_detected_range": [
-      3,
-      4
+      2,
+      3
     ],
-    "false_alarm_episodes_mean": 12.333333333333334,
-    "expected_cost_mean": 46.5,
+    "false_alarm_episodes_mean": 37.0,
+    "expected_cost_mean": 61.72222222222223,
     "confusion_alarms_seed0": {
-      "tn": 1835594,
-      "fp": 12007,
-      "fn": 40124,
-      "tp": 2389
+      "tn": 1835711,
+      "fp": 11890,
+      "fn": 39676,
+      "tp": 2837
     }
   }
 }

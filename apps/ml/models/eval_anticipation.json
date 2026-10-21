@@ -1,0 +1,1927 @@
+{
+ "horizons": {
+  "30": {
+   "xgboost": {
+    "anticipation": {
+     "anticipated": 0,
+     "anticipated_onset_in_window": 0,
+     "chance_hit_rate": 0.0014687163419171644,
+     "reference_windows": 10213,
+     "alarm_time_share_mean": 1.4444503161936974e-05,
+     "failures": 6,
+     "false_alarm_episodes": 17,
+     "false_alarms_per_day_mean": 0.04187199280239601,
+     "median_lead_before_start_min": null,
+     "per_fold": [
+      {
+       "fold": 1,
+       "test_failure": "F20_2",
+       "params": {
+        "max_depth": 6,
+        "learning_rate": 0.1,
+        "n_estimators": 300,
+        "subsample": 0.9,
+        "colsample_bytree": 0.8
+       },
+       "threshold_source": "fallback (<2 failures in training: a-priori threshold, uncalibrated)",
+       "anticipated": 0,
+       "anticipated_onset_in_window": 0,
+       "failures": 1,
+       "per_failure": [
+        {
+         "failure_start": "2020-05-29 23:30:00",
+         "anticipated": false,
+         "onset_in_window": false,
+         "lead_before_start_min": null
+        }
+       ],
+       "false_alarm_episodes": 0,
+       "false_alarms_per_day": 0.0,
+       "expected_cost": 100.0,
+       "reference_windows": 903,
+       "reference_hits": 0,
+       "alarm_time_share": 0.0,
+       "seconds": 0.8
+      },
+      {
+       "fold": 2,
+       "test_failure": "F20_3",
+       "params": {
+        "max_depth": 6,
+        "learning_rate": 0.1,
+        "n_estimators": 300,
+        "subsample": 0.9,
+        "colsample_bytree": 0.8,
+        "neg_stride": 1
+       },
+       "threshold_source": "nested LOFO OOF (2 inner folds)",
+       "anticipated": 0,
+       "anticipated_onset_in_window": 0,
+       "failures": 1,
+       "per_failure": [
+        {
+         "failure_start": "2020-06-05 10:00:00",
+         "anticipated": false,
+         "onset_in_window": false,
+         "lead_before_start_min": null
+        }
+       ],
+       "false_alarm_episodes": 0,
+       "false_alarms_per_day": 0.0,
+       "expected_cost": 100.0,
+       "reference_windows": 871,
+       "reference_hits": 0,
+       "alarm_time_share": 0.0,
+       "seconds": 54.4
+      },
+      {
+       "fold": 3,
+       "test_failure": "F20_4",
+       "params": {
+        "max_depth": 6,
+        "learning_rate": 0.1,
+        "n_estimators": 300,
+        "subsample": 0.9,
+        "colsample_bytree": 0.8,
+        "pos_weight_scale": 0.25
+       },
+       "threshold_source": "nested LOFO OOF (3 inner folds)",
+       "anticipated": 0,
+       "anticipated_onset_in_window": 0,
+       "failures": 1,
+       "per_failure": [
+        {
+         "failure_start": "2020-07-15 14:30:00",
+         "anticipated": false,
+         "onset_in_window": false,
+         "lead_before_start_min": null
+        }
+       ],
+       "false_alarm_episodes": 17,
+       "false_alarms_per_day": 0.25123195681437605,
+       "expected_cost": 117.0,
+       "reference_windows": 2615,
+       "reference_hits": 15,
+       "alarm_time_share": 8.666701897162184e-05,
+       "seconds": 72.1
+      },
+      {
+       "fold": 4,
+       "test_failure": "F22_1",
+       "params": {
+        "max_depth": 6,
+        "learning_rate": 0.1,
+        "n_estimators": 300,
+        "subsample": 0.9,
+        "colsample_bytree": 0.8,
+        "neg_stride": 1
+       },
+       "threshold_source": "nested LOFO OOF (4 inner folds)",
+       "anticipated": 0,
+       "anticipated_onset_in_window": 0,
+       "failures": 1,
+       "per_failure": [
+        {
+         "failure_start": "2022-02-28 21:53:00",
+         "anticipated": false,
+         "onset_in_window": false,
+         "lead_before_start_min": null
+        }
+       ],
+       "false_alarm_episodes": 0,
+       "false_alarms_per_day": 0.0,
+       "expected_cost": 100.0,
+       "reference_windows": 2717,
+       "reference_hits": 0,
+       "alarm_time_share": 0.0,
+       "seconds": 114.5
+      },
+      {
+       "fold": 5,
+       "test_failure": "F22_2",
+       "params": {
+        "max_depth": 6,
+        "learning_rate": 0.1,
+        "n_estimators": 300,
+        "subsample": 0.9,
+        "colsample_bytree": 0.8,
+        "pos_weight_scale": 0.25
+       },
+       "threshold_source": "nested LOFO OOF (5 inner folds)",
+       "anticipated": 0,
+       "anticipated_onset_in_window": 0,
+       "failures": 1,
+       "per_failure": [
+        {
+         "failure_start": "2022-03-23 14:54:00",
+         "anticipated": false,
+         "onset_in_window": false,
+         "lead_before_start_min": null
+        }
+       ],
+       "false_alarm_episodes": 0,
+       "false_alarms_per_day": 0.0,
+       "expected_cost": 100.0,
+       "reference_windows": 1744,
+       "reference_hits": 0,
+       "alarm_time_share": 0.0,
+       "seconds": 155.5
+      },
+      {
+       "fold": 6,
+       "test_failure": "F22_3",
+       "params": {
+        "max_depth": 6,
+        "learning_rate": 0.2,
+        "n_estimators": 150,
+        "subsample": 0.7,
+        "colsample_bytree": 0.5
+       },
+       "threshold_source": "nested LOFO OOF (6 inner folds)",
+       "anticipated": 0,
+       "anticipated_onset_in_window": 0,
+       "failures": 1,
+       "per_failure": [
+        {
+         "failure_start": "2022-05-30 12:00:00",
+         "anticipated": false,
+         "onset_in_window": false,
+         "lead_before_start_min": null
+        }
+       ],
+       "false_alarm_episodes": 0,
+       "false_alarms_per_day": 0.0,
+       "expected_cost": 100.0,
+       "reference_windows": 1363,
+       "reference_hits": 0,
+       "alarm_time_share": 0.0,
+       "seconds": 189.3
+      }
+     ]
+    },
+    "detector": {
+     "anticipated": 1,
+     "anticipated_onset_in_window": 1,
+     "chance_hit_rate": 0.006472491909385114,
+     "reference_windows": 10197,
+     "alarm_time_share_mean": 0.012403554727182665,
+     "failures": 6,
+     "false_alarm_episodes": 37,
+     "false_alarms_per_day_mean": 0.2586258366628335,
+     "median_lead_before_start_min": 11.6,
+     "per_fold": [
+      {
+       "fold": 1,
+       "anticipated": 1,
+       "anticipated_onset_in_window": 1,
+       "failures": 1,
+       "per_failure": [
+        {
+         "failure_start": "2020-05-29 23:30:00",
+         "anticipated": true,
+         "onset_in_window": true,
+         "lead_before_start_min": 11.6
+        }
+       ],
+       "false_alarm_episodes": 37,
+       "false_alarms_per_day": 1.5517550199770012,
+       "expected_cost": 37.0,
+       "reference_windows": 894,
+       "reference_hits": 66,
+       "alarm_time_share": 0.07442132836309599
+      },
+      {
+       "fold": 2,
+       "anticipated": 0,
+       "anticipated_onset_in_window": 0,
+       "failures": 1,
+       "per_failure": [
+        {
+         "failure_start": "2020-06-05 10:00:00",
+         "anticipated": false,
+         "onset_in_window": false,
+         "lead_before_start_min": null
+        }
+       ],
+       "false_alarm_episodes": 0,
+       "false_alarms_per_day": 0.0,
+       "expected_cost": 100.0,
+       "reference_windows": 916,
+       "reference_hits": 0,
+       "alarm_time_share": 0.0
+      },
+      {
+       "fold": 3,
+       "anticipated": 0,
+       "anticipated_onset_in_window": 0,
+       "failures": 1,
+       "per_failure": [
+        {
+         "failure_start": "2020-07-15 14:30:00",
+         "anticipated": false,
+         "onset_in_window": false,
+         "lead_before_start_min": null
+        }
+       ],
+       "false_alarm_episodes": 0,
+       "false_alarms_per_day": 0.0,
+       "expected_cost": 100.0,
+       "reference_windows": 2563,
+       "reference_hits": 0,
+       "alarm_time_share": 0.0
+      },
+      {
+       "fold": 4,
+       "anticipated": 0,
+       "anticipated_onset_in_window": 0,
+       "failures": 1,
+       "per_failure": [
+        {
+         "failure_start": "2022-02-28 21:53:00",
+         "anticipated": false,
+         "onset_in_window": false,
+         "lead_before_start_min": null
+        }
+       ],
+       "false_alarm_episodes": 0,
+       "false_alarms_per_day": 0.0,
+       "expected_cost": 100.0,
+       "reference_windows": 2722,
+       "reference_hits": 0,
+       "alarm_time_share": 0.0
+      },
+      {
+       "fold": 5,
+       "anticipated": 0,
+       "anticipated_onset_in_window": 0,
+       "failures": 1,
+       "per_failure": [
+        {
+         "failure_start": "2022-03-23 14:54:00",
+         "anticipated": false,
+         "onset_in_window": false,
+         "lead_before_start_min": null
+        }
+       ],
+       "false_alarm_episodes": 0,
+       "false_alarms_per_day": 0.0,
+       "expected_cost": 100.0,
+       "reference_windows": 1740,
+       "reference_hits": 0,
+       "alarm_time_share": 0.0
+      },
+      {
+       "fold": 6,
+       "anticipated": 0,
+       "anticipated_onset_in_window": 0,
+       "failures": 1,
+       "per_failure": [
+        {
+         "failure_start": "2022-05-30 12:00:00",
+         "anticipated": false,
+         "onset_in_window": false,
+         "lead_before_start_min": null
+        }
+       ],
+       "false_alarm_episodes": 0,
+       "false_alarms_per_day": 0.0,
+       "expected_cost": 100.0,
+       "reference_windows": 1362,
+       "reference_hits": 0,
+       "alarm_time_share": 0.0
+      }
+     ]
+    },
+    "elapsed_s": 588.5
+   },
+   "logistic_regression": {
+    "anticipation": {
+     "anticipated": 4,
+     "anticipated_onset_in_window": 0,
+     "chance_hit_rate": 0.6555370606090277,
+     "reference_windows": 10213,
+     "alarm_time_share_mean": 0.6666534616382905,
+     "failures": 6,
+     "false_alarm_episodes": 3396,
+     "false_alarms_per_day_mean": 12.86188338111561,
+     "median_lead_before_start_min": 30.0,
+     "per_fold": [
+      {
+       "fold": 1,
+       "test_failure": "F20_2",
+       "params": {
+        "C": 1.0
+       },
+       "threshold_source": "fallback (<2 failures in training: a-priori threshold, uncalibrated)",
+       "anticipated": 0,
+       "anticipated_onset_in_window": 0,
+       "failures": 1,
+       "per_failure": [
+        {
+         "failure_start": "2020-05-29 23:30:00",
+         "anticipated": false,
+         "onset_in_window": false,
+         "lead_before_start_min": null
+        }
+       ],
+       "false_alarm_episodes": 0,
+       "false_alarms_per_day": 0.0,
+       "expected_cost": 100.0,
+       "reference_windows": 903,
+       "reference_hits": 0,
+       "alarm_time_share": 0.0,
+       "seconds": 0.4
+      },
+      {
+       "fold": 2,
+       "test_failure": "F20_3",
+       "params": {
+        "C": 1.0,
+        "neg_stride": 1
+       },
+       "threshold_source": "nested LOFO OOF (2 inner folds)",
+       "anticipated": 1,
+       "anticipated_onset_in_window": 0,
+       "failures": 1,
+       "per_failure": [
+        {
+         "failure_start": "2020-06-05 10:00:00",
+         "anticipated": true,
+         "onset_in_window": false,
+         "lead_before_start_min": 30.0
+        }
+       ],
+       "false_alarm_episodes": 457,
+       "false_alarms_per_day": 19.60331448373788,
+       "expected_cost": 457.0,
+       "reference_windows": 871,
+       "reference_hits": 871,
+       "alarm_time_share": 0.9999672909729627,
+       "seconds": 83.1
+      },
+      {
+       "fold": 3,
+       "test_failure": "F20_4",
+       "params": {
+        "C": 1.0,
+        "pos_weight_scale": 0.25
+       },
+       "threshold_source": "nested LOFO OOF (3 inner folds)",
+       "anticipated": 0,
+       "anticipated_onset_in_window": 0,
+       "failures": 1,
+       "per_failure": [
+        {
+         "failure_start": "2020-07-15 14:30:00",
+         "anticipated": false,
+         "onset_in_window": false,
+         "lead_before_start_min": null
+        }
+       ],
+       "false_alarm_episodes": 0,
+       "false_alarms_per_day": 0.0,
+       "expected_cost": 100.0,
+       "reference_windows": 2615,
+       "reference_hits": 0,
+       "alarm_time_share": 0.0,
+       "seconds": 171.7
+      },
+      {
+       "fold": 4,
+       "test_failure": "F22_1",
+       "params": {
+        "C": 10.0
+       },
+       "threshold_source": "nested LOFO OOF (4 inner folds)",
+       "anticipated": 1,
+       "anticipated_onset_in_window": 0,
+       "failures": 1,
+       "per_failure": [
+        {
+         "failure_start": "2022-02-28 21:53:00",
+         "anticipated": true,
+         "onset_in_window": false,
+         "lead_before_start_min": 30.0
+        }
+       ],
+       "false_alarm_episodes": 1369,
+       "false_alarms_per_day": 19.555526163511615,
+       "expected_cost": 1369.0,
+       "reference_windows": 2717,
+       "reference_hits": 2717,
+       "alarm_time_share": 0.9999897828237005,
+       "seconds": 408.2
+      },
+      {
+       "fold": 5,
+       "test_failure": "F22_2",
+       "params": {
+        "C": 10.0
+       },
+       "threshold_source": "nested LOFO OOF (5 inner folds)",
+       "anticipated": 1,
+       "anticipated_onset_in_window": 0,
+       "failures": 1,
+       "per_failure": [
+        {
+         "failure_start": "2022-03-23 14:54:00",
+         "anticipated": true,
+         "onset_in_window": false,
+         "lead_before_start_min": 30.0
+        }
+       ],
+       "false_alarm_episodes": 882,
+       "false_alarms_per_day": 19.472785812848162,
+       "expected_cost": 882.0,
+       "reference_windows": 1744,
+       "reference_hits": 1744,
+       "alarm_time_share": 0.9999840781571422,
+       "seconds": 730.8
+      },
+      {
+       "fold": 6,
+       "test_failure": "F22_3",
+       "params": {
+        "C": 10.0
+       },
+       "threshold_source": "nested LOFO OOF (6 inner folds)",
+       "anticipated": 1,
+       "anticipated_onset_in_window": 0,
+       "failures": 1,
+       "per_failure": [
+        {
+         "failure_start": "2022-05-30 12:00:00",
+         "anticipated": true,
+         "onset_in_window": false,
+         "lead_before_start_min": 30.0
+        }
+       ],
+       "false_alarm_episodes": 688,
+       "false_alarms_per_day": 18.539673826596015,
+       "expected_cost": 688.0,
+       "reference_windows": 1363,
+       "reference_hits": 1363,
+       "alarm_time_share": 0.9999796178759381,
+       "seconds": 1037.3
+      }
+     ]
+    },
+    "detector": {
+     "anticipated": 1,
+     "anticipated_onset_in_window": 1,
+     "chance_hit_rate": 0.009120329508679022,
+     "reference_windows": 10197,
+     "alarm_time_share_mean": 0.013537476432248912,
+     "failures": 6,
+     "false_alarm_episodes": 64,
+     "false_alarms_per_day_mean": 0.3636421510844848,
+     "median_lead_before_start_min": 11.3,
+     "per_fold": [
+      {
+       "fold": 1,
+       "anticipated": 1,
+       "anticipated_onset_in_window": 1,
+       "failures": 1,
+       "per_failure": [
+        {
+         "failure_start": "2020-05-29 23:30:00",
+         "anticipated": true,
+         "onset_in_window": true,
+         "lead_before_start_min": 11.3
+        }
+       ],
+       "false_alarm_episodes": 45,
+       "false_alarms_per_day": 1.8872696188909475,
+       "expected_cost": 45.0,
+       "reference_windows": 894,
+       "reference_hits": 70,
+       "alarm_time_share": 0.07585069138352266
+      },
+      {
+       "fold": 2,
+       "anticipated": 0,
+       "anticipated_onset_in_window": 0,
+       "failures": 1,
+       "per_failure": [
+        {
+         "failure_start": "2020-06-05 10:00:00",
+         "anticipated": false,
+         "onset_in_window": false,
+         "lead_before_start_min": null
+        }
+       ],
+       "false_alarm_episodes": 0,
+       "false_alarms_per_day": 0.0,
+       "expected_cost": 100.0,
+       "reference_windows": 916,
+       "reference_hits": 0,
+       "alarm_time_share": 0.0
+      },
+      {
+       "fold": 3,
+       "anticipated": 0,
+       "anticipated_onset_in_window": 0,
+       "failures": 1,
+       "per_failure": [
+        {
+         "failure_start": "2020-07-15 14:30:00",
+         "anticipated": false,
+         "onset_in_window": false,
+         "lead_before_start_min": null
+        }
+       ],
+       "false_alarm_episodes": 0,
+       "false_alarms_per_day": 0.0,
+       "expected_cost": 100.0,
+       "reference_windows": 2563,
+       "reference_hits": 0,
+       "alarm_time_share": 0.0
+      },
+      {
+       "fold": 4,
+       "anticipated": 0,
+       "anticipated_onset_in_window": 0,
+       "failures": 1,
+       "per_failure": [
+        {
+         "failure_start": "2022-02-28 21:53:00",
+         "anticipated": false,
+         "onset_in_window": false,
+         "lead_before_start_min": null
+        }
+       ],
+       "false_alarm_episodes": 16,
+       "false_alarms_per_day": 0.228238957471012,
+       "expected_cost": 116.0,
+       "reference_windows": 2722,
+       "reference_hits": 19,
+       "alarm_time_share": 0.004806172136849428
+      },
+      {
+       "fold": 5,
+       "anticipated": 0,
+       "anticipated_onset_in_window": 0,
+       "failures": 1,
+       "per_failure": [
+        {
+         "failure_start": "2022-03-23 14:54:00",
+         "anticipated": false,
+         "onset_in_window": false,
+         "lead_before_start_min": null
+        }
+       ],
+       "false_alarm_episodes": 3,
+       "false_alarms_per_day": 0.06634433014494905,
+       "expected_cost": 103.0,
+       "reference_windows": 1740,
+       "reference_hits": 4,
+       "alarm_time_share": 0.0005679950731213882
+      },
+      {
+       "fold": 6,
+       "anticipated": 0,
+       "anticipated_onset_in_window": 0,
+       "failures": 1,
+       "per_failure": [
+        {
+         "failure_start": "2022-05-30 12:00:00",
+         "anticipated": false,
+         "onset_in_window": false,
+         "lead_before_start_min": null
+        }
+       ],
+       "false_alarm_episodes": 0,
+       "false_alarms_per_day": 0.0,
+       "expected_cost": 100.0,
+       "reference_windows": 1362,
+       "reference_hits": 0,
+       "alarm_time_share": 0.0
+      }
+     ]
+    },
+    "elapsed_s": 2433.5
+   }
+  },
+  "60": {
+   "xgboost": {
+    "anticipation": {
+     "anticipated": 1,
+     "anticipated_onset_in_window": 0,
+     "chance_hit_rate": 0.09376225970969007,
+     "reference_windows": 5098,
+     "alarm_time_share_mean": 0.1667447210382467,
+     "failures": 6,
+     "false_alarm_episodes": 519,
+     "false_alarms_per_day_mean": 3.4152169285429257,
+     "median_lead_before_start_min": 59.9,
+     "per_fold": [
+      {
+       "fold": 1,
+       "test_failure": "F20_2",
+       "params": {
+        "max_depth": 6,
+        "learning_rate": 0.1,
+        "n_estimators": 300,
+        "subsample": 0.9,
+        "colsample_bytree": 0.8
+       },
+       "threshold_source": "fallback (<2 failures in training: a-priori threshold, uncalibrated)",
+       "anticipated": 0,
+       "anticipated_onset_in_window": 0,
+       "failures": 1,
+       "per_failure": [
+        {
+         "failure_start": "2020-05-29 23:30:00",
+         "anticipated": false,
+         "onset_in_window": false,
+         "lead_before_start_min": null
+        }
+       ],
+       "false_alarm_episodes": 0,
+       "false_alarms_per_day": 0.0,
+       "expected_cost": 100.0,
+       "reference_windows": 451,
+       "reference_hits": 0,
+       "alarm_time_share": 0.0,
+       "seconds": 0.7
+      },
+      {
+       "fold": 2,
+       "test_failure": "F20_3",
+       "params": {
+        "max_depth": 6,
+        "learning_rate": 0.1,
+        "n_estimators": 300,
+        "subsample": 0.9,
+        "colsample_bytree": 0.8
+       },
+       "threshold_source": "nested LOFO OOF (2 inner folds)",
+       "anticipated": 1,
+       "anticipated_onset_in_window": 0,
+       "failures": 1,
+       "per_failure": [
+        {
+         "failure_start": "2020-06-05 10:00:00",
+         "anticipated": true,
+         "onset_in_window": false,
+         "lead_before_start_min": 59.9
+        }
+       ],
+       "false_alarm_episodes": 456,
+       "false_alarms_per_day": 19.56040911710955,
+       "expected_cost": 456.0,
+       "reference_windows": 436,
+       "reference_hits": 436,
+       "alarm_time_share": 0.9999672521973776,
+       "seconds": 53.4
+      },
+      {
+       "fold": 3,
+       "test_failure": "F20_4",
+       "params": {
+        "max_depth": 6,
+        "learning_rate": 0.1,
+        "n_estimators": 300,
+        "subsample": 0.9,
+        "colsample_bytree": 0.8,
+        "neg_stride": 1
+       },
+       "threshold_source": "nested LOFO OOF (3 inner folds)",
+       "anticipated": 0,
+       "anticipated_onset_in_window": 0,
+       "failures": 1,
+       "per_failure": [
+        {
+         "failure_start": "2020-07-15 14:30:00",
+         "anticipated": false,
+         "onset_in_window": false,
+         "lead_before_start_min": null
+        }
+       ],
+       "false_alarm_episodes": 63,
+       "false_alarms_per_day": 0.9308924541480057,
+       "expected_cost": 163.0,
+       "reference_windows": 1298,
+       "reference_hits": 42,
+       "alarm_time_share": 0.0005010740321025658,
+       "seconds": 80.4
+      },
+      {
+       "fold": 4,
+       "test_failure": "F22_1",
+       "params": {
+        "max_depth": 6,
+        "learning_rate": 0.1,
+        "n_estimators": 300,
+        "subsample": 0.9,
+        "colsample_bytree": 0.8,
+        "pos_weight_scale": 0.25
+       },
+       "threshold_source": "nested LOFO OOF (4 inner folds)",
+       "anticipated": 0,
+       "anticipated_onset_in_window": 0,
+       "failures": 1,
+       "per_failure": [
+        {
+         "failure_start": "2022-02-28 21:53:00",
+         "anticipated": false,
+         "onset_in_window": false,
+         "lead_before_start_min": null
+        }
+       ],
+       "false_alarm_episodes": 0,
+       "false_alarms_per_day": 0.0,
+       "expected_cost": 100.0,
+       "reference_windows": 1358,
+       "reference_hits": 0,
+       "alarm_time_share": 0.0,
+       "seconds": 119.5
+      },
+      {
+       "fold": 5,
+       "test_failure": "F22_2",
+       "params": {
+        "max_depth": 8,
+        "learning_rate": 0.1,
+        "n_estimators": 300,
+        "subsample": 0.9,
+        "colsample_bytree": 0.8
+       },
+       "threshold_source": "nested LOFO OOF (5 inner folds)",
+       "anticipated": 0,
+       "anticipated_onset_in_window": 0,
+       "failures": 1,
+       "per_failure": [
+        {
+         "failure_start": "2022-03-23 14:54:00",
+         "anticipated": false,
+         "onset_in_window": false,
+         "lead_before_start_min": null
+        }
+       ],
+       "false_alarm_episodes": 0,
+       "false_alarms_per_day": 0.0,
+       "expected_cost": 100.0,
+       "reference_windows": 873,
+       "reference_hits": 0,
+       "alarm_time_share": 0.0,
+       "seconds": 161.4
+      },
+      {
+       "fold": 6,
+       "test_failure": "F22_3",
+       "params": {
+        "max_depth": 8,
+        "learning_rate": 0.1,
+        "n_estimators": 300,
+        "subsample": 0.9,
+        "colsample_bytree": 0.8
+       },
+       "threshold_source": "nested LOFO OOF (6 inner folds)",
+       "anticipated": 0,
+       "anticipated_onset_in_window": 0,
+       "failures": 1,
+       "per_failure": [
+        {
+         "failure_start": "2022-05-30 12:00:00",
+         "anticipated": false,
+         "onset_in_window": false,
+         "lead_before_start_min": null
+        }
+       ],
+       "false_alarm_episodes": 0,
+       "false_alarms_per_day": 0.0,
+       "expected_cost": 100.0,
+       "reference_windows": 682,
+       "reference_hits": 0,
+       "alarm_time_share": 0.0,
+       "seconds": 204.6
+      }
+     ]
+    },
+    "detector": {
+     "anticipated": 1,
+     "anticipated_onset_in_window": 1,
+     "chance_hit_rate": 0.006480754124116261,
+     "reference_windows": 5092,
+     "alarm_time_share_mean": 0.012417785622727941,
+     "failures": 6,
+     "false_alarm_episodes": 37,
+     "false_alarms_per_day_mean": 0.2586258366628335,
+     "median_lead_before_start_min": 11.6,
+     "per_fold": [
+      {
+       "fold": 1,
+       "anticipated": 1,
+       "anticipated_onset_in_window": 1,
+       "failures": 1,
+       "per_failure": [
+        {
+         "failure_start": "2020-05-29 23:30:00",
+         "anticipated": true,
+         "onset_in_window": true,
+         "lead_before_start_min": 11.6
+        }
+       ],
+       "false_alarm_episodes": 37,
+       "false_alarms_per_day": 1.5517550199770012,
+       "expected_cost": 37.0,
+       "reference_windows": 443,
+       "reference_hits": 33,
+       "alarm_time_share": 0.07450671373636765
+      },
+      {
+       "fold": 2,
+       "anticipated": 0,
+       "anticipated_onset_in_window": 0,
+       "failures": 1,
+       "per_failure": [
+        {
+         "failure_start": "2020-06-05 10:00:00",
+         "anticipated": false,
+         "onset_in_window": false,
+         "lead_before_start_min": null
+        }
+       ],
+       "false_alarm_episodes": 0,
+       "false_alarms_per_day": 0.0,
+       "expected_cost": 100.0,
+       "reference_windows": 458,
+       "reference_hits": 0,
+       "alarm_time_share": 0.0
+      },
+      {
+       "fold": 3,
+       "anticipated": 0,
+       "anticipated_onset_in_window": 0,
+       "failures": 1,
+       "per_failure": [
+        {
+         "failure_start": "2020-07-15 14:30:00",
+         "anticipated": false,
+         "onset_in_window": false,
+         "lead_before_start_min": null
+        }
+       ],
+       "false_alarm_episodes": 0,
+       "false_alarms_per_day": 0.0,
+       "expected_cost": 100.0,
+       "reference_windows": 1283,
+       "reference_hits": 0,
+       "alarm_time_share": 0.0
+      },
+      {
+       "fold": 4,
+       "anticipated": 0,
+       "anticipated_onset_in_window": 0,
+       "failures": 1,
+       "per_failure": [
+        {
+         "failure_start": "2022-02-28 21:53:00",
+         "anticipated": false,
+         "onset_in_window": false,
+         "lead_before_start_min": null
+        }
+       ],
+       "false_alarm_episodes": 0,
+       "false_alarms_per_day": 0.0,
+       "expected_cost": 100.0,
+       "reference_windows": 1360,
+       "reference_hits": 0,
+       "alarm_time_share": 0.0
+      },
+      {
+       "fold": 5,
+       "anticipated": 0,
+       "anticipated_onset_in_window": 0,
+       "failures": 1,
+       "per_failure": [
+        {
+         "failure_start": "2022-03-23 14:54:00",
+         "anticipated": false,
+         "onset_in_window": false,
+         "lead_before_start_min": null
+        }
+       ],
+       "false_alarm_episodes": 0,
+       "false_alarms_per_day": 0.0,
+       "expected_cost": 100.0,
+       "reference_windows": 868,
+       "reference_hits": 0,
+       "alarm_time_share": 0.0
+      },
+      {
+       "fold": 6,
+       "anticipated": 0,
+       "anticipated_onset_in_window": 0,
+       "failures": 1,
+       "per_failure": [
+        {
+         "failure_start": "2022-05-30 12:00:00",
+         "anticipated": false,
+         "onset_in_window": false,
+         "lead_before_start_min": null
+        }
+       ],
+       "false_alarm_episodes": 0,
+       "false_alarms_per_day": 0.0,
+       "expected_cost": 100.0,
+       "reference_windows": 680,
+       "reference_hits": 0,
+       "alarm_time_share": 0.0
+      }
+     ]
+    },
+    "elapsed_s": 622.0
+   },
+   "logistic_regression": {
+    "anticipation": {
+     "anticipated": 4,
+     "anticipated_onset_in_window": 0,
+     "chance_hit_rate": 0.6569242840329541,
+     "reference_windows": 5098,
+     "alarm_time_share_mean": 0.6659908048735883,
+     "failures": 6,
+     "false_alarm_episodes": 3524,
+     "false_alarms_per_day_mean": 13.205373898604511,
+     "median_lead_before_start_min": 60.0,
+     "per_fold": [
+      {
+       "fold": 1,
+       "test_failure": "F20_2",
+       "params": {
+        "C": 1.0
+       },
+       "threshold_source": "fallback (<2 failures in training: a-priori threshold, uncalibrated)",
+       "anticipated": 0,
+       "anticipated_onset_in_window": 0,
+       "failures": 1,
+       "per_failure": [
+        {
+         "failure_start": "2020-05-29 23:30:00",
+         "anticipated": false,
+         "onset_in_window": false,
+         "lead_before_start_min": null
+        }
+       ],
+       "false_alarm_episodes": 0,
+       "false_alarms_per_day": 0.0,
+       "expected_cost": 100.0,
+       "reference_windows": 451,
+       "reference_hits": 0,
+       "alarm_time_share": 0.0,
+       "seconds": 0.4
+      },
+      {
+       "fold": 2,
+       "test_failure": "F20_3",
+       "params": {
+        "C": 10.0
+       },
+       "threshold_source": "nested LOFO OOF (2 inner folds)",
+       "anticipated": 1,
+       "anticipated_onset_in_window": 0,
+       "failures": 1,
+       "per_failure": [
+        {
+         "failure_start": "2020-06-05 10:00:00",
+         "anticipated": true,
+         "onset_in_window": false,
+         "lead_before_start_min": 59.9
+        }
+       ],
+       "false_alarm_episodes": 456,
+       "false_alarms_per_day": 19.56040911710955,
+       "expected_cost": 456.0,
+       "reference_windows": 436,
+       "reference_hits": 436,
+       "alarm_time_share": 0.9999672521973776,
+       "seconds": 65.8
+      },
+      {
+       "fold": 3,
+       "test_failure": "F20_4",
+       "params": {
+        "C": 0.01
+       },
+       "threshold_source": "nested LOFO OOF (3 inner folds)",
+       "anticipated": 0,
+       "anticipated_onset_in_window": 0,
+       "failures": 1,
+       "per_failure": [
+        {
+         "failure_start": "2020-07-15 14:30:00",
+         "anticipated": false,
+         "onset_in_window": false,
+         "lead_before_start_min": null
+        }
+       ],
+       "false_alarm_episodes": 0,
+       "false_alarms_per_day": 0.0,
+       "expected_cost": 100.0,
+       "reference_windows": 1298,
+       "reference_hits": 0,
+       "alarm_time_share": 0.0,
+       "seconds": 161.2
+      },
+      {
+       "fold": 4,
+       "test_failure": "F22_1",
+       "params": {
+        "C": 0.01
+       },
+       "threshold_source": "nested LOFO OOF (4 inner folds)",
+       "anticipated": 1,
+       "anticipated_onset_in_window": 0,
+       "failures": 1,
+       "per_failure": [
+        {
+         "failure_start": "2022-02-28 21:53:00",
+         "anticipated": true,
+         "onset_in_window": false,
+         "lead_before_start_min": 60.0
+        }
+       ],
+       "false_alarm_episodes": 1477,
+       "false_alarms_per_day": 21.15035799522673,
+       "expected_cost": 1477.0,
+       "reference_windows": 1358,
+       "reference_hits": 1358,
+       "alarm_time_share": 0.9973995228369734,
+       "seconds": 284.6
+      },
+      {
+       "fold": 5,
+       "test_failure": "F22_2",
+       "params": {
+        "C": 0.01
+       },
+       "threshold_source": "nested LOFO OOF (5 inner folds)",
+       "anticipated": 1,
+       "anticipated_onset_in_window": 0,
+       "failures": 1,
+       "per_failure": [
+        {
+         "failure_start": "2022-03-23 14:54:00",
+         "anticipated": true,
+         "onset_in_window": false,
+         "lead_before_start_min": 60.0
+        }
+       ],
+       "false_alarm_episodes": 893,
+       "false_alarms_per_day": 19.71760869509661,
+       "expected_cost": 893.0,
+       "reference_windows": 873,
+       "reference_hits": 873,
+       "alarm_time_share": 0.9992830170641939,
+       "seconds": 502.8
+      },
+      {
+       "fold": 6,
+       "test_failure": "F22_3",
+       "params": {
+        "C": 0.01
+       },
+       "threshold_source": "nested LOFO OOF (6 inner folds)",
+       "anticipated": 1,
+       "anticipated_onset_in_window": 0,
+       "failures": 1,
+       "per_failure": [
+        {
+         "failure_start": "2022-05-30 12:00:00",
+         "anticipated": true,
+         "onset_in_window": false,
+         "lead_before_start_min": 60.0
+        }
+       ],
+       "false_alarm_episodes": 698,
+       "false_alarms_per_day": 18.803867584194165,
+       "expected_cost": 698.0,
+       "reference_windows": 682,
+       "reference_hits": 682,
+       "alarm_time_share": 0.9992950371429852,
+       "seconds": 663.9
+      }
+     ]
+    },
+    "detector": {
+     "anticipated": 1,
+     "anticipated_onset_in_window": 1,
+     "chance_hit_rate": 0.010015710919088767,
+     "reference_windows": 5092,
+     "alarm_time_share_mean": 0.013552329298297505,
+     "failures": 6,
+     "false_alarm_episodes": 64,
+     "false_alarms_per_day_mean": 0.3636421510844848,
+     "median_lead_before_start_min": 11.3,
+     "per_fold": [
+      {
+       "fold": 1,
+       "anticipated": 1,
+       "anticipated_onset_in_window": 1,
+       "failures": 1,
+       "per_failure": [
+        {
+         "failure_start": "2020-05-29 23:30:00",
+         "anticipated": true,
+         "onset_in_window": true,
+         "lead_before_start_min": 11.3
+        }
+       ],
+       "false_alarm_episodes": 45,
+       "false_alarms_per_day": 1.8872696188909475,
+       "expected_cost": 45.0,
+       "reference_windows": 443,
+       "reference_hits": 36,
+       "alarm_time_share": 0.07593771669923721
+      },
+      {
+       "fold": 2,
+       "anticipated": 0,
+       "anticipated_onset_in_window": 0,
+       "failures": 1,
+       "per_failure": [
+        {
+         "failure_start": "2020-06-05 10:00:00",
+         "anticipated": false,
+         "onset_in_window": false,
+         "lead_before_start_min": null
+        }
+       ],
+       "false_alarm_episodes": 0,
+       "false_alarms_per_day": 0.0,
+       "expected_cost": 100.0,
+       "reference_windows": 458,
+       "reference_hits": 0,
+       "alarm_time_share": 0.0
+      },
+      {
+       "fold": 3,
+       "anticipated": 0,
+       "anticipated_onset_in_window": 0,
+       "failures": 1,
+       "per_failure": [
+        {
+         "failure_start": "2020-07-15 14:30:00",
+         "anticipated": false,
+         "onset_in_window": false,
+         "lead_before_start_min": null
+        }
+       ],
+       "false_alarm_episodes": 0,
+       "false_alarms_per_day": 0.0,
+       "expected_cost": 100.0,
+       "reference_windows": 1283,
+       "reference_hits": 0,
+       "alarm_time_share": 0.0
+      },
+      {
+       "fold": 4,
+       "anticipated": 0,
+       "anticipated_onset_in_window": 0,
+       "failures": 1,
+       "per_failure": [
+        {
+         "failure_start": "2022-02-28 21:53:00",
+         "anticipated": false,
+         "onset_in_window": false,
+         "lead_before_start_min": null
+        }
+       ],
+       "false_alarm_episodes": 16,
+       "false_alarms_per_day": 0.228238957471012,
+       "expected_cost": 116.0,
+       "reference_windows": 1360,
+       "reference_hits": 12,
+       "alarm_time_share": 0.004807937586603078
+      },
+      {
+       "fold": 5,
+       "anticipated": 0,
+       "anticipated_onset_in_window": 0,
+       "failures": 1,
+       "per_failure": [
+        {
+         "failure_start": "2022-03-23 14:54:00",
+         "anticipated": false,
+         "onset_in_window": false,
+         "lead_before_start_min": null
+        }
+       ],
+       "false_alarm_episodes": 3,
+       "false_alarms_per_day": 0.06634433014494905,
+       "expected_cost": 103.0,
+       "reference_windows": 868,
+       "reference_hits": 3,
+       "alarm_time_share": 0.0005683215039447259
+      },
+      {
+       "fold": 6,
+       "anticipated": 0,
+       "anticipated_onset_in_window": 0,
+       "failures": 1,
+       "per_failure": [
+        {
+         "failure_start": "2022-05-30 12:00:00",
+         "anticipated": false,
+         "onset_in_window": false,
+         "lead_before_start_min": null
+        }
+       ],
+       "false_alarm_episodes": 0,
+       "false_alarms_per_day": 0.0,
+       "expected_cost": 100.0,
+       "reference_windows": 680,
+       "reference_hits": 0,
+       "alarm_time_share": 0.0
+      }
+     ]
+    },
+    "elapsed_s": 1680.7
+   }
+  },
+  "120": {
+   "xgboost": {
+    "anticipation": {
+     "anticipated": 2,
+     "anticipated_onset_in_window": 0,
+     "chance_hit_rate": 0.21951219512195122,
+     "reference_windows": 2542,
+     "alarm_time_share_mean": 0.33332446907313157,
+     "failures": 6,
+     "false_alarm_episodes": 1143,
+     "false_alarms_per_day_mean": 6.3429249302882456,
+     "median_lead_before_start_min": 119.95,
+     "per_fold": [
+      {
+       "fold": 1,
+       "test_failure": "F20_2",
+       "params": {
+        "max_depth": 6,
+        "learning_rate": 0.1,
+        "n_estimators": 300,
+        "subsample": 0.9,
+        "colsample_bytree": 0.8
+       },
+       "threshold_source": "fallback (<2 failures in training: a-priori threshold, uncalibrated)",
+       "anticipated": 0,
+       "anticipated_onset_in_window": 0,
+       "failures": 1,
+       "per_failure": [
+        {
+         "failure_start": "2020-05-29 23:30:00",
+         "anticipated": false,
+         "onset_in_window": false,
+         "lead_before_start_min": null
+        }
+       ],
+       "false_alarm_episodes": 0,
+       "false_alarms_per_day": 0.0,
+       "expected_cost": 100.0,
+       "reference_windows": 225,
+       "reference_hits": 0,
+       "alarm_time_share": 0.0,
+       "seconds": 0.6
+      },
+      {
+       "fold": 2,
+       "test_failure": "F20_3",
+       "params": {
+        "max_depth": 6,
+        "learning_rate": 0.2,
+        "n_estimators": 150,
+        "subsample": 0.7,
+        "colsample_bytree": 0.5
+       },
+       "threshold_source": "nested LOFO OOF (2 inner folds)",
+       "anticipated": 1,
+       "anticipated_onset_in_window": 0,
+       "failures": 1,
+       "per_failure": [
+        {
+         "failure_start": "2020-06-05 10:00:00",
+         "anticipated": true,
+         "onset_in_window": false,
+         "lead_before_start_min": 119.9
+        }
+       ],
+       "false_alarm_episodes": 456,
+       "false_alarms_per_day": 19.56039940581633,
+       "expected_cost": 456.0,
+       "reference_windows": 216,
+       "reference_hits": 216,
+       "alarm_time_share": 0.9999671741542421,
+       "seconds": 75.5
+      },
+      {
+       "fold": 3,
+       "test_failure": "F20_4",
+       "params": {
+        "max_depth": 4,
+        "learning_rate": 0.05,
+        "n_estimators": 600,
+        "subsample": 0.8,
+        "colsample_bytree": 0.6
+       },
+       "threshold_source": "nested LOFO OOF (3 inner folds)",
+       "anticipated": 0,
+       "anticipated_onset_in_window": 0,
+       "failures": 1,
+       "per_failure": [
+        {
+         "failure_start": "2020-07-15 14:30:00",
+         "anticipated": false,
+         "onset_in_window": false,
+         "lead_before_start_min": null
+        }
+       ],
+       "false_alarm_episodes": 0,
+       "false_alarms_per_day": 0.0,
+       "expected_cost": 100.0,
+       "reference_windows": 647,
+       "reference_hits": 0,
+       "alarm_time_share": 0.0,
+       "seconds": 106.2
+      },
+      {
+       "fold": 4,
+       "test_failure": "F22_1",
+       "params": {
+        "max_depth": 6,
+        "learning_rate": 0.1,
+        "n_estimators": 300,
+        "subsample": 0.9,
+        "colsample_bytree": 0.8,
+        "pos_weight_scale": 0.25
+       },
+       "threshold_source": "nested LOFO OOF (4 inner folds)",
+       "anticipated": 0,
+       "anticipated_onset_in_window": 0,
+       "failures": 1,
+       "per_failure": [
+        {
+         "failure_start": "2022-02-28 21:53:00",
+         "anticipated": false,
+         "onset_in_window": false,
+         "lead_before_start_min": null
+        }
+       ],
+       "false_alarm_episodes": 0,
+       "false_alarms_per_day": 0.0,
+       "expected_cost": 100.0,
+       "reference_windows": 678,
+       "reference_hits": 0,
+       "alarm_time_share": 0.0,
+       "seconds": 159.4
+      },
+      {
+       "fold": 5,
+       "test_failure": "F22_2",
+       "params": {
+        "max_depth": 6,
+        "learning_rate": 0.1,
+        "n_estimators": 300,
+        "subsample": 0.9,
+        "colsample_bytree": 0.8,
+        "neg_stride": 1
+       },
+       "threshold_source": "nested LOFO OOF (5 inner folds)",
+       "anticipated": 0,
+       "anticipated_onset_in_window": 0,
+       "failures": 1,
+       "per_failure": [
+        {
+         "failure_start": "2022-03-23 14:54:00",
+         "anticipated": false,
+         "onset_in_window": false,
+         "lead_before_start_min": null
+        }
+       ],
+       "false_alarm_episodes": 0,
+       "false_alarms_per_day": 0.0,
+       "expected_cost": 100.0,
+       "reference_windows": 434,
+       "reference_hits": 0,
+       "alarm_time_share": 0.0,
+       "seconds": 223.6
+      },
+      {
+       "fold": 6,
+       "test_failure": "F22_3",
+       "params": {
+        "max_depth": 6,
+        "learning_rate": 0.1,
+        "n_estimators": 300,
+        "subsample": 0.9,
+        "colsample_bytree": 0.8,
+        "neg_stride": 1
+       },
+       "threshold_source": "nested LOFO OOF (6 inner folds)",
+       "anticipated": 1,
+       "anticipated_onset_in_window": 0,
+       "failures": 1,
+       "per_failure": [
+        {
+         "failure_start": "2022-05-30 12:00:00",
+         "anticipated": true,
+         "onset_in_window": false,
+         "lead_before_start_min": 120.0
+        }
+       ],
+       "false_alarm_episodes": 687,
+       "false_alarms_per_day": 18.497150175913145,
+       "expected_cost": 687.0,
+       "reference_windows": 342,
+       "reference_hits": 342,
+       "alarm_time_share": 0.9999796402845473,
+       "seconds": 254.7
+      }
+     ]
+    },
+    "detector": {
+     "anticipated": 1,
+     "anticipated_onset_in_window": 1,
+     "chance_hit_rate": 0.006664053312426499,
+     "reference_windows": 2551,
+     "alarm_time_share_mean": 0.0124462669623695,
+     "failures": 6,
+     "false_alarm_episodes": 37,
+     "false_alarms_per_day_mean": 0.2586258366628335,
+     "median_lead_before_start_min": 11.6,
+     "per_fold": [
+      {
+       "fold": 1,
+       "anticipated": 1,
+       "anticipated_onset_in_window": 1,
+       "failures": 1,
+       "per_failure": [
+        {
+         "failure_start": "2020-05-29 23:30:00",
+         "anticipated": true,
+         "onset_in_window": true,
+         "lead_before_start_min": 11.6
+        }
+       ],
+       "false_alarm_episodes": 37,
+       "false_alarms_per_day": 1.5517550199770012,
+       "expected_cost": 37.0,
+       "reference_windows": 220,
+       "reference_hits": 17,
+       "alarm_time_share": 0.07467760177421699
+      },
+      {
+       "fold": 2,
+       "anticipated": 0,
+       "anticipated_onset_in_window": 0,
+       "failures": 1,
+       "per_failure": [
+        {
+         "failure_start": "2020-06-05 10:00:00",
+         "anticipated": false,
+         "onset_in_window": false,
+         "lead_before_start_min": null
+        }
+       ],
+       "false_alarm_episodes": 0,
+       "false_alarms_per_day": 0.0,
+       "expected_cost": 100.0,
+       "reference_windows": 230,
+       "reference_hits": 0,
+       "alarm_time_share": 0.0
+      },
+      {
+       "fold": 3,
+       "anticipated": 0,
+       "anticipated_onset_in_window": 0,
+       "failures": 1,
+       "per_failure": [
+        {
+         "failure_start": "2020-07-15 14:30:00",
+         "anticipated": false,
+         "onset_in_window": false,
+         "lead_before_start_min": null
+        }
+       ],
+       "false_alarm_episodes": 0,
+       "false_alarms_per_day": 0.0,
+       "expected_cost": 100.0,
+       "reference_windows": 646,
+       "reference_hits": 0,
+       "alarm_time_share": 0.0
+      },
+      {
+       "fold": 4,
+       "anticipated": 0,
+       "anticipated_onset_in_window": 0,
+       "failures": 1,
+       "per_failure": [
+        {
+         "failure_start": "2022-02-28 21:53:00",
+         "anticipated": false,
+         "onset_in_window": false,
+         "lead_before_start_min": null
+        }
+       ],
+       "false_alarm_episodes": 0,
+       "false_alarms_per_day": 0.0,
+       "expected_cost": 100.0,
+       "reference_windows": 679,
+       "reference_hits": 0,
+       "alarm_time_share": 0.0
+      },
+      {
+       "fold": 5,
+       "anticipated": 0,
+       "anticipated_onset_in_window": 0,
+       "failures": 1,
+       "per_failure": [
+        {
+         "failure_start": "2022-03-23 14:54:00",
+         "anticipated": false,
+         "onset_in_window": false,
+         "lead_before_start_min": null
+        }
+       ],
+       "false_alarm_episodes": 0,
+       "false_alarms_per_day": 0.0,
+       "expected_cost": 100.0,
+       "reference_windows": 436,
+       "reference_hits": 0,
+       "alarm_time_share": 0.0
+      },
+      {
+       "fold": 6,
+       "anticipated": 0,
+       "anticipated_onset_in_window": 0,
+       "failures": 1,
+       "per_failure": [
+        {
+         "failure_start": "2022-05-30 12:00:00",
+         "anticipated": false,
+         "onset_in_window": false,
+         "lead_before_start_min": null
+        }
+       ],
+       "false_alarm_episodes": 0,
+       "false_alarms_per_day": 0.0,
+       "expected_cost": 100.0,
+       "reference_windows": 340,
+       "reference_hits": 0,
+       "alarm_time_share": 0.0
+      }
+     ]
+    },
+    "elapsed_s": 821.9
+   },
+   "logistic_regression": {
+    "anticipation": {
+     "anticipated": 5,
+     "anticipated_onset_in_window": 0,
+     "chance_hit_rate": 0.9114870180959874,
+     "reference_windows": 2542,
+     "alarm_time_share_mean": 0.8328714380982345,
+     "failures": 6,
+     "false_alarm_episodes": 4855,
+     "false_alarms_per_day_mean": 16.471336757208856,
+     "median_lead_before_start_min": 120.0,
+     "per_fold": [
+      {
+       "fold": 1,
+       "test_failure": "F20_2",
+       "params": {
+        "C": 1.0
+       },
+       "threshold_source": "fallback (<2 failures in training: a-priori threshold, uncalibrated)",
+       "anticipated": 0,
+       "anticipated_onset_in_window": 0,
+       "failures": 1,
+       "per_failure": [
+        {
+         "failure_start": "2020-05-29 23:30:00",
+         "anticipated": false,
+         "onset_in_window": false,
+         "lead_before_start_min": null
+        }
+       ],
+       "false_alarm_episodes": 0,
+       "false_alarms_per_day": 0.0,
+       "expected_cost": 100.0,
+       "reference_windows": 225,
+       "reference_hits": 0,
+       "alarm_time_share": 0.0,
+       "seconds": 0.4
+      },
+      {
+       "fold": 2,
+       "test_failure": "F20_3",
+       "params": {
+        "C": 1.0,
+        "neg_stride": 1
+       },
+       "threshold_source": "nested LOFO OOF (2 inner folds)",
+       "anticipated": 1,
+       "anticipated_onset_in_window": 0,
+       "failures": 1,
+       "per_failure": [
+        {
+         "failure_start": "2020-06-05 10:00:00",
+         "anticipated": true,
+         "onset_in_window": false,
+         "lead_before_start_min": 119.9
+        }
+       ],
+       "false_alarm_episodes": 456,
+       "false_alarms_per_day": 19.56039940581633,
+       "expected_cost": 456.0,
+       "reference_windows": 216,
+       "reference_hits": 216,
+       "alarm_time_share": 0.9999671741542421,
+       "seconds": 84.9
+      },
+      {
+       "fold": 3,
+       "test_failure": "F20_4",
+       "params": {
+        "C": 0.01
+       },
+       "threshold_source": "nested LOFO OOF (3 inner folds)",
+       "anticipated": 1,
+       "anticipated_onset_in_window": 0,
+       "failures": 1,
+       "per_failure": [
+        {
+         "failure_start": "2020-07-15 14:30:00",
+         "anticipated": true,
+         "onset_in_window": false,
+         "lead_before_start_min": 119.9
+        }
+       ],
+       "false_alarm_episodes": 1377,
+       "false_alarms_per_day": 20.340408740784458,
+       "expected_cost": 1377.0,
+       "reference_windows": 647,
+       "reference_hits": 647,
+       "alarm_time_share": 0.9999894247486263,
+       "seconds": 171.0
+      },
+      {
+       "fold": 4,
+       "test_failure": "F22_1",
+       "params": {
+        "C": 0.01
+       },
+       "threshold_source": "nested LOFO OOF (4 inner folds)",
+       "anticipated": 1,
+       "anticipated_onset_in_window": 0,
+       "failures": 1,
+       "per_failure": [
+        {
+         "failure_start": "2022-02-28 21:53:00",
+         "anticipated": true,
+         "onset_in_window": false,
+         "lead_before_start_min": 120.0
+        }
+       ],
+       "false_alarm_episodes": 1440,
+       "false_alarms_per_day": 20.620525059665873,
+       "expected_cost": 1440.0,
+       "reference_windows": 678,
+       "reference_hits": 678,
+       "alarm_time_share": 0.9982527962420797,
+       "seconds": 323.9
+      },
+      {
+       "fold": 5,
+       "test_failure": "F22_2",
+       "params": {
+        "C": 0.01
+       },
+       "threshold_source": "nested LOFO OOF (5 inner folds)",
+       "anticipated": 1,
+       "anticipated_onset_in_window": 0,
+       "failures": 1,
+       "per_failure": [
+        {
+         "failure_start": "2022-03-23 14:54:00",
+         "anticipated": true,
+         "onset_in_window": false,
+         "lead_before_start_min": 120.0
+        }
+       ],
+       "false_alarm_episodes": 887,
+       "false_alarms_per_day": 19.59414094359546,
+       "expected_cost": 887.0,
+       "reference_windows": 434,
+       "reference_hits": 434,
+       "alarm_time_share": 0.9994956507860506,
+       "seconds": 504.5
+      },
+      {
+       "fold": 6,
+       "test_failure": "F22_3",
+       "params": {
+        "C": 0.01
+       },
+       "threshold_source": "nested LOFO OOF (6 inner folds)",
+       "anticipated": 1,
+       "anticipated_onset_in_window": 0,
+       "failures": 1,
+       "per_failure": [
+        {
+         "failure_start": "2022-05-30 12:00:00",
+         "anticipated": true,
+         "onset_in_window": false,
+         "lead_before_start_min": 120.0
+        }
+       ],
+       "false_alarm_episodes": 695,
+       "false_alarms_per_day": 18.712546393391026,
+       "expected_cost": 695.0,
+       "reference_windows": 342,
+       "reference_hits": 342,
+       "alarm_time_share": 0.9995235826584088,
+       "seconds": 688.7
+      }
+     ]
+    },
+    "detector": {
+     "anticipated": 1,
+     "anticipated_onset_in_window": 1,
+     "chance_hit_rate": 0.011368090944727557,
+     "reference_windows": 2551,
+     "alarm_time_share_mean": 0.013582055791199157,
+     "failures": 6,
+     "false_alarm_episodes": 64,
+     "false_alarms_per_day_mean": 0.3636421510844848,
+     "median_lead_before_start_min": 11.3,
+     "per_fold": [
+      {
+       "fold": 1,
+       "anticipated": 1,
+       "anticipated_onset_in_window": 1,
+       "failures": 1,
+       "per_failure": [
+        {
+         "failure_start": "2020-05-29 23:30:00",
+         "anticipated": true,
+         "onset_in_window": true,
+         "lead_before_start_min": 11.3
+        }
+       ],
+       "false_alarm_episodes": 45,
+       "false_alarms_per_day": 1.8872696188909475,
+       "expected_cost": 45.0,
+       "reference_windows": 220,
+       "reference_hits": 19,
+       "alarm_time_share": 0.07611188687471172
+      },
+      {
+       "fold": 2,
+       "anticipated": 0,
+       "anticipated_onset_in_window": 0,
+       "failures": 1,
+       "per_failure": [
+        {
+         "failure_start": "2020-06-05 10:00:00",
+         "anticipated": false,
+         "onset_in_window": false,
+         "lead_before_start_min": null
+        }
+       ],
+       "false_alarm_episodes": 0,
+       "false_alarms_per_day": 0.0,
+       "expected_cost": 100.0,
+       "reference_windows": 230,
+       "reference_hits": 0,
+       "alarm_time_share": 0.0
+      },
+      {
+       "fold": 3,
+       "anticipated": 0,
+       "anticipated_onset_in_window": 0,
+       "failures": 1,
+       "per_failure": [
+        {
+         "failure_start": "2020-07-15 14:30:00",
+         "anticipated": false,
+         "onset_in_window": false,
+         "lead_before_start_min": null
+        }
+       ],
+       "false_alarm_episodes": 0,
+       "false_alarms_per_day": 0.0,
+       "expected_cost": 100.0,
+       "reference_windows": 646,
+       "reference_hits": 0,
+       "alarm_time_share": 0.0
+      },
+      {
+       "fold": 4,
+       "anticipated": 0,
+       "anticipated_onset_in_window": 0,
+       "failures": 1,
+       "per_failure": [
+        {
+         "failure_start": "2022-02-28 21:53:00",
+         "anticipated": false,
+         "onset_in_window": false,
+         "lead_before_start_min": null
+        }
+       ],
+       "false_alarm_episodes": 16,
+       "false_alarms_per_day": 0.228238957471012,
+       "expected_cost": 116.0,
+       "reference_windows": 679,
+       "reference_hits": 8,
+       "alarm_time_share": 0.004811472379983785
+      },
+      {
+       "fold": 5,
+       "anticipated": 0,
+       "anticipated_onset_in_window": 0,
+       "failures": 1,
+       "per_failure": [
+        {
+         "failure_start": "2022-03-23 14:54:00",
+         "anticipated": false,
+         "onset_in_window": false,
+         "lead_before_start_min": null
+        }
+       ],
+       "false_alarm_episodes": 3,
+       "false_alarms_per_day": 0.06634433014494905,
+       "expected_cost": 103.0,
+       "reference_windows": 436,
+       "reference_hits": 2,
+       "alarm_time_share": 0.0005689754924994326
+      },
+      {
+       "fold": 6,
+       "anticipated": 0,
+       "anticipated_onset_in_window": 0,
+       "failures": 1,
+       "per_failure": [
+        {
+         "failure_start": "2022-05-30 12:00:00",
+         "anticipated": false,
+         "onset_in_window": false,
+         "lead_before_start_min": null
+        }
+       ],
+       "false_alarm_episodes": 0,
+       "false_alarms_per_day": 0.0,
+       "expected_cost": 100.0,
+       "reference_windows": 340,
+       "reference_hits": 0,
+       "alarm_time_share": 0.0
+      }
+     ]
+    },
+    "elapsed_s": 1775.3
+   }
+  }
+ },
+ "evaluated_at": "2026-10-21T05:04:20.133514+00:00",
+ "excluded_after_failure_h": 1.0,
+ "persistence_k": 6
+}

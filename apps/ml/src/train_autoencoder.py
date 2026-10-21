@@ -1,4 +1,8 @@
 """
+DEPRECATED — previous generation (random split / SMOTE; leaked). Kept only to
+reproduce the before/after comparison of the thesis; writes to models/legacy.
+Served models come from ``src.train_production`` (``*_v3``).
+
 train_autoencoder.py — Train the Conv1D Autoencoder for unsupervised
 anomaly detection on the MetroPT-3 compressor dataset.
 
@@ -46,7 +50,7 @@ from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 # Resolve project root so imports work regardless of cwd.
 _SRC: Path = Path(__file__).resolve().parent
 _ROOT: Path = _SRC.parent
-_MODELS_DIR: Path = _ROOT / "models"
+_MODELS_DIR: Path = _ROOT / "models" / "legacy"  # previous generation, not served
 _DATA_DIR: Path = _ROOT / "data" / "processed"
 sys.path.insert(0, str(_SRC))
 

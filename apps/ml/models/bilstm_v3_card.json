@@ -1,0 +1,107 @@
+{
+  "schema_version": "3.0",
+  "model_name": "bilstm_v3",
+  "status": "candidate",
+  "trained_at": "2026-10-20T21:29:53.905681+00:00",
+  "algorithm": "bilstm",
+  "validation": {
+    "leakage_free": true,
+    "protocol": "nested: outer purged walk-forward \u00d7 inner leave-one-failure-out",
+    "hyperparameters": "selected on inner OOF expected cost (RN-02)",
+    "threshold_selection": "nested LOFO OOF (7 inner folds)"
+  },
+  "dropped_sensors": [
+    "Reservoirs",
+    "Oil_level"
+  ],
+  "hyperparameters": {
+    "epochs": 8,
+    "lr": 0.001,
+    "pos_weight_scale": 0.25
+  },
+  "search": [
+    {
+      "params": {
+        "epochs": 8,
+        "lr": 0.001
+      },
+      "oof_cost": 295.0,
+      "oof_pr_auc": 0.17398967450708347,
+      "threshold": 0.23
+    },
+    {
+      "params": {
+        "epochs": 16,
+        "lr": 0.0003
+      },
+      "oof_cost": 329.0,
+      "oof_pr_auc": 0.11003340663944025,
+      "threshold": 0.3
+    },
+    {
+      "params": {
+        "epochs": 8,
+        "lr": 0.001,
+        "neg_stride": 5
+      },
+      "oof_cost": 326.0,
+      "oof_pr_auc": 0.09103799278496218,
+      "threshold": 0.1
+    },
+    {
+      "params": {
+        "epochs": 8,
+        "lr": 0.001,
+        "pos_weight_scale": 0.25
+      },
+      "oof_cost": 293.0,
+      "oof_pr_auc": 0.14489856459592548,
+      "threshold": 0.24
+    }
+  ],
+  "calibration": {
+    "method": "platt",
+    "a": 0.31522195935652636,
+    "b": -2.176259186957525
+  },
+  "threshold_calibrated_probability": 0.24,
+  "decision_threshold": 0.24,
+  "seed": 0,
+  "onnx_parity_max_abs_diff": 1.9073486328125e-06,
+  "feature_count": 10,
+  "feature_names": [
+    "TP2",
+    "TP3",
+    "H1",
+    "DV_pressure",
+    "Motor_current",
+    "Oil_temperature",
+    "COMP",
+    "DV_eletric",
+    "Towers",
+    "MPG"
+  ],
+  "serving": {
+    "adapter": "sequence",
+    "onnx": "bilstm_v3.onnx",
+    "scaler": "bilstm_v3_scaler.joblib",
+    "window_size": 60
+  },
+  "evidence": {
+    "source": "models/nested/bilstm.json",
+    "protocol": "outer purged walk-forward (6 folds) \u00d7 inner leave-one-failure-out, 3 seeds, out-of-time",
+    "failures_detected_mean_of_6": 3.0,
+    "failures_detected_range": [
+      3,
+      3
+    ],
+    "false_alarm_episodes_mean": 45.333333333333336,
+    "expected_cost_mean": 57.55555555555555,
+    "confusion_alarms_seed0": {
+      "tn": 1835477,
+      "fp": 12124,
+      "fn": 29984,
+      "tp": 12529
+    }
+  }
+}

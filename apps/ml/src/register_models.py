@@ -3,7 +3,7 @@ MLflow Model Registry — champion / challenger with the RN-05 gate.
 
 Entry point:
     MLFLOW_TRACKING_URI=http://localhost:5000 python -m src.register_models \
-        --champion random_forest_v2 --challenger xgboost_v2
+        --champion random_forest_v3 --challenger xgboost_v3
 
 For each model: log the ONNX artefact (+ model card, + the leakage-free
 temporal metrics of ``models/eval_temporal.json``) in a run, register it as
@@ -41,11 +41,13 @@ EVAL_JSON: Path = MODELS_DIR / "eval_temporal.json"
 CROSS_JSON: Path = MODELS_DIR / "eval_cross_dataset_harmonized.json"
 # backend model name -> evaluate_temporal model name (temporal metrics)
 _EVAL_NAME: dict[str, str] = {
-    "random_forest_v2": "random_forest",
-    "random_forest": "random_forest",
-    "xgboost_v2": "xgboost",
+    "random_forest_v3": "random_forest",
     "xgboost_v3": "xgboost",
-    "xgboost": "xgboost",
+    "mlp_v3": "mlp",
+    "tcn_v3": "tcn",
+    "bilstm_v3": "bilstm",
+    "patchtst_v3": "patchtst",
+    "autoencoder_v3": "autoencoder",
 }
 
 

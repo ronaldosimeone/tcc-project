@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "evaluated_at": "2026-10-18T11:29:45.737551+00:00",
+  "evaluated_at": "2026-10-20T21:07:56.438398+00:00",
   "requirements": [
     "RF-31"
   ],
@@ -11,145 +11,145 @@
   "models": {
     "random_forest": {
       "static": {
-        "coverage": 0.8995823712365932,
-        "set_size": 0.9302057716782108,
-        "empty_sets": 0.0698067031382535,
-        "coverage_class_0": 0.9146624280653989,
-        "coverage_class_1": 0.5119755350364569,
+        "coverage": 0.8803602916675388,
+        "set_size": 1.083877246671694,
+        "empty_sets": 0.06804684944275202,
+        "coverage_class_0": 0.8900640662051718,
+        "coverage_class_1": 0.6561227667624389,
         "n_runs": 15
       },
       "aci": {
-        "coverage": 0.9003751492002738,
-        "set_size": 1.196935409709183,
-        "empty_sets": 0.06137402957060362,
-        "coverage_class_0": 0.9003970871795441,
-        "coverage_class_1": 0.8950922866624825,
+        "coverage": 0.9004022843792304,
+        "set_size": 1.2240856203694388,
+        "empty_sets": 0.05839500864814602,
+        "coverage_class_0": 0.9003968332055706,
+        "coverage_class_1": 0.9102215960593923,
         "n_runs": 15
       }
     },
     "xgboost": {
       "static": {
-        "coverage": 0.8165199153697948,
-        "set_size": 0.8392738745017427,
-        "empty_sets": 0.16072612549825707,
-        "coverage_class_0": 0.8329490843507,
-        "coverage_class_1": 0.45540022002413666,
+        "coverage": 0.8668668811637839,
+        "set_size": 0.8910831881886361,
+        "empty_sets": 0.10891681181136406,
+        "coverage_class_0": 0.8821729502856047,
+        "coverage_class_1": 0.5310675398196917,
         "n_runs": 15
       },
       "aci": {
-        "coverage": 0.900170071661594,
-        "set_size": 1.030853936759309,
-        "empty_sets": 0.08240832076888362,
-        "coverage_class_0": 0.9001457239912767,
-        "coverage_class_1": 0.8964541899490358,
+        "coverage": 0.9002448292050247,
+        "set_size": 0.935474716832798,
+        "empty_sets": 0.0875037020256585,
+        "coverage_class_0": 0.9002267212155062,
+        "coverage_class_1": 0.8957895661579734,
         "n_runs": 15
       }
     },
     "logistic_regression": {
       "static": {
-        "coverage": 0.6811973075729474,
-        "set_size": 0.6975019652615789,
-        "empty_sets": 0.30249803473842096,
-        "coverage_class_0": 0.6849519331623345,
-        "coverage_class_1": 0.37522537024610614,
+        "coverage": 0.7536303619549741,
+        "set_size": 0.7742797933271959,
+        "empty_sets": 0.2257202066728042,
+        "coverage_class_0": 0.7600045075266894,
+        "coverage_class_1": 0.4198372523036553,
         "n_runs": 15
       },
       "aci": {
-        "coverage": 0.9000475637795176,
-        "set_size": 1.1488358235546052,
-        "empty_sets": 0.06655657501293041,
-        "coverage_class_0": 0.9000244260843421,
-        "coverage_class_1": 0.892916089258708,
+        "coverage": 0.9000489713465284,
+        "set_size": 1.1677934600409459,
+        "empty_sets": 0.06420978066474335,
+        "coverage_class_0": 0.9000460626737448,
+        "coverage_class_1": 0.8870939319338701,
         "n_runs": 15
       }
     },
     "mlp": {
       "static": {
-        "coverage": 0.9044562540070431,
-        "set_size": 0.933121294804281,
-        "empty_sets": 0.06687870519571909,
-        "coverage_class_0": 0.9370073034746226,
-        "coverage_class_1": 0.20515787478098432,
+        "coverage": 0.871848906876,
+        "set_size": 0.9615494934514331,
+        "empty_sets": 0.04980780353293589,
+        "coverage_class_0": 0.904251910059876,
+        "coverage_class_1": 0.15198288884284922,
         "n_runs": 15
       },
       "aci": {
-        "coverage": 0.9002740925983702,
-        "set_size": 1.0637362411332316,
-        "empty_sets": 0.06404680878011998,
-        "coverage_class_0": 0.9003062691181855,
-        "coverage_class_1": 0.889688919798378,
+        "coverage": 0.9002101431770533,
+        "set_size": 1.1228010400841284,
+        "empty_sets": 0.047721026454771096,
+        "coverage_class_0": 0.9002619297736367,
+        "coverage_class_1": 0.8873483409860862,
         "n_runs": 15
       }
     },
     "tcn": {
       "static": {
-        "coverage": 0.8897597376641214,
-        "set_size": 1.0367703687517085,
-        "empty_sets": 0.04770882753787606,
-        "coverage_class_0": 0.9148710921907808,
-        "coverage_class_1": 0.24210106035569415,
+        "coverage": 0.8943327310093603,
+        "set_size": 0.9429568271947741,
+        "empty_sets": 0.06487361509984362,
+        "coverage_class_0": 0.9196410422148532,
+        "coverage_class_1": 0.21272234005915272,
         "n_runs": 15
       },
       "aci": {
-        "coverage": 0.9002650384034756,
-        "set_size": 1.258089343383136,
-        "empty_sets": 0.04293980528089636,
-        "coverage_class_0": 0.9003036281457,
-        "coverage_class_1": 0.8882229010043482,
+        "coverage": 0.9002834460250566,
+        "set_size": 1.2130284338142545,
+        "empty_sets": 0.05883457323851747,
+        "coverage_class_0": 0.9003295537437528,
+        "coverage_class_1": 0.8880859386263505,
         "n_runs": 15
       }
     },
     "bilstm": {
       "static": {
-        "coverage": 0.8534325114955654,
-        "set_size": 0.9199337377049671,
-        "empty_sets": 0.1009935154028215,
-        "coverage_class_0": 0.8803765685940131,
-        "coverage_class_1": 0.19259980127290094,
+        "coverage": 0.8592582511400825,
+        "set_size": 0.9515015502820277,
+        "empty_sets": 0.10683143999385301,
+        "coverage_class_0": 0.8800163883326098,
+        "coverage_class_1": 0.30154864613616716,
         "n_runs": 15
       },
       "aci": {
-        "coverage": 0.900237599800413,
-        "set_size": 1.1835996139921787,
-        "empty_sets": 0.05282359063230835,
-        "coverage_class_0": 0.9002847731969518,
-        "coverage_class_1": 0.8848025719670031,
+        "coverage": 0.9002284331406193,
+        "set_size": 1.2313583387474838,
+        "empty_sets": 0.05628911285885485,
+        "coverage_class_0": 0.9002534779496311,
+        "coverage_class_1": 0.8922011498181558,
         "n_runs": 15
       }
     },
     "patchtst": {
       "static": {
-        "coverage": 0.9051272985093711,
-        "set_size": 0.9624220449875891,
-        "empty_sets": 0.04005679737355083,
-        "coverage_class_0": 0.938883593874284,
-        "coverage_class_1": 0.12010645401270786,
+        "coverage": 0.8766914907779246,
+        "set_size": 0.9603420762418307,
+        "empty_sets": 0.06429806956127322,
+        "coverage_class_0": 0.9095089267615833,
+        "coverage_class_1": 0.1182325369745819,
         "n_runs": 15
       },
       "aci": {
-        "coverage": 0.9002973833399135,
-        "set_size": 1.163483429944834,
-        "empty_sets": 0.05717167280670125,
-        "coverage_class_0": 0.9003560498839592,
-        "coverage_class_1": 0.8827262950518242,
+        "coverage": 0.9002759431052677,
+        "set_size": 1.1900163810867666,
+        "empty_sets": 0.05776880120130094,
+        "coverage_class_0": 0.9003360627307921,
+        "coverage_class_1": 0.8825856446688624,
         "n_runs": 15
       }
     },
     "autoencoder": {
       "static": {
-        "coverage": 0.932707156279435,
-        "set_size": 1.0632366177208297,
+        "coverage": 0.9321808576222038,
+        "set_size": 1.1016885962677534,
         "empty_sets": 0.0,
-        "coverage_class_0": 0.9534049099496859,
-        "coverage_class_1": 0.5355628417214081,
+        "coverage_class_0": 0.9502154394317481,
+        "coverage_class_1": 0.5646968522517574,
         "n_runs": 15
       },
       "aci": {
-        "coverage": 0.9001958074791626,
-        "set_size": 1.1531537673148609,
-        "empty_sets": 0.04131207800133135,
-        "coverage_class_0": 0.9001366752058753,
-        "coverage_class_1": 0.9109229671994449,
+        "coverage": 0.9002071380475914,
+        "set_size": 1.1835938794389798,
+        "empty_sets": 0.03181749568134281,
+        "coverage_class_0": 0.9001569075410703,
+        "coverage_class_1": 0.907892993973324,
         "n_runs": 15
       }
     }

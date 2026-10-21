@@ -96,4 +96,7 @@ apps/ml/mlruns/
 # venv de treino em GPU (torch CUDA), separado do .venv com numpy fixado
 apps/ml/.venv-gpu/
 apps/ml/models/nested/scores/
+apps/ml/models/nested/ablation/*/scores/
+apps/ml/models/legacy/*_int8.onnx
 apps/ml/models/eval_metropt2_scores.npz
+apps/ml/models/anticipation_alarms/

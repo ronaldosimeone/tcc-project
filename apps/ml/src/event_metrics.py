@@ -57,6 +57,7 @@ class EventReport:
     n_episodes: int
     n_false_alarm_episodes: int
     episode_precision: float
+    false_alarm_time_s: float
     event_f1: float
     observed_days: float
     false_alarms_per_day: float
@@ -203,14 +204,23 @@ def evaluate_events(
     cost_fn: float = 100.0,
     cost_fp: float = 1.0,
     max_gap_seconds: float = 60.0,
+    renotify_s: float = 3600.0,
 ) -> EventReport:
     """
     Evaluate alarms against the failure events contained in ``timestamps``.
 
     An event counts as detected if an alarm episode overlaps the window
     ``[start - early_horizon_s, end]``. Its lead time is ``start - first alarm``
-    inside that window. An episode is a false alarm when it does not overlap
-    any ``[start - early_horizon_s, end + grace_s]`` window.
+    inside that window.
+
+    False alarms are counted on the alarm TIME outside every
+    ``[start - early_horizon_s, end + grace_s]`` window: each contiguous
+    out-of-window stretch counts one false alarm per started ``renotify_s``
+    (the operator is re-notified while the alarm stays on). Without this an
+    always-on alarm is a single episode touching the failure — "detected with
+    zero false alarms" — a degenerate optimum a cost-driven threshold search
+    can and did find (autoencoder). An episode entirely outside the windows
+    still counts at least one.
 
     ``min_lead_s`` implements RN-01; ``cost_fn``/``cost_fp`` implement RN-02:
     ``expected_cost = cost_fn * missed_events + cost_fp * false_alarm_episodes``.
@@ -243,19 +253,41 @@ def evaluate_events(
             )
         )
 
-    def _is_false(ep: AlarmEpisode) -> bool:
-        return not any(
-            ep.end >= ev.start - horizon and ep.start <= ev.end + grace
-            for ev in in_range
-        )
+    windows: list[tuple[pd.Timestamp, pd.Timestamp]] = sorted(
+        (ev.start - horizon, ev.end + grace) for ev in in_range
+    )
 
-    n_false: int = sum(1 for ep in episodes if _is_false(ep))
+    def _outside(ep: AlarmEpisode) -> list[float]:
+        """Durations (s) of the parts of ``ep`` outside every window
+        (interval difference: episode minus the union of the windows)."""
+        segs: list[tuple[pd.Timestamp, pd.Timestamp]] = [(ep.start, ep.end)]
+        for w0, w1 in windows:
+            kept: list[tuple[pd.Timestamp, pd.Timestamp]] = []
+            for a, b in segs:
+                if w1 < a or w0 > b:
+                    kept.append((a, b))
+                    continue
+                if a < w0:
+                    kept.append((a, w0))
+                if b > w1:
+                    kept.append((w1, b))
+            segs = kept
+        return [(b - a).total_seconds() for a, b in segs]
+
+    def _n_false(stretches: list[float]) -> int:
+        # one notification per started renotify_s (a 1-sample stretch is one)
+        return sum(int(np.ceil(max(d, 10.0) / renotify_s)) for d in stretches)
+
+    out_parts: list[list[float]] = [_outside(ep) for ep in episodes]
+    n_false: int = sum(_n_false(p) for p in out_parts)
+    false_time: float = float(sum(sum(p) for p in out_parts))
+    n_false_eps: int = sum(1 for p in out_parts if p)
     n_detected: int = sum(1 for o in outcomes if o.detected)
     n_events: int = len(in_range)
 
     event_recall: float = n_detected / n_events if n_events else 0.0
     episode_precision: float = (
-        (len(episodes) - n_false) / len(episodes) if episodes else 0.0
+        (len(episodes) - n_false_eps) / len(episodes) if episodes else 0.0
     )
     observed_days: float = max((t1 - t0).total_seconds() / 86400.0, 1e-9)
     leads: list[float] = [o.lead_time_s for o in outcomes if o.lead_time_s is not None]
@@ -268,6 +300,7 @@ def evaluate_events(
         n_episodes=len(episodes),
         n_false_alarm_episodes=n_false,
         episode_precision=episode_precision,
+        false_alarm_time_s=false_time,
         event_f1=_f1(episode_precision, event_recall),
         observed_days=observed_days,
         false_alarms_per_day=n_false / observed_days,

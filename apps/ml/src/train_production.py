@@ -20,8 +20,10 @@ How each model serves the calibrated decision (no backend change needed):
   raw-probability equivalent of the calibrated threshold (same alarms);
 * autoencoder — ``mse_threshold`` is the MSE equivalent (adapter: 0.5 there).
 
-Artefact names: random_forest_v3 (champion), xgboost_v3 (challenger),
-mlp_v2 / tcn_v2 / bilstm_v2 / patchtst_v2 / autoencoder_v2 (candidates).
+Artefact names (one generation, all ``_v3``): random_forest_v3 (champion),
+xgboost_v3 (challenger), mlp_v3 / tcn_v3 / bilstm_v3 / patchtst_v3 /
+autoencoder_v3 (candidates). Earlier generations (v1, v2) were removed from
+serving.
 Evidence (out-of-time, 3 seeds) is copied from models/nested/<model>.json.
 """
 
@@ -52,7 +54,7 @@ NESTED_DIR: Path = MODELS_DIR / "nested"
 ARTEFACT: dict[str, str] = {
     "random_forest": "random_forest_v3",
     "xgboost": "xgboost_v3",
-    **{a: f"{a}_v2" for a in dt.ARCHS},
+    **{a: f"{a}_v3" for a in dt.ARCHS},
 }
 ROLE: dict[str, str] = {"random_forest": "champion", "xgboost": "challenger"}
 ADAPTER: dict[str, str] = {

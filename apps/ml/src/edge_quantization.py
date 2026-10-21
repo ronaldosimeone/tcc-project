@@ -47,6 +47,8 @@ from src.preprocessing import MetroPTPreprocessor  # noqa: E402
 from src.train_random_forest import FEATURE_COLS  # noqa: E402
 
 MODELS_DIR: Path = _ML_ROOT / "models"
+# Measured artefacts are the previous generation, archived (not served).
+LEGACY_DIR: Path = MODELS_DIR / "legacy"
 PARQUET: Path = _ML_ROOT / "data" / "processed" / "metropt3.parquet"
 OUT_JSON: Path = MODELS_DIR / "edge_quantization.json"
 SLICE: tuple[str, str] = ("2020-05-27", "2020-06-01")
@@ -100,12 +102,12 @@ def _slice() -> pd.DataFrame:
 def _compare(
     name: str, fp32: Path, feed_all: np.ndarray, y: np.ndarray, input_name: str
 ) -> dict[str, Any]:
-    int8 = MODELS_DIR / f"{name}_int8.onnx"
+    int8 = LEGACY_DIR / f"{name}_int8.onnx"
     # The Lightning export keeps stale intermediate shapes in value_info that
     # contradict ONNX shape inference (e.g. 34 vs 256): drop them first.
     model = onnx.load(str(fp32), load_external_data=True)
     del model.graph.value_info[:]
-    clean = MODELS_DIR / f"{name}_clean_tmp.onnx"
+    clean = LEGACY_DIR / f"{name}_clean_tmp.onnx"
     onnx.save(model, str(clean))
     try:
         # Only MatMul/Gemm: the CPU execution provider has no ConvInteger
@@ -177,25 +179,25 @@ def main() -> None:
     feats_v1 = MetroPTPreprocessor(enable_v2_features=False).fit_transform(
         df[FEATURE_COLS].copy()
     )
-    card = json.loads((MODELS_DIR / "mlp_v1_card.json").read_text(encoding="utf-8"))
-    mlp_scaler = joblib.load(MODELS_DIR / "mlp_scaler.joblib")
+    card = json.loads((LEGACY_DIR / "mlp_v1_card.json").read_text(encoding="utf-8"))
+    mlp_scaler = joblib.load(LEGACY_DIR / "mlp_scaler.joblib")
     x_mlp = mlp_scaler.transform(feats_v1[card["feature_names"]].to_numpy()).astype(
         np.float32
     )
     result["models"]["mlp_v1"] = _compare(
-        "mlp_v1", MODELS_DIR / "mlp_v1.onnx", x_mlp, y_rows, "features"
+        "mlp_v1", LEGACY_DIR / "mlp_v1.onnx", x_mlp, y_rows, "features"
     )
 
     # TCN — windows of 60 × 12 raw channels, per-channel StandardScaler.
-    tcn_card = json.loads((MODELS_DIR / "tcn_v1_card.json").read_text(encoding="utf-8"))
+    tcn_card = json.loads((LEGACY_DIR / "tcn_v1_card.json").read_text(encoding="utf-8"))
     raw = df[tcn_card["feature_names"]].to_numpy(dtype=np.float32)
-    tcn_scaler = joblib.load(MODELS_DIR / "tcn_scaler.joblib")
+    tcn_scaler = joblib.load(LEGACY_DIR / "tcn_scaler.joblib")
     scaled = tcn_scaler.transform(raw).astype(np.float32)
     starts = np.arange(0, len(scaled) - WINDOW, WINDOW_STRIDE)
     windows = np.stack([scaled[s : s + WINDOW] for s in starts]).astype(np.float32)
     y_win = y_rows[starts + WINDOW - 1]
     result["models"]["tcn_v1"] = _compare(
-        "tcn_v1", MODELS_DIR / "tcn_v1.onnx", windows, y_win, "window"
+        "tcn_v1", LEGACY_DIR / "tcn_v1.onnx", windows, y_win, "window"
     )
 
     # Production RF — FP32 only (no INT8 kernels for TreeEnsemble).
@@ -204,9 +206,9 @@ def main() -> None:
         .fit_transform(df[FEATURE_COLS].copy())
         .to_numpy(dtype=np.float32)
     )
-    rf = _session(MODELS_DIR / "random_forest_v2.onnx", threads=1)
+    rf = _session(LEGACY_DIR / "random_forest_v2.onnx", threads=1)
     result["models"]["random_forest_v2"] = {
-        "size_mb": _size_mb(MODELS_DIR / "random_forest_v2.onnx"),
+        "size_mb": _size_mb(LEGACY_DIR / "random_forest_v2.onnx"),
         "latency_single_ms_1thread": _latency_ms(rf, {"features": feats_v2[:1]}),
         "int8": "not applicable — ONNX-ML TreeEnsemble has no quantized kernels",
     }

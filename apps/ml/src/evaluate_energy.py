@@ -246,7 +246,9 @@ def inference_phase(base: Baseline, reps: int) -> dict[str, Any]:
         "threads_per_session": 1,
     }
     for name, rows in inputs.items():
-        sessions = [_session(MODELS_DIR / f"{name}.onnx") for _ in range(workers)]
+        sessions = [
+            _session(MODELS_DIR / "legacy" / f"{name}.onnx") for _ in range(workers)
+        ]
         feed_name = sessions[0].get_inputs()[0].name
         for sess in sessions:  # warm-up outside the measurement
             for i in range(20):

@@ -29,7 +29,7 @@ import pytest
 
 # ── paths ─────────────────────────────────────────────────────────────────────
 _ML_ROOT: Path = Path(__file__).resolve().parents[1]
-_MODEL_PATH: Path = _ML_ROOT / "models" / "xgboost_v1.joblib"
+_MODEL_PATH: Path = _ML_ROOT / "models" / "legacy" / "xgboost_v1.joblib"
 
 _FEATURE_NAMES: list[str] = [
     "TP2",

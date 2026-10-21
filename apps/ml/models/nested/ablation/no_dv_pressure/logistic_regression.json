@@ -1,0 +1,581 @@
+{
+  "model": "logistic_regression",
+  "runs": [
+    {
+      "threshold": 0.5,
+      "pr_auc": 0.0856076251556848,
+      "samples": {
+        "tn": 148719,
+        "fp": 12817,
+        "fn": 33,
+        "tp": 2327
+      },
+      "alarms": {
+        "tn": 148988,
+        "fp": 12548,
+        "fn": 33,
+        "tp": 2327
+      },
+      "events": {
+        "failures": 1,
+        "detected": 1,
+        "missed": 0,
+        "false_alarm_episodes": 70,
+        "false_alarms_per_day": 2.9357527404970294,
+        "mean_lead_time_s": 676.0,
+        "expected_cost": 70.0
+      },
+      "seed": 0,
+      "fold": 1,
+      "test_dataset": "2020",
+      "params": {
+        "C": 1.0
+      },
+      "threshold_calibrated": 0.5,
+      "threshold_raw": 0.0,
+      "threshold_source": "fallback (<2 failures in training: a-priori threshold, uncalibrated)",
+      "ece_raw": 0.0794777011900274,
+      "ece_calibrated": null,
+      "search": [],
+      "seconds": 2.1
+    },
+    {
+      "threshold": 0.5,
+      "pr_auc": 0.2888613697656376,
+      "samples": {
+        "tn": 144983,
+        "fp": 18508,
+        "fn": 17315,
+        "tp": 0
+      },
+      "alarms": {
+        "tn": 144995,
+        "fp": 18496,
+        "fn": 17315,
+        "tp": 0
+      },
+      "events": {
+        "failures": 1,
+        "detected": 0,
+        "missed": 1,
+        "false_alarm_episodes": 62,
+        "false_alarms_per_day": 2.554521055914483,
+        "mean_lead_time_s": null,
+        "expected_cost": 162.0
+      },
+      "seed": 0,
+      "fold": 2,
+      "test_dataset": "2020",
+      "params": {
+        "C": 0.01
+      },
+      "threshold_calibrated": 0.13,
+      "threshold_raw": 4.018903854550684,
+      "threshold_source": "nested LOFO OOF (2 inner folds)",
+      "ece_raw": 0.10419618115648996,
+      "ece_calibrated": 0.06491378940193746,
+      "search": [
+        {
+          "params": {
+            "C": 1.0
+          },
+          "oof_cost": 148.0,
+          "oof_pr_auc": 0.15192110381654036,
+          "threshold": 0.1
+        },
+        {
+          "params": {
+            "C": 0.1
+          },
+          "oof_cost": 124.0,
+          "oof_pr_auc": 0.152277319501961,
+          "threshold": 0.11
+        },
+        {
+          "params": {
+            "C": 0.01
+          },
+          "oof_cost": 118.0,
+          "oof_pr_auc": 0.15064426558419078,
+          "threshold": 0.13
+        },
+        {
+          "params": {
+            "C": 10.0
+          },
+          "oof_cost": 165.0,
+          "oof_pr_auc": 0.1501707716615592,
+          "threshold": 0.12
+        },
+        {
+          "params": {
+            "C": 1.0,
+            "neg_stride": 1
+          },
+          "oof_cost": 173.0,
+          "oof_pr_auc": 0.15108530396644682,
+          "threshold": 0.13
+        },
+        {
+          "params": {
+            "C": 1.0,
+            "pos_weight_scale": 0.25
+          },
+          "oof_cost": 148.0,
+          "oof_pr_auc": 0.1538985368623267,
+          "threshold": 0.13
+        }
+      ],
+      "seconds": 160.7
+    },
+    {
+      "threshold": 0.5,
+      "pr_auc": 0.6048984042122628,
+      "samples": {
+        "tn": 465786,
+        "fp": 509,
+        "fn": 95,
+        "tp": 1527
+      },
+      "alarms": {
+        "tn": 465827,
+        "fp": 468,
+        "fn": 100,
+        "tp": 1522
+      },
+      "events": {
+        "failures": 1,
+        "detected": 1,
+        "missed": 0,
+        "false_alarm_episodes": 7,
+        "false_alarms_per_day": 0.1051645935435408,
+        "mean_lead_time_s": -327.0,
+        "expected_cost": 7.0
+      },
+      "seed": 0,
+      "fold": 3,
+      "test_dataset": "2020",
+      "params": {
+        "C": 1.0,
+        "pos_weight_scale": 0.25
+      },
+      "threshold_calibrated": 0.25,
+      "threshold_raw": 1.9070976559474655,
+      "threshold_source": "nested LOFO OOF (3 inner folds)",
+      "ece_raw": 0.0027220216103424483,
+      "ece_calibrated": 0.018293953562866616,
+      "search": [
+        {
+          "params": {
+            "C": 1.0
+          },
+          "oof_cost": 134.0,
+          "oof_pr_auc": 0.2450104027550617,
+          "threshold": 0.22
+        },
+        {
+          "params": {
+            "C": 0.1
+          },
+          "oof_cost": 128.0,
+          "oof_pr_auc": 0.24688422223807402,
+          "threshold": 0.23
+        },
+        {
+          "params": {
+            "C": 0.01
+          },
+          "oof_cost": 126.0,
+          "oof_pr_auc": 0.25249341360106564,
+          "threshold": 0.28
+        },
+        {
+          "params": {
+            "C": 10.0
+          },
+          "oof_cost": 94.0,
+          "oof_pr_auc": 0.2568172889052416,
+          "threshold": 0.26
+        },
+        {
+          "params": {
+            "C": 1.0,
+            "neg_stride": 1
+          },
+          "oof_cost": 82.0,
+          "oof_pr_auc": 0.2463941262001743,
+          "threshold": 0.26
+        },
+        {
+          "params": {
+            "C": 1.0,
+            "pos_weight_scale": 0.25
+          },
+          "oof_cost": 77.0,
+          "oof_pr_auc": 0.28129986476368757,
+          "threshold": 0.25
+        }
+      ],
+      "seconds": 277.7
+    },
+    {
+      "threshold": 0.5,
+      "pr_auc": 0.5061797863211192,
+      "samples": {
+        "tn": 490137,
+        "fp": 2406,
+        "fn": 163,
+        "tp": 1320
+      },
+      "alarms": {
+        "tn": 490209,
+        "fp": 2334,
+        "fn": 178,
+        "tp": 1305
+      },
+      "events": {
+        "failures": 1,
+        "detected": 1,
+        "missed": 0,
+        "false_alarm_episodes": 9,
+        "false_alarms_per_day": 0.12838441357744423,
+        "mean_lead_time_s": -1530.0,
+        "expected_cost": 9.0
+      },
+      "seed": 0,
+      "fold": 4,
+      "test_dataset": "2022",
+      "params": {
+        "C": 0.1
+      },
+      "threshold_calibrated": 0.24,
+      "threshold_raw": 3.4497628919579126,
+      "threshold_source": "nested LOFO OOF (4 inner folds)",
+      "ece_raw": 0.013793304114103603,
+      "ece_calibrated": 0.013620067147624145,
+      "search": [
+        {
+          "params": {
+            "C": 1.0
+          },
+          "oof_cost": 96.0,
+          "oof_pr_auc": 0.3282417688281159,
+          "threshold": 0.23
+        },
+        {
+          "params": {
+            "C": 0.1
+          },
+          "oof_cost": 89.0,
+          "oof_pr_auc": 0.3320611646750719,
+          "threshold": 0.24
+        },
+        {
+          "params": {
+            "C": 0.01
+          },
+          "oof_cost": 140.0,
+          "oof_pr_auc": 0.3359861628551305,
+          "threshold": 0.31
+        },
+        {
+          "params": {
+            "C": 10.0
+          },
+          "oof_cost": 101.0,
+          "oof_pr_auc": 0.32618841646987834,
+          "threshold": 0.24
+        },
+        {
+          "params": {
+            "C": 1.0,
+            "neg_stride": 1
+          },
+          "oof_cost": 101.0,
+          "oof_pr_auc": 0.32634845561344444,
+          "threshold": 0.23
+        },
+        {
+          "params": {
+            "C": 1.0,
+            "pos_weight_scale": 0.25
+          },
+          "oof_cost": 100.0,
+          "oof_pr_auc": 0.3391147252655021,
+          "threshold": 0.24
+        }
+      ],
+      "seconds": 339.1
+    },
+    {
+      "threshold": 0.5,
+      "pr_auc": 0.0003739123033346035,
+      "samples": {
+        "tn": 315913,
+        "fp": 170,
+        "fn": 181,
+        "tp": 0
+      },
+      "alarms": {
+        "tn": 315923,
+        "fp": 160,
+        "fn": 181,
+        "tp": 0
+      },
+      "events": {
+        "failures": 1,
+        "detected": 0,
+        "missed": 1,
+        "false_alarm_episodes": 1,
+        "false_alarms_per_day": 0.022114776714983016,
+        "mean_lead_time_s": null,
+        "expected_cost": 101.0
+      },
+      "seed": 0,
+      "fold": 5,
+      "test_dataset": "2022",
+      "params": {
+        "C": 1.0,
+        "pos_weight_scale": 0.25
+      },
+      "threshold_calibrated": 0.15,
+      "threshold_raw": 1.0673256331914067,
+      "threshold_source": "nested LOFO OOF (5 inner folds)",
+      "ece_raw": 0.0030352904699043623,
+      "ece_calibrated": 0.001996740935399581,
+      "search": [
+        {
+          "params": {
+            "C": 1.0
+          },
+          "oof_cost": 206.0,
+          "oof_pr_auc": 0.4432021749822912,
+          "threshold": 0.52
+        },
+        {
+          "params": {
+            "C": 0.1
+          },
+          "oof_cost": 225.0,
+          "oof_pr_auc": 0.4441239055147025,
+          "threshold": 0.08
+        },
+        {
+          "params": {
+            "C": 0.01
+          },
+          "oof_cost": 220.0,
+          "oof_pr_auc": 0.4547360850299906,
+          "threshold": 0.09
+        },
+        {
+          "params": {
+            "C": 10.0
+          },
+          "oof_cost": 205.0,
+          "oof_pr_auc": 0.44189282665890856,
+          "threshold": 0.52
+        },
+        {
+          "params": {
+            "C": 1.0,
+            "neg_stride": 1
+          },
+          "oof_cost": 231.0,
+          "oof_pr_auc": 0.44044162975886103,
+          "threshold": 0.5
+        },
+        {
+          "params": {
+            "C": 1.0,
+            "pos_weight_scale": 0.25
+          },
+          "oof_cost": 170.0,
+          "oof_pr_auc": 0.38134572251307913,
+          "threshold": 0.15
+        }
+      ],
+      "seconds": 404.2
+    },
+    {
+      "threshold": 0.5,
+      "pr_auc": 0.05922970554475187,
+      "samples": {
+        "tn": 247653,
+        "fp": 0,
+        "fn": 19552,
+        "tp": 0
+      },
+      "alarms": {
+        "tn": 247653,
+        "fp": 0,
+        "fn": 19552,
+        "tp": 0
+      },
+      "events": {
+        "failures": 1,
+        "detected": 0,
+        "missed": 1,
+        "false_alarm_episodes": 0,
+        "false_alarms_per_day": 0.0,
+        "mean_lead_time_s": null,
+        "expected_cost": 100.0
+      },
+      "seed": 0,
+      "fold": 6,
+      "test_dataset": "2022",
+      "params": {
+        "C": 1.0,
+        "pos_weight_scale": 0.25
+      },
+      "threshold_calibrated": 0.51,
+      "threshold_raw": 3.9466633442642656,
+      "threshold_source": "nested LOFO OOF (6 inner folds)",
+      "ece_raw": 0.06989202641944915,
+      "ece_calibrated": 0.07170182069872615,
+      "search": [
+        {
+          "params": {
+            "C": 1.0
+          },
+          "oof_cost": 327.0,
+          "oof_pr_auc": 0.4423745261590463,
+          "threshold": 0.5
+        },
+        {
+          "params": {
+            "C": 0.1
+          },
+          "oof_cost": 306.0,
+          "oof_pr_auc": 0.439329107047042,
+          "threshold": 0.49
+        },
+        {
+          "params": {
+            "C": 0.01
+          },
+          "oof_cost": 334.0,
+          "oof_pr_auc": 0.41759316494108684,
+          "threshold": 0.44
+        },
+        {
+          "params": {
+            "C": 10.0
+          },
+          "oof_cost": 332.0,
+          "oof_pr_auc": 0.4405337494009749,
+          "threshold": 0.51
+        },
+        {
+          "params": {
+            "C": 1.0,
+            "neg_stride": 1
+          },
+          "oof_cost": 326.0,
+          "oof_pr_auc": 0.44099929593681614,
+          "threshold": 0.51
+        },
+        {
+          "params": {
+            "C": 1.0,
+            "pos_weight_scale": 0.25
+          },
+          "oof_cost": 263.0,
+          "oof_pr_auc": 0.38556361050013915,
+          "threshold": 0.51
+        }
+      ],
+      "seconds": 469.0
+    }
+  ],
+  "summary": {
+    "per_seed": [
+      {
+        "seed": 0,
+        "samples": {
+          "tn": 1813191,
+          "fp": 34410,
+          "fn": 37339,
+          "tp": 5174
+        },
+        "alarms": {
+          "tn": 1813595,
+          "fp": 34006,
+          "fn": 37359,
+          "tp": 5154
+        },
+        "events": {
+          "failures": 6,
+          "detected": 3,
+          "missed": 3,
+          "false_alarm_episodes": 149
+        },
+        "expected_cost_mean": 74.83333333333333,
+        "metrics_alarms": {
+          "precision": 0.13161389172625126,
+          "recall": 0.12123350504551549,
+          "f1": 0.12621062040086686,
+          "specificity": 0.9815945109360733
+        },
+        "metrics_samples": {
+          "precision": 0.13070937752627323,
+          "recall": 0.1217039493801896,
+          "f1": 0.12604601873393667,
+          "specificity": 0.9813758490063601
+        },
+        "ece_raw_mean": 0.038727764754057904,
+        "ece_calibrated_mean": 0.03410527434931079
+      }
+    ],
+    "detected_mean": 3.0,
+    "detected_min": 3,
+    "detected_max": 3,
+    "expected_cost_mean": 74.83333333333333,
+    "false_alarm_episodes_mean": 149.0
+  },
+  "schema_version": "1.0",
+  "evaluated_at": "2026-10-20T23:06:26.348111+00:00",
+  "protocol": "outer purged walk-forward (6 folds) \u00d7 inner leave-one-failure-out; Platt calibration; RN-02 threshold",
+  "seeds": 1,
+  "search_space": [
+    {
+      "C": 1.0
+    },
+    {
+      "C": 0.1
+    },
+    {
+      "C": 0.01
+    },
+    {
+      "C": 10.0
+    },
+    {
+      "C": 1.0,
+      "neg_stride": 1
+    },
+    {
+      "C": 1.0,
+      "pos_weight_scale": 0.25
+    }
+  ],
+  "dropped_sensors": [
+    "DV_pressure",
+    "Reservoirs",
+    "Oil_level"
+  ],
+  "sensors": [
+    "TP2",
+    "TP3",
+    "H1",
+    "Motor_current",
+    "Oil_temperature",
+    "COMP",
+    "DV_eletric",
+    "Towers",
+    "MPG"
+  ],
+  "ablation_tag": "no_dv_pressure",
+  "deep_config": null,
+  "elapsed_s": 1652.8
+}

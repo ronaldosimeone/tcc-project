@@ -28,8 +28,8 @@ import pytest
 # ---------------------------------------------------------------------------
 
 _ML_ROOT: Path = Path(__file__).resolve().parent.parent
-MODEL_PATH: Path = _ML_ROOT / "models" / "random_forest_final.joblib"
-MODEL_CARD_PATH: Path = _ML_ROOT / "models" / "model_card.json"
+MODEL_PATH: Path = _ML_ROOT / "models" / "legacy" / "random_forest_final.joblib"
+MODEL_CARD_PATH: Path = _ML_ROOT / "models" / "legacy" / "model_card.json"
 
 
 # ---------------------------------------------------------------------------

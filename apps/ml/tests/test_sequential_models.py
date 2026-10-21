@@ -40,7 +40,7 @@ from sklearn.preprocessing import StandardScaler
 
 # ── resolve project paths ─────────────────────────────────────────────────────
 _ML_ROOT: Path = Path(__file__).resolve().parents[1]
-_MODELS_DIR: Path = _ML_ROOT / "models"
+_MODELS_DIR: Path = _ML_ROOT / "models" / "legacy"
 _SRC: Path = _ML_ROOT / "src"
 _DATA: Path = _ML_ROOT / "data" / "processed" / "metropt3.parquet"
 

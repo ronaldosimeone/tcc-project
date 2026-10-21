@@ -1,4 +1,8 @@
 """
+DEPRECATED — previous generation (random split / SMOTE; leaked). Kept only to
+reproduce the before/after comparison of the thesis; writes to models/legacy.
+Served models come from ``src.train_production`` (``*_v3``).
+
 XGBoost training script with Optuna hyperparameter optimisation (RF-10, RNF-23).
 
 Pipeline
@@ -64,7 +68,7 @@ from xgboost import XGBClassifier
 _HERE: Path = Path(__file__).resolve().parent  # apps/ml/src/
 _ML_ROOT: Path = _HERE.parent  # apps/ml/
 _DATA_PATH: Path = _ML_ROOT / "data" / "processed" / "metropt3.parquet"
-_MODELS_DIR: Path = _ML_ROOT / "models"
+_MODELS_DIR: Path = _ML_ROOT / "models" / "legacy"  # previous generation, not served
 _OPTUNA_DIR: Path = _ML_ROOT / "data" / "optuna"
 _STUDY_DB: Path = _OPTUNA_DIR / "xgboost_study.db"
 

@@ -1,0 +1,678 @@
+{
+ "protocol": "PurgedWalkForwardSplit (outer) x PurgedEventBlockKFold (inner)",
+ "purge_s": 300.0,
+ "embargo_s": 3600.0,
+ "n_failures": 7,
+ "failures": [
+  {
+   "id": "F20_1",
+   "type": "air_leak",
+   "start": "2020-04-18 00:00:00",
+   "end": "2020-04-18 23:59:00"
+  },
+  {
+   "id": "F20_2",
+   "type": "air_leak",
+   "start": "2020-05-29 23:30:00",
+   "end": "2020-05-30 06:00:00"
+  },
+  {
+   "id": "F20_3",
+   "type": "air_leak",
+   "start": "2020-06-05 10:00:00",
+   "end": "2020-06-07 14:30:00"
+  },
+  {
+   "id": "F20_4",
+   "type": "air_leak",
+   "start": "2020-07-15 14:30:00",
+   "end": "2020-07-15 19:00:00"
+  },
+  {
+   "id": "F22_1",
+   "type": "air_leak",
+   "start": "2022-02-28 21:53:00",
+   "end": "2022-03-01 02:00:00"
+  },
+  {
+   "id": "F22_2",
+   "type": "air_dryer",
+   "start": "2022-03-23 14:54:00",
+   "end": "2022-03-23 15:24:00"
+  },
+  {
+   "id": "F22_3",
+   "type": "oil_leak",
+   "start": "2022-05-30 12:00:00",
+   "end": "2022-06-02 06:18:00"
+  }
+ ],
+ "folds": [
+  {
+   "fold": 1,
+   "test_failure": "F20_2",
+   "failure_type": "air_leak",
+   "failure_interval": [
+    "2020-05-29 23:30:00",
+    "2020-05-30 06:00:00"
+   ],
+   "train_span": [
+    "2020-02-01 00:00:00",
+    "2020-05-09 11:39:21"
+   ],
+   "train_failures": [
+    "F20_1"
+   ],
+   "purge": [
+    "2020-05-09 11:39:30",
+    "2020-05-09 11:44:30"
+   ],
+   "test_segment": [
+    "2020-05-09 11:44:30",
+    "2020-06-02 08:00:00"
+   ],
+   "test_span": [
+    "2020-05-09 11:44:38",
+    "2020-06-02 07:59:57"
+   ],
+   "train": {
+    "rows": 704298,
+    "failure_rows": 8657,
+    "normal_rows": 695641
+   },
+   "test": {
+    "rows": 163896,
+    "failure_rows": 2360,
+    "normal_rows": 161536
+   },
+   "selection": "fallback (a-priori, uncalibrated)",
+   "inner_folds": [],
+   "no_train_row_after_test_start": true
+  },
+  {
+   "fold": 2,
+   "test_failure": "F20_3",
+   "failure_type": "air_leak",
+   "failure_interval": [
+    "2020-06-05 10:00:00",
+    "2020-06-07 14:30:00"
+   ],
+   "train_span": [
+    "2020-02-01 00:00:00",
+    "2020-06-02 07:54:50"
+   ],
+   "train_failures": [
+    "F20_1",
+    "F20_2"
+   ],
+   "purge": [
+    "2020-06-02 07:55:00",
+    "2020-06-02 08:00:00"
+   ],
+   "test_segment": [
+    "2020-06-02 08:00:00",
+    "2020-06-26 14:30:00"
+   ],
+   "test_span": [
+    "2020-06-02 08:00:07",
+    "2020-06-26 14:29:55"
+   ],
+   "train": {
+    "rows": 868194,
+    "failure_rows": 11017,
+    "normal_rows": 857177
+   },
+   "test": {
+    "rows": 180806,
+    "failure_rows": 17315,
+    "normal_rows": 163491
+   },
+   "selection": "nested LOFO",
+   "inner_folds": [
+    {
+     "held_out_failure": "F20_1",
+     "validation_segment": [
+      "2020-02-01 00:00:00",
+      "2020-05-09 11:44:30"
+     ],
+     "train": {
+      "rows": 163502,
+      "failure_rows": 2360,
+      "normal_rows": 161142
+     },
+     "validation": {
+      "rows": 704329,
+      "failure_rows": 8657,
+      "normal_rows": 695672
+     },
+     "trains_on_later_failures": true
+    },
+    {
+     "held_out_failure": "F20_2",
+     "validation_segment": [
+      "2020-05-09 11:44:30",
+      "2020-06-02 07:54:51"
+     ],
+     "train": {
+      "rows": 704298,
+      "failure_rows": 8657,
+      "normal_rows": 695641
+     },
+     "validation": {
+      "rows": 163865,
+      "failure_rows": 2360,
+      "normal_rows": 161505
+     },
+     "trains_on_later_failures": false
+    }
+   ],
+   "no_train_row_after_test_start": true
+  },
+  {
+   "fold": 3,
+   "test_failure": "F20_4",
+   "failure_type": "air_leak",
+   "failure_interval": [
+    "2020-07-15 14:30:00",
+    "2020-07-15 19:00:00"
+   ],
+   "train_span": [
+    "2020-02-01 00:00:00",
+    "2020-06-26 14:24:58"
+   ],
+   "train_failures": [
+    "F20_1",
+    "F20_2",
+    "F20_3"
+   ],
+   "purge": [
+    "2020-06-26 14:25:00",
+    "2020-06-26 14:30:00"
+   ],
+   "test_segment": [
+    "2020-06-26 14:30:00",
+    "2021-05-08 08:26:30"
+   ],
+   "test_span": [
+    "2020-06-26 14:30:05",
+    "2020-09-01 03:59:50"
+   ],
+   "train": {
+    "rows": 1049001,
+    "failure_rows": 28332,
+    "normal_rows": 1020669
+   },
+   "test": {
+    "rows": 467917,
+    "failure_rows": 1622,
+    "normal_rows": 466295
+   },
+   "selection": "nested LOFO",
+   "inner_folds": [
+    {
+     "held_out_failure": "F20_1",
+     "validation_segment": [
+      "2020-02-01 00:00:00",
+      "2020-05-09 11:44:30"
+     ],
+     "train": {
+      "rows": 344309,
+      "failure_rows": 19675,
+      "normal_rows": 324634
+     },
+     "validation": {
+      "rows": 704329,
+      "failure_rows": 8657,
+      "normal_rows": 695672
+     },
+     "trains_on_later_failures": true
+    },
+    {
+     "held_out_failure": "F20_2",
+     "validation_segment": [
+      "2020-05-09 11:44:30",
+      "2020-06-02 08:00:00"
+     ],
+     "train": {
+      "rows": 884711,
+      "failure_rows": 25972,
+      "normal_rows": 858739
+     },
+     "validation": {
+      "rows": 163896,
+      "failure_rows": 2360,
+      "normal_rows": 161536
+     },
+     "trains_on_later_failures": true
+    },
+    {
+     "held_out_failure": "F20_3",
+     "validation_segment": [
+      "2020-06-02 08:00:00",
+      "2020-06-26 14:24:59"
+     ],
+     "train": {
+      "rows": 868194,
+      "failure_rows": 11017,
+      "normal_rows": 857177
+     },
+     "validation": {
+      "rows": 180776,
+      "failure_rows": 17315,
+      "normal_rows": 163461
+     },
+     "trains_on_later_failures": false
+    }
+   ],
+   "no_train_row_after_test_start": true
+  },
+  {
+   "fold": 4,
+   "test_failure": "F22_1",
+   "failure_type": "air_leak",
+   "failure_interval": [
+    "2022-02-28 21:53:00",
+    "2022-03-01 02:00:00"
+   ],
+   "train_span": [
+    "2020-02-01 00:00:00",
+    "2020-09-01 03:59:50"
+   ],
+   "train_failures": [
+    "F20_1",
+    "F20_2",
+    "F20_3",
+    "F20_4"
+   ],
+   "purge": [
+    "2021-05-08 08:21:30",
+    "2021-05-08 08:26:30"
+   ],
+   "test_segment": [
+    "2021-05-08 08:26:30",
+    "2022-03-12 08:27:00"
+   ],
+   "test_span": [
+    "2022-01-01 06:00:00",
+    "2022-03-12 08:26:50"
+   ],
+   "train": {
+    "rows": 1516948,
+    "failure_rows": 29954,
+    "normal_rows": 1486994
+   },
+   "test": {
+    "rows": 494026,
+    "failure_rows": 1483,
+    "normal_rows": 492543
+   },
+   "selection": "nested LOFO",
+   "inner_folds": [
+    {
+     "held_out_failure": "F20_1",
+     "validation_segment": [
+      "2020-02-01 00:00:00",
+      "2020-05-09 11:44:30"
+     ],
+     "train": {
+      "rows": 812256,
+      "failure_rows": 21297,
+      "normal_rows": 790959
+     },
+     "validation": {
+      "rows": 704329,
+      "failure_rows": 8657,
+      "normal_rows": 695672
+     },
+     "trains_on_later_failures": true
+    },
+    {
+     "held_out_failure": "F20_2",
+     "validation_segment": [
+      "2020-05-09 11:44:30",
+      "2020-06-02 08:00:00"
+     ],
+     "train": {
+      "rows": 1352658,
+      "failure_rows": 27594,
+      "normal_rows": 1325064
+     },
+     "validation": {
+      "rows": 163896,
+      "failure_rows": 2360,
+      "normal_rows": 161536
+     },
+     "trains_on_later_failures": true
+    },
+    {
+     "held_out_failure": "F20_3",
+     "validation_segment": [
+      "2020-06-02 08:00:00",
+      "2020-06-26 14:30:00"
+     ],
+     "train": {
+      "rows": 1335748,
+      "failure_rows": 12639,
+      "normal_rows": 1323109
+     },
+     "validation": {
+      "rows": 180806,
+      "failure_rows": 17315,
+      "normal_rows": 163491
+     },
+     "trains_on_later_failures": true
+    },
+    {
+     "held_out_failure": "F20_4",
+     "validation_segment": [
+      "2020-06-26 14:30:00",
+      "2020-09-01 03:59:51"
+     ],
+     "train": {
+      "rows": 1049001,
+      "failure_rows": 28332,
+      "normal_rows": 1020669
+     },
+     "validation": {
+      "rows": 467917,
+      "failure_rows": 1622,
+      "normal_rows": 466295
+     },
+     "trains_on_later_failures": false
+    }
+   ],
+   "no_train_row_after_test_start": true
+  },
+  {
+   "fold": 5,
+   "test_failure": "F22_2",
+   "failure_type": "air_dryer",
+   "failure_interval": [
+    "2022-03-23 14:54:00",
+    "2022-03-23 15:24:00"
+   ],
+   "train_span": [
+    "2020-02-01 00:00:00",
+    "2022-03-12 08:21:50"
+   ],
+   "train_failures": [
+    "F20_1",
+    "F20_2",
+    "F20_3",
+    "F20_4",
+    "F22_1"
+   ],
+   "purge": [
+    "2022-03-12 08:22:00",
+    "2022-03-12 08:27:00"
+   ],
+   "test_segment": [
+    "2022-03-12 08:27:00",
+    "2022-04-26 13:42:00"
+   ],
+   "test_span": [
+    "2022-03-12 08:27:00",
+    "2022-04-26 13:41:50"
+   ],
+   "train": {
+    "rows": 2010944,
+    "failure_rows": 31437,
+    "normal_rows": 1979507
+   },
+   "test": {
+    "rows": 316264,
+    "failure_rows": 181,
+    "normal_rows": 316083
+   },
+   "selection": "nested LOFO",
+   "inner_folds": [
+    {
+     "held_out_failure": "F20_1",
+     "validation_segment": [
+      "2020-02-01 00:00:00",
+      "2020-05-09 11:44:30"
+     ],
+     "train": {
+      "rows": 1306252,
+      "failure_rows": 22780,
+      "normal_rows": 1283472
+     },
+     "validation": {
+      "rows": 704329,
+      "failure_rows": 8657,
+      "normal_rows": 695672
+     },
+     "trains_on_later_failures": true
+    },
+    {
+     "held_out_failure": "F20_2",
+     "validation_segment": [
+      "2020-05-09 11:44:30",
+      "2020-06-02 08:00:00"
+     ],
+     "train": {
+      "rows": 1846654,
+      "failure_rows": 29077,
+      "normal_rows": 1817577
+     },
+     "validation": {
+      "rows": 163896,
+      "failure_rows": 2360,
+      "normal_rows": 161536
+     },
+     "trains_on_later_failures": true
+    },
+    {
+     "held_out_failure": "F20_3",
+     "validation_segment": [
+      "2020-06-02 08:00:00",
+      "2020-06-26 14:30:00"
+     ],
+     "train": {
+      "rows": 1829744,
+      "failure_rows": 14122,
+      "normal_rows": 1815622
+     },
+     "validation": {
+      "rows": 180806,
+      "failure_rows": 17315,
+      "normal_rows": 163491
+     },
+     "trains_on_later_failures": true
+    },
+    {
+     "held_out_failure": "F20_4",
+     "validation_segment": [
+      "2020-06-26 14:30:00",
+      "2021-05-08 08:26:30"
+     ],
+     "train": {
+      "rows": 1542997,
+      "failure_rows": 29815,
+      "normal_rows": 1513182
+     },
+     "validation": {
+      "rows": 467917,
+      "failure_rows": 1622,
+      "normal_rows": 466295
+     },
+     "trains_on_later_failures": true
+    },
+    {
+     "held_out_failure": "F22_1",
+     "validation_segment": [
+      "2021-05-08 08:26:30",
+      "2022-03-12 08:21:51"
+     ],
+     "train": {
+      "rows": 1516948,
+      "failure_rows": 29954,
+      "normal_rows": 1486994
+     },
+     "validation": {
+      "rows": 493996,
+      "failure_rows": 1483,
+      "normal_rows": 492513
+     },
+     "trains_on_later_failures": false
+    }
+   ],
+   "no_train_row_after_test_start": true
+  },
+  {
+   "fold": 6,
+   "test_failure": "F22_3",
+   "failure_type": "oil_leak",
+   "failure_interval": [
+    "2022-05-30 12:00:00",
+    "2022-06-02 06:18:00"
+   ],
+   "train_span": [
+    "2020-02-01 00:00:00",
+    "2022-04-26 13:36:50"
+   ],
+   "train_failures": [
+    "F20_1",
+    "F20_2",
+    "F20_3",
+    "F20_4",
+    "F22_1",
+    "F22_2"
+   ],
+   "purge": [
+    "2022-04-26 13:37:00",
+    "2022-04-26 13:42:00"
+   ],
+   "test_segment": [
+    "2022-04-26 13:42:00",
+    "2022-06-02 15:49:51"
+   ],
+   "test_span": [
+    "2022-04-26 13:42:00",
+    "2022-06-02 15:49:50"
+   ],
+   "train": {
+    "rows": 2327208,
+    "failure_rows": 31618,
+    "normal_rows": 2295590
+   },
+   "test": {
+    "rows": 267205,
+    "failure_rows": 19552,
+    "normal_rows": 247653
+   },
+   "selection": "nested LOFO",
+   "inner_folds": [
+    {
+     "held_out_failure": "F20_1",
+     "validation_segment": [
+      "2020-02-01 00:00:00",
+      "2020-05-09 11:44:30"
+     ],
+     "train": {
+      "rows": 1622516,
+      "failure_rows": 22961,
+      "normal_rows": 1599555
+     },
+     "validation": {
+      "rows": 704329,
+      "failure_rows": 8657,
+      "normal_rows": 695672
+     },
+     "trains_on_later_failures": true
+    },
+    {
+     "held_out_failure": "F20_2",
+     "validation_segment": [
+      "2020-05-09 11:44:30",
+      "2020-06-02 08:00:00"
+     ],
+     "train": {
+      "rows": 2162918,
+      "failure_rows": 29258,
+      "normal_rows": 2133660
+     },
+     "validation": {
+      "rows": 163896,
+      "failure_rows": 2360,
+      "normal_rows": 161536
+     },
+     "trains_on_later_failures": true
+    },
+    {
+     "held_out_failure": "F20_3",
+     "validation_segment": [
+      "2020-06-02 08:00:00",
+      "2020-06-26 14:30:00"
+     ],
+     "train": {
+      "rows": 2146008,
+      "failure_rows": 14303,
+      "normal_rows": 2131705
+     },
+     "validation": {
+      "rows": 180806,
+      "failure_rows": 17315,
+      "normal_rows": 163491
+     },
+     "trains_on_later_failures": true
+    },
+    {
+     "held_out_failure": "F20_4",
+     "validation_segment": [
+      "2020-06-26 14:30:00",
+      "2021-05-08 08:26:30"
+     ],
+     "train": {
+      "rows": 1859261,
+      "failure_rows": 29996,
+      "normal_rows": 1829265
+     },
+     "validation": {
+      "rows": 467917,
+      "failure_rows": 1622,
+      "normal_rows": 466295
+     },
+     "trains_on_later_failures": true
+    },
+    {
+     "held_out_failure": "F22_1",
+     "validation_segment": [
+      "2021-05-08 08:26:30",
+      "2022-03-12 08:27:00"
+     ],
+     "train": {
+      "rows": 1832822,
+      "failure_rows": 30135,
+      "normal_rows": 1802687
+     },
+     "validation": {
+      "rows": 494026,
+      "failure_rows": 1483,
+      "normal_rows": 492543
+     },
+     "trains_on_later_failures": true
+    },
+    {
+     "held_out_failure": "F22_2",
+     "validation_segment": [
+      "2022-03-12 08:27:00",
+      "2022-04-26 13:36:51"
+     ],
+     "train": {
+      "rows": 2010944,
+      "failure_rows": 31437,
+      "normal_rows": 1979507
+     },
+     "validation": {
+      "rows": 316234,
+      "failure_rows": 181,
+      "normal_rows": 316053
+     },
+     "trains_on_later_failures": false
+    }
+   ],
+   "no_train_row_after_test_start": true
+  }
+ ]
+}

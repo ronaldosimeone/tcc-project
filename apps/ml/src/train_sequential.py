@@ -1,4 +1,8 @@
 """
+DEPRECATED — previous generation (random split / SMOTE; leaked). Kept only to
+reproduce the before/after comparison of the thesis; writes to models/legacy.
+Served models come from ``src.train_production`` (``*_v3``).
+
 Generic trainer for sequential DL models on MetroPT-3 (TCN, BiLSTM, PatchTST).
 
 Pipeline (mirrors train_mlp.py for consistency)
@@ -68,7 +72,7 @@ from sklearn.metrics import (
 _HERE: Path = Path(__file__).resolve().parent  # apps/ml/src/
 _ML_ROOT: Path = _HERE.parent  # apps/ml/
 _DATA_PATH: Path = _ML_ROOT / "data" / "processed" / "metropt3.parquet"
-_MODELS_DIR: Path = _ML_ROOT / "models"
+_MODELS_DIR: Path = _ML_ROOT / "models" / "legacy"  # previous generation, not served
 
 sys.path.insert(0, str(_HERE))
 

@@ -37,6 +37,9 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 
+# Same segmentation rule as the feature engineering.
+from src.preprocessing import _MAX_GAP_S as MAX_GAP_S
+
 from src.models.autoencoder import Conv1DAutoencoder
 from src.models.bilstm import BiLstmClassifier
 from src.models.patchtst import PatchTSTClassifier
@@ -85,7 +88,15 @@ def build_data(
     channels = [c for c in raw_df.columns if c not in ("timestamp", "anomaly")]
     raw = raw_df[channels].to_numpy(np.float32)
     n = len(raw)
-    seg_start = np.where(is22, int(np.argmax(is22)), 0)
+    # A window is valid only if its WINDOW rows are one contiguous segment:
+    # no time gap > MAX_GAP_S inside it (this also covers the 2020→2022 jump
+    # and any concatenated recording).
+    t = pd.to_datetime(ts).reset_index(drop=True)
+    gap = t.diff().dt.total_seconds().to_numpy()
+    new_seg = (
+        np.r_[True, gap[1:] > MAX_GAP_S] | np.r_[False, np.diff(is22.astype(int)) != 0]
+    )
+    seg_start = np.maximum.accumulate(np.where(new_seg, np.arange(n), 0))
     valid_end = (np.arange(n) - seg_start) >= WINDOW - 1
     yv = y.to_numpy().astype(int)
     csum = np.concatenate([[0], np.cumsum(yv)])
@@ -164,16 +175,26 @@ def batch_inputs(
     return (src[idx[:, None] + _offsets()[None, :]] - m) / s
 
 
-def _train_rows(data: DeepData, arch: str, train_idx: np.ndarray) -> np.ndarray:
+def default_neg_stride(arch: str) -> int:
+    """A-priori stride over normal rows/windows (a tuned hyper-parameter)."""
+    if arch == "mlp":
+        return MLP_NEG_STRIDE
+    return NEG_EVERY // 2 if arch == "autoencoder" else NEG_EVERY
+
+
+def _train_rows(
+    data: DeepData, arch: str, train_idx: np.ndarray, neg_stride: int | None = None
+) -> np.ndarray:
+    stride = default_neg_stride(arch) if neg_stride is None else int(neg_stride)
     if arch == "mlp":
         pos = train_idx[data.y[train_idx] == 1]
-        neg = train_idx[data.y[train_idx] == 0][::MLP_NEG_STRIDE]
+        neg = train_idx[data.y[train_idx] == 0][::stride]
         return np.sort(np.concatenate([pos, neg]))
     ends = train_idx[data.valid_end[train_idx]]
     if arch == "autoencoder":
-        return ends[data.clean_window[ends]][:: NEG_EVERY // 2]
+        return ends[data.clean_window[ends]][::stride]
     pos = ends[data.y[ends] == 1][::POS_EVERY]
-    neg = ends[data.y[ends] == 0][::NEG_EVERY]
+    neg = ends[data.y[ends] == 0][::stride]
     return np.sort(np.concatenate([pos, neg]))
 
 
@@ -191,9 +212,13 @@ def fit(
     src = data.feats[train_idx] if arch == "mlp" else data.raw[train_idx]
     mean = src.mean(axis=0)
     std = src.std(axis=0) + 1e-6
-    rows = _train_rows(data, arch, train_idx)
+    rows = _train_rows(data, arch, train_idx, p.get("neg_stride"))
     yv = data.y[rows]
-    pos_weight = float((len(yv) - yv.sum()) / max(int(yv.sum()), 1))
+    # Balanced weight on the rows actually trained on, times a tuned scale
+    # (1 = fully balanced; < 1 = softer emphasis on the failure class).
+    pos_weight = float((len(yv) - yv.sum()) / max(int(yv.sum()), 1)) * float(
+        p.get("pos_weight_scale", 1.0)
+    )
     n_in = data.feats.shape[1] if arch == "mlp" else data.raw.shape[1]
     model = make_model(arch, n_in, pos_weight, epochs).to(DEVICE)
     opt = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=1e-4)

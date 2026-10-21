@@ -35,8 +35,8 @@ from sklearn.preprocessing import StandardScaler
 
 # ── paths ─────────────────────────────────────────────────────────────────────
 _ML_ROOT: Path = Path(__file__).resolve().parents[1]
-_ONNX_PATH: Path = _ML_ROOT / "models" / "mlp_v1.onnx"
-_SCALER_PATH: Path = _ML_ROOT / "models" / "mlp_scaler.joblib"
+_ONNX_PATH: Path = _ML_ROOT / "models" / "legacy" / "mlp_v1.onnx"
+_SCALER_PATH: Path = _ML_ROOT / "models" / "legacy" / "mlp_scaler.joblib"
 
 _FEATURE_NAMES: list[str] = [
     "TP2",

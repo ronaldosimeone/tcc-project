@@ -26,66 +26,63 @@ stages:
       - data/processed/metropt3.parquet:
           cache: false
 
-  # ── Treino — Random Forest (RF-04 / RNF-10) ─────────────────────────────
-  # Modelo ATIVO em produção (ACTIVE_MODEL=random_forest_v2, vencedor do
-  # benchmark RF-18/RNF-36 — ver .env.example). GridSearchCV + refit final
-  # com SMOTE, tudo com random_state=42 fixo — determinístico.
-  train_random_forest:
-    cmd: python -m src.train_random_forest
+  # ── Treino de produção — os 7 modelos servidos (geração ``*_v3``) ───────
+  # Protocolo aninhado sem vazamento (src/nested_protocol.py): hiperparâmetros
+  # por leave-one-failure-out sobre as falhas de treino (custo RN-02),
+  # calibração Platt nas predições OOF, limiar RN-02 na escala calibrada,
+  # refit em todos os dados, export ONNX com checagem de paridade. Sem SMOTE;
+  # desbalanceamento tratado por peso de classe + subamostragem de negativos.
+  # A geração anterior (split aleatório + SMOTE) foi arquivada em
+  # models/legacy e não é servida. Treina na GPU (apps/ml/.venv-gpu).
+  train_production:
+    cmd: python -m src.train_production
     deps:
-      - src/train_random_forest.py
-      - src/preprocessing.py
-      - src/balancing.py
-      - data/processed/metropt3.parquet
-    outs:
-      # Os artefatos já são commitados diretamente no Git (mesmo padrão de
-      # model_card.json/onnx já estabelecido no projeto) — o backend os
-      # consome via bind-mount, sem passo de `dvc pull`. Mesmo raciocínio
-      # do `cache: false` do stage `ingest` acima. `model_card.json` entra
-      # como `metrics:` (não `outs:` de novo — o DVC trata isso como
-      # duplicata) porque também é uma saída, só que com métricas reais.
-      - models/random_forest_final.joblib:
-          cache: false
-      - models/random_forest_v2.onnx:
-          cache: false
-    metrics:
-      - models/model_card.json:
-          cache: false
-
-  # ── Treino — XGBoost (RF-10 / RNF-23) ────────────────────────────────────
-  # Candidato de benchmark (não é o ACTIVE_MODEL hoje). `--n-trials 5`
-  # aqui é o "quick smoke run" já documentado no próprio script (linha
-  # "Quick smoke run (5 trials, ~2 min...)") — usado deliberadamente para
-  # manter `dvc repro` rápido o bastante para validar de verdade neste
-  # pipeline (idempotência, rebuild, etc.); um retrain de produção real
-  # usaria `--n-trials 100` manualmente, fora do dvc repro automático.
-  #
-  # NOTA DE DETERMINISMO (seção 5): `optuna.create_study()` não recebe
-  # `sampler=TPESampler(seed=...)` — a AMOSTRAGEM de hiperparâmetros pelo
-  # Optuna não é semeada explicitamente. `random_state=42` cobre o split
-  # train/test, o K-Fold da CV interna e o XGBClassifier em si, mas a
-  # ESCOLHA de quais hiperparâmetros o TPE testa em cada trial pode variar
-  # entre execuções "do zero" (study.db ausente). Isto é uma lacuna real
-  # pré-existente do script, não introduzida por esta task — documentada
-  # aqui e nas Pendências do relatório, não corrigida (mudar a lógica de
-  # treino está fora do escopo desta task de DVC).
-  train_xgboost:
-    cmd: python -m src.train_xgboost --n-trials 5
-    deps:
-      - src/train_xgboost.py
+      - src/train_production.py
+      - src/nested_protocol.py
+      - src/deep_temporal.py
+      - src/evaluate_nested.py
       - src/preprocessing.py
       - data/processed/metropt3.parquet
+      - data/processed/metropt2022.parquet
     outs:
-      - models/xgboost_v1.joblib:
+      # Artefatos commitados direto no Git (o backend os consome via
+      # bind-mount) — mesmo contrato ``cache: false`` do stage ``ingest``.
+      - models/random_forest_v3.onnx:
           cache: false
-      - models/xgboost_v2.onnx:
+      - models/xgboost_v3.onnx:
           cache: false
-      # data/optuna/xgboost_study.db é DELIBERADAMENTE excluído de outs:
-      # é um SQLite que ACUMULA trials entre execuções (Optuna
-      # `load_if_exists=True`) — não é uma função pura de seus deps, então
-      # não se encaixa no contrato "mesmos deps => mesmo out" que o DVC
-      # espera de um `outs`. Continua gitignored/local, como já era antes
-      # desta task (ver apps/ml/data/*.gitignore).
+      - models/mlp_v3.onnx:
+          cache: false
+      - models/mlp_v3_scaler.joblib:
+          cache: false
+      - models/tcn_v3.onnx:
+          cache: false
+      - models/tcn_v3_scaler.joblib:
+          cache: false
+      - models/bilstm_v3.onnx:
+          cache: false
+      - models/bilstm_v3_scaler.joblib:
+          cache: false
+      - models/patchtst_v3.onnx:
+          cache: false
+      - models/patchtst_v3_scaler.joblib:
+          cache: false
+      - models/autoencoder_v3.onnx:
+          cache: false
+      - models/autoencoder_v3_scaler.joblib:
+          cache: false
     metrics:
-      - models/xgboost_v1_card.json:
+      - models/random_forest_v3_card.json:
+          cache: false
+      - models/xgboost_v3_card.json:
+          cache: false
+      - models/mlp_v3_card.json:
+          cache: false
+      - models/tcn_v3_card.json:
+          cache: false
+      - models/bilstm_v3_card.json:
+          cache: false
+      - models/patchtst_v3_card.json:
+          cache: false
+      - models/autoencoder_v3_card.json:
           cache: false

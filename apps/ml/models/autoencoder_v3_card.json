@@ -1,0 +1,98 @@
+{
+  "schema_version": "3.0",
+  "model_name": "autoencoder_v3",
+  "status": "candidate",
+  "trained_at": "2026-10-20T22:53:46.134406+00:00",
+  "algorithm": "autoencoder",
+  "validation": {
+    "leakage_free": true,
+    "protocol": "nested: outer purged walk-forward \u00d7 inner leave-one-failure-out",
+    "hyperparameters": "selected on inner OOF expected cost (RN-02)",
+    "threshold_selection": "nested LOFO OOF (7 inner folds)"
+  },
+  "dropped_sensors": [
+    "Reservoirs",
+    "Oil_level"
+  ],
+  "hyperparameters": {
+    "epochs": 8,
+    "lr": 0.001,
+    "neg_stride": 2
+  },
+  "search": [
+    {
+      "params": {
+        "epochs": 8,
+        "lr": 0.001
+      },
+      "oof_cost": 604.0,
+      "oof_pr_auc": 0.09485088472817893,
+      "threshold": 0.36
+    },
+    {
+      "params": {
+        "epochs": 16,
+        "lr": 0.0003
+      },
+      "oof_cost": 600.0,
+      "oof_pr_auc": 0.10011655442706331,
+      "threshold": 0.51
+    },
+    {
+      "params": {
+        "epochs": 8,
+        "lr": 0.001,
+        "neg_stride": 2
+      },
+      "oof_cost": 595.0,
+      "oof_pr_auc": 0.09265484086376412,
+      "threshold": 0.26
+    }
+  ],
+  "calibration": {
+    "method": "platt",
+    "a": 0.679598509691416,
+    "b": 0.393612710481018
+  },
+  "threshold_calibrated_probability": 0.26,
+  "decision_threshold": 0.5,
+  "seed": 0,
+  "onnx_parity_max_abs_diff": 1.049041748046875e-05,
+  "feature_count": 10,
+  "feature_names": [
+    "TP2",
+    "TP3",
+    "H1",
+    "DV_pressure",
+    "Motor_current",
+    "Oil_temperature",
+    "COMP",
+    "DV_eletric",
+    "Towers",
+    "MPG"
+  ],
+  "serving": {
+    "adapter": "autoencoder",
+    "onnx": "autoencoder_v3.onnx",
+    "mse_threshold": 0.1202380244487071,
+    "scaler": "autoencoder_v3_scaler.joblib",
+    "window_size": 60
+  },
+  "evidence": {
+    "source": "models/nested/autoencoder.json",
+    "protocol": "outer purged walk-forward (6 folds) \u00d7 inner leave-one-failure-out, 3 seeds, out-of-time",
+    "failures_detected_mean_of_6": 1.0,
+    "failures_detected_range": [
+      1,
+      1
+    ],
+    "false_alarm_episodes_mean": 202.66666666666666,
+    "expected_cost_mean": 117.1111111111111,
+    "confusion_alarms_seed0": {
+      "tn": 1827423,
+      "fp": 20178,
+      "fn": 41316,
+      "tp": 1197
+    }
+  }
+}

@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "evaluated_at": "2026-10-19T15:11:35.989471+00:00",
+  "evaluated_at": "2026-10-21T00:32:45.038211+00:00",
   "requirements": [
     "RF-33",
     "RN-01",
@@ -28,19 +28,19 @@
   "early_horizon_h": 6.0,
   "production": {
     "random_forest": {
-      "threshold": 0.814773,
-      "pr_auc": 0.10466611271363924,
+      "threshold": 0.694113,
+      "pr_auc": 0.10498518096242157,
       "samples": {
-        "tn": 404413,
-        "fp": 70,
-        "fn": 21849,
-        "tp": 1307
+        "tn": 404417,
+        "fp": 66,
+        "fn": 21845,
+        "tp": 1311
       },
       "alarms": {
-        "tn": 404418,
-        "fp": 65,
-        "fn": 21879,
-        "tp": 1277
+        "tn": 404417,
+        "fp": 66,
+        "fn": 21875,
+        "tp": 1281
       },
       "events": {
         "failures": 2,
@@ -48,20 +48,20 @@
         "missed": 1,
         "false_alarm_episodes": 0,
         "false_alarms_per_day": 0.0,
-        "mean_lead_time_s": -1406.0,
+        "mean_lead_time_s": -1446.0,
         "expected_cost": 100.0
       },
       "failures": [
         {
           "type": "air_leak",
           "detected": true,
-          "first_alarm": "2022-06-04 10:42:50",
-          "lead_vs_start_min": -23.4,
-          "lead_vs_lps_min": 43.2,
+          "first_alarm": "2022-06-04 10:43:30",
+          "lead_vs_start_min": -24.1,
+          "lead_vs_lps_min": 42.5,
           "sustained_detected": true,
-          "sustained_alarm": "2022-06-04 10:52:20",
-          "sustained_lead_vs_start_min": -32.9,
-          "sustained_lead_vs_lps_min": 33.7
+          "sustained_alarm": "2022-06-04 10:43:30",
+          "sustained_lead_vs_start_min": -24.1,
+          "sustained_lead_vs_lps_min": 42.5
         },
         {
           "type": "oil_leak",
@@ -78,19 +78,19 @@
       "false_alarms_per_day": 0.0
     },
     "xgboost": {
-      "threshold": 0.905041,
-      "pr_auc": 0.09556999311759255,
+      "threshold": 0.983594,
+      "pr_auc": 0.10521026610044744,
       "samples": {
-        "tn": 404259,
-        "fp": 224,
-        "fn": 21942,
-        "tp": 1214
+        "tn": 404434,
+        "fp": 49,
+        "fn": 21856,
+        "tp": 1300
       },
       "alarms": {
-        "tn": 404269,
-        "fp": 214,
-        "fn": 22029,
-        "tp": 1127
+        "tn": 404472,
+        "fp": 11,
+        "fn": 21913,
+        "tp": 1243
       },
       "events": {
         "failures": 2,
@@ -98,20 +98,20 @@
         "missed": 1,
         "false_alarm_episodes": 0,
         "false_alarms_per_day": 0.0,
-        "mean_lead_time_s": -1966.0,
+        "mean_lead_time_s": -1496.0,
         "expected_cost": 100.0
       },
       "failures": [
         {
           "type": "air_leak",
           "detected": true,
-          "first_alarm": "2022-06-04 10:52:10",
-          "lead_vs_start_min": -32.8,
-          "lead_vs_lps_min": 33.9,
+          "first_alarm": "2022-06-04 10:44:20",
+          "lead_vs_start_min": -24.9,
+          "lead_vs_lps_min": 41.7,
           "sustained_detected": true,
-          "sustained_alarm": "2022-06-04 10:52:10",
-          "sustained_lead_vs_start_min": -32.8,
-          "sustained_lead_vs_lps_min": 33.9
+          "sustained_alarm": "2022-06-04 10:44:20",
+          "sustained_lead_vs_start_min": -24.9,
+          "sustained_lead_vs_lps_min": 41.7
         },
         {
           "type": "oil_leak",
@@ -128,19 +128,19 @@
       "false_alarms_per_day": 0.0
     },
     "mlp": {
-      "threshold": 0.08,
-      "pr_auc": 0.32366929695967916,
+      "threshold": 0.06,
+      "pr_auc": 0.4503067652601207,
       "samples": {
-        "tn": 404058,
-        "fp": 425,
-        "fn": 16134,
-        "tp": 7022
+        "tn": 403969,
+        "fp": 514,
+        "fn": 12940,
+        "tp": 10216
       },
       "alarms": {
-        "tn": 404142,
-        "fp": 341,
-        "fn": 18712,
-        "tp": 4444
+        "tn": 404053,
+        "fp": 430,
+        "fn": 16232,
+        "tp": 6924
       },
       "events": {
         "failures": 2,
@@ -148,7 +148,7 @@
         "missed": 0,
         "false_alarm_episodes": 5,
         "false_alarms_per_day": 0.08951382802155791,
-        "mean_lead_time_s": 2746.0,
+        "mean_lead_time_s": 7131.0,
         "expected_cost": 5.0
       },
       "failures": [
@@ -159,138 +159,88 @@
           "lead_vs_start_min": 119.1,
           "lead_vs_lps_min": 185.7,
           "sustained_detected": true,
-          "sustained_alarm": "2022-06-04 10:52:50",
-          "sustained_lead_vs_start_min": -33.4,
-          "sustained_lead_vs_lps_min": 33.2
+          "sustained_alarm": "2022-06-04 10:52:10",
+          "sustained_lead_vs_start_min": -32.8,
+          "sustained_lead_vs_lps_min": 33.9
         },
         {
           "type": "oil_leak",
           "detected": true,
-          "first_alarm": "2022-07-11 10:37:50",
-          "lead_vs_start_min": -27.5,
-          "lead_vs_lps_min": 3426.0,
+          "first_alarm": "2022-07-11 08:11:40",
+          "lead_vs_start_min": 118.6,
+          "lead_vs_lps_min": 3572.2,
           "sustained_detected": true,
-          "sustained_alarm": "2022-07-11 12:02:00",
-          "sustained_lead_vs_start_min": -111.7,
-          "sustained_lead_vs_lps_min": 3341.9
+          "sustained_alarm": "2022-07-11 11:47:10",
+          "sustained_lead_vs_start_min": -96.9,
+          "sustained_lead_vs_lps_min": 3356.7
         }
       ],
       "false_alarms_per_day": 0.08951382802155791
     },
     "tcn": {
-      "threshold": 0.12,
-      "pr_auc": 0.5626924852302596,
+      "threshold": 0.54,
+      "pr_auc": 0.26794131030837587,
       "samples": {
-        "tn": 404061,
-        "fp": 422,
-        "fn": 10274,
-        "tp": 12882
+        "tn": 404483,
+        "fp": 0,
+        "fn": 17922,
+        "tp": 5234
       },
       "alarms": {
-        "tn": 404095,
-        "fp": 388,
-        "fn": 11344,
-        "tp": 11812
+        "tn": 404483,
+        "fp": 0,
+        "fn": 18759,
+        "tp": 4397
       },
       "events": {
         "failures": 2,
         "detected": 2,
         "missed": 0,
-        "false_alarm_episodes": 3,
-        "false_alarms_per_day": 0.05370829681293474,
-        "mean_lead_time_s": 1846.0,
-        "expected_cost": 3.0
+        "false_alarm_episodes": 0,
+        "false_alarms_per_day": 0.0,
+        "mean_lead_time_s": -5179.0,
+        "expected_cost": 0.0
       },
       "failures": [
         {
           "type": "air_leak",
           "detected": true,
-          "first_alarm": "2022-06-04 08:23:50",
-          "lead_vs_start_min": 115.6,
-          "lead_vs_lps_min": 182.2,
+          "first_alarm": "2022-06-04 10:55:10",
+          "lead_vs_start_min": -35.8,
+          "lead_vs_lps_min": 30.9,
           "sustained_detected": true,
-          "sustained_alarm": "2022-06-04 10:45:50",
-          "sustained_lead_vs_start_min": -26.4,
-          "sustained_lead_vs_lps_min": 40.2
+          "sustained_alarm": "2022-06-04 10:55:10",
+          "sustained_lead_vs_start_min": -35.8,
+          "sustained_lead_vs_lps_min": 30.9
         },
         {
           "type": "oil_leak",
           "detected": true,
-          "first_alarm": "2022-07-11 11:04:20",
-          "lead_vs_start_min": -54.0,
-          "lead_vs_lps_min": 3399.5,
+          "first_alarm": "2022-07-11 12:27:10",
+          "lead_vs_start_min": -136.9,
+          "lead_vs_lps_min": 3316.7,
           "sustained_detected": true,
-          "sustained_alarm": "2022-07-11 12:24:10",
-          "sustained_lead_vs_start_min": -133.9,
-          "sustained_lead_vs_lps_min": 3319.7
+          "sustained_alarm": "2022-07-11 12:27:10",
+          "sustained_lead_vs_start_min": -136.9,
+          "sustained_lead_vs_lps_min": 3316.7
         }
       ],
-      "false_alarms_per_day": 0.05370829681293474
+      "false_alarms_per_day": 0.0
     },
     "bilstm": {
-      "threshold": 0.27,
-      "pr_auc": 0.31915774195246804,
+      "threshold": 0.24,
+      "pr_auc": 0.44161166323657186,
       "samples": {
-        "tn": 404163,
-        "fp": 320,
-        "fn": 16345,
-        "tp": 6811
+        "tn": 404128,
+        "fp": 355,
+        "fn": 13308,
+        "tp": 9848
       },
       "alarms": {
-        "tn": 404183,
-        "fp": 300,
-        "fn": 17390,
-        "tp": 5766
-      },
-      "events": {
-        "failures": 2,
-        "detected": 2,
-        "missed": 0,
-        "false_alarm_episodes": 4,
-        "false_alarms_per_day": 0.07161106241724632,
-        "mean_lead_time_s": -2914.0,
-        "expected_cost": 4.0
-      },
-      "failures": [
-        {
-          "type": "air_leak",
-          "detected": true,
-          "first_alarm": "2022-06-04 11:00:40",
-          "lead_vs_start_min": -41.3,
-          "lead_vs_lps_min": 25.4,
-          "sustained_detected": true,
-          "sustained_alarm": "2022-06-04 11:00:40",
-          "sustained_lead_vs_start_min": -41.3,
-          "sustained_lead_vs_lps_min": 25.4
-        },
-        {
-          "type": "oil_leak",
-          "detected": true,
-          "first_alarm": "2022-07-11 11:06:10",
-          "lead_vs_start_min": -55.9,
-          "lead_vs_lps_min": 3397.7,
-          "sustained_detected": true,
-          "sustained_alarm": "2022-07-11 12:13:40",
-          "sustained_lead_vs_start_min": -123.4,
-          "sustained_lead_vs_lps_min": 3330.2
-        }
-      ],
-      "false_alarms_per_day": 0.07161106241724632
-    },
-    "patchtst": {
-      "threshold": 0.46,
-      "pr_auc": 0.4396126948346775,
-      "samples": {
-        "tn": 404366,
-        "fp": 117,
-        "fn": 13597,
-        "tp": 9559
-      },
-      "alarms": {
-        "tn": 404436,
-        "fp": 47,
-        "fn": 16176,
-        "tp": 6980
+        "tn": 404150,
+        "fp": 333,
+        "fn": 14653,
+        "tp": 8503
       },
       "events": {
         "failures": 2,
@@ -298,27 +248,27 @@
         "missed": 0,
         "false_alarm_episodes": 3,
         "false_alarms_per_day": 0.05370829681293474,
-        "mean_lead_time_s": -2754.0,
+        "mean_lead_time_s": -2914.0,
         "expected_cost": 3.0
       },
       "failures": [
         {
           "type": "air_leak",
           "detected": true,
-          "first_alarm": "2022-06-04 10:55:50",
-          "lead_vs_start_min": -36.4,
-          "lead_vs_lps_min": 30.2,
+          "first_alarm": "2022-06-04 10:53:50",
+          "lead_vs_start_min": -34.4,
+          "lead_vs_lps_min": 32.2,
           "sustained_detected": true,
-          "sustained_alarm": "2022-06-04 10:55:50",
-          "sustained_lead_vs_start_min": -36.4,
-          "sustained_lead_vs_lps_min": 30.2
+          "sustained_alarm": "2022-06-04 10:53:50",
+          "sustained_lead_vs_start_min": -34.4,
+          "sustained_lead_vs_lps_min": 32.2
         },
         {
           "type": "oil_leak",
           "detected": true,
-          "first_alarm": "2022-07-11 11:05:40",
-          "lead_vs_start_min": -55.4,
-          "lead_vs_lps_min": 3398.2,
+          "first_alarm": "2022-07-11 11:13:00",
+          "lead_vs_start_min": -62.7,
+          "lead_vs_lps_min": 3390.9,
           "sustained_detected": true,
           "sustained_alarm": "2022-07-11 12:27:50",
           "sustained_lead_vs_start_min": -137.5,
@@ -327,20 +277,70 @@
       ],
       "false_alarms_per_day": 0.05370829681293474
     },
-    "autoencoder": {
-      "threshold": 0.13852765115935545,
-      "pr_auc": 0.07420431861060926,
+    "patchtst": {
+      "threshold": 0.17,
+      "pr_auc": 0.7043340939405264,
       "samples": {
-        "tn": 404483,
-        "fp": 0,
-        "fn": 22665,
-        "tp": 491
+        "tn": 403753,
+        "fp": 730,
+        "fn": 6499,
+        "tp": 16657
       },
       "alarms": {
+        "tn": 403864,
+        "fp": 619,
+        "fn": 8821,
+        "tp": 14335
+      },
+      "events": {
+        "failures": 2,
+        "detected": 2,
+        "missed": 0,
+        "false_alarm_episodes": 11,
+        "false_alarms_per_day": 0.1969304216474274,
+        "mean_lead_time_s": 2691.0,
+        "expected_cost": 11.0
+      },
+      "failures": [
+        {
+          "type": "air_leak",
+          "detected": true,
+          "first_alarm": "2022-06-04 08:22:10",
+          "lead_vs_start_min": 117.2,
+          "lead_vs_lps_min": 183.8,
+          "sustained_detected": true,
+          "sustained_alarm": "2022-06-04 10:51:50",
+          "sustained_lead_vs_start_min": -32.4,
+          "sustained_lead_vs_lps_min": 34.2
+        },
+        {
+          "type": "oil_leak",
+          "detected": true,
+          "first_alarm": "2022-07-11 10:37:50",
+          "lead_vs_start_min": -27.5,
+          "lead_vs_lps_min": 3426.0,
+          "sustained_detected": true,
+          "sustained_alarm": "2022-07-11 11:02:40",
+          "sustained_lead_vs_start_min": -52.4,
+          "sustained_lead_vs_lps_min": 3401.2
+        }
+      ],
+      "false_alarms_per_day": 0.1969304216474274
+    },
+    "autoencoder": {
+      "threshold": 0.1202380244487071,
+      "pr_auc": 0.07338737999919132,
+      "samples": {
         "tn": 404483,
         "fp": 0,
         "fn": 22685,
         "tp": 471
+      },
+      "alarms": {
+        "tn": 404483,
+        "fp": 0,
+        "fn": 22690,
+        "tp": 466
       },
       "events": {
         "failures": 2,
@@ -348,20 +348,20 @@
         "missed": 1,
         "false_alarm_episodes": 0,
         "false_alarms_per_day": 0.0,
-        "mean_lead_time_s": -4266.0,
+        "mean_lead_time_s": -4456.0,
         "expected_cost": 100.0
       },
       "failures": [
         {
           "type": "air_leak",
           "detected": true,
-          "first_alarm": "2022-06-04 11:30:30",
-          "lead_vs_start_min": -71.1,
-          "lead_vs_lps_min": -4.5,
+          "first_alarm": "2022-06-04 11:33:40",
+          "lead_vs_start_min": -74.3,
+          "lead_vs_lps_min": -7.7,
           "sustained_detected": true,
-          "sustained_alarm": "2022-06-04 11:30:30",
-          "sustained_lead_vs_start_min": -71.1,
-          "sustained_lead_vs_lps_min": -4.5
+          "sustained_alarm": "2022-06-04 11:33:40",
+          "sustained_lead_vs_start_min": -74.3,
+          "sustained_lead_vs_lps_min": -7.7
         },
         {
           "type": "oil_leak",
@@ -398,10 +398,10 @@
         "failures": 2,
         "detected": 2,
         "missed": 0,
-        "false_alarm_episodes": 7,
-        "false_alarms_per_day": 0.1253193592301811,
+        "false_alarm_episodes": 8,
+        "false_alarms_per_day": 0.14322212483449265,
         "mean_lead_time_s": -8694.0,
-        "expected_cost": 7.0
+        "expected_cost": 8.0
       },
       "failures": [
         {
@@ -427,25 +427,25 @@
           "sustained_lead_vs_lps_min": 1585.0
         }
       ],
-      "false_alarms_per_day": 0.1253193592301811,
+      "false_alarms_per_day": 0.14322212483449265,
       "calibration": "MetroPT2 normal rows 28/04\u219202/06, no labels"
     }
   },
   "no_oil": {
     "random_forest": {
       "threshold": 0.5,
-      "pr_auc": 0.10362099359124055,
+      "pr_auc": 0.10354631228908531,
       "samples": {
-        "tn": 404288,
-        "fp": 195,
-        "fn": 21764,
-        "tp": 1392
+        "tn": 404293,
+        "fp": 190,
+        "fn": 21770,
+        "tp": 1386
       },
       "alarms": {
-        "tn": 404315,
-        "fp": 168,
-        "fn": 21779,
-        "tp": 1377
+        "tn": 404314,
+        "fp": 169,
+        "fn": 21782,
+        "tp": 1374
       },
       "events": {
         "failures": 2,
@@ -453,20 +453,20 @@
         "missed": 1,
         "false_alarm_episodes": 0,
         "false_alarms_per_day": 0.0,
-        "mean_lead_time_s": -616.0,
+        "mean_lead_time_s": -856.0,
         "expected_cost": 100.0
       },
       "failures": [
         {
           "type": "air_leak",
           "detected": true,
-          "first_alarm": "2022-06-04 10:29:40",
-          "lead_vs_start_min": -10.3,
-          "lead_vs_lps_min": 56.4,
+          "first_alarm": "2022-06-04 10:33:40",
+          "lead_vs_start_min": -14.3,
+          "lead_vs_lps_min": 52.4,
           "sustained_detected": true,
-          "sustained_alarm": "2022-06-04 10:29:40",
-          "sustained_lead_vs_start_min": -10.3,
-          "sustained_lead_vs_lps_min": 56.4
+          "sustained_alarm": "2022-06-04 10:33:40",
+          "sustained_lead_vs_start_min": -14.3,
+          "sustained_lead_vs_lps_min": 52.4
         },
         {
           "type": "oil_leak",
@@ -484,23 +484,24 @@
       "params": {
         "max_depth": 20,
         "min_samples_leaf": 1,
-        "max_features": "sqrt"
+        "max_features": "sqrt",
+        "neg_stride": 1
       }
     },
     "xgboost": {
       "threshold": 0.5,
-      "pr_auc": 0.1053376345108833,
+      "pr_auc": 0.10552615126575432,
       "samples": {
-        "tn": 404346,
-        "fp": 137,
-        "fn": 21771,
-        "tp": 1385
+        "tn": 404349,
+        "fp": 134,
+        "fn": 21769,
+        "tp": 1387
       },
       "alarms": {
-        "tn": 404386,
-        "fp": 97,
-        "fn": 21799,
-        "tp": 1357
+        "tn": 404392,
+        "fp": 91,
+        "fn": 21790,
+        "tp": 1366
       },
       "events": {
         "failures": 2,
@@ -508,20 +509,20 @@
         "missed": 1,
         "false_alarm_episodes": 0,
         "false_alarms_per_day": 0.0,
-        "mean_lead_time_s": -846.0,
+        "mean_lead_time_s": 2204.0,
         "expected_cost": 100.0
       },
       "failures": [
         {
           "type": "air_leak",
           "detected": true,
-          "first_alarm": "2022-06-04 10:33:30",
-          "lead_vs_start_min": -14.1,
-          "lead_vs_lps_min": 52.5,
+          "first_alarm": "2022-06-04 09:42:40",
+          "lead_vs_start_min": 36.7,
+          "lead_vs_lps_min": 103.3,
           "sustained_detected": true,
-          "sustained_alarm": "2022-06-04 10:33:30",
-          "sustained_lead_vs_start_min": -14.1,
-          "sustained_lead_vs_lps_min": 52.5
+          "sustained_alarm": "2022-06-04 10:29:40",
+          "sustained_lead_vs_start_min": -10.3,
+          "sustained_lead_vs_lps_min": 56.4
         },
         {
           "type": "oil_leak",
@@ -546,18 +547,72 @@
     },
     "mlp": {
       "threshold": 0.5,
-      "pr_auc": 0.09049807006405856,
+      "pr_auc": 0.08865998702208933,
       "samples": {
-        "tn": 404235,
-        "fp": 248,
-        "fn": 22052,
-        "tp": 1104
+        "tn": 404234,
+        "fp": 249,
+        "fn": 22098,
+        "tp": 1058
       },
       "alarms": {
         "tn": 404240,
         "fp": 243,
-        "fn": 22074,
-        "tp": 1082
+        "fn": 22113,
+        "tp": 1043
+      },
+      "events": {
+        "failures": 2,
+        "detected": 1,
+        "missed": 1,
+        "false_alarm_episodes": 0,
+        "false_alarms_per_day": 0.0,
+        "mean_lead_time_s": -2076.0,
+        "expected_cost": 100.0
+      },
+      "failures": [
+        {
+          "type": "air_leak",
+          "detected": true,
+          "first_alarm": "2022-06-04 10:54:00",
+          "lead_vs_start_min": -34.6,
+          "lead_vs_lps_min": 32.0,
+          "sustained_detected": true,
+          "sustained_alarm": "2022-06-04 10:54:00",
+          "sustained_lead_vs_start_min": -34.6,
+          "sustained_lead_vs_lps_min": 32.0
+        },
+        {
+          "type": "oil_leak",
+          "detected": false,
+          "first_alarm": null,
+          "lead_vs_start_min": null,
+          "lead_vs_lps_min": null,
+          "sustained_detected": false,
+          "sustained_alarm": null,
+          "sustained_lead_vs_start_min": null,
+          "sustained_lead_vs_lps_min": null
+        }
+      ],
+      "false_alarms_per_day": 0.0,
+      "params": {
+        "epochs": 8,
+        "lr": 0.001
+      }
+    },
+    "tcn": {
+      "threshold": 0.5,
+      "pr_auc": 0.0832314902667776,
+      "samples": {
+        "tn": 404483,
+        "fp": 0,
+        "fn": 22444,
+        "tp": 712
+      },
+      "alarms": {
+        "tn": 404483,
+        "fp": 0,
+        "fn": 22462,
+        "tp": 694
       },
       "events": {
         "failures": 2,
@@ -595,77 +650,24 @@
       "false_alarms_per_day": 0.0,
       "params": {
         "epochs": 8,
-        "lr": 0.001
-      }
-    },
-    "tcn": {
-      "threshold": 0.5,
-      "pr_auc": 0.07358009319102955,
-      "samples": {
-        "tn": 404425,
-        "fp": 58,
-        "fn": 22625,
-        "tp": 531
-      },
-      "alarms": {
-        "tn": 404435,
-        "fp": 48,
-        "fn": 22645,
-        "tp": 511
-      },
-      "events": {
-        "failures": 2,
-        "detected": 1,
-        "missed": 1,
-        "false_alarm_episodes": 1,
-        "false_alarms_per_day": 0.01790276560431158,
-        "mean_lead_time_s": -2136.0,
-        "expected_cost": 101.0
-      },
-      "failures": [
-        {
-          "type": "air_leak",
-          "detected": true,
-          "first_alarm": "2022-06-04 10:55:00",
-          "lead_vs_start_min": -35.6,
-          "lead_vs_lps_min": 31.0,
-          "sustained_detected": true,
-          "sustained_alarm": "2022-06-04 10:55:00",
-          "sustained_lead_vs_start_min": -35.6,
-          "sustained_lead_vs_lps_min": 31.0
-        },
-        {
-          "type": "oil_leak",
-          "detected": false,
-          "first_alarm": null,
-          "lead_vs_start_min": null,
-          "lead_vs_lps_min": null,
-          "sustained_detected": false,
-          "sustained_alarm": null,
-          "sustained_lead_vs_start_min": null,
-          "sustained_lead_vs_lps_min": null
-        }
-      ],
-      "false_alarms_per_day": 0.01790276560431158,
-      "params": {
-        "epochs": 16,
-        "lr": 0.0003
+        "lr": 0.001,
+        "neg_stride": 5
       }
     },
     "bilstm": {
       "threshold": 0.5,
-      "pr_auc": 0.0924130838612495,
+      "pr_auc": 0.09026674727437525,
       "samples": {
-        "tn": 404207,
-        "fp": 276,
-        "fn": 21983,
-        "tp": 1173
+        "tn": 404242,
+        "fp": 241,
+        "fn": 22063,
+        "tp": 1093
       },
       "alarms": {
-        "tn": 404207,
-        "fp": 276,
-        "fn": 22001,
-        "tp": 1155
+        "tn": 404242,
+        "fp": 241,
+        "fn": 22073,
+        "tp": 1083
       },
       "events": {
         "failures": 2,
@@ -673,20 +675,20 @@
         "missed": 1,
         "false_alarm_episodes": 0,
         "false_alarms_per_day": 0.0,
-        "mean_lead_time_s": -2216.0,
+        "mean_lead_time_s": -2416.0,
         "expected_cost": 100.0
       },
       "failures": [
         {
           "type": "air_leak",
           "detected": true,
-          "first_alarm": "2022-06-04 10:56:20",
-          "lead_vs_start_min": -36.9,
-          "lead_vs_lps_min": 29.7,
+          "first_alarm": "2022-06-04 10:59:40",
+          "lead_vs_start_min": -40.3,
+          "lead_vs_lps_min": 26.4,
           "sustained_detected": true,
-          "sustained_alarm": "2022-06-04 10:56:20",
-          "sustained_lead_vs_start_min": -36.9,
-          "sustained_lead_vs_lps_min": 29.7
+          "sustained_alarm": "2022-06-04 10:59:40",
+          "sustained_lead_vs_start_min": -40.3,
+          "sustained_lead_vs_lps_min": 26.4
         },
         {
           "type": "oil_leak",
@@ -703,23 +705,24 @@
       "false_alarms_per_day": 0.0,
       "params": {
         "epochs": 8,
-        "lr": 0.001
+        "lr": 0.001,
+        "pos_weight_scale": 0.25
       }
     },
     "patchtst": {
       "threshold": 0.5,
-      "pr_auc": 0.07636920593086684,
+      "pr_auc": 0.07748946269251378,
       "samples": {
-        "tn": 404483,
-        "fp": 0,
-        "fn": 22612,
-        "tp": 544
+        "tn": 404256,
+        "fp": 227,
+        "fn": 22400,
+        "tp": 756
       },
       "alarms": {
-        "tn": 404483,
-        "fp": 0,
-        "fn": 22653,
-        "tp": 503
+        "tn": 404257,
+        "fp": 226,
+        "fn": 22417,
+        "tp": 739
       },
       "events": {
         "failures": 2,
@@ -727,74 +730,20 @@
         "missed": 1,
         "false_alarm_episodes": 0,
         "false_alarms_per_day": 0.0,
-        "mean_lead_time_s": -2266.0,
+        "mean_lead_time_s": -2916.0,
         "expected_cost": 100.0
       },
       "failures": [
         {
           "type": "air_leak",
           "detected": true,
-          "first_alarm": "2022-06-04 10:57:10",
-          "lead_vs_start_min": -37.8,
-          "lead_vs_lps_min": 28.9,
+          "first_alarm": "2022-06-04 11:08:00",
+          "lead_vs_start_min": -48.6,
+          "lead_vs_lps_min": 18.0,
           "sustained_detected": true,
-          "sustained_alarm": "2022-06-04 11:42:50",
-          "sustained_lead_vs_start_min": -83.4,
-          "sustained_lead_vs_lps_min": -16.8
-        },
-        {
-          "type": "oil_leak",
-          "detected": false,
-          "first_alarm": null,
-          "lead_vs_start_min": null,
-          "lead_vs_lps_min": null,
-          "sustained_detected": false,
-          "sustained_alarm": null,
-          "sustained_lead_vs_start_min": null,
-          "sustained_lead_vs_lps_min": null
-        }
-      ],
-      "false_alarms_per_day": 0.0,
-      "params": {
-        "epochs": 16,
-        "lr": 0.0003
-      }
-    },
-    "autoencoder": {
-      "threshold": 0.5,
-      "pr_auc": 0.07477617563860182,
-      "samples": {
-        "tn": 404483,
-        "fp": 0,
-        "fn": 22651,
-        "tp": 505
-      },
-      "alarms": {
-        "tn": 404483,
-        "fp": 0,
-        "fn": 22661,
-        "tp": 495
-      },
-      "events": {
-        "failures": 2,
-        "detected": 1,
-        "missed": 1,
-        "false_alarm_episodes": 0,
-        "false_alarms_per_day": 0.0,
-        "mean_lead_time_s": -4196.0,
-        "expected_cost": 100.0
-      },
-      "failures": [
-        {
-          "type": "air_leak",
-          "detected": true,
-          "first_alarm": "2022-06-04 11:29:20",
-          "lead_vs_start_min": -69.9,
-          "lead_vs_lps_min": -3.3,
-          "sustained_detected": true,
-          "sustained_alarm": "2022-06-04 11:29:20",
-          "sustained_lead_vs_start_min": -69.9,
-          "sustained_lead_vs_lps_min": -3.3
+          "sustained_alarm": "2022-06-04 11:08:00",
+          "sustained_lead_vs_start_min": -48.6,
+          "sustained_lead_vs_lps_min": 18.0
         },
         {
           "type": "oil_leak",
@@ -811,7 +760,63 @@
       "false_alarms_per_day": 0.0,
       "params": {
         "epochs": 8,
-        "lr": 0.001
+        "lr": 0.001,
+        "pos_weight_scale": 0.25
+      }
+    },
+    "autoencoder": {
+      "threshold": 0.5,
+      "pr_auc": 0.06901675842810528,
+      "samples": {
+        "tn": 404483,
+        "fp": 0,
+        "fn": 22792,
+        "tp": 364
+      },
+      "alarms": {
+        "tn": 404483,
+        "fp": 0,
+        "fn": 22815,
+        "tp": 341
+      },
+      "events": {
+        "failures": 2,
+        "detected": 1,
+        "missed": 1,
+        "false_alarm_episodes": 0,
+        "false_alarms_per_day": 0.0,
+        "mean_lead_time_s": -5306.0,
+        "expected_cost": 100.0
+      },
+      "failures": [
+        {
+          "type": "air_leak",
+          "detected": true,
+          "first_alarm": "2022-06-04 11:47:50",
+          "lead_vs_start_min": -88.4,
+          "lead_vs_lps_min": -21.8,
+          "sustained_detected": true,
+          "sustained_alarm": "2022-06-04 11:47:50",
+          "sustained_lead_vs_start_min": -88.4,
+          "sustained_lead_vs_lps_min": -21.8
+        },
+        {
+          "type": "oil_leak",
+          "detected": false,
+          "first_alarm": null,
+          "lead_vs_start_min": null,
+          "lead_vs_lps_min": null,
+          "sustained_detected": false,
+          "sustained_alarm": null,
+          "sustained_lead_vs_start_min": null,
+          "sustained_lead_vs_lps_min": null
+        }
+      ],
+      "false_alarms_per_day": 0.0,
+      "params": {
+        "epochs": 8,
+        "lr": 0.001,
+        "neg_stride": 2
       }
     }
   }

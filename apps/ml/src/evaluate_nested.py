@@ -62,8 +62,15 @@ logging.basicConfig(
 log = logging.getLogger("evaluate_nested")
 
 
-def build_context() -> tuple[npc.Context, np.ndarray]:
-    xd.configure(DROPPED)
+def build_context(
+    extra_drop: list[str] | None = None, only: list[str] | None = None
+) -> tuple[npc.Context, np.ndarray]:
+    """Pooled context. ``extra_drop`` removes more sensors (ablation);
+    ``only`` keeps just these sensors (diagnostic single-sensor baseline)."""
+    drop = [*DROPPED, *(extra_drop or [])]
+    if only:
+        drop = [c for c in xd.FEATURE_COLS if c not in only]
+    xd.configure(drop)
     X, y, ts, is22 = xd.load_pooled()
     raw_df = pd.concat(
         [xd._read(xd.P2020, []), xd._read(xd.P2022, [])], ignore_index=True
@@ -217,9 +224,26 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[1])
     parser.add_argument("--models", nargs="+", default=ALL_MODELS, choices=ALL_MODELS)
     parser.add_argument("--seeds", type=int, default=3)
+    parser.add_argument(
+        "--drop-sensors", nargs="+", default=[], help="ablation: drop these sensors too"
+    )
+    parser.add_argument(
+        "--only-sensors",
+        nargs="+",
+        default=[],
+        help="ablation: keep only these sensors",
+    )
+    parser.add_argument(
+        "--tag", default="", help="write to models/nested/ablation/<tag>/ instead"
+    )
     args = parser.parse_args()
+    global SCORES_DIR
+    out_dir = OUT_DIR / "ablation" / args.tag if args.tag else OUT_DIR
+    out_dir.mkdir(parents=True, exist_ok=True)
+    if args.tag:  # never overwrite the main run's per-fold scores
+        SCORES_DIR = out_dir / "scores"
     SCORES_DIR.mkdir(parents=True, exist_ok=True)
-    ctx, is22 = build_context()
+    ctx, is22 = build_context(args.drop_sensors, args.only_sensors)
     for name in args.models:
         t0 = time.perf_counter()
         result = run_model(ctx, is22, name, args.seeds)
@@ -231,12 +255,14 @@ def main() -> None:
                 "leave-one-failure-out; Platt calibration; RN-02 threshold",
                 "seeds": args.seeds,
                 "search_space": npc.SPACES[name],
-                "dropped_sensors": DROPPED,
+                "dropped_sensors": [c for c in xd.FEATURE_COLS if c not in xd.FEATURES],
+                "sensors": list(xd.FEATURES),
+                "ablation_tag": args.tag or None,
                 "deep_config": dt.describe() if name in dt.ARCHS else None,
                 "elapsed_s": round(time.perf_counter() - t0, 1),
             }
         )
-        (OUT_DIR / f"{name}.json").write_text(
+        (out_dir / f"{name}.json").write_text(
             json.dumps(result, indent=2, default=str), encoding="utf-8"
         )
         log.info("wrote nested/%s.json (%.0fs)", name, result["elapsed_s"])

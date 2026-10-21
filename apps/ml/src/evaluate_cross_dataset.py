@@ -112,9 +112,11 @@ def _read(path: Path, extra: list[str]) -> pd.DataFrame:
 
 
 def _features(df: pd.DataFrame, extra: list[str]) -> pd.DataFrame:
-    """Rolling features per dataset: a window never spans the 2020→2022 gap."""
+    """Rolling features per dataset: a window never spans the 2020→2022 gap
+    nor any time gap > 60 s inside a dataset (segment-aware preprocessor)."""
     pre = MetroPTPreprocessor(sensor_cols=ANALOG + extra)
-    return pre.fit_transform(df[FEATURES + extra].copy()).astype(np.float32)
+    cols = (["timestamp"] if "timestamp" in df.columns else []) + FEATURES + extra
+    return pre.fit_transform(df[cols].copy()).astype(np.float32)
 
 
 def load_pooled() -> tuple[pd.DataFrame, pd.Series, pd.Series, np.ndarray]:

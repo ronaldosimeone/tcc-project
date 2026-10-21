@@ -63,6 +63,12 @@ _PRESSURE_COL: str = "TP2"
 # Numerical safety floor for ratio features to avoid div-by-zero.
 _RATIO_EPS: float = 1e-6
 
+# Two readings further apart than this belong to different operating
+# segments: rolling windows, deltas and lags never span the gap (the series
+# is nominally 10 s; MetroPT-3 has 331 gaps > 60 s, 160 of them > 1 h).
+_MAX_GAP_S: float = 60.0
+_TIME_COL: str = "timestamp"
+
 
 class MetroPTPreprocessor(BaseEstimator, TransformerMixin):
     """
@@ -95,6 +101,13 @@ class MetroPTPreprocessor(BaseEstimator, TransformerMixin):
         Long lag window in samples (V2). Default: 15.
     window_minmax : int
         Rolling window for min/max/range (V2). Default: 15.
+    max_gap_s : float | None
+        When *X* carries ``time_col``, a time gap larger than this starts a new
+        segment and no window, delta or lag crosses it. ``None`` disables it.
+        Without ``time_col`` (e.g. the live 60-row buffer) the whole frame is
+        one segment. Default: 60 s.
+    time_col : str
+        Timestamp column used for segmentation; it is not part of the output.
 
     Notes
     -----
@@ -114,6 +127,8 @@ class MetroPTPreprocessor(BaseEstimator, TransformerMixin):
         lag_short: int = 5,
         lag_long: int = 15,
         window_minmax: int = 15,
+        max_gap_s: float | None = _MAX_GAP_S,
+        time_col: str = _TIME_COL,
     ) -> None:
         self.sensor_cols = sensor_cols
         self.pressure_col = pressure_col
@@ -124,6 +139,8 @@ class MetroPTPreprocessor(BaseEstimator, TransformerMixin):
         self.lag_short = lag_short
         self.lag_long = lag_long
         self.window_minmax = window_minmax
+        self.max_gap_s = max_gap_s
+        self.time_col = time_col
 
     # ------------------------------------------------------------------
     # sklearn API
@@ -140,7 +157,7 @@ class MetroPTPreprocessor(BaseEstimator, TransformerMixin):
         Steps (applied in order):
             1. Validate input type.
             2. Copy — never mutate the caller's DataFrame.
-            3. Null imputation (ffill → bfill).
+            3. Null imputation (causal: ffill, then 0 for leading NaN).
             4. Pressure delta.
             5. Rolling std (window_std samples).
             6. Rolling moving averages (window_ma_short, window_ma_long samples).
@@ -172,17 +189,43 @@ class MetroPTPreprocessor(BaseEstimator, TransformerMixin):
 
         df: pd.DataFrame = X.copy()
 
+        seg = self._segments(df)
+        df = df.drop(columns=[self.time_col], errors="ignore")
+
         df = self._impute_nulls(df)
-        df = self._add_pressure_delta(df)
-        df = self._add_rolling_std(df)
-        df = self._add_moving_averages(df)
+        df = self._add_pressure_delta(df, seg)
+        df = self._add_rolling_std(df, seg)
+        df = self._add_moving_averages(df, seg)
 
         if self.enable_v2_features:
             df = self._add_cross_sensor_features(df)
-            df = self._add_lags(df)
-            df = self._add_rolling_minmax(df)
+            df = self._add_lags(df, seg)
+            df = self._add_rolling_minmax(df, seg)
 
         return df
+
+    # ------------------------------------------------------------------
+    # Segmentation (time gaps)
+    # ------------------------------------------------------------------
+
+    def _segments(self, df: pd.DataFrame) -> pd.Series:
+        """Segment id per row: a new segment starts after a gap > max_gap_s."""
+        if self.max_gap_s is None or self.time_col not in df.columns:
+            return pd.Series(0, index=df.index)
+        gap = pd.to_datetime(df[self.time_col]).diff().dt.total_seconds()
+        return (gap > self.max_gap_s).cumsum().astype(int)
+
+    @staticmethod
+    def _one_segment(df: pd.DataFrame) -> pd.Series:
+        return pd.Series(0, index=df.index)
+
+    @staticmethod
+    def _rolling(s: pd.Series, seg: pd.Series, window: int, how: str) -> pd.Series:
+        """Per-segment trailing rolling statistic (``min_periods=1``)."""
+        if seg.nunique() <= 1:
+            return getattr(s.rolling(window=window, min_periods=1), how)()
+        r = getattr(s.groupby(seg).rolling(window=window, min_periods=1), how)()
+        return r.reset_index(level=0, drop=True).reindex(s.index)
 
     # ------------------------------------------------------------------
     # V1 — Private helpers
@@ -190,18 +233,20 @@ class MetroPTPreprocessor(BaseEstimator, TransformerMixin):
 
     def _impute_nulls(self, df: pd.DataFrame) -> pd.DataFrame:
         """
-        Forward-fill then backward-fill numeric sensor columns.
+        Causal imputation of numeric sensor columns.
 
         Forward-fill propagates the last valid reading forward in time (safe
-        for sensor drop-outs lasting a few samples).  The subsequent
-        backward-fill handles any remaining NaNs at the very start of the
-        series where no prior value exists.
+        for sensor drop-outs lasting a few samples). Leading NaNs, with no
+        earlier reading, become 0.0 — never a FUTURE value (a backward fill
+        would leak information from after the prediction time).
         """
         numeric_cols: list[str] = df.select_dtypes(include=[np.number]).columns.tolist()
-        df[numeric_cols] = df[numeric_cols].ffill().bfill()
+        df[numeric_cols] = df[numeric_cols].ffill().fillna(0.0)
         return df
 
-    def _add_pressure_delta(self, df: pd.DataFrame) -> pd.DataFrame:
+    def _add_pressure_delta(
+        self, df: pd.DataFrame, seg: pd.Series | None = None
+    ) -> pd.DataFrame:
         """
         Compute the first-order difference of the pressure column.
 
@@ -211,11 +256,12 @@ class MetroPTPreprocessor(BaseEstimator, TransformerMixin):
         valve failure or blockage in the air circuit.  The first row becomes
         NaN after diff(); we fill it with 0.0 (no change at series start).
         """
+        seg = self._one_segment(df) if seg is None else seg
         if self.pressure_col not in df.columns:
             return df
 
         col_name: str = f"{self.pressure_col}_delta"
-        df[col_name] = df[self.pressure_col].diff().fillna(0.0)
+        df[col_name] = df[self.pressure_col].groupby(seg).diff().fillna(0.0)
         return df
 
     def _resolve_sensor_cols(self, df: pd.DataFrame) -> list[str]:
@@ -225,7 +271,9 @@ class MetroPTPreprocessor(BaseEstimator, TransformerMixin):
         )
         return [c for c in candidates if c in df.columns]
 
-    def _add_rolling_std(self, df: pd.DataFrame) -> pd.DataFrame:
+    def _add_rolling_std(
+        self, df: pd.DataFrame, seg: pd.Series | None = None
+    ) -> pd.DataFrame:
         """
         Rolling standard deviation over *window_std* samples per sensor column.
 
@@ -235,14 +283,17 @@ class MetroPTPreprocessor(BaseEstimator, TransformerMixin):
         mechanical instability (e.g., worn piston rings or bearing damage).
         The ``min_periods=1`` parameter avoids NaN for the first w−1 rows.
         """
+        seg = self._one_segment(df) if seg is None else seg
         cols: list[str] = self._resolve_sensor_cols(df)
         for col in cols:
-            df[f"{col}_std_{self.window_std}"] = (
-                df[col].rolling(window=self.window_std, min_periods=1).std().fillna(0.0)
-            )
+            df[f"{col}_std_{self.window_std}"] = self._rolling(
+                df[col], seg, self.window_std, "std"
+            ).fillna(0.0)
         return df
 
-    def _add_moving_averages(self, df: pd.DataFrame) -> pd.DataFrame:
+    def _add_moving_averages(
+        self, df: pd.DataFrame, seg: pd.Series | None = None
+    ) -> pd.DataFrame:
         """
         Short and long exponential-free moving averages per sensor column.
 
@@ -253,13 +304,14 @@ class MetroPTPreprocessor(BaseEstimator, TransformerMixin):
         (e.g., slow oil temperature rise before thermal shutdown).
         ``min_periods=1`` avoids leading NaNs.
         """
+        seg = self._one_segment(df) if seg is None else seg
         cols: list[str] = self._resolve_sensor_cols(df)
         for col in cols:
-            df[f"{col}_ma_{self.window_ma_short}"] = (
-                df[col].rolling(window=self.window_ma_short, min_periods=1).mean()
+            df[f"{col}_ma_{self.window_ma_short}"] = self._rolling(
+                df[col], seg, self.window_ma_short, "mean"
             )
-            df[f"{col}_ma_{self.window_ma_long}"] = (
-                df[col].rolling(window=self.window_ma_long, min_periods=1).mean()
+            df[f"{col}_ma_{self.window_ma_long}"] = self._rolling(
+                df[col], seg, self.window_ma_long, "mean"
             )
         return df
 
@@ -292,7 +344,7 @@ class MetroPTPreprocessor(BaseEstimator, TransformerMixin):
             df["reservoir_drop"] = df["Reservoirs"] - df["TP3"]
         return df
 
-    def _add_lags(self, df: pd.DataFrame) -> pd.DataFrame:
+    def _add_lags(self, df: pd.DataFrame, seg: pd.Series | None = None) -> pd.DataFrame:
         """
         Explicit lag snapshots and rate-of-change.
 
@@ -304,21 +356,27 @@ class MetroPTPreprocessor(BaseEstimator, TransformerMixin):
         than the single-sample ``delta`` for anomalies that develop over
         seconds rather than instantaneously.
 
-        ``shift().bfill()`` propagates the first valid value backwards so the
-        leading rows do not produce NaNs.
+        The first ``k`` rows of a segment have no ``x(t - k)`` inside it; they
+        take the segment's FIRST reading, a past value, so still causal
+        (equivalent to the former ``shift().bfill()`` on a single segment).
         """
+        seg = self._one_segment(df) if seg is None else seg
         cols: list[str] = self._resolve_sensor_cols(df)
         for col in cols:
             lag_short_col = f"{col}_lag_{self.lag_short}"
             lag_long_col = f"{col}_lag_{self.lag_long}"
-            df[lag_short_col] = df[col].shift(self.lag_short).bfill()
-            df[lag_long_col] = df[col].shift(self.lag_long).bfill()
+            grouped = df[col].groupby(seg)
+            first = grouped.transform("first")
+            df[lag_short_col] = grouped.shift(self.lag_short).fillna(first).fillna(0.0)
+            df[lag_long_col] = grouped.shift(self.lag_long).fillna(first).fillna(0.0)
             df[f"{col}_roc_{self.lag_long}"] = (
                 (df[col] - df[lag_long_col]) / float(self.lag_long)
             ).fillna(0.0)
         return df
 
-    def _add_rolling_minmax(self, df: pd.DataFrame) -> pd.DataFrame:
+    def _add_rolling_minmax(
+        self, df: pd.DataFrame, seg: pd.Series | None = None
+    ) -> pd.DataFrame:
         """
         Rolling minimum, maximum, and range over a configurable window.
 
@@ -326,12 +384,13 @@ class MetroPTPreprocessor(BaseEstimator, TransformerMixin):
         pressure spike inside an otherwise stable window is an early
         indicator of valve flutter.
         """
+        seg = self._one_segment(df) if seg is None else seg
         cols: list[str] = self._resolve_sensor_cols(df)
         w = self.window_minmax
         for col in cols:
             min_col = f"{col}_min_{w}"
             max_col = f"{col}_max_{w}"
-            df[min_col] = df[col].rolling(window=w, min_periods=1).min()
-            df[max_col] = df[col].rolling(window=w, min_periods=1).max()
+            df[min_col] = self._rolling(df[col], seg, w, "min")
+            df[max_col] = self._rolling(df[col], seg, w, "max")
             df[f"{col}_range_{w}"] = df[max_col] - df[min_col]
         return df

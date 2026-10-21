@@ -1,0 +1,107 @@
+{
+  "schema_version": "3.0",
+  "model_name": "tcn_v3",
+  "status": "candidate",
+  "trained_at": "2026-10-20T20:53:52.609673+00:00",
+  "algorithm": "tcn",
+  "validation": {
+    "leakage_free": true,
+    "protocol": "nested: outer purged walk-forward \u00d7 inner leave-one-failure-out",
+    "hyperparameters": "selected on inner OOF expected cost (RN-02)",
+    "threshold_selection": "nested LOFO OOF (7 inner folds)"
+  },
+  "dropped_sensors": [
+    "Reservoirs",
+    "Oil_level"
+  ],
+  "hyperparameters": {
+    "epochs": 8,
+    "lr": 0.001,
+    "pos_weight_scale": 0.25
+  },
+  "search": [
+    {
+      "params": {
+        "epochs": 8,
+        "lr": 0.001
+      },
+      "oof_cost": 243.0,
+      "oof_pr_auc": 0.24200766238216007,
+      "threshold": 0.47
+    },
+    {
+      "params": {
+        "epochs": 16,
+        "lr": 0.0003
+      },
+      "oof_cost": 243.0,
+      "oof_pr_auc": 0.24195810361967068,
+      "threshold": 0.43
+    },
+    {
+      "params": {
+        "epochs": 8,
+        "lr": 0.001,
+        "neg_stride": 5
+      },
+      "oof_cost": 244.0,
+      "oof_pr_auc": 0.1764803423032219,
+      "threshold": 0.29
+    },
+    {
+      "params": {
+        "epochs": 8,
+        "lr": 0.001,
+        "pos_weight_scale": 0.25
+      },
+      "oof_cost": 238.0,
+      "oof_pr_auc": 0.298769534499303,
+      "threshold": 0.54
+    }
+  ],
+  "calibration": {
+    "method": "platt",
+    "a": 0.26375445755349813,
+    "b": -1.5232528670547143
+  },
+  "threshold_calibrated_probability": 0.54,
+  "decision_threshold": 0.54,
+  "seed": 0,
+  "onnx_parity_max_abs_diff": 1.430511474609375e-06,
+  "feature_count": 10,
+  "feature_names": [
+    "TP2",
+    "TP3",
+    "H1",
+    "DV_pressure",
+    "Motor_current",
+    "Oil_temperature",
+    "COMP",
+    "DV_eletric",
+    "Towers",
+    "MPG"
+  ],
+  "serving": {
+    "adapter": "sequence",
+    "onnx": "tcn_v3.onnx",
+    "scaler": "tcn_v3_scaler.joblib",
+    "window_size": 60
+  },
+  "evidence": {
+    "source": "models/nested/tcn.json",
+    "protocol": "outer purged walk-forward (6 folds) \u00d7 inner leave-one-failure-out, 3 seeds, out-of-time",
+    "failures_detected_mean_of_6": 2.0,
+    "failures_detected_range": [
+      2,
+      2
+    ],
+    "false_alarm_episodes_mean": 154.0,
+    "expected_cost_mean": 92.33333333333333,
+    "confusion_alarms_seed0": {
+      "tn": 1822304,
+      "fp": 25297,
+      "fn": 39424,
+      "tp": 3089
+    }
+  }
+}
