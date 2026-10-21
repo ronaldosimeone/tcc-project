@@ -64,3 +64,34 @@ export function isAlertProb(
 ): boolean {
   return getRiskLevel(prob, decisionThreshold) === "ALERTA";
 }
+
+/**
+ * Escala de risco relativa ao limiar do modelo — mesma de
+ * `apps/backend/src/core/risk.py` (aviso crítico, RF-25):
+ *   risco = 0,65 · p / limiar                        (p < limiar)
+ *   risco = 0,65 + 0,35 · (p − limiar)/(1 − limiar)   (p ≥ limiar)
+ * 0,65 = o modelo decide "falha" (CRÍTICO no painel); 1 = probabilidade 1.
+ */
+export const CRITICAL_RISK: number = RISK_THRESHOLDS.CRITICAL;
+
+const clampThr = (thr: number): number =>
+  Math.min(Math.max(thr, 1e-9), 1 - 1e-9);
+
+/** Probabilidade → risco relativo ao limiar do modelo. */
+export const riskIndex = (prob: number, decisionThreshold: number): number => {
+  const p = Math.min(Math.max(prob, 0), 1);
+  const thr = clampThr(decisionThreshold);
+  if (p < thr) return (CRITICAL_RISK * p) / thr;
+  return CRITICAL_RISK + ((1 - CRITICAL_RISK) * (p - thr)) / (1 - thr);
+};
+
+/** Inverso de `riskIndex`: a probabilidade em que o modelo atinge `risk`. */
+export const probabilityForRisk = (
+  risk: number,
+  decisionThreshold: number,
+): number => {
+  const r = Math.min(Math.max(risk, 0), 1);
+  const thr = clampThr(decisionThreshold);
+  if (r < CRITICAL_RISK) return (r / CRITICAL_RISK) * thr;
+  return thr + ((r - CRITICAL_RISK) / (1 - CRITICAL_RISK)) * (1 - thr);
+};

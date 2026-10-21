@@ -39,3 +39,20 @@ describe("risco relativo ao limiar do modelo", () => {
     expect(getRiskLevel(0.7, undefined)).toBe("CRÍTICO");
   });
 });
+
+describe("escala de risco do alerta crítico", () => {
+  it("65% é exatamente o limiar do modelo e a inversa fecha", async () => {
+    const { riskIndex, probabilityForRisk, CRITICAL_RISK } = await import(
+      "@/lib/risk-thresholds"
+    );
+    expect(CRITICAL_RISK).toBeCloseTo(0.65, 6);
+    expect(riskIndex(0.06, 0.06)).toBeCloseTo(0.65, 6);
+    for (const thr of [0.06, 0.1, 0.694, 0.984]) {
+      for (const r of [0.5, 0.65, 0.85, 0.95]) {
+        expect(riskIndex(probabilityForRisk(r, thr), thr)).toBeCloseTo(r, 6);
+      }
+    }
+    // RF v3 (limiar 0,694): 85% ≈ P 0,869 — próximo da regra antiga de 85%
+    expect(probabilityForRisk(0.85, 0.694)).toBeCloseTo(0.869, 3);
+  });
+});
