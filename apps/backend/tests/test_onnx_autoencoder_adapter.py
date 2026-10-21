@@ -100,7 +100,7 @@ def test_constructor_raises_value_error_for_non_positive_mse_threshold(
 
 @pytest.fixture(scope="module")
 def real_adapter() -> OnnxAutoencoderAdapter:
-    service = load_model_by_name("autoencoder")
+    service = load_model_by_name("autoencoder_v3")
     adapter = service._model  # noqa: SLF001
     assert isinstance(adapter, OnnxAutoencoderAdapter)
     return adapter

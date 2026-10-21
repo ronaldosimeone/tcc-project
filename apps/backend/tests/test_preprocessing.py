@@ -114,7 +114,7 @@ def test_transform_does_not_mutate_input_dataframe() -> None:
 
 
 # ---------------------------------------------------------------------------
-# _impute_nulls — ffill + bfill
+# _impute_nulls — causal: ffill, then 0 (never a future value)
 # ---------------------------------------------------------------------------
 
 
@@ -125,14 +125,32 @@ def test_impute_nulls_forward_fills_interior_gap() -> None:
     assert out["TP2"].tolist() == [1.0, 1.0, 1.0, 4.0]
 
 
-def test_impute_nulls_backward_fills_leading_gap() -> None:
-    """Um NaN no INÍCIO da série não tem valor anterior para `ffill` —
-    só `bfill` (aplicado depois) resolve. Sem o bfill, a linha 0
-    continuaria NaN e quebraria tudo a jusante (rolling/lag)."""
+def test_impute_nulls_never_uses_a_future_value() -> None:
+    """Um NaN no INÍCIO da série não tem valor anterior: vira 0.0, nunca o
+    valor SEGUINTE (um bfill vazaria informação de depois do instante da
+    predição — quebra a causalidade que a avaliação temporal pressupõe)."""
     pre = MetroPTPreprocessor()
     df = pd.DataFrame({"TP2": [np.nan, 2.0, 3.0]})
     out = pre._impute_nulls(df)
-    assert out["TP2"].tolist() == [2.0, 2.0, 3.0]
+    assert out["TP2"].tolist() == [0.0, 2.0, 3.0]
+
+
+def test_mirror_is_identical_to_the_training_preprocessor() -> None:
+    """Paridade treino/serving: o espelho do backend tem de ser o MESMO
+    código do apps/ml (só o docstring do módulo difere)."""
+    from pathlib import Path
+
+    ml = Path(__file__).resolve().parents[2] / "ml" / "src" / "preprocessing.py"
+    if not ml.exists():
+        pytest.skip("apps/ml not present in this checkout")
+    be = Path(__file__).resolve().parents[1] / "src" / "services" / "preprocessing.py"
+    marker = "from __future__ import annotations"
+
+    def body(p: Path) -> str:
+        text = p.read_text(encoding="utf-8")
+        return text[text.index(marker) :]
+
+    assert body(be) == body(ml)
 
 
 def test_impute_nulls_ignores_non_numeric_columns() -> None:

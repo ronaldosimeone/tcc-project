@@ -1,7 +1,7 @@
 """
 Leakage-free retrains served through the card-driven loader.
 
-For every ``*_v2`` / ``*_v3`` artefact present on disk:
+For every served ``*_v3`` artefact present on disk:
 1. its card declares leakage-free validation and a ``serving`` block;
 2. ``load_model_by_name`` builds the right adapter from the card alone;
 3. a prediction through the REAL pipeline path (60-row buffer → V2 feature
@@ -25,13 +25,13 @@ from src.services.preprocessing import MetroPTPreprocessor
 _NAMES = (
     "random_forest_v3",
     "xgboost_v3",
-    "mlp_v2",
-    "tcn_v2",
-    "bilstm_v2",
-    "patchtst_v2",
-    "autoencoder_v2",
+    "mlp_v3",
+    "tcn_v3",
+    "bilstm_v3",
+    "patchtst_v3",
+    "autoencoder_v3",
 )
-_MODELS = settings.model_path.parent
+_MODELS = settings.models_dir
 _AVAILABLE = [n for n in _NAMES if (_MODELS / f"{n}_card.json").exists()]
 
 _SENSORS = (

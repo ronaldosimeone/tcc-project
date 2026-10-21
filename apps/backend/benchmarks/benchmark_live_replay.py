@@ -46,11 +46,11 @@ OUT: Path = Path(__file__).resolve().parent / "live_replay_matrix.json"
 MODELS: tuple[str, ...] = (
     "random_forest_v3",
     "xgboost_v3",
-    "mlp_v2",
-    "tcn_v2",
-    "bilstm_v2",
-    "patchtst_v2",
-    "autoencoder_v2",
+    "mlp_v3",
+    "tcn_v3",
+    "bilstm_v3",
+    "patchtst_v3",
+    "autoencoder_v3",
 )
 LEAD_MINUTES: int = 10
 MAX_FAILURE_ROWS: int = 720  # first 2 h of each failure

@@ -99,7 +99,7 @@ def test_extract_probabilities_rejects_ndarray_with_wrong_row_count() -> None:
 
 
 # ---------------------------------------------------------------------------
-# predict() — threshold 0.5, artefato real (random_forest_v2)
+# predict() — threshold 0.5, artefato real (random_forest_v3)
 # ---------------------------------------------------------------------------
 
 
@@ -107,7 +107,7 @@ def test_predict_applies_0_5_threshold_on_real_artifact() -> None:
     """Chama `adapter.predict()` DIRETAMENTE (não via `ModelService`, que só
     usa `predict_proba`) — a única forma de exercitar a linha do threshold
     0.5 em `OnnxTreeAdapter.predict` com um artefato ONNX real."""
-    service = load_model_by_name("random_forest_v2")
+    service = load_model_by_name("random_forest_v3")
     adapter = service._model  # noqa: SLF001 — acesso de teste ao adapter real
     assert isinstance(adapter, OnnxTreeAdapter)
 
@@ -131,7 +131,7 @@ def test_predict_classifies_as_1_exactly_at_the_0_5_boundary(
     devolver EXATAMENTE 0.5 — substitui `predict_proba` por um valor
     controlado no adapter real (sem tocar o ONNX Runtime) pra testar só a
     regra `>= 0.5`, não `> 0.5`."""
-    service = load_model_by_name("random_forest_v2")
+    service = load_model_by_name("random_forest_v3")
     adapter = service._model  # noqa: SLF001
     monkeypatch.setattr(
         adapter, "predict_proba", lambda X: np.array([[0.5, 0.5]], dtype=np.float32)

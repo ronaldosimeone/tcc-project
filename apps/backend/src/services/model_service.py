@@ -1,29 +1,19 @@
 """
 ModelService — [RNF-11] inference singleton, [RF-10] multi-model factory.
 
-The same ModelService class wraps any sklearn-compatible estimator that
-exposes ``.predict()``, ``.predict_proba()`` and ``.feature_names_in_`` —
-RandomForestClassifier, XGBClassifier and OnnxMlpAdapter all satisfy this
-contract.
+The same ModelService class wraps the ONNX adapters (tree, MLP, sequence,
+autoencoder): each exposes ``.predict()`` / ``.predict_proba()`` and the
+feature or channel order it expects.
 
-Model selection at startup (RF-10)
------------------------------------
-The active model is determined by the ``ACTIVE_MODEL`` environment variable
-(via ``settings.active_model``).  No code change or redeploy is required:
-
-    ACTIVE_MODEL=random_forest   →  loads random_forest_final.joblib  (default)
-    ACTIVE_MODEL=xgboost         →  loads xgboost_v1.joblib
-    ACTIVE_MODEL=mlp             →  loads mlp_v1.onnx + mlp_scaler.joblib
-
-V2 — Decision threshold tuning
-------------------------------
-The default classification threshold of 0.5 is suboptimal for industrial
-imbalanced fault detection (cost of a missed fault ≫ cost of a false alarm).
-The training scripts now compute an F2-favouring threshold from the
-Precision-Recall curve and persist it under ``decision_threshold`` in the
-model card.  ``ModelService`` reads that value at load time and applies it
-during inference; legacy cards without the field fall back to 0.5 so older
-artefacts continue to work unchanged.
+Served models (RF-10)
+---------------------
+Only ONE generation is served: ``*_v3`` (``SERVED_MODELS``), produced by
+``apps/ml/src/train_production.py`` with the leak-free nested protocol —
+hyper-parameters by leave-one-failure-out over the training failures, Platt
+calibration on out-of-fold scores, RN-02 threshold on the calibrated scale.
+Each card's ``serving`` block says how to load it, and its
+``decision_threshold`` is the calibrated decision the alerts follow.
+``ACTIVE_MODEL`` picks one at startup; ``PUT /models/active`` swaps at run time.
 """
 
 from __future__ import annotations
@@ -32,10 +22,8 @@ import json
 import logging
 import time
 from datetime import datetime, timezone
-from pathlib import Path
 from typing import Any
 
-import joblib
 import numpy as np
 import pandas as pd
 from fastapi import Request
@@ -72,29 +60,20 @@ _DEFAULT_THRESHOLD: float = 0.5
 # ---------------------------------------------------------------------------
 
 
-_MODEL_CARDS: dict[str, str] = {
-    "random_forest": "model_card.json",
-    "xgboost": "xgboost_v1_card.json",
-    "mlp": "mlp_v1_card.json",
-    # V2 ONNX exports share the same training scripts (and therefore the same
-    # cards) as their joblib siblings — train_random_forest.py writes
-    # model_card.json and train_xgboost.py writes xgboost_v1_card.json.
-    "random_forest_v2": "model_card.json",
-    "xgboost_v2": "xgboost_v1_card.json",
-    "xgboost_v3": "xgboost_v3_card.json",
-    "random_forest_v3": "random_forest_v3_card.json",
-    "mlp_v2": "mlp_v2_card.json",
-    "tcn_v2": "tcn_v2_card.json",
-    "bilstm_v2": "bilstm_v2_card.json",
-    "patchtst_v2": "patchtst_v2_card.json",
-    "autoencoder_v2": "autoencoder_v2_card.json",
-    # Sequential DL models — RNF-24 extension
-    "tcn": "tcn_v1_card.json",
-    "bilstm": "bilstm_v1_card.json",
-    "patchtst": "patchtst_v1_card.json",
-    # Unsupervised Conv1D Autoencoder
-    "autoencoder": "autoencoder_v1_card.json",
-}
+# The ONE generation served by the platform — leak-free nested protocol
+# (apps/ml/src/train_production.py). Earlier generations (v1 random split +
+# SMOTE, v2 trees) leaked and were removed from serving.
+SERVED_MODELS: tuple[str, ...] = (
+    "random_forest_v3",
+    "xgboost_v3",
+    "mlp_v3",
+    "tcn_v3",
+    "bilstm_v3",
+    "patchtst_v3",
+    "autoencoder_v3",
+)
+
+_MODEL_CARDS: dict[str, str] = {name: f"{name}_card.json" for name in SERVED_MODELS}
 
 
 def _read_model_card(model_name: str) -> dict[str, Any] | None:
@@ -103,7 +82,7 @@ def _read_model_card(model_name: str) -> dict[str, Any] | None:
     if card_name is None:
         return None
 
-    card_path = settings.model_path.parent / card_name
+    card_path = settings.models_dir / card_name
     if not card_path.exists():
         return None
 
@@ -142,64 +121,6 @@ def _resolve_threshold(model_name: str) -> float:
     return threshold
 
 
-def _resolve_feature_names(model_name: str) -> list[str]:
-    """
-    Read ``feature_names`` from the matching model card.
-
-    Required by ``OnnxTreeAdapter`` because tree-based ONNX graphs do not
-    embed column names — the adapter has to be told the training column
-    order.  RF V2 has 80 features (cross-features + lags + min/max/range);
-    XGB V2 has 34 (no lags).  Reading the card keeps the adapter generic.
-    """
-    card = _read_model_card(model_name)
-    if card is None:
-        raise FileNotFoundError(
-            f"Model card for '{model_name}' is missing — cannot resolve "
-            "feature_names for the ONNX adapter."
-        )
-    names = card.get("feature_names")
-    if not isinstance(names, list) or not names:
-        raise ValueError(
-            f"Model card for '{model_name}' has no usable 'feature_names' field."
-        )
-    return [str(n) for n in names]
-
-
-# ---------------------------------------------------------------------------
-# Loader
-# ---------------------------------------------------------------------------
-
-
-def load_model(
-    path: Path,
-    decision_threshold: float = _DEFAULT_THRESHOLD,
-    model_name: str = "unknown",
-) -> "ModelService":
-    """Carrega o modelo do disco. Se não achar, tenta o nome alternativo."""
-    if not path.exists():
-        # Tentativa amigável caso o config ainda aponte para o nome antigo
-        alt_path = path.parent / "random_forest_final.joblib"
-        if alt_path.exists():
-            logger.info("[RNF-11] Usando caminho alternativo: %s", alt_path)
-            path = alt_path
-        else:
-            logger.error("[RNF-11] Modelo não encontrado em %s", path)
-            raise FileNotFoundError(f"Model artefact missing at {path}")
-
-    model: Any = joblib.load(path)
-    logger.info("[RNF-11] Modelo carregado com sucesso: %s", path)
-    return ModelService(
-        model, decision_threshold=decision_threshold, model_name=model_name
-    )
-
-
-# RF-10 registry — maps ACTIVE_MODEL values to their artefact paths.
-_MODEL_REGISTRY: dict[str, Path] = {
-    "random_forest": settings.model_path,
-    "xgboost": settings.xgboost_model_path,
-}
-
-
 def resolve_threshold(model_name: str) -> float:
     """Public read of a model's calibrated decision threshold (model card)."""
     return _resolve_threshold(model_name.lower().strip())
@@ -207,173 +128,24 @@ def resolve_threshold(model_name: str) -> float:
 
 def load_model_by_name(model_name: str) -> "ModelService":
     """
-    Load a ModelService by explicit name (RF-10, RNF-25).
+    Load a served model by name (RF-10, RNF-25).
 
-    Reads the optimal decision threshold from the matching model card so that
-    V2 artefacts apply their tuned cut-off automatically.
+    Every served artefact is described by its card's ``serving`` block
+    (adapter, ONNX file, scaler, window); the card also carries the
+    calibrated ``decision_threshold`` chosen without leakage.
     """
     model_name = model_name.lower().strip()
-    threshold = _resolve_threshold(model_name)
-
-    if threshold != _DEFAULT_THRESHOLD:
-        logger.info(
-            "[V2] %s usará threshold=%.4f (PR-curve / F2-score)",
-            model_name,
-            threshold,
-        )
-
-    if model_name == "mlp":
-        from src.services.mlp_adapter import OnnxMlpAdapter
-
-        logger.info(
-            "[RF-10] Loading model 'mlp' | onnx=%s | scaler=%s",
-            settings.mlp_onnx_path,
-            settings.mlp_scaler_path,
-        )
-        adapter = OnnxMlpAdapter(
-            onnx_path=settings.mlp_onnx_path,
-            scaler_path=settings.mlp_scaler_path,
-        )
-        return ModelService(
-            adapter, decision_threshold=threshold, model_name=model_name
-        )
-
-    card = _read_model_card(model_name)
-    if card is not None and isinstance(card.get("serving"), dict):
-        return _load_from_serving_card(model_name, card, threshold)
-
-    if model_name in {"random_forest_v2", "xgboost_v2", "xgboost_v3"}:
-        from src.services.onnx_tree_adapter import OnnxTreeAdapter
-
-        onnx_path = {
-            "random_forest_v2": settings.rf_v2_onnx_path,
-            "xgboost_v2": settings.xgboost_v2_onnx_path,
-            "xgboost_v3": settings.xgboost_v3_onnx_path,
-        }[model_name]
-        feature_names = _resolve_feature_names(model_name)
-        logger.info(
-            "[RF-10] Loading model '%s' | onnx=%s | features=%d",
-            model_name,
-            onnx_path,
-            len(feature_names),
-        )
-        return ModelService(
-            OnnxTreeAdapter(onnx_path=onnx_path, feature_names=feature_names),
-            decision_threshold=threshold,
-            model_name=model_name,
-        )
-
-    if model_name in {"tcn", "bilstm", "patchtst"}:
-        return _load_sequential_model(model_name, threshold)
-
-    if model_name == "autoencoder":
-        return _load_autoencoder_model(threshold)
-
-    path = _MODEL_REGISTRY.get(model_name, settings.model_path)
-    logger.info("[RF-10] Loading model '%s' | path = %s", model_name, path)
-    return load_model(path, decision_threshold=threshold, model_name=model_name)
-
-
-def _load_sequential_model(model_name: str, threshold: float) -> "ModelService":
-    """
-    Load a sequential ONNX model (TCN, BiLSTM or PatchTST) via OnnxSequenceAdapter.
-
-    Reads ``window_size`` and ``feature_names`` from the model card so the
-    adapter is self-configured without hard-coded constants here.
-    """
-    from src.services.onnx_sequence_adapter import OnnxSequenceAdapter
-
-    onnx_path_map: dict[str, Path] = {
-        "tcn": settings.tcn_onnx_path,
-        "bilstm": settings.bilstm_onnx_path,
-        "patchtst": settings.patchtst_onnx_path,
-    }
-    scaler_path_map: dict[str, Path] = {
-        "tcn": settings.tcn_scaler_path,
-        "bilstm": settings.bilstm_scaler_path,
-        "patchtst": settings.patchtst_scaler_path,
-    }
-
-    onnx_path: Path = onnx_path_map[model_name]
-    scaler_path: Path = scaler_path_map[model_name]
-
-    # Read window_size and channel_names from the card — avoids hard-coding.
-    card: dict[str, Any] | None = _read_model_card(model_name)
-    window_size: int = 60  # safe default matching train_sequential.py
-    channel_names: list[str] | None = None
-    if card is not None:
-        # ``card.get("inference") or {}`` handles both the missing-key case
-        # (returns {}) and the explicit-null case (returns {}); the bare
-        # ``card.get("inference", {})`` would let an explicit JSON null
-        # propagate and crash on the next ``.get(...)``.
-        inference_cfg: dict[str, Any] = card.get("inference") or {}
-        window_size = int(inference_cfg.get("window_size", window_size))
-        raw_names = card.get("feature_names")
-        if isinstance(raw_names, list) and raw_names:
-            channel_names = [str(n) for n in raw_names]
-
-    logger.info(
-        "[RF-10] Loading model '%s' | onnx=%s | T=%d | C=%s",
-        model_name,
-        onnx_path,
-        window_size,
-        len(channel_names) if channel_names else "default",
-    )
-
-    adapter: OnnxSequenceAdapter = OnnxSequenceAdapter(
-        onnx_path=onnx_path,
-        scaler_path=scaler_path,
-        window_size=window_size,
-        channel_names=channel_names,
-    )
-    return ModelService(adapter, decision_threshold=threshold, model_name=model_name)
-
-
-def _load_autoencoder_model(threshold: float) -> "ModelService":
-    """
-    Load the Conv1D Autoencoder via OnnxAutoencoderAdapter.
-
-    Reads ``mse_threshold`` and ``feature_names`` from the model card so the
-    adapter is fully self-configured without hard-coded constants here.
-    """
-    from src.services.onnx_autoencoder_adapter import OnnxAutoencoderAdapter
-
-    card: dict[str, Any] | None = _read_model_card("autoencoder")
-    if card is None:
-        raise FileNotFoundError(
-            "autoencoder_v1_card.json not found — run `python src/train_autoencoder.py` first."
-        )
-
-    mse_threshold = card.get("mse_threshold")
-    if mse_threshold is None:
+    if model_name not in SERVED_MODELS:
         raise ValueError(
-            "autoencoder_v1_card.json is missing 'mse_threshold'. "
-            "Re-run `python src/train_autoencoder.py` to regenerate the card."
+            f"Unknown model '{model_name}'. Served: {', '.join(SERVED_MODELS)}."
         )
-
-    window_size: int = 60
-    channel_names: list[str] | None = None
-    inference_cfg: dict[str, Any] = card.get("inference") or {}
-    window_size = int(inference_cfg.get("window_size", window_size))
-    raw_names = card.get("feature_names")
-    if isinstance(raw_names, list) and raw_names:
-        channel_names = [str(n) for n in raw_names]
-
-    logger.info(
-        "[RF-10] Loading model 'autoencoder' | onnx=%s | T=%d | mse_threshold=%.6f",
-        settings.autoencoder_onnx_path,
-        window_size,
-        float(mse_threshold),
-    )
-
-    adapter = OnnxAutoencoderAdapter(
-        onnx_path=settings.autoencoder_onnx_path,
-        scaler_path=settings.autoencoder_scaler_path,
-        mse_threshold=float(mse_threshold),
-        window_size=window_size,
-        channel_names=channel_names,
-    )
-    return ModelService(adapter, decision_threshold=threshold, model_name="autoencoder")
+    card = _read_model_card(model_name)
+    if card is None or not isinstance(card.get("serving"), dict):
+        raise FileNotFoundError(
+            f"Model card for '{model_name}' is missing or has no 'serving' block "
+            f"in {settings.models_dir} — run `python -m src.train_production`."
+        )
+    return _load_from_serving_card(model_name, card, _resolve_threshold(model_name))
 
 
 def _load_from_serving_card(
@@ -387,7 +159,7 @@ def _load_from_serving_card(
     from ``card["feature_names"]``.
     """
     serving: dict[str, Any] = card["serving"]
-    models_dir = settings.model_path.parent
+    models_dir = settings.models_dir
     onnx_path = models_dir / str(serving["onnx"])
     names = [str(n) for n in card.get("feature_names") or []]
     kind = str(serving["adapter"])
@@ -434,6 +206,22 @@ def _load_from_serving_card(
     return ModelService(adapter, decision_threshold=threshold, model_name=model_name)
 
 
+def resolve_active_model(name: str) -> str:
+    """``ACTIVE_MODEL`` as served: a legacy or unknown name (e.g. an old
+    ``.env`` with ``random_forest_v2``) falls back to the champion with a
+    warning instead of failing the startup."""
+    normalized = name.lower().strip()
+    if normalized in SERVED_MODELS:
+        return normalized
+    logger.warning(
+        "ACTIVE_MODEL=%r is not served (served: %s) — using %s",
+        name,
+        ", ".join(SERVED_MODELS),
+        SERVED_MODELS[0],
+    )
+    return SERVED_MODELS[0]
+
+
 def load_active_model() -> "ModelService":
     """
     Load whichever model is selected by ``settings.active_model`` (RF-10).
@@ -441,7 +229,7 @@ def load_active_model() -> "ModelService":
     Thin wrapper around ``load_model_by_name`` for startup use.  The runtime
     hot-swap path calls ``load_model_by_name`` directly via ``ModelRegistry``.
     """
-    return load_model_by_name(settings.active_model)
+    return load_model_by_name(resolve_active_model(settings.active_model))
 
 
 # ---------------------------------------------------------------------------

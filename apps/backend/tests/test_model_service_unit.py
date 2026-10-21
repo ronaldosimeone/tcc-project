@@ -35,25 +35,21 @@ import pytest
 
 import src.services.model_service as model_service_module
 from src.core import metrics as metrics_module
-from src.core.config import settings
 from src.core.exceptions import ModelNotAvailableError
 from src.schemas.predict import PredictRequest
 from src.services.model_service import (
+    SERVED_MODELS,
     ModelService,
-    _load_autoencoder_model,
-    _load_sequential_model,
     _read_model_card,
-    _resolve_feature_names,
     _resolve_threshold,
     get_model_service,
     load_model_by_name,
+    resolve_active_model,
 )
 
 
 def _point_model_path_at(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    monkeypatch.setattr(
-        model_service_module.settings, "model_path", tmp_path / "model.joblib"
-    )
+    monkeypatch.setattr(model_service_module.settings, "models_dir", tmp_path)
 
 
 # ---------------------------------------------------------------------------
@@ -75,31 +71,21 @@ def test_binary_cols_is_the_exact_expected_list() -> None:
     ]
 
 
-def test_model_cards_maps_every_model_name_to_its_exact_card_filename() -> None:
+def test_only_the_v3_generation_is_served() -> None:
+    assert SERVED_MODELS == (
+        "random_forest_v3",
+        "xgboost_v3",
+        "mlp_v3",
+        "tcn_v3",
+        "bilstm_v3",
+        "patchtst_v3",
+        "autoencoder_v3",
+    )
+
+
+def test_model_cards_map_each_served_model_to_its_own_card() -> None:
     assert model_service_module._MODEL_CARDS == {  # noqa: SLF001
-        "random_forest": "model_card.json",
-        "xgboost": "xgboost_v1_card.json",
-        "mlp": "mlp_v1_card.json",
-        "random_forest_v2": "model_card.json",
-        "xgboost_v2": "xgboost_v1_card.json",
-        "xgboost_v3": "xgboost_v3_card.json",
-        "random_forest_v3": "random_forest_v3_card.json",
-        "mlp_v2": "mlp_v2_card.json",
-        "tcn_v2": "tcn_v2_card.json",
-        "bilstm_v2": "bilstm_v2_card.json",
-        "patchtst_v2": "patchtst_v2_card.json",
-        "autoencoder_v2": "autoencoder_v2_card.json",
-        "tcn": "tcn_v1_card.json",
-        "bilstm": "bilstm_v1_card.json",
-        "patchtst": "patchtst_v1_card.json",
-        "autoencoder": "autoencoder_v1_card.json",
-    }
-
-
-def test_model_registry_maps_v1_names_to_the_configured_artefact_paths() -> None:
-    assert model_service_module._MODEL_REGISTRY == {  # noqa: SLF001
-        "random_forest": settings.model_path,
-        "xgboost": settings.xgboost_model_path,
+        name: f"{name}_card.json" for name in SERVED_MODELS
     }
 
 
@@ -116,25 +102,27 @@ def test_read_model_card_returns_none_when_file_missing(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     _point_model_path_at(monkeypatch, tmp_path)
-    assert _read_model_card("random_forest") is None
+    assert _read_model_card("random_forest_v3") is None
 
 
 def test_read_model_card_returns_none_on_malformed_json(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     _point_model_path_at(monkeypatch, tmp_path)
-    (tmp_path / "model_card.json").write_text("{not valid json", encoding="utf-8")
-    assert _read_model_card("random_forest") is None
+    (tmp_path / "random_forest_v3_card.json").write_text(
+        "{not valid json", encoding="utf-8"
+    )
+    assert _read_model_card("random_forest_v3") is None
 
 
 def test_read_model_card_parses_valid_json(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     _point_model_path_at(monkeypatch, tmp_path)
-    (tmp_path / "model_card.json").write_text(
+    (tmp_path / "random_forest_v3_card.json").write_text(
         json.dumps({"decision_threshold": 0.3}), encoding="utf-8"
     )
-    assert _read_model_card("random_forest") == {"decision_threshold": 0.3}
+    assert _read_model_card("random_forest_v3") == {"decision_threshold": 0.3}
 
 
 # ---------------------------------------------------------------------------
@@ -146,7 +134,7 @@ def test_resolve_threshold_defaults_to_0_5_when_card_missing(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     _point_model_path_at(monkeypatch, tmp_path)
-    assert _resolve_threshold("random_forest") == 0.5
+    assert _resolve_threshold("random_forest_v3") == 0.5
 
 
 @pytest.mark.parametrize("raw", ["not-a-number", None, [1, 2]])
@@ -154,10 +142,10 @@ def test_resolve_threshold_falls_back_when_value_not_coercible_to_float(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, raw: Any
 ) -> None:
     _point_model_path_at(monkeypatch, tmp_path)
-    (tmp_path / "model_card.json").write_text(
+    (tmp_path / "random_forest_v3_card.json").write_text(
         json.dumps({"decision_threshold": raw}), encoding="utf-8"
     )
-    assert _resolve_threshold("random_forest") == 0.5
+    assert _resolve_threshold("random_forest_v3") == 0.5
 
 
 @pytest.mark.parametrize("raw", [0.0, 1.0, -0.1, 1.5])
@@ -167,308 +155,86 @@ def test_resolve_threshold_clamps_out_of_range_values_to_default(
     """Fronteira: a regra real é `0.0 < threshold < 1.0` (exclusiva nas duas
     pontas) — 0.0 e 1.0 são REJEITADOS, não aceitos como limite."""
     _point_model_path_at(monkeypatch, tmp_path)
-    (tmp_path / "model_card.json").write_text(
+    (tmp_path / "random_forest_v3_card.json").write_text(
         json.dumps({"decision_threshold": raw}), encoding="utf-8"
     )
-    assert _resolve_threshold("random_forest") == 0.5
+    assert _resolve_threshold("random_forest_v3") == 0.5
 
 
 def test_resolve_threshold_accepts_value_strictly_between_0_and_1(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     _point_model_path_at(monkeypatch, tmp_path)
-    (tmp_path / "model_card.json").write_text(
+    (tmp_path / "random_forest_v3_card.json").write_text(
         json.dumps({"decision_threshold": 0.37}), encoding="utf-8"
     )
-    assert _resolve_threshold("random_forest") == 0.37
+    assert _resolve_threshold("random_forest_v3") == 0.37
 
 
 def test_resolve_threshold_uses_default_when_field_absent(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     _point_model_path_at(monkeypatch, tmp_path)
-    (tmp_path / "model_card.json").write_text(json.dumps({}), encoding="utf-8")
-    assert _resolve_threshold("random_forest") == 0.5
+    (tmp_path / "random_forest_v3_card.json").write_text(
+        json.dumps({}), encoding="utf-8"
+    )
+    assert _resolve_threshold("random_forest_v3") == 0.5
 
 
 # ---------------------------------------------------------------------------
-# _resolve_feature_names
+# load_model_by_name — only served names, always through the card
 # ---------------------------------------------------------------------------
-
-
-def test_resolve_feature_names_raises_file_not_found_when_card_missing(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
-    """Mensagem EXATA (não `match=` parcial): RNF-64 achado — o mutador de
-    string do mutmut embrulha a mensagem inteira em `"XX...XX"`, o que
-    preserva qualquer substring que um `match=` parcial procurasse. Só uma
-    comparação de string completa mata essa classe de mutante."""
-    _point_model_path_at(monkeypatch, tmp_path)
-    with pytest.raises(FileNotFoundError) as exc_info:
-        _resolve_feature_names("random_forest_v2")
-    assert str(exc_info.value) == (
-        "Model card for 'random_forest_v2' is missing — cannot resolve "
-        "feature_names for the ONNX adapter."
-    )
-
-
-@pytest.mark.parametrize("bad_names", [None, "not-a-list", [], 42])
-def test_resolve_feature_names_raises_value_error_when_field_unusable(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, bad_names: Any
-) -> None:
-    _point_model_path_at(monkeypatch, tmp_path)
-    (tmp_path / "model_card.json").write_text(
-        json.dumps({"feature_names": bad_names}), encoding="utf-8"
-    )
-    with pytest.raises(ValueError) as exc_info:
-        _resolve_feature_names("random_forest_v2")
-    assert str(exc_info.value) == (
-        "Model card for 'random_forest_v2' has no usable 'feature_names' field."
-    )
-
-
-def test_resolve_feature_names_returns_names_as_strings(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
-    _point_model_path_at(monkeypatch, tmp_path)
-    (tmp_path / "model_card.json").write_text(
-        json.dumps({"feature_names": ["TP2", "TP3"]}), encoding="utf-8"
-    )
-    assert _resolve_feature_names("random_forest_v2") == ["TP2", "TP3"]
-
-
-# ---------------------------------------------------------------------------
-# _load_sequential_model / _load_autoencoder_model — ramos guiados pelo card
-# ---------------------------------------------------------------------------
-
-
-class _FakeAdapter:
-    def __init__(self, **kwargs: Any) -> None:
-        self.kwargs = kwargs
-        self.feature_names_in_ = kwargs.get("channel_names") or ["TP2"]
-
-
-def test_load_sequential_model_uses_card_window_size_and_channel_names(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setattr(
-        model_service_module,
-        "_read_model_card",
-        lambda name: {
-            "inference": {"window_size": 42},
-            "feature_names": ["TP2", "TP3"],
-        },
-    )
-    monkeypatch.setattr(
-        "src.services.onnx_sequence_adapter.OnnxSequenceAdapter", _FakeAdapter
-    )
-    service = _load_sequential_model("tcn", threshold=0.5)
-    assert service._model.kwargs["window_size"] == 42  # noqa: SLF001
-    assert service._model.kwargs["channel_names"] == ["TP2", "TP3"]  # noqa: SLF001
-
-
-def test_load_sequential_model_falls_back_to_default_window_size_when_card_missing(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setattr(model_service_module, "_read_model_card", lambda name: None)
-    monkeypatch.setattr(
-        "src.services.onnx_sequence_adapter.OnnxSequenceAdapter", _FakeAdapter
-    )
-    service = _load_sequential_model("bilstm", threshold=0.5)
-    assert service._model.kwargs["window_size"] == 60  # noqa: SLF001
-    assert service._model.kwargs["channel_names"] is None  # noqa: SLF001
-
-
-def test_load_sequential_model_ignores_non_list_feature_names(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setattr(
-        model_service_module,
-        "_read_model_card",
-        lambda name: {"feature_names": "not-a-list"},
-    )
-    monkeypatch.setattr(
-        "src.services.onnx_sequence_adapter.OnnxSequenceAdapter", _FakeAdapter
-    )
-    service = _load_sequential_model("patchtst", threshold=0.5)
-    assert service._model.kwargs["channel_names"] is None  # noqa: SLF001
-
-
-def test_load_sequential_model_ignores_an_empty_feature_names_list(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Fronteira RNF-64: `isinstance(x, list) and x` — uma lista VAZIA é
-    `isinstance` True mas falsy, então a condição real deve ser False (não
-    setar `channel_names=[]`). Um mutante `and`->`or` setaria `[]` aqui,
-    porque `isinstance([], list)` sozinho já é True e o `or` nunca avalia o
-    segundo operando."""
-    monkeypatch.setattr(
-        model_service_module, "_read_model_card", lambda name: {"feature_names": []}
-    )
-    monkeypatch.setattr(
-        "src.services.onnx_sequence_adapter.OnnxSequenceAdapter", _FakeAdapter
-    )
-    service = _load_sequential_model("patchtst", threshold=0.5)
-    assert service._model.kwargs["channel_names"] is None  # noqa: SLF001
-
-
-def test_load_autoencoder_model_raises_when_card_missing(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setattr(model_service_module, "_read_model_card", lambda name: None)
-    with pytest.raises(FileNotFoundError) as exc_info:
-        _load_autoencoder_model(threshold=0.5)
-    assert str(exc_info.value) == (
-        "autoencoder_v1_card.json not found — run `python src/train_autoencoder.py` first."
-    )
-
-
-def test_load_autoencoder_model_raises_when_mse_threshold_missing(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setattr(model_service_module, "_read_model_card", lambda name: {})
-    with pytest.raises(ValueError) as exc_info:
-        _load_autoencoder_model(threshold=0.5)
-    assert str(exc_info.value) == (
-        "autoencoder_v1_card.json is missing 'mse_threshold'. "
-        "Re-run `python src/train_autoencoder.py` to regenerate the card."
-    )
-
-
-def test_load_autoencoder_model_falls_back_to_default_window_size_when_card_has_no_inference_key(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Fronteira RNF-64: o card SÓ precisa de `mse_threshold` pra ser válido —
-    sem a chave `inference`, `window_size` deve cair no default 60 (não 0,
-    não None, não outro número)."""
-    monkeypatch.setattr(
-        model_service_module, "_read_model_card", lambda name: {"mse_threshold": 0.02}
-    )
-    monkeypatch.setattr(
-        "src.services.onnx_autoencoder_adapter.OnnxAutoencoderAdapter", _FakeAdapter
-    )
-    service = _load_autoencoder_model(threshold=0.5)
-    assert service._model.kwargs["window_size"] == 60  # noqa: SLF001
-    assert service._model.kwargs["channel_names"] is None  # noqa: SLF001
-
-
-def test_load_autoencoder_model_uses_card_window_size_and_channel_names(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setattr(
-        model_service_module,
-        "_read_model_card",
-        lambda name: {
-            "mse_threshold": 0.02,
-            "inference": {"window_size": 30},
-            "feature_names": ["TP2"],
-        },
-    )
-    monkeypatch.setattr(
-        "src.services.onnx_autoencoder_adapter.OnnxAutoencoderAdapter", _FakeAdapter
-    )
-    service = _load_autoencoder_model(threshold=0.5)
-    assert service._model.kwargs["window_size"] == 30  # noqa: SLF001
-    assert service._model.kwargs["mse_threshold"] == 0.02  # noqa: SLF001
-    assert service._model.kwargs["channel_names"] == ["TP2"]  # noqa: SLF001
-
-
-# ---------------------------------------------------------------------------
-# load_model_by_name — dispatch por nome (RNF-64: cada ramo `if model_name
-# == "..."` / `in {...}` tem seu literal testado individualmente; um typo
-# em QUALQUER um deles faz cair no ramo errado ou no fallback V1).
-# ---------------------------------------------------------------------------
-
-
-def test_load_model_by_name_dispatches_mlp_to_the_mlp_adapter(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setattr(model_service_module, "_resolve_threshold", lambda name: 0.5)
-    monkeypatch.setattr("src.services.mlp_adapter.OnnxMlpAdapter", _FakeAdapter)
-    service = load_model_by_name("mlp")
-    assert set(service._model.kwargs) == {"onnx_path", "scaler_path"}  # noqa: SLF001
 
 
 @pytest.mark.parametrize(
-    ("model_name", "expected_onnx_path"),
+    "legacy", ["random_forest", "random_forest_v2", "tcn", "mlp_v2"]
+)
+def test_load_model_by_name_rejects_legacy_and_unknown_names(legacy: str) -> None:
+    with pytest.raises(ValueError, match="Served"):
+        load_model_by_name(legacy)
+
+
+def test_load_model_by_name_requires_a_card_with_serving_block(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    _point_model_path_at(monkeypatch, tmp_path)
+    with pytest.raises(FileNotFoundError):
+        load_model_by_name("tcn_v3")
+    (tmp_path / "tcn_v3_card.json").write_text(json.dumps({}), encoding="utf-8")
+    with pytest.raises(FileNotFoundError):
+        load_model_by_name("tcn_v3")
+
+
+def test_load_model_by_name_builds_from_the_card(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    _point_model_path_at(monkeypatch, tmp_path)
+    card = {"decision_threshold": 0.12, "serving": {"adapter": "sequence"}}
+    (tmp_path / "tcn_v3_card.json").write_text(json.dumps(card), encoding="utf-8")
+    seen: dict[str, Any] = {}
+
+    def fake(name: str, c: dict[str, Any], thr: float) -> str:
+        seen.update(name=name, card=c, thr=thr)
+        return "service"
+
+    monkeypatch.setattr(model_service_module, "_load_from_serving_card", fake)
+    assert load_model_by_name(" TCN_v3 ") == "service"
+    assert seen == {"name": "tcn_v3", "card": card, "thr": 0.12}
+
+
+@pytest.mark.parametrize(
+    ("configured", "expected"),
     [
-        ("random_forest_v2", settings.rf_v2_onnx_path),
-        ("xgboost_v2", settings.xgboost_v2_onnx_path),
+        ("tcn_v3", "tcn_v3"),
+        ("XGBoost_V3", "xgboost_v3"),
+        ("random_forest_v2", "random_forest_v3"),
+        ("patchtst", "random_forest_v3"),
     ],
 )
-def test_load_model_by_name_dispatches_v2_tree_models_to_the_right_onnx_path(
-    monkeypatch: pytest.MonkeyPatch, model_name: str, expected_onnx_path: Path
+def test_resolve_active_model_falls_back_to_the_champion(
+    configured: str, expected: str
 ) -> None:
-    monkeypatch.setattr(model_service_module, "_resolve_threshold", lambda name: 0.5)
-    monkeypatch.setattr(
-        model_service_module, "_resolve_feature_names", lambda name: ["TP2"]
-    )
-    monkeypatch.setattr("src.services.onnx_tree_adapter.OnnxTreeAdapter", _FakeAdapter)
-    service = load_model_by_name(model_name)
-    assert service._model.kwargs["onnx_path"] == expected_onnx_path  # noqa: SLF001
-
-
-@pytest.mark.parametrize("model_name", ["tcn", "bilstm", "patchtst"])
-def test_load_model_by_name_dispatches_sequential_models_by_exact_name(
-    monkeypatch: pytest.MonkeyPatch, model_name: str
-) -> None:
-    monkeypatch.setattr(model_service_module, "_resolve_threshold", lambda name: 0.5)
-    calls: list[str] = []
-
-    def _fake_load_sequential(name: str, threshold: float) -> ModelService:
-        calls.append(name)
-        return ModelService(_MinimalModel())
-
-    monkeypatch.setattr(
-        model_service_module, "_load_sequential_model", _fake_load_sequential
-    )
-    load_model_by_name(model_name)
-    assert calls == [model_name]
-
-
-def test_load_model_by_name_dispatches_autoencoder_by_exact_name(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setattr(model_service_module, "_resolve_threshold", lambda name: 0.5)
-    calls: list[str] = []
-
-    def _fake_load_autoencoder(threshold: float) -> ModelService:
-        calls.append("autoencoder")
-        return ModelService(_MinimalModel())
-
-    monkeypatch.setattr(
-        model_service_module, "_load_autoencoder_model", _fake_load_autoencoder
-    )
-    load_model_by_name("autoencoder")
-    assert calls == ["autoencoder"]
-
-
-def test_load_model_by_name_logs_only_when_threshold_differs_from_default(
-    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
-) -> None:
-    """RNF-64: `if threshold != _DEFAULT_THRESHOLD` só tem efeito observável
-    via log (o valor retornado não muda) — a fronteira `!=`/`==` só é
-    detectável inspecionando se a linha de log foi de fato emitida."""
-    monkeypatch.setattr(
-        model_service_module, "_MODEL_REGISTRY", {"random_forest": settings.model_path}
-    )
-    monkeypatch.setattr(
-        model_service_module,
-        "load_model",
-        lambda *a, **kw: ModelService(_MinimalModel()),
-    )
-
-    monkeypatch.setattr(model_service_module, "_resolve_threshold", lambda name: 0.5)
-    with caplog.at_level("INFO", logger="src.services.model_service"):
-        caplog.clear()
-        load_model_by_name("random_forest")
-    assert not any("usará threshold" in r.message for r in caplog.records)
-
-    monkeypatch.setattr(model_service_module, "_resolve_threshold", lambda name: 0.3)
-    with caplog.at_level("INFO", logger="src.services.model_service"):
-        caplog.clear()
-        load_model_by_name("random_forest")
-    assert any("usará threshold" in r.message for r in caplog.records)
+    assert resolve_active_model(configured) == expected
 
 
 # ---------------------------------------------------------------------------

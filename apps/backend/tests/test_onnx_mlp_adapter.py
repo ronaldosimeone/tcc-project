@@ -136,7 +136,7 @@ def test_softmax_on_a_non_square_batch_matches_exact_row_wise_values() -> None:
 
 
 def test_predict_applies_0_5_threshold_on_column_1_of_predict_proba() -> None:
-    service = load_model_by_name("mlp")
+    service = load_model_by_name("mlp_v3")
     adapter = service._model  # noqa: SLF001
     assert isinstance(adapter, OnnxMlpAdapter)
 

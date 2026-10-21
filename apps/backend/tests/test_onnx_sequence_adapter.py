@@ -99,7 +99,7 @@ def test_softmax_is_invariant_to_a_constant_shift_added_to_every_logit() -> None
 
 @pytest.fixture(scope="module")
 def real_adapter() -> OnnxSequenceAdapter:
-    service = load_model_by_name("tcn")
+    service = load_model_by_name("tcn_v3")
     adapter = service._model  # noqa: SLF001
     assert isinstance(adapter, OnnxSequenceAdapter)
     return adapter

@@ -91,9 +91,9 @@ async def test_registry_swap_updates_active_name() -> None:
         "src.services.model_service.load_model_by_name",
         return_value=_mock_service(),
     ):
-        await registry.swap("random_forest")
+        await registry.swap("random_forest_v3")
 
-    assert registry.active_name == "random_forest"
+    assert registry.active_name == "random_forest_v3"
     assert registry.is_loaded
 
 
@@ -101,7 +101,7 @@ async def test_registry_get_returns_service_after_swap() -> None:
     registry = ModelRegistry()
     mock = _mock_service()
     with patch("src.services.model_service.load_model_by_name", return_value=mock):
-        await registry.swap("xgboost")
+        await registry.swap("xgboost_v3")
 
     result = await registry.get()
     assert result is mock
@@ -113,7 +113,7 @@ async def test_registry_swap_returns_empty_string_on_first_load() -> None:
         "src.services.model_service.load_model_by_name",
         return_value=_mock_service(),
     ):
-        previous = await registry.swap("random_forest")
+        previous = await registry.swap("random_forest_v3")
 
     assert previous == ""
 
@@ -124,11 +124,11 @@ async def test_registry_swap_returns_previous_model_name() -> None:
         "src.services.model_service.load_model_by_name",
         return_value=_mock_service(),
     ):
-        await registry.swap("random_forest")
-        previous = await registry.swap("xgboost")
+        await registry.swap("random_forest_v3")
+        previous = await registry.swap("xgboost_v3")
 
-    assert previous == "random_forest"
-    assert registry.active_name == "xgboost"
+    assert previous == "random_forest_v3"
+    assert registry.active_name == "xgboost_v3"
 
 
 async def test_registry_swap_invalid_model_raises_value_error() -> None:
@@ -164,8 +164,8 @@ async def test_registry_lock_serialises_concurrent_swaps() -> None:
         "src.services.model_registry.asyncio.to_thread", side_effect=fake_to_thread
     ):
         await asyncio.gather(
-            registry.swap("random_forest"),
-            registry.swap("xgboost"),
+            registry.swap("random_forest_v3"),
+            registry.swap("xgboost_v3"),
         )
 
     # Both swaps must have completed; active_name is whichever finished last
@@ -191,11 +191,11 @@ async def test_list_summaries_marks_the_swapped_model_as_active_after_swap() -> 
         return_value=_mock_service(),
     ):
         registry = ModelRegistry()
-        await registry.swap("random_forest")
+        await registry.swap("random_forest_v3")
 
     summaries = registry.list_summaries()
     active_names = {s.name for s in summaries if s.active}
-    assert active_names == {"random_forest"}
+    assert active_names == {"random_forest_v3"}
 
 
 # ---------------------------------------------------------------------------
@@ -272,7 +272,7 @@ async def test_get_models_returns_200_with_valid_token() -> None:
         "src.services.model_service.load_model_by_name",
         return_value=_mock_service(),
     ):
-        await registry.swap("random_forest")
+        await registry.swap("random_forest_v3")
 
     _, client = _build_client(registry)
     async with client:
@@ -280,7 +280,7 @@ async def test_get_models_returns_200_with_valid_token() -> None:
 
     assert resp.status_code == 200
     body = ModelsListResponse(**resp.json())
-    assert body.active_model == "random_forest"
+    assert body.active_model == "random_forest_v3"
     assert len(body.models) == len(KNOWN_MODELS)
 
 
@@ -298,7 +298,7 @@ async def test_put_models_active_returns_401_without_token() -> None:
     registry = ModelRegistry()
     _, client = _build_client(registry)
     async with client:
-        resp = await client.put("/models/active", json={"model_name": "xgboost"})
+        resp = await client.put("/models/active", json={"model_name": "xgboost_v3"})
     assert resp.status_code == 401
 
 
@@ -308,7 +308,7 @@ async def test_put_models_active_returns_401_for_wrong_token() -> None:
     async with client:
         resp = await client.put(
             "/models/active",
-            json={"model_name": "xgboost"},
+            json={"model_name": "xgboost_v3"},
             headers={"X-Admin-Token": _WRONG_TOKEN},
         )
     assert resp.status_code == 401
@@ -332,7 +332,7 @@ async def test_put_models_active_swaps_model_successfully() -> None:
         "src.services.model_service.load_model_by_name",
         return_value=_mock_service(),
     ):
-        await registry.swap("random_forest")
+        await registry.swap("random_forest_v3")
 
     _, client = _build_client(registry)
     with patch(
@@ -342,14 +342,14 @@ async def test_put_models_active_swaps_model_successfully() -> None:
         async with client:
             resp = await client.put(
                 "/models/active",
-                json={"model_name": "xgboost"},
+                json={"model_name": "xgboost_v3"},
                 headers=_ADMIN_HEADER,
             )
 
     assert resp.status_code == 202
     body = SwapModelResponse(**resp.json())
-    assert body.previous_model == "random_forest"
-    assert body.active_model == "xgboost"
+    assert body.previous_model == "random_forest_v3"
+    assert body.active_model == "xgboost_v3"
 
 
 async def test_put_models_active_returns_404_when_artefact_missing() -> None:
@@ -363,7 +363,7 @@ async def test_put_models_active_returns_404_when_artefact_missing() -> None:
         async with client:
             resp = await client.put(
                 "/models/active",
-                json={"model_name": "mlp"},
+                json={"model_name": "mlp_v3"},
                 headers=_ADMIN_HEADER,
             )
     assert resp.status_code == 404

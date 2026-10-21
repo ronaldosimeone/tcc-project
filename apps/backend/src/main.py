@@ -67,6 +67,7 @@ from src.routers import simulator as simulator_router
 from src.services.alert_service import get_alert_service
 from src.services.inference_cache import InferenceCache, create_redis_client
 from src.services.inference_pipeline import InferencePipelineService
+from src.services.model_service import resolve_active_model
 from src.services.model_registry import ModelRegistry
 from src.services.sensor_stream_service import get_sensor_stream_service
 
@@ -117,13 +118,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     registry = ModelRegistry()
     app.state.model_registry = registry
 
+    active_model = resolve_active_model(settings.active_model)
     try:
-        await registry.swap(settings.active_model)
-        log.info("model_loaded", model=settings.active_model)
+        await registry.swap(active_model)
+        log.info("model_loaded", model=active_model)
     except FileNotFoundError:
         log.warning(
             "model_artefact_missing",
-            model=settings.active_model,
+            model=active_model,
             consequence="POST /predict will return HTTP 503 until a model is loaded via PUT /models/active",
         )
 

@@ -49,7 +49,7 @@ _VALID_PAYLOAD: dict = {
 
 
 # ---------------------------------------------------------------------------
-# 1. ModelService.predict_batch — artefato real (random_forest, joblib)
+# 1. ModelService.predict_batch — artefato real (random_forest_v3, ONNX)
 # ---------------------------------------------------------------------------
 
 
@@ -57,7 +57,7 @@ class TestModelServicePredictBatch:
     @staticmethod
     @pytest.fixture(scope="class")
     def service() -> ModelService:
-        return load_model_by_name("random_forest")
+        return load_model_by_name("random_forest_v3")
 
     @staticmethod
     def _distinct_requests(n: int) -> list[PredictRequest]:
@@ -118,7 +118,7 @@ class TestModelServicePredictBatch:
         """Prova direta de vetorização — não um loop de N chamadas. Mocka
         só `predict_proba` (mantém `feature_names_in_` real) e conta
         chamadas para N=100 amostras."""
-        real_model = load_model_by_name("random_forest")._model
+        real_model = load_model_by_name("random_forest_v3")._model
         wrapped = MagicMock(wraps=real_model)
         wrapped.feature_names_in_ = real_model.feature_names_in_
         service = ModelService(model=wrapped)

@@ -39,67 +39,21 @@ from fastapi import Request
 from src.core.config import settings
 from src.core.exceptions import ModelNotAvailableError, NotFoundError
 from src.schemas.models import ModelSummary
+from src.services.model_service import SERVED_MODELS
 
 if TYPE_CHECKING:
     from src.services.model_service import ModelService
 
 logger: logging.Logger = logging.getLogger(__name__)
 
-# Single source of truth — must stay in sync with the branches in
-# model_service.load_model_by_name and the Literal in schemas.models.ModelName.
-# Adding a new model name here also requires:
-#   1. A branch (or registry entry) in model_service.load_model_by_name.
-#   2. The same name in schemas/models.py::ModelName.
-KNOWN_MODELS: frozenset[str] = frozenset(
-    {
-        "random_forest",
-        "xgboost",
-        "mlp",
-        "random_forest_v2",
-        "xgboost_v2",
-        "xgboost_v3",
-        # Leakage-free retrains (apps/ml/src/train_production.py):
-        # artefacts and adapter described by each model card ("serving").
-        "random_forest_v3",
-        "mlp_v2",
-        "tcn_v2",
-        "bilstm_v2",
-        "patchtst_v2",
-        "autoencoder_v2",
-        # Sequential DL models (TCN, BiLSTM, PatchTST) — RNF-24 extension
-        "tcn",
-        "bilstm",
-        "patchtst",
-        # Unsupervised anomaly detection via reconstruction error
-        "autoencoder",
-    }
-)
+# Single source of truth: model_service.SERVED_MODELS (the v3 generation).
+# schemas.models.ModelName must list the same names (checked by a test).
+KNOWN_MODELS: frozenset[str] = frozenset(SERVED_MODELS)
 
-# RNF-56 — movido de `routers/models.py`: mapeia cada modelo conhecido ao
-# Path que sinaliza que o artefato está pronto em disco. `mlp` exige
-# tanto o .onnx quanto o scaler; checamos o .onnx como sinal canônico (o
-# scaler é sempre produzido junto). Entradas V2 apontam para os .onnx
-# servidos por OnnxTreeAdapter.
+# RNF-56 — the ``.onnx`` is the readiness signal of each served model; its
+# card (``<name>_card.json``) carries scaler, window and threshold.
 _ARTEFACT_PATHS: dict[str, Path] = {
-    "random_forest": settings.model_path,
-    "xgboost": settings.xgboost_model_path,
-    "mlp": settings.mlp_onnx_path,
-    "random_forest_v2": settings.rf_v2_onnx_path,
-    "xgboost_v2": settings.xgboost_v2_onnx_path,
-    "xgboost_v3": settings.xgboost_v3_onnx_path,
-    "random_forest_v3": settings.model_path.parent / "random_forest_v3.onnx",
-    "mlp_v2": settings.model_path.parent / "mlp_v2.onnx",
-    "tcn_v2": settings.model_path.parent / "tcn_v2.onnx",
-    "bilstm_v2": settings.model_path.parent / "bilstm_v2.onnx",
-    "patchtst_v2": settings.model_path.parent / "patchtst_v2.onnx",
-    "autoencoder_v2": settings.model_path.parent / "autoencoder_v2.onnx",
-    # Sequential DL models — RNF-24 extension. O .onnx é o sinal canônico de
-    # prontidão; o scaler por canal é sempre produzido junto por
-    # train_sequential.py e rastreado via _MODEL_CARDS.
-    "tcn": settings.tcn_onnx_path,
-    "bilstm": settings.bilstm_onnx_path,
-    "patchtst": settings.patchtst_onnx_path,
-    "autoencoder": settings.autoencoder_onnx_path,
+    name: settings.models_dir / f"{name}.onnx" for name in SERVED_MODELS
 }
 
 

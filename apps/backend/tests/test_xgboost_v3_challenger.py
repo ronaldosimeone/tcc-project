@@ -20,10 +20,10 @@ from src.core.config import settings
 from src.services.model_service import load_model_by_name
 from src.services.preprocessing import MetroPTPreprocessor
 
-_CARD = settings.model_path.parent / "xgboost_v3_card.json"
+_CARD = settings.models_dir / "xgboost_v3_card.json"
 
 pytestmark = pytest.mark.skipif(
-    not settings.xgboost_v3_onnx_path.exists() or not _CARD.exists(),
+    not (settings.models_dir / "xgboost_v3.onnx").exists() or not _CARD.exists(),
     reason="xgboost_v3 not built (python -m src.train_production --models xgboost)",
 )
 

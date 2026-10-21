@@ -101,7 +101,7 @@ DRIFT_PSI_THRESHOLD: float = 0.25
 # Features monitoradas — os 7 sensores ANALÓGICOS que
 # `src/services/preprocessing.py::MetroPTPreprocessor` usa como
 # `_DEFAULT_SENSOR_COLS` (a base real do pipeline de feature engineering do
-# modelo ativo, `ACTIVE_MODEL=random_forest_v2` — ver `.env`). Os 5 sinais
+# modelo ativo, `ACTIVE_MODEL` — ver `.env`). Os 5 sinais
 # digitais (COMP, DV_eletric, Towers, MPG, Oil_level — binários ON/OFF) são
 # deliberadamente excluídos: PSI sobre um sinal ON/OFF mede só a proporção de
 # tempo ligado/desligado, um sinal de drift qualitativamente diferente que

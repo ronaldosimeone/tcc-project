@@ -29,51 +29,51 @@
    "end": "2020-04-18 23:59:00",
    "seen_in_training": true,
    "label_source": "MetroPT-3 incident report",
-   "p_failure_onset": 0.6404,
-   "threshold": 0.814773,
+   "p_failure_onset": 0.4306,
+   "threshold": 0.694113,
    "alarm_in_onset": true,
    "onset_rows": 128,
    "baseline_rows": 46945,
    "occlusion": [
     {
-     "sensor": "TP2",
-     "contribution": 0.326735
-    },
-    {
-     "sensor": "Oil_temperature",
-     "contribution": 0.310675
+     "sensor": "DV_pressure",
+     "contribution": 0.278403
     },
     {
      "sensor": "TP3",
-     "contribution": 0.276362
+     "contribution": 0.252617
     },
     {
-     "sensor": "DV_pressure",
-     "contribution": 0.204181
+     "sensor": "TP2",
+     "contribution": 0.226295
     },
     {
-     "sensor": "H1",
-     "contribution": 0.179229
+     "sensor": "Oil_temperature",
+     "contribution": 0.20181
     },
     {
      "sensor": "Motor_current",
-     "contribution": 0.102734
+     "contribution": 0.108025
+    },
+    {
+     "sensor": "H1",
+     "contribution": 0.059753
     },
     {
      "sensor": "MPG",
-     "contribution": 0.002828
-    },
-    {
-     "sensor": "Towers",
-     "contribution": 0.002792
+     "contribution": 0.00262
     },
     {
      "sensor": "COMP",
-     "contribution": 0.002775
+     "contribution": 0.002159
+    },
+    {
+     "sensor": "Towers",
+     "contribution": 0.001813
     },
     {
      "sensor": "DV_eletric",
-     "contribution": 0.000547
+     "contribution": 0.001445
     }
    ],
    "deviation": [
@@ -137,50 +137,50 @@
    "end": "2020-05-30 06:00:00",
    "seen_in_training": true,
    "label_source": "MetroPT-3 incident report",
-   "p_failure_onset": 0.9964,
-   "threshold": 0.814773,
+   "p_failure_onset": 0.995,
+   "threshold": 0.694113,
    "alarm_in_onset": true,
    "onset_rows": 181,
    "baseline_rows": 43993,
    "occlusion": [
     {
      "sensor": "DV_pressure",
-     "contribution": 0.960191
+     "contribution": 0.973557
     },
     {
      "sensor": "Oil_temperature",
-     "contribution": 0.75718
-    },
-    {
-     "sensor": "H1",
-     "contribution": 0.485042
-    },
-    {
-     "sensor": "TP2",
-     "contribution": 0.336947
+     "contribution": 0.749545
     },
     {
      "sensor": "Motor_current",
-     "contribution": 0.251342
+     "contribution": 0.338648
+    },
+    {
+     "sensor": "TP2",
+     "contribution": 0.331552
+    },
+    {
+     "sensor": "H1",
+     "contribution": 0.101552
     },
     {
      "sensor": "TP3",
-     "contribution": 0.01642
-    },
-    {
-     "sensor": "COMP",
-     "contribution": 0.0
+     "contribution": 0.01254
     },
     {
      "sensor": "DV_eletric",
-     "contribution": 0.0
-    },
-    {
-     "sensor": "Towers",
-     "contribution": 0.0
+     "contribution": 0.005
     },
     {
      "sensor": "MPG",
+     "contribution": 0.003812
+    },
+    {
+     "sensor": "COMP",
+     "contribution": -0.000111
+    },
+    {
+     "sensor": "Towers",
      "contribution": 0.0
     }
    ],
@@ -245,50 +245,50 @@
    "end": "2020-06-07 14:30:00",
    "seen_in_training": true,
    "label_source": "MetroPT-3 incident report",
-   "p_failure_onset": 0.9927,
-   "threshold": 0.814773,
+   "p_failure_onset": 0.9954,
+   "threshold": 0.694113,
    "alarm_in_onset": true,
    "onset_rows": 182,
    "baseline_rows": 52613,
    "occlusion": [
     {
      "sensor": "DV_pressure",
-     "contribution": 0.929539
+     "contribution": 0.944854
     },
     {
      "sensor": "Oil_temperature",
-     "contribution": 0.882927
-    },
-    {
-     "sensor": "H1",
-     "contribution": 0.459678
+     "contribution": 0.867203
     },
     {
      "sensor": "TP3",
-     "contribution": 0.34677
+     "contribution": 0.602364
     },
     {
      "sensor": "TP2",
-     "contribution": 0.250718
+     "contribution": 0.308763
     },
     {
      "sensor": "Motor_current",
-     "contribution": 0.132096
+     "contribution": 0.268251
     },
     {
-     "sensor": "COMP",
-     "contribution": 0.0
+     "sensor": "H1",
+     "contribution": 0.094524
     },
     {
      "sensor": "DV_eletric",
-     "contribution": 0.0
-    },
-    {
-     "sensor": "Towers",
-     "contribution": 0.0
+     "contribution": 0.005
     },
     {
      "sensor": "MPG",
+     "contribution": 0.004835
+    },
+    {
+     "sensor": "COMP",
+     "contribution": -2.8e-05
+    },
+    {
+     "sensor": "Towers",
      "contribution": 0.0
     }
    ],
@@ -353,51 +353,51 @@
    "end": "2020-07-15 19:00:00",
    "seen_in_training": true,
    "label_source": "MetroPT-3 incident report",
-   "p_failure_onset": 0.9942,
-   "threshold": 0.814773,
+   "p_failure_onset": 0.992,
+   "threshold": 0.694113,
    "alarm_in_onset": true,
    "onset_rows": 182,
    "baseline_rows": 44906,
    "occlusion": [
     {
      "sensor": "Oil_temperature",
-     "contribution": 0.970539
+     "contribution": 0.958948
     },
     {
      "sensor": "H1",
-     "contribution": 0.361974
-    },
-    {
-     "sensor": "DV_pressure",
-     "contribution": 0.29045
-    },
-    {
-     "sensor": "TP3",
-     "contribution": 0.243174
+     "contribution": 0.420403
     },
     {
      "sensor": "TP2",
-     "contribution": 0.115678
+     "contribution": 0.355509
+    },
+    {
+     "sensor": "TP3",
+     "contribution": 0.332886
     },
     {
      "sensor": "Motor_current",
-     "contribution": 0.087224
+     "contribution": 0.194862
     },
     {
-     "sensor": "MPG",
-     "contribution": 0.000907
-    },
-    {
-     "sensor": "COMP",
-     "contribution": 0.0
+     "sensor": "DV_pressure",
+     "contribution": 0.088187
     },
     {
      "sensor": "DV_eletric",
-     "contribution": 0.0
+     "contribution": 0.028379
+    },
+    {
+     "sensor": "MPG",
+     "contribution": 0.023707
+    },
+    {
+     "sensor": "COMP",
+     "contribution": 0.009533
     },
     {
      "sensor": "Towers",
-     "contribution": 0.0
+     "contribution": -5.5e-05
     }
    ],
    "deviation": [
@@ -461,51 +461,51 @@
    "end": "2022-03-01 02:00:00",
    "seen_in_training": true,
    "label_source": "MetroPT 2022 maintenance report",
-   "p_failure_onset": 0.8826,
-   "threshold": 0.814773,
+   "p_failure_onset": 0.7781,
+   "threshold": 0.694113,
    "alarm_in_onset": true,
    "onset_rows": 181,
    "baseline_rows": 50407,
    "occlusion": [
     {
      "sensor": "Motor_current",
-     "contribution": 0.61792
+     "contribution": 0.530022
     },
     {
      "sensor": "Oil_temperature",
-     "contribution": 0.435947
-    },
-    {
-     "sensor": "DV_pressure",
-     "contribution": 0.377495
+     "contribution": 0.416912
     },
     {
      "sensor": "H1",
-     "contribution": 0.35697
+     "contribution": 0.34151
+    },
+    {
+     "sensor": "DV_pressure",
+     "contribution": 0.334038
     },
     {
      "sensor": "TP3",
-     "contribution": 0.27761
+     "contribution": 0.291499
     },
     {
      "sensor": "TP2",
-     "contribution": 0.191766
+     "contribution": 0.286531
     },
     {
      "sensor": "MPG",
-     "contribution": 0.000926
-    },
-    {
-     "sensor": "Towers",
-     "contribution": 0.000205
-    },
-    {
-     "sensor": "COMP",
-     "contribution": 0.0
+     "contribution": 0.007238
     },
     {
      "sensor": "DV_eletric",
-     "contribution": 0.0
+     "contribution": 0.006657
+    },
+    {
+     "sensor": "COMP",
+     "contribution": 0.002845
+    },
+    {
+     "sensor": "Towers",
+     "contribution": 0.000138
     }
    ],
    "deviation": [
@@ -569,47 +569,47 @@
    "end": "2022-03-23 15:24:00",
    "seen_in_training": true,
    "label_source": "MetroPT 2022 maintenance report",
-   "p_failure_onset": 0.6546,
-   "threshold": 0.814773,
+   "p_failure_onset": 0.3442,
+   "threshold": 0.694113,
    "alarm_in_onset": true,
    "onset_rows": 181,
    "baseline_rows": 50407,
    "occlusion": [
     {
      "sensor": "DV_pressure",
-     "contribution": 0.549812
-    },
-    {
-     "sensor": "Motor_current",
-     "contribution": 0.346166
+     "contribution": 0.248709
     },
     {
      "sensor": "Oil_temperature",
-     "contribution": 0.343588
+     "contribution": 0.181498
+    },
+    {
+     "sensor": "Motor_current",
+     "contribution": 0.177517
     },
     {
      "sensor": "TP3",
-     "contribution": 0.296183
+     "contribution": 0.141023
     },
     {
      "sensor": "H1",
-     "contribution": 0.216359
+     "contribution": 0.128264
     },
     {
      "sensor": "TP2",
-     "contribution": 0.065497
-    },
-    {
-     "sensor": "COMP",
-     "contribution": 0.0
+     "contribution": 0.0664
     },
     {
      "sensor": "DV_eletric",
-     "contribution": 0.0
+     "contribution": 0.000398
     },
     {
      "sensor": "Towers",
-     "contribution": 0.0
+     "contribution": 8.3e-05
+    },
+    {
+     "sensor": "COMP",
+     "contribution": -3e-06
     },
     {
      "sensor": "MPG",
@@ -677,51 +677,51 @@
    "end": "2022-06-02 06:18:00",
    "seen_in_training": true,
    "label_source": "MetroPT 2022 maintenance report",
-   "p_failure_onset": 0.8365,
-   "threshold": 0.814773,
+   "p_failure_onset": 0.7664,
+   "threshold": 0.694113,
    "alarm_in_onset": true,
    "onset_rows": 181,
    "baseline_rows": 50407,
    "occlusion": [
     {
      "sensor": "Oil_temperature",
-     "contribution": 0.38716
-    },
-    {
-     "sensor": "TP2",
-     "contribution": 0.214621
+     "contribution": 0.361762
     },
     {
      "sensor": "Motor_current",
-     "contribution": 0.213086
-    },
-    {
-     "sensor": "TP3",
-     "contribution": 0.171728
-    },
-    {
-     "sensor": "H1",
-     "contribution": 0.151993
+     "contribution": 0.265843
     },
     {
      "sensor": "DV_pressure",
-     "contribution": 0.142288
+     "contribution": 0.220782
     },
     {
-     "sensor": "Towers",
-     "contribution": 7.4e-05
+     "sensor": "TP3",
+     "contribution": 0.197442
     },
     {
-     "sensor": "MPG",
-     "contribution": 2.5e-05
+     "sensor": "TP2",
+     "contribution": 0.17735
     },
     {
-     "sensor": "COMP",
-     "contribution": 0.0
+     "sensor": "H1",
+     "contribution": 0.167096
     },
     {
      "sensor": "DV_eletric",
-     "contribution": 0.0
+     "contribution": 0.00033
+    },
+    {
+     "sensor": "MPG",
+     "contribution": -0.000243
+    },
+    {
+     "sensor": "COMP",
+     "contribution": 4e-05
+    },
+    {
+     "sensor": "Towers",
+     "contribution": 2.8e-05
     }
    ],
    "deviation": [
@@ -785,51 +785,51 @@
    "end": "2022-06-04 14:22:39",
    "seen_in_training": false,
    "label_source": "arXiv:2502.07394 Table 1",
-   "p_failure_onset": 0.4708,
-   "threshold": 0.814773,
+   "p_failure_onset": 0.3783,
+   "threshold": 0.694113,
    "alarm_in_onset": true,
    "onset_rows": 180,
    "baseline_rows": 55579,
    "occlusion": [
     {
      "sensor": "Motor_current",
-     "contribution": 0.434164
-    },
-    {
-     "sensor": "TP3",
-     "contribution": 0.183449
-    },
-    {
-     "sensor": "Oil_temperature",
-     "contribution": 0.161454
-    },
-    {
-     "sensor": "H1",
-     "contribution": 0.12971
+     "contribution": 0.342321
     },
     {
      "sensor": "TP2",
-     "contribution": 0.114979
+     "contribution": 0.179013
+    },
+    {
+     "sensor": "H1",
+     "contribution": 0.156597
+    },
+    {
+     "sensor": "TP3",
+     "contribution": 0.149001
+    },
+    {
+     "sensor": "Oil_temperature",
+     "contribution": 0.148868
     },
     {
      "sensor": "DV_pressure",
-     "contribution": -0.00065
-    },
-    {
-     "sensor": "Towers",
-     "contribution": 0.000117
-    },
-    {
-     "sensor": "COMP",
-     "contribution": 0.0
+     "contribution": -0.001793
     },
     {
      "sensor": "DV_eletric",
-     "contribution": 0.0
+     "contribution": 0.000444
     },
     {
      "sensor": "MPG",
-     "contribution": 0.0
+     "contribution": 0.00025
+    },
+    {
+     "sensor": "COMP",
+     "contribution": 8.3e-05
+    },
+    {
+     "sensor": "Towers",
+     "contribution": 8.3e-05
     }
    ],
    "deviation": [
@@ -893,35 +893,35 @@
    "end": "2022-07-14 10:22:08",
    "seen_in_training": false,
    "label_source": "arXiv:2502.07394 Table 1",
-   "p_failure_onset": 0.011,
-   "threshold": 0.814773,
+   "p_failure_onset": 0.0201,
+   "threshold": 0.694113,
    "alarm_in_onset": false,
    "onset_rows": 180,
    "baseline_rows": 49868,
    "occlusion": [
     {
-     "sensor": "TP3",
-     "contribution": -0.007665
+     "sensor": "Motor_current",
+     "contribution": 0.011954
     },
     {
      "sensor": "DV_pressure",
-     "contribution": 0.007213
+     "contribution": 0.006447
+    },
+    {
+     "sensor": "TP3",
+     "contribution": -0.003734
     },
     {
      "sensor": "H1",
-     "contribution": -0.006474
-    },
-    {
-     "sensor": "Oil_temperature",
-     "contribution": 0.005181
-    },
-    {
-     "sensor": "Motor_current",
-     "contribution": -0.00377
+     "contribution": -0.002119
     },
     {
      "sensor": "TP2",
-     "contribution": -8.8e-05
+     "contribution": -0.001424
+    },
+    {
+     "sensor": "Oil_temperature",
+     "contribution": 0.001249
     },
     {
      "sensor": "COMP",
@@ -929,7 +929,7 @@
     },
     {
      "sensor": "DV_eletric",
-     "contribution": 0.0
+     "contribution": -0.0
     },
     {
      "sensor": "Towers",

@@ -10,25 +10,16 @@ from pydantic import BaseModel
 
 # Exhaustive list of selectable models.  Must stay in sync with
 # services.model_registry.KNOWN_MODELS and services.model_service.load_model_by_name.
+# The served generation (v3, leak-free nested protocol) — same names as
+# model_service.SERVED_MODELS.
 ModelName = Literal[
-    "random_forest",
-    "xgboost",
-    "mlp",
-    "random_forest_v2",
-    "xgboost_v2",
-    "xgboost_v3",
     "random_forest_v3",
-    "mlp_v2",
-    "tcn_v2",
-    "bilstm_v2",
-    "patchtst_v2",
-    "autoencoder_v2",
-    # Sequential DL models — RNF-24 extension
-    "tcn",
-    "bilstm",
-    "patchtst",
-    # Unsupervised anomaly detection via reconstruction error
-    "autoencoder",
+    "xgboost_v3",
+    "mlp_v3",
+    "tcn_v3",
+    "bilstm_v3",
+    "patchtst_v3",
+    "autoencoder_v3",
 ]
 
 
