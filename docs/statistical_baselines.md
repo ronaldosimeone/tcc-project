@@ -88,3 +88,22 @@ Wilcoxon unilateral exato, pareado por fold (6 blocos → menor p possível 1/64
 | `bilstm` | `ewma` | -2.5 | 0.719 | não |
 | `patchtst` | `ewma` | +0.2 | 0.578 | não |
 | `autoencoder` | `ewma` | -57.8 | 0.969 | não |
+
+## Análise secundária descritiva — fold 1 separado
+
+**Não é um novo resultado principal.** O resultado acima (6 folds) continua sendo o oficial. Esta separação foi motivada depois de ver os resultados, por isso os folds 2–6 **não** são um novo teste independente, e nenhum gate é recalculado aqui. Ela só mostra se a ordem dos métodos depende do fold 1, cujos parâmetros a priori do CUSUM/EWMA vêm de um benchmark que viu as falhas do MetroPT-3. Parâmetros "fisicamente justificados" escolhidos agora não foram testados: seriam escolhidos já conhecendo os resultados.
+
+| Detector / modelo | Fold 1: falha / FA / custo | Folds 2–6: falhas | Folds 2–6: FA | Folds 2–6: FA/dia (média) | Folds 2–6: custo médio |
+|---|---|---|---|---|---|
+| `ewma` | 1 / 19 / 19 | 3.0/5 | 82 | 0.61 | 56.4 |
+| `patchtst` | 1 / 64 / 64 | 2.0/5 | 2 | 0.01 | 60.3 |
+| `bilstm` | 1 / 36 / 36 | 2.0/5 | 10 | 0.04 | 61.9 |
+| `xgboost` | 1 / 37 / 37 | 1.7/5 | 0 | 0.00 | 66.7 |
+| `cusum` | 0 / 0 / 100 | 2.0/5 | 74 | 0.56 | 74.8 |
+| `random_forest` | 1 / 36 / 36 | 1.0/5 | 12 | 0.03 | 82.4 |
+| `logistic_regression` | 1 / 44 / 44 | 1.0/5 | 19 | 0.06 | 83.8 |
+| `mlp` | 1 / 37 / 37 | 2.0/5 | 142 | 0.41 | 88.3 |
+| `tcn` | 1 / 92 / 92 | 1.0/5 | 62 | 0.18 | 92.3 |
+| `autoencoder` | 0 / 121 / 221 | 1.0/5 | 82 | 0.23 | 96.3 |
+
+Leitura: menos alarmes falsos não basta para dizer que um método é melhor; o custo junta falhas perdidas e alarmes. Nos folds 2–6 as árvores e os melhores modelos sequenciais (XGBoost, RF, BiLSTM, PatchTST) quase não alarmam fora das falhas, e a maior parte dos alarmes falsos deles fica no fold 1 (maio de 2020), onde estão as anomalias não confirmadas da [auditoria](label_audit.md). Essa concentração é compatível com falhas não documentadas, mas também com mudança operacional ou de instrumentação; não comprova nenhuma delas.

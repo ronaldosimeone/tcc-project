@@ -168,8 +168,64 @@ def render(models: dict[str, Any]) -> str:
             f"| `{c}` | `{bl}` | {g['median_improvement']:+.1f} | "
             f"{g['p_value']:.3f} | {'sim' if g['promote'] else 'não'} |"
         )
-    lines.append("")
+    lines += ["", *_without_fold1(models, [*base, *ml])]
     return "\n".join(lines)
+
+
+def _without_fold1(models: dict[str, Any], names: list[str]) -> list[str]:
+    """Descriptive sensitivity: fold 1 reported apart (its baseline
+    parameters came from a benchmark that saw the MetroPT-3 failures)."""
+    lines = [
+        "## Análise secundária descritiva — fold 1 separado",
+        "",
+        "**Não é um novo resultado principal.** O resultado acima (6 folds) "
+        "continua sendo o oficial. Esta separação foi motivada depois de ver os "
+        "resultados, por isso os folds 2–6 **não** são um novo teste "
+        "independente, e nenhum gate é recalculado aqui. Ela só mostra se a "
+        "ordem dos métodos depende do fold 1, cujos parâmetros a priori do "
+        "CUSUM/EWMA vêm de um benchmark que viu as falhas do MetroPT-3. "
+        'Parâmetros "fisicamente justificados" escolhidos agora não foram '
+        "testados: seriam escolhidos já conhecendo os resultados.",
+        "",
+        "| Detector / modelo | Fold 1: falha / FA / custo | Folds 2–6: falhas | Folds 2–6: FA | Folds 2–6: FA/dia (média) | Folds 2–6: custo médio |",
+        "|---|---|---|---|---|---|",
+    ]
+    rows = []
+    for n in names:
+        by_fold: dict[int, list[dict[str, Any]]] = {}
+        for r in models[n]["runs"]:
+            by_fold.setdefault(r["fold"], []).append(r["events"])
+
+        def mean(f: int, k: str) -> float:
+            return float(np.mean([e[k] for e in by_fold[f]]))
+
+        rest = [f for f in sorted(by_fold) if f != 1]
+        rows.append(
+            (
+                np.mean([mean(f, "expected_cost") for f in rest]),
+                f"| `{n}` | {mean(1, 'detected'):.0f} / "
+                f"{mean(1, 'false_alarm_episodes'):.0f} / "
+                f"{mean(1, 'expected_cost'):.0f} | "
+                f"{sum(mean(f, 'detected') for f in rest):.1f}/{len(rest)} | "
+                f"{sum(mean(f, 'false_alarm_episodes') for f in rest):.0f} | "
+                f"{np.mean([mean(f, 'false_alarms_per_day') for f in rest]):.2f} | "
+                f"{np.mean([mean(f, 'expected_cost') for f in rest]):.1f} |",
+            )
+        )
+    lines += [r for _, r in sorted(rows, key=lambda x: x[0])]
+    lines += [
+        "",
+        "Leitura: menos alarmes falsos não basta para dizer que um método é "
+        "melhor; o custo junta falhas perdidas e alarmes. Nos folds 2–6 as "
+        "árvores e os melhores modelos sequenciais (XGBoost, RF, BiLSTM, "
+        "PatchTST) quase não alarmam fora das falhas, e a maior parte dos "
+        "alarmes falsos deles fica no fold 1 (maio de 2020), onde estão as "
+        "anomalias não confirmadas da [auditoria](label_audit.md). Essa "
+        "concentração é compatível com falhas não documentadas, mas também com "
+        "mudança operacional ou de instrumentação; não comprova nenhuma delas.",
+        "",
+    ]
+    return lines
 
 
 def main() -> None:
