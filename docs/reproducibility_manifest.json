@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-10-21T05:16:58.869927+00:00",
+  "generated_at": "2026-10-22T15:53:21.737375+00:00",
   "git": {
-    "commit": "21901b9b1033ac89d8f26d80fb9eeac0a76c2caf",
-    "dirty": true
+    "commit": "eacb81d96e68d9470c142763811727411619a977",
+    "dirty": false
   },
   "platform": {
     "python": "3.12.10",
@@ -20,35 +20,19 @@
     "torch": "2.3.1",
     "lightning": null
   },
-  "docker_mcp_server_image": "sha256:026a5b543bf2582c98dd1d5b923dc0fa3ccab31977c62a48ee4a8cfb439c472c",
-  "ollama_models": [
-    {
-      "name": "qwen2.5:3b-instruct",
-      "digest": "357c53fb659c5076de1d65ccb0b397446227b71a42be9d1603d46168015c9e4b"
-    },
-    {
-      "name": "llama3.2:3b",
-      "digest": "a80c4f17acd55265feec403c7aef86be0c25983ab279d83f3bcd3abbcb5b8b72"
-    },
-    {
-      "name": "qwen3-vl:8b",
-      "digest": "901cae73216286ea8c5aba8b46d307ff7188f737285ec500c795a12f05225d28"
-    },
-    {
-      "name": "nomic-embed-text:latest",
-      "digest": "0a109f422b47e3a30ba2b10eca18548e944e8a23073ee3f3e947efcf3c45e59f"
-    },
-    {
-      "name": "qwen3:8b",
-      "digest": "500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41"
-    }
-  ],
+  "docker_mcp_server_image": null,
+  "ollama_models": null,
   "inputs_sha256": {
     "apps/ml/data/processed/metropt3.parquet": "483f0bfd3874e58484f21299d36d9f0b53cf6c96552c9844e6e572c8568cfa80",
     "apps/ml/data/processed/metropt2022.parquet": "5f8fac70a983e1efe42243566200774d06f310b9387643b38bbe34f677174c92",
-    "apps/ml/models/random_forest_v2.onnx": null,
-    "apps/ml/models/mlp_v1.onnx": null,
-    "apps/ml/models/tcn_v1.onnx": null,
+    "apps/ml/data/processed/metropt2.parquet": "1b2c0f57053a5a9343c96f9c2d9edb342446978f8f6caac86049df616c267348",
+    "apps/ml/models/random_forest_v3.onnx": "074649158e2eb3496acfc7f53644a3fa48216f24279f1d08e034a2107b85ef1c",
+    "apps/ml/models/xgboost_v3.onnx": "7cd5a06344ae82c0ece6971b8333ccad030a6087328d2de9ae4b9ee8c9d443e5",
+    "apps/ml/models/mlp_v3.onnx": "48301ed630c4eb57fae299389796bd23972b2f4328d1ec45eb8826769d847c29",
+    "apps/ml/models/tcn_v3.onnx": "6870aa35824eb1ff82ad7faa2dce54cbd8ba6178d461b0caa70c90d602880aeb",
+    "apps/ml/models/bilstm_v3.onnx": "5d5884e37ca3a549e244de8f5a237125e579d7e5f8e20419b5222aaeaf22a251",
+    "apps/ml/models/patchtst_v3.onnx": "ac5c5660ed185c6f1c80f2d7c92a8ed2f0eb58c0a3faeb97d6e6774357243126",
+    "apps/ml/models/autoencoder_v3.onnx": "577b40764f71c4dfcf9116e1c773efe53831c1f80a7674e89277aaaf603fdbdb",
     "apps/mcp-server/data/manuals/wap5-scheduled-maintenance-vol-b.pdf": "e58b9cc1e7b4a6e1a152247ac861266b1b07a0d96ade7b4b4470e48be257c93f",
     "apps/mcp-server/data/manuals/wap5-scheduled-maintenance-vol-b.meta.json": "10dc284e1606656a1e1c114ba57bb453b3d7fddd35084f57fca3254d82626b43"
   },
@@ -61,6 +45,15 @@
     "apps/ml/models/nested/bilstm.json": "608dc317d4c4de6271729f77d0da40550ce49ce09bae834add2f071521fac7de",
     "apps/ml/models/nested/patchtst.json": "fb8f72cca5811888ae0302aae7259f4e29e7e2d85bf9c9e282872a91c08511da",
     "apps/ml/models/nested/autoencoder.json": "825f7e57393a6d6b9cd78b46d0064caf917476c23a7f000a206b2e277d53ca94",
+    "apps/ml/models/nested/cusum.json": "d43cbc38ac3257e98786b08ac78f4419584c633aa2c3bf19bc1732af40ef126e",
+    "apps/ml/models/nested/ewma.json": "2453bb23d6c3b3a3b028f694a4227c05e540e6e6c726068b40f45ff0f5995520",
+    "apps/ml/models/label_audit.json": "61c10f18486b7c04edcfc1e4556321c4237f673cfc644c9d1f07832f533df309",
+    "apps/ml/models/eval_classification_metrics.json": "bdc8198d8da7d648f38a6d8e16d7c69373063bea6b733af1c048ac990d98b994",
+    "apps/ml/models/eval_anticipation.json": "fb7301895dbfec51353e6267ec03737d9e6e2e80f61a533cff23988fd81ad491",
+    "apps/ml/models/fold_chronology.json": "b0a49a5e2b1c7b7dae55196fdf0cd4f585acd244a6d1e79665f78e8a4167ef3b",
+    "apps/ml/models/event_correlation.json": "8f00fb947ed3c227a4cedcc42d4c51ebfca6d44bfc801805175a2527237874d6",
+    "apps/ml/models/eval_metropt2.json": "fad1969494812b69bca4cdbb765e79ca223e330cc3098d9fe0cd76b19dee1a33",
+    "apps/ml/models/metropt2_ingest.json": "11cc6bfe7cd365ec374726b82829c3d556606130d793252bce30c7682b9c2801",
     "apps/ml/models/eval_temporal.json": "53153b9a675ffca53a3217e38083cf36eb9d7528d0dc3418ff64c507651ac09c",
     "apps/ml/models/eval_sensitivity.json": "143dceb5abe46b078943c64030c2e086f4c7c4c782e879708ca9e25ff971caec",
     "apps/ml/models/eval_conformal_aci.json": "99c214d63f6a4e442a33626ed3443d80a0e2db4c6e7eb0a66617976af71823e6",
@@ -76,13 +69,13 @@
     "apps/ml/models/eval_cross_dataset_harmonized.json": "ebabc090f6f05ea02ff0335833993b7b8bc75cd37bcc64c7fcdb2c3f9b03a194",
     "apps/ml/models/eval_twin_cross.json": "6878c028135df2621dbc1b1e3375daf795552ba7d1373187d0da5f365bb41ee1",
     "apps/ml/models/eval_production_2022.json": "0fe7973e383c0aa70bad0c89e0c37a23fa10c93aa427da0ec6d44d75205c5e12",
-    "apps/ml/models/xgboost_v3_card.json": "f2eaaaa0710172971266b5738c1f4e7c98bdd20979f574397a5be93fc391bdfa",
     "apps/ml/models/random_forest_v3_card.json": "de11a70b440dd35e74eb239980d6e893db1315dc30735a89ab252423ca02753b",
-    "apps/ml/models/mlp_v2_card.json": null,
-    "apps/ml/models/tcn_v2_card.json": null,
-    "apps/ml/models/bilstm_v2_card.json": null,
-    "apps/ml/models/patchtst_v2_card.json": null,
-    "apps/ml/models/autoencoder_v2_card.json": null,
+    "apps/ml/models/xgboost_v3_card.json": "f2eaaaa0710172971266b5738c1f4e7c98bdd20979f574397a5be93fc391bdfa",
+    "apps/ml/models/mlp_v3_card.json": "683d48b5488b01df9533ba7af9b782062b2f0107c76af2dbd84025ebba380b91",
+    "apps/ml/models/tcn_v3_card.json": "e56bb8c35076948b2cee1813016939d92f17e57dbf8bb31a77673685d94f950e",
+    "apps/ml/models/bilstm_v3_card.json": "d4d96f37c46c820dce46d0d2bb0f295c66bc8ddfa962f5bfd71ecfd41a1d02cf",
+    "apps/ml/models/patchtst_v3_card.json": "d79daa022357584b1a6a842e2d9fc3237aa255b3c04209830aaaff37d90b0eeb",
+    "apps/ml/models/autoencoder_v3_card.json": "091b3494685f7dbceac389ecb072d01b2ca02afa810de3dd1a5f3fe83a869fde",
     "apps/ml/models/eval_energy.json": "68c1defbcb8236d247948900d19a6fc1ce1bf34299eee491d19951544f8cbc23",
     "apps/backend/benchmarks/timescale_benchmark.json": "74eb0a08e84b35f5f0e41786608a9f86124eb1d2ee27415697d787d78e548750",
     "apps/mcp-server/embedder_latency_benchmark.json": "22b654612296e62edf7cc3b046507f4b0cddfbe5dc4465b17aeadad69c80ac56",
@@ -92,6 +85,7 @@
     "apps/backend/benchmarks/out/rag_retrieval_bge-m3.json": "b046b1038eab659d1a1c846472f512fd35e53cc6e09d566736857c26d10503a4",
     "apps/backend/benchmarks/out/rag_generation.json": "606852882d9d369cce08a3b7f734691a14259125890d5644f67939dc727e6de0",
     "apps/backend/benchmarks/out/redteam_results_no_guard.json": "80119a887d02311835d662991b331668fde7ddd952bd2023100ebeaaf6978dc2",
-    "apps/backend/benchmarks/out/redteam_results.json": "2e83bd335fb807f3bac951f07a3b7384beef9cdb2b3be46bc2b1dcad328aca89"
+    "apps/backend/benchmarks/out/redteam_results.json": "2e83bd335fb807f3bac951f07a3b7384beef9cdb2b3be46bc2b1dcad328aca89",
+    "apps/backend/benchmarks/out/rag_diag_metrics.json": "355b51d89165e733afea349faae89b71b9a662bbfe45425e50a6a96575c35b4d"
   }
 }
