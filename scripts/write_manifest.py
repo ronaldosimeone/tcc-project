@@ -34,6 +34,15 @@ RESULT_FILES: list[str] = [
     "apps/ml/models/nested/bilstm.json",
     "apps/ml/models/nested/patchtst.json",
     "apps/ml/models/nested/autoencoder.json",
+    "apps/ml/models/nested/cusum.json",
+    "apps/ml/models/nested/ewma.json",
+    "apps/ml/models/label_audit.json",
+    "apps/ml/models/eval_classification_metrics.json",
+    "apps/ml/models/eval_anticipation.json",
+    "apps/ml/models/fold_chronology.json",
+    "apps/ml/models/event_correlation.json",
+    "apps/ml/models/eval_metropt2.json",
+    "apps/ml/models/metropt2_ingest.json",
     "apps/ml/models/eval_temporal.json",
     "apps/ml/models/eval_sensitivity.json",
     "apps/ml/models/eval_conformal_aci.json",
@@ -49,13 +58,18 @@ RESULT_FILES: list[str] = [
     "apps/ml/models/eval_cross_dataset_harmonized.json",
     "apps/ml/models/eval_twin_cross.json",
     "apps/ml/models/eval_production_2022.json",
-    "apps/ml/models/xgboost_v3_card.json",
-    "apps/ml/models/random_forest_v3_card.json",
-    "apps/ml/models/mlp_v2_card.json",
-    "apps/ml/models/tcn_v2_card.json",
-    "apps/ml/models/bilstm_v2_card.json",
-    "apps/ml/models/patchtst_v2_card.json",
-    "apps/ml/models/autoencoder_v2_card.json",
+    *(
+        f"apps/ml/models/{m}_v3_card.json"
+        for m in (
+            "random_forest",
+            "xgboost",
+            "mlp",
+            "tcn",
+            "bilstm",
+            "patchtst",
+            "autoencoder",
+        )
+    ),
     "apps/ml/models/eval_energy.json",
     "apps/backend/benchmarks/timescale_benchmark.json",
     "apps/mcp-server/embedder_latency_benchmark.json",
@@ -66,13 +80,24 @@ RESULT_FILES: list[str] = [
     "apps/backend/benchmarks/out/rag_generation.json",
     "apps/backend/benchmarks/out/redteam_results_no_guard.json",
     "apps/backend/benchmarks/out/redteam_results.json",
+    "apps/backend/benchmarks/out/rag_diag_metrics.json",
 ]
 INPUT_FILES: list[str] = [
     "apps/ml/data/processed/metropt3.parquet",
     "apps/ml/data/processed/metropt2022.parquet",
-    "apps/ml/models/random_forest_v2.onnx",
-    "apps/ml/models/mlp_v1.onnx",
-    "apps/ml/models/tcn_v1.onnx",
+    "apps/ml/data/processed/metropt2.parquet",
+    *(
+        f"apps/ml/models/{m}_v3.onnx"
+        for m in (
+            "random_forest",
+            "xgboost",
+            "mlp",
+            "tcn",
+            "bilstm",
+            "patchtst",
+            "autoencoder",
+        )
+    ),
     "apps/mcp-server/data/manuals/wap5-scheduled-maintenance-vol-b.pdf",
     "apps/mcp-server/data/manuals/wap5-scheduled-maintenance-vol-b.meta.json",
 ]

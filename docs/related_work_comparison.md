@@ -147,19 +147,26 @@ antes de olhar os alarmes; resultado em [`label_audit.md`](label_audit.md).
   mostram evidência porque o critério de ciclo de trabalho satura. **3,4 % dos
   blocos "saudáveis" de 2020** têm o compressor em carga contínua por 1 h, a
   mesma assinatura das falhas rotuladas. Na variante declarada (`≥ p99`), as
-  6 falhas de ar têm evidência física. Ela começa 0,5–1,5 h **depois** do início
-  rotulado, ou seja, os rótulos começam cedo. O secador (F22_2) não tem
+  6 falhas de ar têm evidência nos sensores, que aparece 0,5–1,5 h **depois**
+  do início documentado. Isso não quer dizer que o registro esteja errado: o
+  início documentado, a primeira evidência observável e o primeiro alarme são
+  instantes diferentes, e a auditoria os reporta separados (cronologia por
+  falha). O secador (F22_2) não tem
   evidência; o vazamento de óleo (F22_3) só tem evidência fraca (3 % dos blocos).
 * **Etapa B (falsos alarmes):** dois episódios longos em maio de 2020
   (13/05, 11,5 h; 19–20/05, 21,4 h) disparam 8 a 9 dos 10 detectores e têm
-  queda de pressão e carga contínua. São os candidatos mais fortes a vazamento
-  não reportado.
+  queda de pressão e carga contínua, sem registro de manutenção. São
+  **anomalias não confirmadas**, não falhas presumidas: detectores e evidências
+  usam os mesmos sensores, então a concordância mostra uma mudança forte no
+  sinal, não sua causa.
 * **Análise secundária:** tratando esses períodos como ambíguos, os alarmes
   falsos do XGBoost caem de 36 para 0 e os do BiLSTM de 37 para 1 (variante
   `≥`). Pelos critérios principais, caem para 22 e 23. Os do EWMA quase não
   mudam (101 → 91). Ou seja, **a maior parte dos alarmes "falsos" dos melhores
-  modelos coincide com prováveis vazamentos reais**, enquanto os do EWMA são,
-  em boa parte, alarmes falsos de fato. Isso não muda a métrica principal nem
+  modelos coincide com anomalias não confirmadas**, enquanto os do EWMA ficam,
+  em boa parte, fora delas. Em alarmes por dia, com o tempo excluído
+  descontado da exposição: XGBoost 0,13 → 0,08, BiLSTM 0,14 → 0,09,
+  EWMA 0,38 → 0,34. Isso não muda a métrica principal nem
   nenhum modelo. Os dois períodos estão no teste do fold 1, então não podem
   virar ajuste.
 

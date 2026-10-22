@@ -24,12 +24,24 @@ the Model Context Protocol and measure what reaches the technician: with the
 production embedder the correct manual page is retrieved in 2.4 % of cases,
 an LLM without retrieval hallucinates procedures for 100 % of unanswerable
 questions, and a malicious manual makes both local LLMs recommend disabling a
-safety valve — which deterministic grounding and safety guards prevent. We
+safety valve — which deterministic grounding and safety guards prevent.
+Under one nested protocol (7 failures, 6 out-of-time folds), a tuned EWMA
+control chart has the lowest observed cost (4/6 failures) but more false
+alarms than the best deep model, and no method — chart, tree or deep network
+— is statistically superior. A pre-registered label audit shows that most
+"false" alarms of the best learned models fall on undocumented anomalies,
+which bounds how far event labels from maintenance reports can be trusted. We
 release code, benchmark and a one-command reproduction package.
 
 ## 1. Introduction **[TODO: motivation + citations from PRISMA]**
 
-Contributions:
+The paper does not claim a best model. Its three scientific contributions are:
+
+- **Rigorous temporal evaluation**: random splits of correlated readings overstate performance (§4.1), and a nested event-level protocol replaces them (§3, §4.7b).
+- **Statistical charts vs machine learning under the same protocol**: with seven failures, added model complexity shows no statistically demonstrated advantage over a tuned EWMA chart; the choice depends on the operational cost ratio (§4.7e).
+- **Label uncertainty and transfer across assets**: incomplete failure documentation limits the interpretation of false alarms (§4.7e), and transfer to another unit works only in part (§4.7c).
+
+Technical contributions that support them:
 
 1. **An evaluation protocol** for run-to-failure-scarce industrial data: purged walk-forward by failure event, event-level metrics (event recall, lead time, false alarms/day, range-based F1, asymmetric expected cost), thresholds chosen only on training out-of-fold scores, and a statistical promotion gate that reports when a comparison is underpowered.
 2. **A physics-aware detector**: a grey-box twin whose residuals stay consistent across failures (duty-cycle residual z = +4.0 … +5.3 in all three) and complement ML; late fusion detects 3/3 failures.
@@ -46,6 +58,7 @@ Axes: validation protocols on MetroPT/MetroPT-2; event-based metrics (Tatbul et 
 
 - MetroPT-3: 1.52 M samples at 10 s from a Porto metro APU compressor, Feb–Aug 2020, **4 documented air-leak failures**.
 - MetroPT 2022 (Veloso et al., *Sci. Data* 2022; Zenodo 10.5281/zenodo.6854240): same APU family, Jan–Jun 2022, 1 Hz, **3 failures** (two air leaks, one oil leak). Point-sampled to 10 s (1.08 M rows), GPS dropped; used for cross-period transfer and a pooled 7-failure walk-forward (6 test folds).
+- MetroPT2 (Zenodo 10.5281/zenodo.7766691): a different APU, Apr–Jul 2022, 0.71 M rows at 10 s, **2 failures** (air leak, oil leak) that start after every training set; test only. Dataset figures in `docs/datasets.md`.
 - Purged walk-forward: segment boundaries at mid-points between failures; fold *k* tests failure *k*+1 and trains strictly before it (purge 300 s > largest feature window of 150 s). 3 folds × 5 seeds.
 - Alarms: persistence k = 6 samples (RN-03). Lead-time target 2 h (RN-01). Cost C_FN = 100 · C_FP (RN-02). Thresholds: training out-of-fold, cost-optimal.
 
@@ -126,15 +139,33 @@ An independent review of the training methodology was checked point by point aga
 
 The audit also produced three studies. A per-event analysis shows that the highest pooled correlate, DV_pressure, is driven by three 2020 air leaks (Cohen's d 8.3, 3.0, 9.4; ≈ 0 for the other four failures); its ablation helps XGBoost but *improves* the random forest when removed, and alone it detects only 2020 leaks. An anticipation target ("a failure starts within H", H = 30 min–2 h, failure-in-progress rows excluded) answers the detection-versus-prediction question with a chance control: models trained for it **never** switch an alarm on inside the pre-failure window, and their apparent hits are explained by being in alarm 17–83 % of the time (random windows hit 9–91 %). With these sensors and seven failures there is no learnable 30 min–2 h precursor; the platform is a detector of failures in progress, with minutes of lead.
 
+### 4.7e Statistical charts and label uncertainty (`docs/statistical_baselines.md`, `docs/label_audit.md`)
+
+**Charts under the same protocol.** CUSUM and EWMA enter the nested protocol as learners: sensor (motor current, oil temperature, TP2, or motor current + oil temperature), drift `k` or smoothing `λ`, reference (healthy training statistics, or the causal previous 7 days) and threshold are chosen only by inner leave-one-failure-out cost; the statistic runs on a causal 10-min mean that restarts at every data gap. Unlike the public benchmark, no parameter is chosen on the failures it is tested on, with one documented exception: fold 1 has a single training failure, so the a-priori parameters (the benchmark's choice) apply there, and that benchmark saw the MetroPT-3 failures.
+
+| Detector | Failures (of 6) | False alarms/day | Expected cost |
+|---|---|---|---|
+| EWMA (motor current, selected in folds 3–6) | **4.0** | 0.64 | **50.2** |
+| BiLSTM | 3.0 | 0.29 | 57.6 |
+| XGBoost | 2.7 | 0.26 | 61.7 |
+| Random forest | 2.0 | 0.28 | 74.7 |
+| CUSUM | 2.0 | 0.47 | 79.0 |
+
+No comparison passes the RN-05 gate in either direction (EWMA over random forest p = 0.094; best learned models over EWMA p ≥ 0.58). The EWMA has the lowest observed cost but about twice the false alarms of BiLSTM, so it is preferable only when a missed failure is much more expensive than an intervention; the defensible conclusion is that there is not enough evidence to call any method superior. As a descriptive sensitivity analysis, motivated by the results and therefore not an independent test, reporting fold 1 apart leaves the ordering unchanged (folds 2–6: EWMA 56.4, PatchTST 60.3, BiLSTM 61.9).
+
+**Pre-registered label audit.** Evidence criteria (pressure drop, abnormal duty cycle in the physics twin, low-pressure switch, proximity to recorded maintenance) were fixed before inspecting any alarm, and applied in order: first the event boundaries, then the false alarms. Original labels remain the primary metric; audited labels enter only a secondary analysis, and no model is retrained. The duty-cycle criterion saturates — 3.4 % of 2020 blocks labelled healthy already show an hour of continuous loading, the signature of the labelled 2020 leaks — so a declared `≥` variant is reported separately. For each failure three instants are kept apart: documented start, first observable sensor evidence (0.5–2.3 h after the documented start for the air leaks; none for the air-dryer failure) and first alarm (median within ±1 h of the documented start). Alarm clusters outside every failure window are classified as boundary, unconfirmed anomaly, weak evidence or no evidence. Two May 2020 episodes (11.5 h and 21.4 h) with pressure loss and continuous loading trigger 8–9 of the 10 detectors; most false alarms of XGBoost and BiLSTM fall in them and in fold 1 generally (folds 2–6: 0 and 10 false alarms). Treating unconfirmed anomalies as ambiguous — removing their time from both numerator and exposure — lowers XGBoost from 0.13 to 0.08 false alarms/day and BiLSTM from 0.14 to 0.09, while EWMA barely moves (0.38 → 0.34). These are **unconfirmed anomalies, not presumed failures**: the detectors and the evidence share the same sensors, so their agreement shows a strong change in the signal, not its cause, and operating or instrumentation changes would explain it too.
+
 ### 4.8 Energy (`models/eval_energy.json`, RNF-83)
 
 CodeCarbon (offline, Brazilian grid ≈ 98 gCO₂/kWh), CPU and GPU energy measured by hardware counters, idle power subtracted. Training a model costs 0.02–0.15 Wh; ONNX inference ≈ 0.09 mWh per 1,000 predictions (≈ 0.3 Wh per asset-year at 0.1 Hz). One grounded repair plan from the local 3 B LLM costs 0.072 Wh (0.007 gCO₂) — **as much as ~800,000 predictions**. The footprint of the system is the advisory layer, not the detector.
 
 ## 5. Threats to validity
 
-See `docs/pesquisa/questoes-e-hipoteses.md` §Ameaças: one compressor family (two periods, and the 2022 recording maps two sensors to different signals under the same names), 3 test folds on MetroPT-3 alone (no comparison can reach p < 0.05; the pooled 6-fold protocol lifts this floor to p = 0.016), draft RAG annotations pending expert validation, proxy edge measurements.
+See `docs/pesquisa/questoes-e-hipoteses.md` §Ameaças. Specific to §4.7e: the fold-1 a-priori chart parameters come from work that saw the MetroPT-3 failures; the separate fold-1 analysis was motivated by the results; the label-audit evidence uses the same sensors as the detectors, so it cannot confirm undocumented failures; the duty-cycle criterion needed a declared post-hoc variant. General: one compressor family (two periods, and the 2022 recording maps two sensors to different signals under the same names), 3 test folds on MetroPT-3 alone (no comparison can reach p < 0.05; the pooled 6-fold protocol lifts this floor to p = 0.016), draft RAG annotations pending expert validation, proxy edge measurements.
 
-## 6. Conclusion **[TODO]**
+## 6. Conclusion
+
+On scarce, weakly documented industrial failures, the evaluation protocol decides the result more than the model does. Random splits turn a hard detection problem into near-perfect scores; a purged, nested, event-level protocol shows that the learned models detect failures in progress rather than anticipate them, that a tuned EWMA chart is as good as any of them (lowest observed cost, more false alarms, no significant difference), and that the choice among them follows the operational cost ratio. Maintenance reports are an imperfect ground truth: a pre-registered audit finds unconfirmed anomalies where the best models raise most of their "false" alarms, so false-alarm counts should be read with that uncertainty. Transfer to another asset works for the failure mode seen in training and needs at least one example of the others. For engineering practice the useful outcome is not a single model with a high score, but a reproducible way to state which conclusions the data actually support. Results are frozen in `docs/results_freeze.md`; later findings are added as dated addenda.
 
 ## Artifact availability
 
