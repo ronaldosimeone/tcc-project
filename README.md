@@ -34,7 +34,11 @@
 > [`docs/cross_dataset_evaluation.md`](docs/cross_dataset_evaluation.md)
 > (MetroPT-3 + MetroPT 2022),
 > [`docs/model_evaluation_leakfree.md`](docs/model_evaluation_leakfree.md)
-> (todos os modelos retreinados sem vazamento, com matrizes de confusão fora do tempo). Reproduzir tudo:
+> (todos os modelos retreinados sem vazamento, com matrizes de confusão fora do tempo),
+> [`docs/statistical_baselines.md`](docs/statistical_baselines.md) (CUSUM/EWMA no
+> mesmo protocolo), [`docs/label_audit.md`](docs/label_audit.md) (auditoria
+> pré-registrada dos rótulos) e [`docs/datasets.md`](docs/datasets.md)
+> (os 3 datasets em números). Reproduzir tudo:
 > `bash scripts/reproduce-thesis.sh`.
 >
 > **Operação.** Telemetria por MQTT ou OPC UA (`TELEMETRY_TRANSPORT`),
@@ -1523,6 +1527,19 @@ Avaliação **sem vazamento**: walk-forward purgado (6 folds, cada um testando u
 
 Leitura: **custo** = 100 × falhas perdidas + 1 × falso alarme (menor é melhor). **Nenhum candidato passa no gate estatístico RN-05** contra o RF (melhor: BiLSTM, p = 0,19 — com 7 falhas, a diferença não é significativa), por isso o RF segue *champion*. O melhor modelo **depende da razão de custo** (10:1 → regressão logística/MLP; 100:1 → BiLSTM/XGBoost; 1000:1 → autoencoder/PatchTST). *MetroPT2 inédito* = as 2 falhas posteriores a todo o treino, em outra APU. *Replay ao vivo* = os 6 cenários reais do simulador pelo caminho exato de produção (4 deles vistos no treino). Nenhum modelo antecipa falhas de forma aprendível (estudo com controle de acaso em [`docs/anticipation_study.md`](docs/anticipation_study.md)): o sistema é um detector de falha em andamento.
 
+#### Baselines estatísticos (CUSUM / EWMA) e auditoria dos rótulos
+
+CUSUM e EWMA passam pelo **mesmo protocolo aninhado** dos modelos: sensor, `k`/`λ`, referência e limiar escolhidos só no treino (LOFO interno, custo RN-02), e o resultado entra no gate RN-05. Detalhe em [`docs/statistical_baselines.md`](docs/statistical_baselines.md).
+
+| Detector | Falhas detectadas (de 6) | Falsos alarmes / dia | Custo esperado |
+|---|---|---|---|
+| **EWMA** (corrente do motor) | **4,0** | 0,64 | **50,2** |
+| CUSUM | 2,0 | 0,47 | 79,0 |
+
+O EWMA detecta mais falhas e tem o menor custo, mas com ~2× os alarmes falsos do BiLSTM. **Nenhuma comparação passa no RN-05, em nenhuma direção** (EWMA vs RF p = 0,094): com 6 folds, controle estatístico de processo, ML e DL empatam, e a escolha depende do custo operacional. Ressalva: no fold 1 (1 falha no treino) os parâmetros a priori vêm de um benchmark público que viu as falhas do MetroPT-3.
+
+A **auditoria dos rótulos** ([protocolo pré-registrado](docs/label_audit_protocol.md), [resultado](docs/label_audit.md)) primeiro fixa as fronteiras físicas de cada falha e depois classifica os alarmes falsos por evidência nos sensores (queda de pressão, ciclo de trabalho do gêmeo físico, LPS, proximidade de manutenção). Dois períodos de maio de 2020 sem registro de manutenção disparam 8–9 dos 10 detectores. Tratando-os como ambíguos (análise secundária, sem retreino), os alarmes falsos do XGBoost caem de 36 para 22 (0 na variante declarada do critério) e os do BiLSTM de 37 para 23 (1). A métrica principal continua usando os rótulos originais.
+
 #### Métricas clássicas de classificação (nível de alarme, após persistência de 6 leituras)
 
 Matrizes de confusão somadas nas 18 rodadas fora do tempo (6 folds × 3 seeds), no limiar calibrado de cada modelo. Relatório completo (também por leitura, média ± desvio por rodada e F0,5/kappa) em [`docs/classification_metrics.md`](docs/classification_metrics.md).
@@ -1981,6 +1998,15 @@ Coloque o arquivo CSV em:
 apps/ml/data/raw/MetroPT3(AirCompressor).csv
 ```
 
+O TCC usa três datasets do Metro do Porto (detalhe em [`docs/datasets.md`](docs/datasets.md)):
+
+| | MetroPT-3 (2020) | MetroPT 2022 | MetroPT2 |
+|---|---|---|---|
+| Período | 213 dias (fev–set 2020) | 152 dias (jan–jun 2022) | 91 dias (abr–jul 2022) |
+| Linhas a 10 s | 1.516.948 | 1.077.495 (de 10,8 M a 1 Hz) | 705.563 (de 7,1 M a 1 Hz) |
+| Falhas | 4 | 3 | 2 |
+| Papel | treino + teste | treino + teste | só teste (outra APU) |
+
 ### 12.3. Pipeline completo
 
 Todos os comandos rodam a partir de `apps/ml/` com o venv ativo:
@@ -1993,6 +2019,8 @@ python -m src.ingest_metropt2022      # MetroPT 2022 (Zenodo 6854240)
 # 2. Avaliação sem vazamento — walk-forward purgado (6 folds) × LOFO interno
 python -m src.evaluate_nested --models random_forest logistic_regression
 .venv-gpu/Scripts/python -m src.evaluate_nested --models xgboost autoencoder patchtst bilstm tcn mlp
+python -m src.evaluate_nested --models cusum ewma --seeds 1   # baselines estatísticos
+python -m src.audit_labels                                     # auditoria dos rótulos (secundária)
 
 # 3. Artefatos servidos — os 7 modelos *_v3 (GPU para as redes)
 .venv-gpu/Scripts/python -m src.train_production

@@ -63,6 +63,7 @@ run_ml() {
   # Árvores na CPU; redes no venv de GPU (apps/ml/.venv-gpu, torch CUDA) se existir.
   "$ML_PY" -m src.evaluate_nested --models random_forest logistic_regression
   "$GPU_PY" -m src.evaluate_nested --models xgboost autoencoder patchtst bilstm tcn mlp
+  "$ML_PY" -m src.evaluate_nested --models cusum ewma --seeds 1
   "$GPU_PY" -m src.train_production                             # os 7 artefatos *_v3 servidos
   "$ML_PY" -m src.evaluate_sensitivity                          # k × horizonte × razão de custo
   "$ML_PY" -m src.evaluate_conformal_aci                        # conformal estático × ACI
@@ -139,6 +140,8 @@ run_docs() {
   "$ML_PY" -m src.render_temporal_report
   "$ML_PY" -m src.render_cross_dataset_report
   "$ML_PY" -m src.render_nested_report
+  "$ML_PY" -m src.render_baselines_report
+  "$ML_PY" -m src.audit_labels
   cd "$ROOT/apps/backend"
   "$BE_PY" benchmarks/benchmark_rag.py report
   "$BE_PY" benchmarks/benchmark_redteam.py report
