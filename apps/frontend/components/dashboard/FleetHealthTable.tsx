@@ -56,8 +56,8 @@ const FleetHealthTable = memo(function FleetHealthTable({
   onSelect,
 }: FleetHealthTableProps) {
   return (
-    <Card className="flex h-full flex-col border border-border bg-card shadow-sm ring-0">
-      <CardHeader className="px-5 pb-3 pt-4">
+    <Card className="flex h-full flex-col border border-border bg-card shadow-sm ring-0 short:gap-2 short:py-2">
+      <CardHeader className="px-5 pb-3 pt-4 short:pb-1 short:pt-2">
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm font-semibold text-foreground">
             Saúde da Frota
@@ -68,7 +68,7 @@ const FleetHealthTable = memo(function FleetHealthTable({
         </div>
       </CardHeader>
 
-      <CardContent className="px-5 pb-5">
+      <CardContent className="min-h-0 flex-1 overflow-y-auto px-5 pb-5">
         {isLoading ? (
           <TableSkeleton />
         ) : (

@@ -53,15 +53,15 @@ export function KpiShell({
   // children > sparkline. Cards podem optar por nenhum visual de rodapé
   // simplesmente omitindo ambos.
   const footerVisual: ReactNode = children ? (
-    <div className="mt-3 h-11">{children}</div>
+    <div className="mt-3 h-11 short:hidden">{children}</div>
   ) : spark ? (
-    <div className="mt-2 -mb-1 h-11">
+    <div className="mt-2 -mb-1 h-11 short:hidden">
       <KpiSparkline data={spark} tone={sparkTone ?? "neutral"} />
     </div>
   ) : null;
   return (
     <Card className="border border-border bg-card shadow-sm ring-0">
-      <CardContent className="p-4">
+      <CardContent className="p-4 short:p-3">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">

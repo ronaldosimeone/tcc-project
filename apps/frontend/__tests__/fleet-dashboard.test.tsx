@@ -121,4 +121,28 @@ describe("FleetDashboard", () => {
     expect(screen.getByTestId("event-feed-stub")).toBeInTheDocument();
     expect(screen.getByTestId("model-status-stub")).toBeInTheDocument();
   });
+
+  it("cabe na tela no desktop: só o grid do meio encolhe, o feed não", () => {
+    // Antes a coluna tinha altura fixa e todos os itens podiam encolher: o
+    // EventFeedCard (último) era espremido com overflow-hidden e cortava
+    // linhas ("5 eventos" no cabeçalho, 4 visíveis). Agora a raiz tem a
+    // altura da tela só a partir de lg (sem scroll de página) e o único item
+    // que encolhe é o grid tabela + modelo (min-h-0 flex-1).
+    mockUseSensorData.mockReturnValue({
+      latest: null,
+      currentLatency: null,
+      isLoading: true,
+      sseStatus: "connecting",
+    });
+
+    const { container } = render(<FleetDashboard />);
+    const root = container.firstElementChild!;
+    expect(root).toHaveClass("min-h-full", "lg:h-full");
+    expect(root).not.toHaveClass("h-full");
+    const shrinking = [...root.children].filter((c) =>
+      c.classList.contains("min-h-0"),
+    );
+    expect(shrinking).toHaveLength(1);
+    expect(shrinking[0]).toHaveClass("flex-1");
+  });
 });

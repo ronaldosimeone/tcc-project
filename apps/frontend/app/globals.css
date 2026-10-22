@@ -3,6 +3,9 @@
 @import "shadcn/tailwind.css";
 
 @custom-variant dark (&:is(.dark *));
+/* Telas baixas (notebook 768–900 px úteis): o cockpit compacta para caber
+   sem scroll de página (ver FleetDashboard). */
+@custom-variant short (@media (max-height: 899px));
 
 /* ── Tailwind v4: mapeia utilitários semânticos para as variáveis shadcn ───
    As variáveis abaixo (--background, --primary, etc.) já são valores

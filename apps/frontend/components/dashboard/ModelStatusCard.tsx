@@ -96,15 +96,15 @@ const ModelStatusCard = memo(function ModelStatusCard({
   );
 
   return (
-    <Card className="flex h-full flex-col border border-border bg-card shadow-sm ring-0">
-      <CardHeader className="px-5 pb-3 pt-4">
+    <Card className="flex h-full flex-col border border-border bg-card shadow-sm ring-0 short:gap-2 short:py-2">
+      <CardHeader className="px-5 pb-3 pt-4 short:pb-1 short:pt-2">
         <CardTitle className="flex items-center gap-2 text-sm font-semibold text-foreground">
           <Brain className="h-4 w-4 text-muted-foreground" />
           Status do Modelo
         </CardTitle>
       </CardHeader>
 
-      <CardContent className="flex flex-1 flex-col px-5 pb-5">
+      <CardContent className="flex min-h-0 flex-1 flex-col overflow-y-auto px-5 pb-5">
         {/* ── Cabeçalho: modelo activo + confiança ── */}
         <div className="flex items-start justify-between gap-3 border-b border-border/60 pb-3">
           <div className="min-w-0 flex-1">

@@ -68,8 +68,8 @@ const EventFeedCard = memo(function EventFeedCard() {
   }, [alerts]);
 
   return (
-    <Card className="flex w-full flex-col border border-border bg-card shadow-sm ring-0">
-      <CardHeader className="px-5 pb-2 pt-4">
+    <Card className="flex w-full shrink-0 flex-col border border-border bg-card shadow-sm ring-0 short:gap-2 short:py-2">
+      <CardHeader className="px-5 pb-2 pt-4 short:pb-1 short:pt-2">
         <CardTitle className="flex items-center justify-between text-sm font-semibold text-foreground">
           <span className="flex items-center gap-2">
             <Radio className="h-4 w-4 text-muted-foreground" />
@@ -84,7 +84,9 @@ const EventFeedCard = memo(function EventFeedCard() {
       {/* Lista compacta tipo SCADA: alta densidade, severidade pela borda
           esquerda, todos os campos numa única linha quando cabe. */}
       <CardContent className="px-2 pb-2">
-        <ScrollArea className="h-[260px] pr-2">
+        {/* Altura de 5 linhas (~29 px cada): o card não força scroll na
+            página; com mais eventos (alertas ao vivo) a lista rola por dentro. */}
+        <ScrollArea className="h-[148px] pr-2">
           <ul className="flex flex-col">
             {events.map((evt, index) => (
               // Composto com index: blinda contra colisões de id quando o

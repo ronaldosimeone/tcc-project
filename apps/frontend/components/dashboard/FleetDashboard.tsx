@@ -3,15 +3,21 @@
 /**
  * Dashboard de frota — "cockpit operacional" do PredictIQ.
  *
- * Layout vertical full-height (flex col + h-full vindo do layout.tsx):
+ * Layout vertical que cabe na tela no desktop, sem scroll de página
+ * (flex col + lg:h-full; abaixo de lg os cards empilham e a página rola):
  *   1. Cabeçalho        — altura natural
  *   2. KPIs             — altura natural
  *   3. Grid intermediário (flex-1) — Tabela (col-span-2) + Modelo (col-span-1)
- *      lado a lado; ambos com h-full para emparelhar a altura.
+ *      lado a lado; ambos com h-full para emparelhar a altura. É a única
+ *      região que encolhe (min-h-0): se faltar altura, a tabela rola por
+ *      dentro.
  *   4. EventFeedCard    — full-width abaixo; lista interna em grid responsivo.
  *
  * O `flex-1` no item 3 faz a tabela/modelo absorverem todo o espaço vertical
- * que sobra do viewport, eliminando o "espaço em branco" no rodapé.
+ * que sobra do viewport, eliminando o "espaço em branco" no rodapé. O feed
+ * (item 4) não encolhe: antes ele era espremido e cortava linhas. Em telas
+ * baixas (variante `short:`, altura < 900 px) os espaçamentos diminuem e os
+ * KPIs escondem o rodapé gráfico, para sobrar altura para a tabela.
  */
 
 import { useMemo, useState } from "react";
@@ -73,7 +79,7 @@ export default function FleetDashboard() {
     // Padding responsivo: respiro horizontal mínimo (px-4) no mobile evita
     // que cards e linhas do feed encostem na borda; px-8 no desktop dá ar
     // suficiente sem desperdiçar viewport.
-    <div className="flex h-full flex-col gap-6 px-4 py-6 lg:px-8">
+    <div className="flex min-h-full flex-col gap-6 px-4 py-6 short:gap-4 short:py-4 lg:h-full lg:px-8">
       {/* ── Cabeçalho ── */}
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
@@ -83,7 +89,7 @@ export default function FleetDashboard() {
           <h1 className="mt-0.5 text-xl font-bold tracking-tight text-foreground">
             Cockpit Operacional
           </h1>
-          <p className="mt-0.5 text-sm text-muted-foreground">
+          <p className="mt-0.5 text-sm text-muted-foreground short:hidden">
             Manutenção preditiva e MLOps em tempo real
           </p>
         </div>
@@ -114,8 +120,8 @@ export default function FleetDashboard() {
 
       {/* ── Grid intermediário: tabela (2/3) + modelo (1/3), altura emparelhada.
           `flex-1` faz esta região absorver o resto da altura disponível. ── */}
-      <div className="grid flex-1 grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2">
+      <div className="grid min-h-0 flex-1 grid-cols-1 gap-6 short:gap-4 lg:grid-cols-3">
+        <div className="min-h-0 lg:col-span-2">
           <DevProfiler id="FleetHealthTable">
             <FleetHealthTable
               effectiveRiskLevel={effectiveRiskLevel}
@@ -127,7 +133,7 @@ export default function FleetDashboard() {
           </DevProfiler>
         </div>
 
-        <div className="lg:col-span-1">
+        <div className="min-h-0 lg:col-span-1">
           <DevProfiler id="ModelStatusCard">
             <ModelStatusCard distribution={distribution} />
           </DevProfiler>

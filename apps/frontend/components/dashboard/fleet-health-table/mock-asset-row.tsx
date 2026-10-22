@@ -25,7 +25,7 @@ export function MockAssetRow({
         isSelected ? "bg-muted/50" : "hover:bg-muted/60",
       )}
     >
-      <td className="py-3 pl-5 pr-4">
+      <td className="py-3 short:py-1.5 pl-5 pr-4">
         <button
           type="button"
           aria-pressed={isSelected}
@@ -51,19 +51,19 @@ export function MockAssetRow({
         </button>
       </td>
 
-      <td className="py-3 pr-4">
+      <td className="py-3 short:py-1.5 pr-4">
         <RiskBadge level={asset.riskLevel} />
       </td>
 
-      <td className="py-3 pr-4">
+      <td className="py-3 short:py-1.5 pr-4">
         <HealthCell health={asset.health} trendPp={asset.trendPp} />
       </td>
 
-      <td className="py-3 pr-4 text-right font-mono text-xs tabular-nums text-foreground/80">
+      <td className="py-3 short:py-1.5 pr-4 text-right font-mono text-xs tabular-nums text-foreground/80">
         {(asset.prob * 100).toFixed(1)}%
       </td>
 
-      <td className="py-3 pr-3 text-right">
+      <td className="py-3 short:py-1.5 pr-3 text-right">
         <span className="font-mono text-[10px] italic text-muted-foreground/70">
           há {asset.lastSeen}
         </span>

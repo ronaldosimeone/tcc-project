@@ -53,7 +53,7 @@ export function LiveAssetRow({
           : "hover:bg-muted/60",
       )}
     >
-      <td className="py-3 pl-5 pr-4">
+      <td className="py-3 short:py-1.5 pl-5 pr-4">
         <button
           type="button"
           aria-pressed={isSelected}
@@ -106,11 +106,11 @@ export function LiveAssetRow({
         </button>
       </td>
 
-      <td className="py-3 pr-4">
+      <td className="py-3 short:py-1.5 pr-4">
         <RiskBadge level={effectiveRiskLevel} />
       </td>
 
-      <td className="py-3 pr-4">
+      <td className="py-3 short:py-1.5 pr-4">
         <HealthCell
           health={liveHealth}
           trendPp={liveTrendPp}
@@ -118,11 +118,14 @@ export function LiveAssetRow({
         />
       </td>
 
-      <td className="py-3 pr-4 text-right font-mono text-xs tabular-nums text-foreground">
+      <td className="py-3 short:py-1.5 pr-4 text-right font-mono text-xs tabular-nums text-foreground">
         {(effectiveProb * 100).toFixed(1)}%
       </td>
 
-      <td className="py-3 pr-3 text-right" onClick={(e) => e.stopPropagation()}>
+      <td
+        className="py-3 short:py-1.5 pr-3 text-right"
+        onClick={(e) => e.stopPropagation()}
+      >
         <Link
           href={`/sensors/${LIVE_ASSET_ID}`}
           className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[11px] font-semibold text-foreground/80 transition-colors hover:bg-muted/50"
