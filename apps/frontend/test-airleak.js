@@ -71,7 +71,7 @@ async function runTest({ label, payload }) {
     });
   } catch (err) {
     console.error(
-      `${RED}[ERRO]${RESET} Não foi possível conectar em ${API_URL}`,
+      `${RED}[ERRO]${RESET} Não foi possível conectar em ${API_URL} (${err.message})`,
     );
     console.error(
       `${DIM}       Certifique-se de que a stack está no ar: docker compose up${RESET}`,

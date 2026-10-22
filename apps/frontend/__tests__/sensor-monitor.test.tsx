@@ -87,7 +87,7 @@ describe("SensorMonitor", () => {
       await vi.advanceTimersByTimeAsync(0);
     });
     expect(
-      screen.getByRole("heading", { name: /monitoramento em tempo real/i }),
+      screen.getByRole("heading", { name: /APU-Trem-042/i }),
     ).toBeInTheDocument();
   });
 
@@ -96,10 +96,10 @@ describe("SensorMonitor", () => {
     await act(async () => {
       await vi.advanceTimersByTimeAsync(0);
     });
-    expect(screen.getByText(/pressão tp2/i)).toBeInTheDocument();
+    expect(screen.getByText(/tp3 — pressão painel/i)).toBeInTheDocument();
     expect(screen.getByText(/temperatura óleo/i)).toBeInTheDocument();
     expect(screen.getByText(/corrente motor/i)).toBeInTheDocument();
-    expect(screen.getByText(/reservatório/i)).toBeInTheDocument();
+    expect(screen.getByText(/índice de anomalia/i)).toBeInTheDocument();
   });
 
   it("exibe a seção do Painel de Sensores com os labels corretos", async () => {
@@ -107,8 +107,8 @@ describe("SensorMonitor", () => {
     await act(async () => {
       await vi.advanceTimersByTimeAsync(0);
     });
-    // Usa os labels exatos que sensor-monitor.tsx renderiza nos SensorChips
-    const sensorLabels = ["TP3", "H1", "DV Press.", "COMP", "Towers"];
+    // Labels exatos dos manômetros secundários e do painel de sinais digitais
+    const sensorLabels = ["H1", "DV Press", "Reserv.", "COMP", "TOWERS"];
     for (const label of sensorLabels) {
       expect(screen.getByText(label)).toBeInTheDocument();
     }
@@ -123,7 +123,7 @@ describe("SensorMonitor", () => {
       await vi.advanceTimersByTimeAsync(0);
     });
 
-    expect(screen.getAllByText("NORMAL")[0]).toBeInTheDocument();
+    expect(screen.getByText("OPERACIONAL")).toBeInTheDocument();
   });
 
   it("chama fetch GET /predictions a cada intervalo de polling", async () => {

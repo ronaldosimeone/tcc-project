@@ -19,6 +19,7 @@ import { AlertToastQueue } from "@/components/alert-toast-queue";
 import { useSensorData, getRiskLevel } from "@/hooks/use-sensor-data";
 import { useAlertWebSocket } from "@/hooks/use-alert-websocket";
 import { useErrorRateStatus } from "@/hooks/use-error-rate";
+import { formatFixed } from "@/lib/format";
 import { isCriticalProb } from "@/lib/risk-thresholds";
 import { C } from "./sensor-monitor/constants";
 import { SensorMonitorHeader } from "./sensor-monitor/header";
@@ -85,6 +86,7 @@ export default function SensorMonitor() {
         {isHardOffline ? (
           /* ── ErrorState ─────────────────────────────────────── */
           <div
+            data-testid="error-state"
             role="alert"
             className="flex flex-1 flex-col items-center justify-center gap-4 rounded-xl border border-destructive/30 bg-destructive/5 px-6 py-12 text-center"
           >
@@ -113,7 +115,7 @@ export default function SensorMonitor() {
             <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
               <SparkKpiCard
                 title="TP3 — Pressão Painel"
-                value={currentPayload.TP3.toFixed(2)}
+                value={formatFixed(currentPayload.TP3, 2)}
                 unit="bar"
                 icon={Gauge}
                 sparkData={history}
@@ -123,7 +125,7 @@ export default function SensorMonitor() {
               />
               <SparkKpiCard
                 title="Corrente Motor"
-                value={currentPayload.Motor_current.toFixed(2)}
+                value={formatFixed(currentPayload.Motor_current, 2)}
                 unit="A"
                 icon={Zap}
                 sparkData={history}
@@ -133,7 +135,7 @@ export default function SensorMonitor() {
               />
               <SparkKpiCard
                 title="Temperatura Óleo"
-                value={currentPayload.Oil_temperature.toFixed(1)}
+                value={formatFixed(currentPayload.Oil_temperature, 1)}
                 unit="°C"
                 icon={Thermometer}
                 sparkData={history}
@@ -142,7 +144,7 @@ export default function SensorMonitor() {
                 isLoading={isLoading}
               />
               <SparkKpiCard
-                title="Anomaly Score"
+                title="Índice de Anomalia"
                 value={anomalyScoreStr}
                 unit="%"
                 icon={AlertTriangle}
@@ -166,10 +168,8 @@ export default function SensorMonitor() {
                 DV_eletric={currentPayload.DV_eletric}
                 Towers={currentPayload.Towers}
                 MPG={currentPayload.MPG}
-                LPS={0}
-                Pressure_switch={0}
                 Oil_level={currentPayload.Oil_level}
-                Caudal_impulses={0}
+                isLoading={isLoading}
               />
             </div>
 

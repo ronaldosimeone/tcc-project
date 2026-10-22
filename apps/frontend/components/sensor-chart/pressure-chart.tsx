@@ -11,6 +11,7 @@ import {
   YAxis,
 } from "recharts";
 import type { SensorDataPoint } from "@/hooks/use-sensor-data";
+import { formatFixed } from "@/lib/format";
 import { AXIS_TICK_STYLE, GRID_STROKE, LINE_COLORS } from "./constants";
 import { TOOLTIP_CONTENT } from "./chart-tooltip";
 
@@ -34,8 +35,8 @@ export const PressureChart = memo(function PressureChart({
           transmite os valores a leitores de tela; sem aria-live: 1Hz seria
           ruidoso demais para anúncio contínuo (RNF-66 §14). */}
       <p className="sr-only">
-        Leitura mais recente de pressão: TP2 {latest.TP2.toFixed(1)} bar, TP3{" "}
-        {latest.TP3.toFixed(1)} bar.
+        Leitura mais recente de pressão: TP2 {formatFixed(latest.TP2, 1)} bar,
+        TP3 {formatFixed(latest.TP3, 1)} bar.
       </p>
       <div aria-hidden="true" className="contents">
         <ResponsiveContainer width="100%" height={160}>

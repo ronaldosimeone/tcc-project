@@ -245,7 +245,7 @@ describe("RF-17 / RNF-35: Resiliência de Conexão e Modo Degradado", () => {
     // Dados ainda presentes — error-state NÃO deve aparecer
     expect(screen.queryByTestId("error-state")).not.toBeInTheDocument();
     // KPI cards ainda presentes
-    expect(screen.getByText(/pressão tp2/i)).toBeInTheDocument();
+    expect(screen.getByText(/tp3 — pressão painel/i)).toBeInTheDocument();
   });
 
   it("RNF-35: badge de risco permanece visível em modo degradado", async () => {
@@ -256,14 +256,14 @@ describe("RF-17 / RNF-35: Resiliência de Conexão e Modo Degradado", () => {
     });
 
     // Risco visível antes da queda
-    expect(screen.getAllByText("NORMAL")[0]).toBeInTheDocument();
+    expect(screen.getByText("OPERACIONAL")).toBeInTheDocument();
 
     await act(async () => {
       TrackableEventSource.instances[0]!.simulateError();
     });
 
     // Risco ainda visível após queda — dados em cache
-    expect(screen.getAllByText("NORMAL")[0]).toBeInTheDocument();
+    expect(screen.getByText("OPERACIONAL")).toBeInTheDocument();
   });
 
   it("RNF-35: banner desaparece quando SSE reconecta com sucesso", async () => {

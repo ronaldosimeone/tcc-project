@@ -14,10 +14,10 @@ export const HistorySkeleton = () => (
     aria-busy="true"
     aria-label="Carregando histórico"
   >
-    <Skeleton className="h-10 w-72" />
-    <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
-      {Array.from({ length: 5 }).map((_, i) => (
-        <Skeleton key={i} className="h-24" />
+    {/* Mesma grade dos 6 KPIs (HistoryKPIs), sem saltos ao carregar. */}
+    <div className="grid grid-cols-2 gap-4 md:grid-cols-3 2xl:grid-cols-6">
+      {Array.from({ length: 6 }).map((_, i) => (
+        <Skeleton key={i} className="h-28" />
       ))}
     </div>
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">

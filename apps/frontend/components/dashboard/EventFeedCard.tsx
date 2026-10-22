@@ -23,6 +23,8 @@ import { Radio } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useIsClient } from "@/hooks/use-is-client";
 import { useAlertWebSocket } from "@/hooks/use-alert-websocket";
 import {
   DEMO_EVENTS,
@@ -41,6 +43,10 @@ import { FeedEventRow } from "./event-feed-card/feed-event-row";
  */
 const EventFeedCard = memo(function EventFeedCard() {
   const { alerts } = useAlertWebSocket();
+  // Horários e "há N min" dependem do relógio e do fuso do navegador: o
+  // servidor (UTC) não os renderiza — antes o HTML do SSR ficava na tela
+  // com os horários 3 h à frente.
+  const isClient = useIsClient();
 
   const events: FeedEvent[] = useMemo(() => {
     const now = Date.now();
@@ -88,11 +94,17 @@ const EventFeedCard = memo(function EventFeedCard() {
             página; com mais eventos (alertas ao vivo) a lista rola por dentro. */}
         <ScrollArea className="h-[148px] pr-2">
           <ul className="flex flex-col">
-            {events.map((evt, index) => (
-              // Composto com index: blinda contra colisões de id quando o
-              // backend dispara eventos em rajada com timestamps idênticos.
-              <FeedEventRow key={`${evt.id}-${index}`} evt={evt} />
-            ))}
+            {isClient
+              ? events.map((evt, index) => (
+                  // Composto com index: blinda contra colisões de id quando o
+                  // backend dispara eventos em rajada com timestamps idênticos.
+                  <FeedEventRow key={`${evt.id}-${index}`} evt={evt} />
+                ))
+              : Array.from({ length: 5 }, (_, i) => (
+                  <li key={i} className="px-3 py-1.5">
+                    <Skeleton className="h-4 w-full" />
+                  </li>
+                ))}
           </ul>
         </ScrollArea>
       </CardContent>

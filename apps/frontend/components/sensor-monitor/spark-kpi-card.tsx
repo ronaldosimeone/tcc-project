@@ -44,7 +44,7 @@ export const SparkKpiCard = memo(function SparkKpiCard({
               {title}
             </p>
             {isLoading ? (
-              <Skeleton className="mt-2 h-7 w-20" />
+              <Skeleton data-testid="kpi-skeleton" className="mt-2 h-7 w-20" />
             ) : (
               <p
                 className={cn(

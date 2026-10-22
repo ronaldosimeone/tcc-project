@@ -4,9 +4,8 @@
 // honestidade: "vista no treino" (demonstração) × "inédita" (teste honesto).
 
 import { memo, useCallback, useEffect, useState } from "react";
-import { CircleAlert, FlaskConical, Loader2, Play, Square } from "lucide-react";
+import { CircleAlert, FlaskConical, Loader2, Square } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
@@ -23,21 +22,9 @@ import {
   playFailureScenario,
   type FailureScenario,
 } from "@/lib/failure-scenarios-api";
+import { FailureScenarioItem } from "./failure-scenario-item";
 
 const LEAD_OPTIONS: readonly number[] = [10, 30, 60, 360];
-
-interface HonestyBadgeProps {
-  seen: boolean;
-}
-
-const HonestyBadge = ({ seen }: HonestyBadgeProps) =>
-  seen ? (
-    <Badge variant="secondary" className="text-[10px]">
-      Vista no treino · demonstração
-    </Badge>
-  ) : (
-    <Badge className="text-[10px]">Inédita · teste honesto</Badge>
-  );
 
 const RealFailureSectionComponent = () => {
   const [scenarios, setScenarios] = useState<FailureScenario[] | null>(null);
@@ -132,49 +119,23 @@ const RealFailureSectionComponent = () => {
         </p>
       )}
 
+      {scenarios?.length === 0 && (
+        <p className="text-xs text-muted-foreground">
+          Nenhum cenário de falha disponível neste servidor.
+        </p>
+      )}
+
       <ul className="flex flex-col gap-1.5">
-        {(scenarios ?? []).map((s) => {
-          const isActive = active?.id === s.id;
-          return (
-            <li
-              key={s.id}
-              data-active={isActive}
-              className="flex items-start justify-between gap-2 rounded-md border border-border bg-card px-3 py-2 data-[active=true]:border-primary"
-            >
-              <div className="flex min-w-0 flex-col gap-1">
-                <span className="text-sm font-medium text-foreground">
-                  {s.label}
-                </span>
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <HonestyBadge seen={s.seen_in_training} />
-                  <span className="text-[10px] text-muted-foreground">
-                    {s.dataset}
-                  </span>
-                </div>
-                <span className="text-xs text-muted-foreground">{s.note}</span>
-              </div>
-              <Button
-                type="button"
-                size="sm"
-                variant={isActive ? "secondary" : "outline"}
-                disabled={!s.available || pending !== null}
-                aria-label={`Reproduzir ${s.label}`}
-                title={
-                  s.available
-                    ? undefined
-                    : "Dados não disponíveis neste servidor"
-                }
-                onClick={() => void play(s.id)}
-              >
-                {pending === s.id ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <Play className="h-3.5 w-3.5" />
-                )}
-              </Button>
-            </li>
-          );
-        })}
+        {(scenarios ?? []).map((s) => (
+          <FailureScenarioItem
+            key={s.id}
+            scenario={s}
+            isActive={active?.id === s.id}
+            isPending={pending === s.id}
+            disabled={pending !== null}
+            onPlay={(id) => void play(id)}
+          />
+        ))}
       </ul>
 
       {active && (

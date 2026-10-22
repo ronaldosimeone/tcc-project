@@ -100,14 +100,14 @@ function makePageResponse(item = BASE_ITEM) {
 // ── getRiskLevel (função pura — sem timers) ───────────────────────────────
 
 describe("getRiskLevel", () => {
-  it("retorna NORMAL para prob < 0.3", () => {
+  it("retorna NORMAL para prob < 0.35", () => {
     expect(getRiskLevel(0)).toBe("NORMAL");
     expect(getRiskLevel(0.1)).toBe("NORMAL");
-    expect(getRiskLevel(0.299)).toBe("NORMAL");
+    expect(getRiskLevel(0.349)).toBe("NORMAL");
   });
 
-  it("retorna ALERTA para 0.3 <= prob < 0.65", () => {
-    expect(getRiskLevel(0.3)).toBe("ALERTA");
+  it("retorna ALERTA para 0.35 <= prob < 0.65", () => {
+    expect(getRiskLevel(0.35)).toBe("ALERTA");
     expect(getRiskLevel(0.5)).toBe("ALERTA");
     expect(getRiskLevel(0.649)).toBe("ALERTA");
   });

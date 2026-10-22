@@ -1,7 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // O indicador de rota do `next dev` (canto inferior esquerdo) ficava sobre
+  // o rodapé da barra lateral. Erros de compilação/execução continuam
+  // aparecendo (doc: next.config.js > devIndicators).
+  devIndicators: false,
 };
 
 // RNF-74/75 — @next/bundle-analyzer é um plugin de WEBPACK: injeta uma

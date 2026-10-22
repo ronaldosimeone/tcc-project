@@ -1,5 +1,7 @@
 // ── Configuração dos eixos + helpers — RNF-58: extraído de EventHeatmap ─────
 
+import dayjs from "dayjs";
+
 import type { HistoryEvent } from "@/lib/history-types";
 
 export const SHIFTS = ["00h", "06h", "12h", "18h"] as const;
@@ -49,16 +51,17 @@ export function buildMatrix(events: HistoryEvent[]): CellData[][] {
   );
 
   for (const e of events) {
-    const dt = new Date(e.timestamp);
-    if (Number.isNaN(dt.getTime())) continue;
+    // Turno e dia no fuso do operador — o turno é uma noção local.
+    const dt = dayjs(e.timestamp);
+    if (!dt.isValid()) continue;
 
     // Turno: 0–5h → row 0, 6–11h → 1, 12–17h → 2, 18–23h → 3.
-    const row = Math.floor(dt.getUTCHours() / 6);
+    const row = Math.floor(dt.hour() / 6);
     if (row < 0 || row > 3) continue;
 
-    // getUTCDay() retorna 0 = Domingo, 1 = Segunda, ..., 6 = Sábado.
+    // day() retorna 0 = Domingo, 1 = Segunda, ..., 6 = Sábado.
     // Nosso eixo é Seg..Dom (índice 0 = Seg). Mapeamento: (day + 6) % 7.
-    const col = (dt.getUTCDay() + 6) % 7;
+    const col = (dt.day() + 6) % 7;
 
     const cell = matrix[row][col];
     cell.total++;

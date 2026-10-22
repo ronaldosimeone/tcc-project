@@ -101,7 +101,7 @@ export function ModelSection() {
         </Label>
         {data && (
           <Badge variant="outline" className="font-mono text-[10px]">
-            activo · {formatModelName(data.active_model)}
+            ativo · {formatModelName(data.active_model)}
           </Badge>
         )}
       </div>

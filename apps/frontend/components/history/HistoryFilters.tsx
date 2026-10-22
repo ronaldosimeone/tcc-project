@@ -12,6 +12,14 @@ const PERIODS = [
   { label: "Todo o período", value: "all" },
 ];
 
+/** Rótulo do período selecionado (ex.: "Últimos 30 dias"). */
+export const periodLabel = (period: string): string =>
+  PERIODS.find((p) => p.value === period)?.label ?? "Período selecionado";
+
+/** Dias exibidos no gráfico diário: o período, ou 30 em "todo o período". */
+export const chartDays = (period: string): number =>
+  period === "all" ? 30 : Number(period);
+
 export interface FilterState {
   search: string;
   period: string;

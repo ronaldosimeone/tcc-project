@@ -14,6 +14,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { PredictPayload, PredictResponse } from "@/lib/api-client";
+import { formatClock } from "@/lib/format";
 import { useSSE } from "@/hooks/use-sse";
 import type { SSEStatus } from "@/hooks/use-sse";
 
@@ -133,14 +134,7 @@ type WsFrame = WsAlertFrame | WsPingFrame;
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
-function toTimeLabel(ts?: string): string {
-  const d = ts ? new Date(ts) : new Date();
-  return d.toLocaleTimeString("pt-BR", {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  });
-}
+const toTimeLabel = (ts?: string): string => formatClock(ts ?? Date.now());
 
 function sseReadingToPoint(
   r: SensorReading,

@@ -52,7 +52,7 @@ export function LiveRow({
             variant="outline"
             className="border-blue-500/30 bg-blue-500/10 px-1.5 py-0 text-[9px] font-bold tracking-wider text-blue-400"
           >
-            LIVE
+            AO VIVO
           </Badge>
         </div>
       </td>

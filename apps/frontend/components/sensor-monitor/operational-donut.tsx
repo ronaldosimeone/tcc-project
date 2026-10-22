@@ -87,7 +87,7 @@ export const OperationalDonut = memo(function OperationalDonut({
             </ResponsiveContainer>
           </div>
         )}
-        <div className="grid w-full grid-cols-2 gap-x-3 gap-y-1">
+        <div className="flex w-full flex-wrap justify-center gap-x-3 gap-y-1">
           {(data.length > 0 ? data : OP_STATES).map((s) => (
             <div key={s.name} className="flex items-center gap-1.5">
               <span
@@ -95,7 +95,7 @@ export const OperationalDonut = memo(function OperationalDonut({
                 style={{ background: s.color }}
                 aria-hidden="true"
               />
-              <span className="truncate text-[10px] text-muted-foreground">
+              <span className="whitespace-nowrap text-[10px] text-muted-foreground">
                 {s.name}
                 {"value" in s && total > 0 && (
                   <> — {((s.value / total) * 100).toFixed(0)}%</>

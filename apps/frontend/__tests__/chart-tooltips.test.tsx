@@ -27,22 +27,22 @@ describe("SensorChart ChartTooltip", () => {
     expect(c2).toBeEmptyDOMElement();
   });
 
-  it("renderiza o label e cada série com seu valor", () => {
+  it("renderiza o label e cada série com o valor arredondado a 2 casas", () => {
     render(
       <SensorChartTooltip
         active
         label="10:00:05"
         payload={[
-          { name: "TP2", value: 8.1, color: "#60a5fa" },
+          { name: "TP2", value: 8.977999687194824, color: "#60a5fa" },
           { name: "TP3", value: 7.9, color: "#4ade80" },
         ]}
       />,
     );
     expect(screen.getByText("10:00:05")).toBeInTheDocument();
     expect(screen.getByText("TP2")).toBeInTheDocument();
-    expect(screen.getByText("8.1")).toBeInTheDocument();
+    expect(screen.getByText("8.98")).toBeInTheDocument();
     expect(screen.getByText("TP3")).toBeInTheDocument();
-    expect(screen.getByText("7.9")).toBeInTheDocument();
+    expect(screen.getByText("7.90")).toBeInTheDocument();
   });
 });
 

@@ -9,7 +9,7 @@ interface SwatchProps {
 
 export function Swatch({ className, label }: SwatchProps) {
   return (
-    <span className="inline-flex items-center gap-1.5">
+    <span className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap">
       <span
         className={cn("h-3 w-3 rounded-sm border border-border", className)}
         aria-hidden="true"

@@ -54,7 +54,7 @@ export function EventRow({ event, onSelectEvent }: EventRowProps) {
 
       {/* Equipment */}
       <td className="py-3 pr-5">
-        <span className="font-mono text-xs font-medium text-foreground">
+        <span className="whitespace-nowrap font-mono text-xs font-medium text-foreground">
           {event.equipment}
         </span>
       </td>

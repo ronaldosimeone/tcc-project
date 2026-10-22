@@ -1,5 +1,8 @@
 // ── Bucketização diária — RNF-58: extraído de AlertFrequencyChart ───────────
 
+import dayjs from "dayjs";
+
+import { formatDayMonth, localDayKey } from "@/lib/format";
 import type { HistoryEvent } from "@/lib/history-types";
 
 // Literais slate — evita tokens hsl(var(--...)) que renderizam transparente
@@ -22,27 +25,28 @@ export interface DayBucket {
  * num intervalo de 14 dias terminando no evento mais recente — assim o eixo
  * X mantém continuidade visual mesmo quando um dia não tem ocorrências.
  */
-export function bucketEventsByDay(events: HistoryEvent[]): DayBucket[] {
+export function bucketEventsByDay(
+  events: HistoryEvent[],
+  days = 14,
+): DayBucket[] {
   if (events.length === 0) return [];
 
   // Encontra o dia "mais recente" no recorte para fechar a janela de 14 dias.
+  // Dias no fuso do operador (antes UTC: eventos das 21h–24h no Brasil
+  // caíam no dia seguinte).
   const latestMs = events.reduce(
-    (max, e) => Math.max(max, new Date(e.timestamp).getTime()),
+    (max, e) => Math.max(max, dayjs(e.timestamp).valueOf()),
     0,
   );
-  const latest = new Date(latestMs);
-  latest.setUTCHours(0, 0, 0, 0);
+  const latest = dayjs(latestMs).startOf("day");
 
   const buckets = new Map<string, DayBucket>();
-  for (let i = 13; i >= 0; i--) {
-    const d = new Date(latest);
-    d.setUTCDate(d.getUTCDate() - i);
-    const iso = d.toISOString().slice(0, 10);
+  for (let i = days - 1; i >= 0; i--) {
+    const d = latest.subtract(i, "day");
+    const iso = localDayKey(d.valueOf());
     buckets.set(iso, {
       iso,
-      date: `${String(d.getUTCDate()).padStart(2, "0")}/${String(
-        d.getUTCMonth() + 1,
-      ).padStart(2, "0")}`,
+      date: formatDayMonth(d.valueOf()),
       alerta: 0,
       critico: 0,
       normal: 0,
@@ -50,9 +54,9 @@ export function bucketEventsByDay(events: HistoryEvent[]): DayBucket[] {
   }
 
   for (const e of events) {
-    const iso = e.timestamp.slice(0, 10);
+    const iso = localDayKey(e.timestamp);
     const bucket = buckets.get(iso);
-    if (!bucket) continue; // fora da janela de 14 dias
+    if (!bucket) continue; // fora da janela
     if (e.severity === "CRÍTICO") bucket.critico++;
     else if (e.severity === "ALERTA") bucket.alerta++;
     else bucket.normal++;

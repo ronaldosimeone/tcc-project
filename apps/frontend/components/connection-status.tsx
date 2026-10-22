@@ -130,7 +130,7 @@ export function ConnectionStatus({
     <div
       data-testid="connection-status"
       aria-label="Status das conexões em tempo real"
-      className="flex items-center gap-3 rounded-lg border border-border/50 bg-card/40 px-3 py-1.5"
+      className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-border/50 bg-card/40 px-3 py-1.5"
     >
       <ChannelPill name="Sensores" state={sseToState(sseStatus)} />
       <div className="h-3 w-px bg-border/60" aria-hidden="true" />

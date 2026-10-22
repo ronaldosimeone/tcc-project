@@ -40,7 +40,7 @@ export function RadarHeader({
                 className="h-1.5 w-1.5 animate-pulse rounded-full bg-green-400"
                 aria-hidden="true"
               />
-              LIVE
+              AO VIVO
             </span>
           ) : (
             <span className="rounded-full border border-border bg-muted/30 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">

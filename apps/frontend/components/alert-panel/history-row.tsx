@@ -1,16 +1,13 @@
 // ── Linha do histórico — RNF-58: extraído de alert-panel.tsx ────────────────
 
+import { formatClock } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { PredictionHistoryEntry } from "@/hooks/use-prediction-history";
 import { RiskBadge } from "./risk-badge";
 
 export function HistoryRow({ entry }: { entry: PredictionHistoryEntry }) {
   const pct = (entry.failure_probability * 100).toFixed(1);
-  const time = new Date(entry.timestamp).toLocaleTimeString("pt-BR", {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  });
+  const time = formatClock(entry.timestamp);
 
   const probColor =
     entry.riskLevel === "CRÍTICO"

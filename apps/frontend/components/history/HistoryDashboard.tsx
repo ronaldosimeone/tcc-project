@@ -10,7 +10,9 @@
  *
  * Estrutura vertical:
  *   1. Sessão analítica — Header + KPIs + Chart + Heatmap.
- *   2. Filtros + tabela de eventos.
+ *      Os filtros ficam logo abaixo do header: KPIs e gráficos também
+ *      usam os eventos filtrados.
+ *   2. Tabela de eventos.
  *   3. RootCauseDrawer — causa raiz congelada, leituras reais e a OS.
  *
  * O período vem do servidor (refetch); severidade/equipamento/busca são
@@ -24,6 +26,8 @@ import EventHeatmap from "@/components/history/EventHeatmap";
 import EventLogTable from "@/components/history/EventLogTable";
 import HistoryFilters, {
   DEFAULT_FILTERS,
+  chartDays,
+  periodLabel,
   type FilterState,
 } from "@/components/history/HistoryFilters";
 import HistoryHeader from "@/components/history/HistoryHeader";
@@ -72,6 +76,19 @@ export default function HistoryDashboard() {
             totalEvents={events.length}
             filteredCount={filtered.length}
             events={filtered}
+            periodLabel={periodLabel(filters.period)}
+          />
+
+          {/* Filtros antes dos KPIs e gráficos: todos usam os eventos
+              filtrados (antes ficavam abaixo deles, longe do que mudam). */}
+          <HistoryFilters
+            filters={filters}
+            onChange={setFilters}
+            equipments={
+              assets.length > 0
+                ? assets
+                : [...new Set(events.map((e) => e.equipment))].sort()
+            }
           />
 
           {state === "loading" && <HistorySkeleton />}
@@ -86,7 +103,10 @@ export default function HistoryDashboard() {
 
               <div className="grid flex-1 grid-cols-1 gap-6 lg:grid-cols-12">
                 <div className="flex min-h-0 flex-col lg:col-span-7">
-                  <AlertFrequencyChart events={filtered} />
+                  <AlertFrequencyChart
+                    events={filtered}
+                    days={chartDays(filters.period)}
+                  />
                 </div>
 
                 <div className="flex min-h-0 flex-col gap-4 lg:col-span-5">
@@ -103,15 +123,6 @@ export default function HistoryDashboard() {
           )}
         </section>
 
-        <HistoryFilters
-          filters={filters}
-          onChange={setFilters}
-          equipments={
-            assets.length > 0
-              ? assets
-              : [...new Set(events.map((e) => e.equipment))].sort()
-          }
-        />
         <EventLogTable events={filtered} onSelectEvent={setSelectedEvent} />
       </div>
 

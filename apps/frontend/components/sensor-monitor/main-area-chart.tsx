@@ -16,7 +16,9 @@ import {
 import { Activity } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { RiskLevel, SensorDataPoint } from "@/hooks/use-sensor-data";
+import { formatFixed } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { AREA_TOOLTIP } from "./area-chart-tooltip";
 import { AXIS_TICK, C, GRID_STROKE } from "./constants";
 
 export interface MainAreaChartProps {
@@ -24,47 +26,6 @@ export interface MainAreaChartProps {
   isLive: boolean;
   riskLevel: RiskLevel;
 }
-
-interface AreaTooltipEntry {
-  name: string;
-  value: number;
-  color: string;
-}
-
-interface AreaTooltipProps {
-  active?: boolean;
-  label?: string;
-  payload?: AreaTooltipEntry[];
-}
-
-const AreaChartTooltip = memo(function AreaChartTooltip({
-  active,
-  label,
-  payload,
-}: AreaTooltipProps) {
-  if (!active || !payload?.length) return null;
-  return (
-    <div className="rounded-lg border border-border bg-card px-3 py-2 shadow-md">
-      <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-        {label}
-      </p>
-      {payload.map((e) => (
-        <div key={e.name} className="flex items-center gap-2 text-xs">
-          <span
-            className="h-2 w-2 rounded-full"
-            style={{ background: e.color }}
-          />
-          <span className="text-muted-foreground">{e.name}</span>
-          <span className="ml-auto font-bold tabular-nums text-foreground">
-            {e.value} bar
-          </span>
-        </div>
-      ))}
-    </div>
-  );
-});
-
-const AREA_TOOLTIP = <AreaChartTooltip />;
 
 export const MainAreaChart = memo(function MainAreaChart({
   data,
@@ -94,7 +55,7 @@ export const MainAreaChart = memo(function MainAreaChart({
                   <span className="relative inline-flex h-2 w-2 rounded-full bg-green-500" />
                 </span>
                 <span className="text-[10px] font-semibold uppercase tracking-wider text-green-600 dark:text-green-400">
-                  Live
+                  Ao vivo
                 </span>
               </span>
             )}
@@ -124,8 +85,8 @@ export const MainAreaChart = memo(function MainAreaChart({
             {/* Alternativa textual ao gráfico (RNF-66 §12) — sem aria-live:
                 1Hz seria ruidoso demais para anúncio contínuo (RNF-66 §14). */}
             <p className="sr-only">
-              Leitura mais recente de pressão: TP2 {latest.TP2.toFixed(1)} bar,
-              TP3 {latest.TP3.toFixed(1)} bar.
+              Leitura mais recente de pressão: TP2 {formatFixed(latest.TP2, 1)}{" "}
+              bar, TP3 {formatFixed(latest.TP3, 1)} bar.
             </p>
             <div aria-hidden="true" className="contents">
               <ResponsiveContainer width="100%" height={180}>
@@ -156,8 +117,12 @@ export const MainAreaChart = memo(function MainAreaChart({
                     axisLine={false}
                     interval="preserveStartEnd"
                   />
+                  {/* Ticks fixos: o ruído negativo de TP2 (−0,014 bar)
+                      gerava ticks −0,014 / 3,986 / 7,986, cortados. */}
                   <YAxis
                     domain={[0, 12]}
+                    ticks={[0, 3, 6, 9, 12]}
+                    allowDataOverflow
                     tick={AXIS_TICK}
                     tickLine={false}
                     axisLine={false}

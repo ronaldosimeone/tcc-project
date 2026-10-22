@@ -10,6 +10,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { formatFixed } from "@/lib/format";
 import { AXIS_TICK_STYLE, GRID_STROKE, LINE_COLORS } from "./constants";
 import { TOOLTIP_CONTENT } from "./chart-tooltip";
 import type { PressureChartProps } from "./pressure-chart";
@@ -27,8 +28,8 @@ export const ThermalChart = memo(function ThermalChart({
       </p>
       {/* Alternativa textual ao gráfico (RNF-66 §12) — ver PressureChart. */}
       <p className="sr-only">
-        Leitura mais recente: corrente {latest.Motor_current.toFixed(1)} A,
-        temperatura {latest.Oil_temperature.toFixed(1)}°C.
+        Leitura mais recente: corrente {formatFixed(latest.Motor_current, 1)} A,
+        temperatura {formatFixed(latest.Oil_temperature, 1)}°C.
       </p>
       <div aria-hidden="true" className="contents">
         <ResponsiveContainer width="100%" height={160}>

@@ -67,18 +67,16 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-/* ── Tema industrial escuro (padrão absoluto — sem media query) ────────── */
+/* ── Tema claro (padrão). O escuro é a classe `.dark`, mais abaixo. ─────── */
 :root {
-  /* Fundo principal: Slate quase-preto */
-
-  /* Cards levemente mais claros que o fundo */
+  /* Cards brancos sobre fundo branco, separados pela borda */
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
 
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
 
-  /* Primário: azul tech industrial */
+  /* Primário: quase-preto neutro */
   --primary: oklch(0.205 0 0);
   --primary-foreground: oklch(0.985 0 0);
 
@@ -104,12 +102,13 @@
 
   --radius: 0.625rem;
 
-  /* Tokens de gráfico */
-  --chart-1: oklch(0.87 0 0); /* azul primário */
-  --chart-2: oklch(0.556 0 0); /* verde — normal */
-  --chart-3: oklch(0.439 0 0); /* âmbar — alerta */
-  --chart-4: oklch(0.371 0 0); /* vermelho — crítico */
-  --chart-5: oklch(0.269 0 0); /* roxo — auxiliar */
+  /* Tokens de gráfico: escala de cinzas neutra (padrão shadcn). As cores
+     de status dos gráficos ainda vêm de constantes nos componentes. */
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --sidebar: oklch(0.985 0 0);
@@ -142,7 +141,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Scrollbar discreta — combina com o tema escuro */
+/* Scrollbar discreta — usa os tokens do tema ativo */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;

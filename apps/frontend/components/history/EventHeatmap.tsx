@@ -81,7 +81,7 @@ export default function EventHeatmap({ events }: EventHeatmapProps) {
         </div>
 
         {/* Legenda — escala de intensidade. */}
-        <div className="mt-4 flex items-center gap-3 border-t border-border/60 pt-3 text-[10px] text-muted-foreground">
+        <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-border/60 pt-3 text-[10px] text-muted-foreground">
           <span className="font-medium uppercase tracking-wider text-muted-foreground/70">
             Intensidade
           </span>

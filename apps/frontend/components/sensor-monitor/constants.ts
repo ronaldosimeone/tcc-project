@@ -42,14 +42,16 @@ export interface BooleanPanelProps {
   DV_eletric: number;
   Towers: number;
   MPG: number;
-  LPS: number;
-  Pressure_switch: number;
+  /** Não transmitidos pela API (fora do modelo): ausentes = "N/D". */
+  LPS?: number;
+  Pressure_switch?: number;
   Oil_level: number;
-  Caudal_impulses: number;
+  Caudal_impulses?: number;
+  isLoading?: boolean;
 }
 
 export const BOOL_SIGNALS: Array<{
-  key: keyof BooleanPanelProps;
+  key: Exclude<keyof BooleanPanelProps, "isLoading">;
   label: string;
   mode: BoolSignalMode;
   isCount?: boolean;

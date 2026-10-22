@@ -101,7 +101,7 @@ export default function FleetKPIs({
   );
 
   return (
-    <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
       <KpiShell
         title="Saúde Global da Frota"
         value={

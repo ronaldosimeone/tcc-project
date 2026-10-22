@@ -5,6 +5,7 @@ import { WifiOff } from "lucide-react";
 export function DegradedModeBanner({ attempt }: { attempt: number }) {
   return (
     <div
+      data-testid="degraded-mode-banner"
       role="status"
       aria-live="polite"
       className="flex items-center gap-3 rounded-xl border border-amber-400/40 bg-amber-400/8 px-4 py-3 text-amber-700 dark:text-amber-400"

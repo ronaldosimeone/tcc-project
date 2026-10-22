@@ -4,6 +4,7 @@
 
 import { memo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import {
   BOOL_SIGNALS,
@@ -13,7 +14,8 @@ import {
 
 export interface BoolSignalProps {
   label: string;
-  value: number;
+  /** `undefined` = sinal não transmitido pela API — mostra "N/D". */
+  value: number | undefined;
   mode?: BoolSignalMode;
   isCount?: boolean; // para Caudal Impulses
 }
@@ -24,6 +26,21 @@ export function BoolSignal({
   mode = "normal",
   isCount = false,
 }: BoolSignalProps) {
+  if (value === undefined) {
+    return (
+      <div
+        className="flex items-center justify-between rounded-md border border-dashed border-border p-2"
+        title="Sinal não transmitido pela API (fora do modelo)"
+      >
+        <span className="truncate text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/70">
+          {label}
+        </span>
+        <span className="text-[10px] font-bold text-muted-foreground/60">
+          N/D
+        </span>
+      </div>
+    );
+  }
   const isOn = isCount ? value > 0 : value === 1;
   const isAlert =
     mode === "alertWhenOn" ? isOn : mode === "alertWhenOff" ? !isOn : false;
@@ -86,15 +103,23 @@ export const BooleanPanel = memo(function BooleanPanel(
       </CardHeader>
       <CardContent className="flex flex-1 flex-col p-3 pt-0">
         <div className="grid h-full grid-cols-2 grid-rows-4 gap-2">
-          {BOOL_SIGNALS.map(({ key, label, mode, isCount }) => (
-            <BoolSignal
-              key={key}
-              label={label}
-              value={props[key]}
-              mode={mode}
-              isCount={isCount}
-            />
-          ))}
+          {BOOL_SIGNALS.map(({ key, label, mode, isCount }) =>
+            props.isLoading ? (
+              <Skeleton
+                key={key}
+                data-testid="chip-skeleton"
+                className="h-full min-h-8 rounded-md"
+              />
+            ) : (
+              <BoolSignal
+                key={key}
+                label={label}
+                value={props[key]}
+                mode={mode}
+                isCount={isCount}
+              />
+            ),
+          )}
         </div>
       </CardContent>
     </Card>

@@ -3,6 +3,7 @@
 // ── Log de Eventos — RNF-58: extraído de sensor-monitor.tsx ─────────────────
 
 import { memo } from "react";
+import { formatClock } from "@/lib/format";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -99,10 +100,7 @@ export const EventLog = memo(function EventLog({
             <div>
               {history.map((entry) => {
                 const { cls, icon: Icon } = RISK_CFG[entry.riskLevel];
-                const time = new Date(entry.timestamp).toLocaleTimeString(
-                  "pt-BR",
-                  { hour: "2-digit", minute: "2-digit", second: "2-digit" },
-                );
+                const time = formatClock(entry.timestamp);
                 return (
                   <div
                     key={entry.id}

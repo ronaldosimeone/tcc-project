@@ -32,6 +32,7 @@ const MaintenanceAssistant = dynamic(
 );
 
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { useMediaQuery } from "@/hooks/use-media-query";
 import { cn } from "@/lib/utils";
 import { isActive, NAV_ITEMS, type NavAction } from "./sidebar/constants";
 import { NavLink } from "./sidebar/nav-link";
@@ -39,11 +40,25 @@ import { SidebarFooter } from "./sidebar/sidebar-footer";
 import { SidebarHeader } from "./sidebar/sidebar-header";
 
 export default function Sidebar() {
+  // Desktop (lg+): barra aberta empurra o conteúdo. Abaixo de lg ela começa
+  // recolhida (trilho de ícones) e, quando aberta, sobrepõe o conteúdo em vez
+  // de esmagá-lo — no celular a barra de 256 px deixava ~130 px para a página.
+  const isDesktop = useMediaQuery("(min-width: 1024px)");
   const [isOpen, setIsOpen] = useState(true);
   const [simulationOpen, setSimulationOpen] = useState(false);
   const [maintenanceAssistantOpen, setMaintenanceAssistantOpen] =
     useState(false);
   const pathname = usePathname();
+  const overlay = !isDesktop && isOpen;
+
+  // Acompanha o breakpoint e fecha a sobreposição ao navegar no celular
+  // (ajuste de estado durante o render, sem efeito em cascata).
+  const layoutKey = `${isDesktop}|${pathname}`;
+  const [prevLayoutKey, setPrevLayoutKey] = useState(layoutKey);
+  if (layoutKey !== prevLayoutKey) {
+    setPrevLayoutKey(layoutKey);
+    setIsOpen(isDesktop);
+  }
 
   const handleAction = (action: NavAction) => {
     if (action === "simulation") setSimulationOpen(true);
@@ -57,11 +72,24 @@ export default function Sidebar() {
         open={maintenanceAssistantOpen}
         onOpenChange={setMaintenanceAssistantOpen}
       />
+      {overlay && (
+        <>
+          {/* Mantém o trilho de 64 px no fluxo para a página não pular. */}
+          <div aria-hidden="true" className="w-16 shrink-0" />
+          <button
+            type="button"
+            aria-label="Fechar barra lateral"
+            className="fixed inset-0 z-30 bg-foreground/20"
+            onClick={() => setIsOpen(false)}
+          />
+        </>
+      )}
       <aside
         className={cn(
           "flex shrink-0 flex-col border-r border-input bg-sidebar",
           "overflow-hidden transition-[width] duration-300 ease-in-out",
           isOpen ? "w-64" : "w-16",
+          overlay && "fixed inset-y-0 left-0 z-40 shadow-xl",
         )}
       >
         <SidebarHeader isOpen={isOpen} onToggle={setIsOpen} />

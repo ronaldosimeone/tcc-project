@@ -17,6 +17,7 @@
 import { AlertTriangle, WifiOff, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { formatClock } from "@/lib/format";
 import { isCriticalProb } from "@/lib/risk-thresholds";
 import { cn } from "@/lib/utils";
 import type { WsAlert, WsStatus } from "@/hooks/use-alert-websocket";
@@ -68,11 +69,7 @@ function AlertToast({ alert, onAcknowledge }: AlertToastProps) {
     alert.decision_threshold,
   );
 
-  const time = new Date(alert.timestamp).toLocaleTimeString("pt-BR", {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  });
+  const time = formatClock(alert.timestamp);
 
   return (
     <div

@@ -51,7 +51,8 @@ export function SortableHead({
     >
       <button
         onClick={() => onSort(column)}
-        className="flex items-center gap-1 transition-colors hover:text-foreground"
+        type="button"
+        className="flex items-center gap-1 uppercase tracking-widest transition-colors hover:text-foreground"
       >
         {label}
         <SortIndicator column={column} sort={sort} />

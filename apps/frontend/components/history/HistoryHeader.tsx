@@ -10,6 +10,8 @@ type ExportState = "csv" | "pdf" | null;
 interface HistoryHeaderProps {
   totalEvents: number;
   filteredCount: number;
+  /** Rótulo do período do filtro (ex.: "Últimos 30 dias"). */
+  periodLabel: string;
   /** Eventos exportados no CSV (os do recorte filtrado). */
   events: HistoryEvent[];
 }
@@ -61,6 +63,7 @@ export default function HistoryHeader({
   totalEvents,
   filteredCount,
   events,
+  periodLabel,
 }: HistoryHeaderProps) {
   const [isExporting, setIsExporting] = useState<ExportState>(null);
   const isFiltered = filteredCount !== totalEvents;
@@ -91,7 +94,7 @@ export default function HistoryHeader({
         </h1>
         <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
           <Clock className="h-3.5 w-3.5 shrink-0" />
-          Período selecionado ·{" "}
+          {periodLabel} ·{" "}
           {isFiltered ? (
             <>
               <span className="font-semibold text-foreground">

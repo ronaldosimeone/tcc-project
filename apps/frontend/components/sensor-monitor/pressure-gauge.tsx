@@ -5,8 +5,8 @@
 
 import { memo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
+import { formatFixed } from "@/lib/format";
 import { C } from "./constants";
 import { buildArcPaths } from "./helpers";
 
@@ -34,7 +34,7 @@ function PressureGauge({ label, value, max, unit, color }: PressureGaugeProps) {
           quando o navegador aplica antialiasing agressivo. */}
       <svg
         viewBox="0 0 100 72"
-        className="w-full max-w-[96px] overflow-visible"
+        className="w-full max-w-[120px] overflow-visible"
       >
         <path
           d={bg}
@@ -61,7 +61,7 @@ function PressureGauge({ label, value, max, unit, color }: PressureGaugeProps) {
           fontWeight="700"
           fontFamily="var(--font-geist-sans, sans-serif)"
         >
-          {value.toFixed(1)}
+          {formatFixed(value, 1)}
         </text>
         <text
           x={cx}
@@ -78,17 +78,6 @@ function PressureGauge({ label, value, max, unit, color }: PressureGaugeProps) {
       <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
         {label}
       </span>
-      <div className="w-full max-w-[80px]">
-        <Progress
-          value={pct * 100}
-          className="h-1"
-          style={
-            {
-              "--progress-bg": color,
-            } as React.CSSProperties
-          }
-        />
-      </div>
     </div>
   );
 }
@@ -118,7 +107,10 @@ export const PressureRadials = memo(function PressureRadials({
       </CardHeader>
       <CardContent className="px-4 pb-6">
         {isLoading ? (
-          <div className="flex items-center justify-around gap-2">
+          <div
+            data-testid="gauge-skeleton"
+            className="flex items-center justify-around gap-2"
+          >
             {[0, 1, 2].map((i) => (
               <Skeleton key={i} className="h-[100px] w-[80px] rounded-lg" />
             ))}

@@ -86,6 +86,11 @@ describe("useAlertWebSocket", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.spyOn(Math, "random").mockReturnValue(0); // jitter determinístico: delay = backoff * 0.8
+    // Cada alerta chega 6 s depois do anterior: fora da janela de dedupe
+    // (5 s), então os testes de fila veem alertas distintos. O dedupe tem
+    // teste próprio abaixo.
+    let clock = 0;
+    vi.spyOn(Date, "now").mockImplementation(() => (clock += 6_000));
     MockWebSocket.reset();
     vi.stubGlobal("WebSocket", MockWebSocket);
   });
@@ -225,6 +230,27 @@ describe("useAlertWebSocket", () => {
 
     expect(result.current.alerts[0]!.message_id).toBe("second");
     expect(result.current.alerts[1]!.message_id).toBe("first");
+  });
+
+  it("dedupe: alertas da mesma severidade em < 5 s atualizam o topo em vez de empilhar", async () => {
+    vi.spyOn(Date, "now").mockReturnValue(1_000);
+    const { result } = renderHook(() => useAlertWebSocket());
+    const ws = MockWebSocket.instances[0]!;
+
+    await act(async () => {
+      for (const id of ["a", "b", "c"]) {
+        ws.simulateMessage({
+          type: "alert",
+          message_id: id,
+          probability: 0.8,
+          predicted_class: 1,
+          timestamp: "2024-01-01T10:00:00.000Z",
+        });
+      }
+    });
+
+    expect(result.current.alerts).toHaveLength(1);
+    expect(result.current.alerts[0]!.message_id).toBe("c");
   });
 
   it("ignora frames com JSON inválido sem lançar exceção", async () => {

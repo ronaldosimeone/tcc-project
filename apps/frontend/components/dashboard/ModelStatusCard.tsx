@@ -105,11 +105,11 @@ const ModelStatusCard = memo(function ModelStatusCard({
       </CardHeader>
 
       <CardContent className="flex min-h-0 flex-1 flex-col overflow-y-auto px-5 pb-5">
-        {/* ── Cabeçalho: modelo activo + confiança ── */}
+        {/* ── Cabeçalho: modelo ativo + confiança ── */}
         <div className="flex items-start justify-between gap-3 border-b border-border/60 pb-3">
           <div className="min-w-0 flex-1">
             <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-              Inferência activa
+              Inferência ativa
             </p>
             {error ? (
               <p className="mt-1 text-sm text-muted-foreground/70">
@@ -138,7 +138,9 @@ const ModelStatusCard = memo(function ModelStatusCard({
         </div>
 
         {/* ── Donut: distribuição de saúde ── */}
-        <div className="mt-3 flex items-center gap-4">
+        {/* Quebra a legenda para baixo do donut quando o card é estreito
+            (1024 px): antes os números ficavam cortados à direita. */}
+        <div className="mt-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
           <div className="relative h-24 w-24 shrink-0">
             <ModelStatusDonut pieData={pieData} />
             <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
@@ -151,7 +153,7 @@ const ModelStatusCard = memo(function ModelStatusCard({
             </div>
           </div>
 
-          <ul className="flex flex-1 flex-col gap-1.5 text-xs">
+          <ul className="flex min-w-28 flex-1 flex-col gap-1.5 text-xs">
             {pieData.map((slice) => (
               <li key={slice.name} className="flex items-center gap-2">
                 <span

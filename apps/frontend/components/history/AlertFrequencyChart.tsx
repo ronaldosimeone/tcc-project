@@ -28,12 +28,15 @@ import { TOOLTIP_CONTENT } from "./alert-frequency-chart/chart-tooltip";
 
 interface AlertFrequencyChartProps {
   events: HistoryEvent[];
+  /** Dias da janela do gráfico (o período do filtro). */
+  days?: number;
 }
 
 export default function AlertFrequencyChart({
   events,
+  days = 14,
 }: AlertFrequencyChartProps) {
-  const data = useMemo(() => bucketEventsByDay(events), [events]);
+  const data = useMemo(() => bucketEventsByDay(events, days), [events, days]);
   const totalAlerts = data.reduce((acc, d) => acc + d.alerta + d.critico, 0);
   const peakDay = data.reduce(
     (max, d) => Math.max(max, d.alerta + d.critico),
@@ -50,7 +53,7 @@ export default function AlertFrequencyChart({
               Frequência de Ocorrências
             </CardTitle>
             <p className="mt-0.5 text-[11px] text-muted-foreground">
-              Alertas e falhas por dia · Últimos 14 dias
+              Alertas e falhas por dia · últimos {days} dias
             </p>
           </div>
 
@@ -82,7 +85,7 @@ export default function AlertFrequencyChart({
             visualmente, presente para leitor de tela) dá a série completa
             por dia que só o SVG do Recharts transmitiria visualmente. */}
         <table className="sr-only">
-          <caption>Ocorrências por dia — últimos 14 dias</caption>
+          <caption>Ocorrências por dia — últimos {days} dias</caption>
           <thead>
             <tr>
               <th scope="col">Dia</th>
@@ -105,7 +108,7 @@ export default function AlertFrequencyChart({
             <BarChart
               accessibilityLayer={false}
               data={data}
-              margin={{ top: 8, right: 4, bottom: 0, left: -10 }}
+              margin={{ top: 8, right: 4, bottom: 0, left: -4 }}
               barSize={14}
             >
               <CartesianGrid
@@ -118,7 +121,8 @@ export default function AlertFrequencyChart({
                 tick={AXIS_TICK}
                 tickLine={false}
                 axisLine={false}
-                interval={1}
+                interval="preserveStartEnd"
+                minTickGap={8}
               />
               <YAxis
                 stroke="#94a3b8"
@@ -126,7 +130,7 @@ export default function AlertFrequencyChart({
                 tickLine={false}
                 axisLine={false}
                 allowDecimals={false}
-                width={28}
+                width={40}
               />
               <Tooltip
                 content={TOOLTIP_CONTENT}

@@ -2,6 +2,7 @@
 // Memoizado para estabilidade de referência.
 
 import { memo } from "react";
+import { formatFixed } from "@/lib/format";
 
 interface TooltipPayloadEntry {
   name: string;
@@ -34,7 +35,7 @@ export const ChartTooltip = memo(function ChartTooltip({
           />
           <span className="text-muted-foreground">{entry.name}</span>
           <span className="ml-auto font-bold tabular-nums text-foreground">
-            {entry.value}
+            {formatFixed(entry.value, 2)}
           </span>
         </div>
       ))}

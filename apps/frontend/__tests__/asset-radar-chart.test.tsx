@@ -35,13 +35,13 @@ describe("AssetRadarChart", () => {
       />,
     );
     expect(screen.getByText("IDLE")).toBeInTheDocument();
-    expect(screen.queryByText("LIVE")).not.toBeInTheDocument();
+    expect(screen.queryByText("AO VIVO")).not.toBeInTheDocument();
     expect(screen.getByText(/Ótimo vs Estático/)).toBeInTheDocument();
     // Sem live, a tira de valores brutos (TP2/Temp/Motor) não é renderizada.
     expect(screen.queryByText("TP2")).not.toBeInTheDocument();
   });
 
-  it("modo live: mostra o badge LIVE e os valores brutos instantâneos", () => {
+  it("modo live: mostra o badge AO VIVO e os valores brutos instantâneos", () => {
     render(
       <AssetRadarChart
         sensorData={SENSOR_DATA}
@@ -50,7 +50,7 @@ describe("AssetRadarChart", () => {
         anomalyScore={0.1}
       />,
     );
-    expect(screen.getByText("LIVE")).toBeInTheDocument();
+    expect(screen.getByText("AO VIVO")).toBeInTheDocument();
     expect(screen.getByText(/Ótimo vs Atual/)).toBeInTheDocument();
     expect(screen.getByText("TP2")).toBeInTheDocument();
     expect(screen.getByText("10.10")).toBeInTheDocument();

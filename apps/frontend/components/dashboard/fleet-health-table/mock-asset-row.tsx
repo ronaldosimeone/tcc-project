@@ -39,7 +39,7 @@ export function MockAssetRow({
             className="h-1.5 w-1.5 shrink-0 rounded-full bg-muted-foreground/30"
             aria-hidden="true"
           />
-          <span className="font-mono text-xs text-foreground/80">
+          <span className="whitespace-nowrap font-mono text-xs text-foreground/80">
             {asset.id}
           </span>
           <Badge

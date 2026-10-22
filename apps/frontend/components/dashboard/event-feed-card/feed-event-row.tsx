@@ -29,15 +29,9 @@ export function FeedEventRow({ evt }: FeedEventRowProps) {
         borderTone,
       )}
     >
-      {/* Horário monoespaçado — referência temporal precisa.
-          suppressHydrationWarning: o HTML do SSR é renderizado em UTC
-          enquanto o cliente formata no fuso local — divergência esperada.
-          Após a primeira interação no cliente o valor converge para o
-          horário local correto. */}
-      <span
-        suppressHydrationWarning
-        className="shrink-0 font-mono text-[11px] tabular-nums text-muted-foreground"
-      >
+      {/* Horário monoespaçado — referência temporal precisa. Só é
+          renderizado no cliente (ver EventFeedCard), no fuso local. */}
+      <span className="shrink-0 font-mono text-[11px] tabular-nums text-muted-foreground">
         {formatClockTime(evt.ts)}
       </span>
 
@@ -65,12 +59,8 @@ export function FeedEventRow({ evt }: FeedEventRowProps) {
 
       {/* Tempo relativo à direita — opcional, dispensável em viewports muito
           estreitos. suppressHydrationWarning porque `fromNow` depende de
-          `Date.now()`, que difere entre o instante do render no servidor e
-          o instante do paint no cliente. */}
-      <span
-        suppressHydrationWarning
-        className="hidden shrink-0 text-[10px] text-muted-foreground/70 sm:inline"
-      >
+          `Date.now()`, calculado só no cliente. */}
+      <span className="hidden shrink-0 text-[10px] text-muted-foreground/70 sm:inline">
         {fromNow(evt.ts)}
       </span>
     </li>

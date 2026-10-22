@@ -75,8 +75,8 @@ export function SuggestionForm({ disabled, onSubmit }: SuggestionFormProps) {
           disabled={disabled}
         />
         <p className="text-xs text-muted-foreground">
-          Sugestão automática só é gerada quando a probabilidade excede 0.7
-          (RF-22).
+          Neste formulário a sugestão só é gerada com probabilidade acima de 0,7
+          (RF-22). Nos eventos reais vale o limiar do modelo ativo.
         </p>
       </div>
 

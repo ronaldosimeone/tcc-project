@@ -39,7 +39,7 @@ describe("AssetTable", () => {
       />,
     );
     expect(screen.getByText("APU-Trem-042")).toBeInTheDocument();
-    expect(screen.getByText("LIVE")).toBeInTheDocument();
+    expect(screen.getByText("AO VIVO")).toBeInTheDocument();
     expect(screen.getByText("91.0%")).toBeInTheDocument();
     expect(screen.getByText("6.20")).toBeInTheDocument();
     expect(screen.getByText("95.5")).toBeInTheDocument();

@@ -2,6 +2,7 @@
 
 import type { ComponentType } from "react";
 import { AlertTriangle, CheckCircle2, Info, Wrench } from "lucide-react";
+import { formatClock } from "@/lib/format";
 import { RISK_THRESHOLDS } from "@/lib/risk-thresholds";
 
 /** Tempo relativo em pt-BR — "agora", "há 2 min", "há 3 h". */
@@ -141,10 +142,4 @@ export const MAX_FEED_EVENTS = 50;
 export const VISIBLE_FEED_EVENTS = 10;
 
 /** Horário curto (HH:mm:ss) — formato típico de log industrial / SCADA. */
-export function formatClockTime(ts: number): string {
-  return new Date(ts).toLocaleTimeString("pt-BR", {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  });
-}
+export const formatClockTime = (ts: number): string => formatClock(ts);

@@ -43,14 +43,14 @@ export function SidebarHeader({ isOpen, onToggle }: SidebarHeaderProps) {
       ) : (
         <div className="group relative flex w-full items-center justify-center">
           {/* Ícone da logo — desaparece no hover */}
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 ring-1 ring-primary/30 transition-opacity duration-150 group-hover:opacity-0">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 ring-1 ring-primary/30 transition-opacity duration-150 group-hover:opacity-0 max-lg:opacity-0">
             <Cpu className="h-4 w-4 text-primary" />
           </div>
           {/* Botão de abrir — aparece no hover */}
           <Button
             variant="ghost"
             size="icon"
-            className="absolute inset-0 m-auto h-8 w-8 text-muted-foreground opacity-0 transition-opacity duration-150 group-hover:opacity-100 hover:text-sidebar-foreground"
+            className="absolute inset-0 m-auto h-8 w-8 text-muted-foreground opacity-0 transition-opacity duration-150 group-hover:opacity-100 hover:text-sidebar-foreground focus-visible:opacity-100 max-lg:opacity-100"
             onClick={() => onToggle(true)}
             aria-label="Abrir barra lateral"
           >

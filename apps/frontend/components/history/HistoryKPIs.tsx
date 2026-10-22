@@ -154,7 +154,7 @@ export default function HistoryKPIs({ events, kpis }: HistoryKPIsProps) {
   const tiles = useMemo(() => reliabilityTiles(kpis), [kpis]);
 
   return (
-    <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
+    <div className="grid grid-cols-2 gap-4 md:grid-cols-3 2xl:grid-cols-6">
       {tiles.map((t) => (
         <KpiTile key={t.title} {...t} />
       ))}

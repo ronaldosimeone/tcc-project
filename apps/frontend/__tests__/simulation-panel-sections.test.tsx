@@ -55,12 +55,12 @@ describe("ModelSection", () => {
     vi.clearAllMocks();
   });
 
-  it("carrega e exibe o modelo activo formatado, listando só os artefatos prontos", async () => {
+  it("carrega e exibe o modelo ativo formatado, listando só os artefatos prontos", async () => {
     mockedListModels.mockResolvedValue(MODELS_RESPONSE);
     render(<ModelSection />);
 
     await waitFor(() => {
-      expect(screen.getByText(/activo · /)).toBeInTheDocument();
+      expect(screen.getByText(/ativo · /)).toBeInTheDocument();
     });
 
     fireEvent.click(screen.getByRole("combobox"));
@@ -84,7 +84,7 @@ describe("ModelSection", () => {
     render(<ModelSection />);
 
     await waitFor(() => {
-      expect(screen.getByText(/activo · /)).toBeInTheDocument();
+      expect(screen.getByText(/ativo · /)).toBeInTheDocument();
     });
 
     fireEvent.click(screen.getByRole("combobox"));
@@ -104,7 +104,7 @@ describe("ModelSection", () => {
     render(<ModelSection />);
 
     await waitFor(() => {
-      expect(screen.getByText(/activo · /)).toBeInTheDocument();
+      expect(screen.getByText(/ativo · /)).toBeInTheDocument();
     });
 
     fireEvent.click(screen.getByRole("combobox"));

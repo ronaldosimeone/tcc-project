@@ -87,7 +87,7 @@ export function LiveAssetRow({
               )}
             />
           </span>
-          <span className="font-mono text-xs font-semibold text-foreground">
+          <span className="whitespace-nowrap font-mono text-xs font-semibold text-foreground">
             APU-Trem-042
           </span>
           <Badge
@@ -101,7 +101,7 @@ export function LiveAssetRow({
                 : "border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-400",
             )}
           >
-            LIVE
+            AO VIVO
           </Badge>
         </button>
       </td>
