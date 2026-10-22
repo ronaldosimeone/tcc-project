@@ -1,0 +1,1200 @@
+{
+  "model": "cusum",
+  "runs": [
+    {
+      "threshold": 0.5,
+      "pr_auc": 0.03489473482244208,
+      "samples": {
+        "tn": 161536,
+        "fp": 0,
+        "fn": 2360,
+        "tp": 0
+      },
+      "alarms": {
+        "tn": 161536,
+        "fp": 0,
+        "fn": 2360,
+        "tp": 0
+      },
+      "events": {
+        "failures": 1,
+        "detected": 0,
+        "missed": 1,
+        "false_alarm_episodes": 0,
+        "false_alarms_per_day": 0.0,
+        "mean_lead_time_s": null,
+        "expected_cost": 100.0
+      },
+      "seed": 0,
+      "fold": 1,
+      "test_dataset": "2020",
+      "params": {
+        "sensors": "Motor_current+Oil_temperature",
+        "k": 0.5,
+        "reference": "rolling"
+      },
+      "threshold_calibrated": 0.5,
+      "threshold_raw": 9.543891020675078,
+      "threshold_source": "fallback (<2 failures in training: a-priori threshold, uncalibrated)",
+      "ece_raw": null,
+      "ece_calibrated": null,
+      "search": [],
+      "seconds": 0.8
+    },
+    {
+      "threshold": 0.5,
+      "pr_auc": 0.29782001150402554,
+      "samples": {
+        "tn": 146807,
+        "fp": 16684,
+        "fn": 11074,
+        "tp": 6241
+      },
+      "alarms": {
+        "tn": 146812,
+        "fp": 16679,
+        "fn": 11079,
+        "tp": 6236
+      },
+      "events": {
+        "failures": 1,
+        "detected": 1,
+        "missed": 0,
+        "false_alarm_episodes": 56,
+        "false_alarms_per_day": 2.307309340825985,
+        "mean_lead_time_s": -45910.0,
+        "expected_cost": 56.0
+      },
+      "seed": 0,
+      "fold": 2,
+      "test_dataset": "2020",
+      "params": {
+        "sensors": "TP2",
+        "k": 1.0,
+        "reference": "rolling"
+      },
+      "threshold_calibrated": 0.24,
+      "threshold_raw": 8.983538816484797,
+      "threshold_source": "nested LOFO OOF (2 inner folds)",
+      "ece_raw": null,
+      "ece_calibrated": 0.0897572337058661,
+      "search": [
+        {
+          "params": {
+            "sensors": "Motor_current+Oil_temperature",
+            "k": 0.5,
+            "reference": "rolling"
+          },
+          "oof_cost": 141.0,
+          "oof_pr_auc": 0.07303515751330399,
+          "threshold": 0.1
+        },
+        {
+          "params": {
+            "sensors": "Motor_current",
+            "k": 0.5,
+            "reference": "static"
+          },
+          "oof_cost": 53.0,
+          "oof_pr_auc": 0.2080927695241877,
+          "threshold": 0.11
+        },
+        {
+          "params": {
+            "sensors": "Motor_current",
+            "k": 0.5,
+            "reference": "rolling"
+          },
+          "oof_cost": 69.0,
+          "oof_pr_auc": 0.17467723432157287,
+          "threshold": 0.14
+        },
+        {
+          "params": {
+            "sensors": "Motor_current",
+            "k": 1.0,
+            "reference": "static"
+          },
+          "oof_cost": 44.0,
+          "oof_pr_auc": 0.2613371086517762,
+          "threshold": 0.23
+        },
+        {
+          "params": {
+            "sensors": "Motor_current",
+            "k": 1.0,
+            "reference": "rolling"
+          },
+          "oof_cost": 66.0,
+          "oof_pr_auc": 0.1674624574971679,
+          "threshold": 0.18
+        },
+        {
+          "params": {
+            "sensors": "Oil_temperature",
+            "k": 0.5,
+            "reference": "static"
+          },
+          "oof_cost": 200.0,
+          "oof_pr_auc": 0.03268877020336687,
+          "threshold": 0.99
+        },
+        {
+          "params": {
+            "sensors": "Oil_temperature",
+            "k": 0.5,
+            "reference": "rolling"
+          },
+          "oof_cost": 138.0,
+          "oof_pr_auc": 0.08029830716454127,
+          "threshold": 0.11
+        },
+        {
+          "params": {
+            "sensors": "Oil_temperature",
+            "k": 1.0,
+            "reference": "static"
+          },
+          "oof_cost": 90.0,
+          "oof_pr_auc": 0.04897083617432611,
+          "threshold": 0.06
+        },
+        {
+          "params": {
+            "sensors": "Oil_temperature",
+            "k": 1.0,
+            "reference": "rolling"
+          },
+          "oof_cost": 69.0,
+          "oof_pr_auc": 0.11151312272766603,
+          "threshold": 0.1
+        },
+        {
+          "params": {
+            "sensors": "TP2",
+            "k": 0.5,
+            "reference": "static"
+          },
+          "oof_cost": 46.0,
+          "oof_pr_auc": 0.26153586588765954,
+          "threshold": 0.21
+        },
+        {
+          "params": {
+            "sensors": "TP2",
+            "k": 0.5,
+            "reference": "rolling"
+          },
+          "oof_cost": 42.0,
+          "oof_pr_auc": 0.16897947420797937,
+          "threshold": 0.21
+        },
+        {
+          "params": {
+            "sensors": "TP2",
+            "k": 1.0,
+            "reference": "static"
+          },
+          "oof_cost": 46.0,
+          "oof_pr_auc": 0.26251308832376724,
+          "threshold": 0.24
+        },
+        {
+          "params": {
+            "sensors": "TP2",
+            "k": 1.0,
+            "reference": "rolling"
+          },
+          "oof_cost": 38.0,
+          "oof_pr_auc": 0.16816561016751294,
+          "threshold": 0.24
+        },
+        {
+          "params": {
+            "sensors": "Motor_current+Oil_temperature",
+            "k": 0.5,
+            "reference": "static"
+          },
+          "oof_cost": 178.0,
+          "oof_pr_auc": 0.03809744135043137,
+          "threshold": 0.04
+        },
+        {
+          "params": {
+            "sensors": "Motor_current+Oil_temperature",
+            "k": 1.0,
+            "reference": "static"
+          },
+          "oof_cost": 93.0,
+          "oof_pr_auc": 0.0685210329140553,
+          "threshold": 0.07
+        },
+        {
+          "params": {
+            "sensors": "Motor_current+Oil_temperature",
+            "k": 1.0,
+            "reference": "rolling"
+          },
+          "oof_cost": 86.0,
+          "oof_pr_auc": 0.09843943240114908,
+          "threshold": 0.09
+        }
+      ],
+      "seconds": 333.5
+    },
+    {
+      "threshold": 0.5,
+      "pr_auc": 0.6565583582627635,
+      "samples": {
+        "tn": 466295,
+        "fp": 0,
+        "fn": 1141,
+        "tp": 481
+      },
+      "alarms": {
+        "tn": 466295,
+        "fp": 0,
+        "fn": 1146,
+        "tp": 476
+      },
+      "events": {
+        "failures": 1,
+        "detected": 1,
+        "missed": 0,
+        "false_alarm_episodes": 0,
+        "false_alarms_per_day": 0.0,
+        "mean_lead_time_s": -5631.0,
+        "expected_cost": 0.0
+      },
+      "seed": 0,
+      "fold": 3,
+      "test_dataset": "2020",
+      "params": {
+        "sensors": "Oil_temperature",
+        "k": 1.0,
+        "reference": "rolling"
+      },
+      "threshold_calibrated": 0.2,
+      "threshold_raw": 8.489767040018288,
+      "threshold_source": "nested LOFO OOF (3 inner folds)",
+      "ece_raw": null,
+      "ece_calibrated": 0.006831985914835487,
+      "search": [
+        {
+          "params": {
+            "sensors": "Motor_current+Oil_temperature",
+            "k": 0.5,
+            "reference": "rolling"
+          },
+          "oof_cost": 182.0,
+          "oof_pr_auc": 0.12019974891691432,
+          "threshold": 0.15
+        },
+        {
+          "params": {
+            "sensors": "Motor_current",
+            "k": 0.5,
+            "reference": "static"
+          },
+          "oof_cost": 146.0,
+          "oof_pr_auc": 0.21090855378335788,
+          "threshold": 0.27
+        },
+        {
+          "params": {
+            "sensors": "Motor_current",
+            "k": 0.5,
+            "reference": "rolling"
+          },
+          "oof_cost": 130.0,
+          "oof_pr_auc": 0.20907123116871326,
+          "threshold": 0.17
+        },
+        {
+          "params": {
+            "sensors": "Motor_current",
+            "k": 1.0,
+            "reference": "static"
+          },
+          "oof_cost": 102.0,
+          "oof_pr_auc": 0.2975982988618408,
+          "threshold": 0.24
+        },
+        {
+          "params": {
+            "sensors": "Motor_current",
+            "k": 1.0,
+            "reference": "rolling"
+          },
+          "oof_cost": 121.0,
+          "oof_pr_auc": 0.22150830176633224,
+          "threshold": 0.24
+        },
+        {
+          "params": {
+            "sensors": "Oil_temperature",
+            "k": 0.5,
+            "reference": "static"
+          },
+          "oof_cost": 229.0,
+          "oof_pr_auc": 0.0641132111401312,
+          "threshold": 0.1
+        },
+        {
+          "params": {
+            "sensors": "Oil_temperature",
+            "k": 0.5,
+            "reference": "rolling"
+          },
+          "oof_cost": 136.0,
+          "oof_pr_auc": 0.1755710607616852,
+          "threshold": 0.11
+        },
+        {
+          "params": {
+            "sensors": "Oil_temperature",
+            "k": 1.0,
+            "reference": "static"
+          },
+          "oof_cost": 191.0,
+          "oof_pr_auc": 0.0821087451365539,
+          "threshold": 0.1
+        },
+        {
+          "params": {
+            "sensors": "Oil_temperature",
+            "k": 1.0,
+            "reference": "rolling"
+          },
+          "oof_cost": 68.0,
+          "oof_pr_auc": 0.22050304850701719,
+          "threshold": 0.2
+        },
+        {
+          "params": {
+            "sensors": "TP2",
+            "k": 0.5,
+            "reference": "static"
+          },
+          "oof_cost": 102.0,
+          "oof_pr_auc": 0.2915382605847769,
+          "threshold": 0.21
+        },
+        {
+          "params": {
+            "sensors": "TP2",
+            "k": 0.5,
+            "reference": "rolling"
+          },
+          "oof_cost": 100.0,
+          "oof_pr_auc": 0.21418363387938688,
+          "threshold": 0.23
+        },
+        {
+          "params": {
+            "sensors": "TP2",
+            "k": 1.0,
+            "reference": "static"
+          },
+          "oof_cost": 101.0,
+          "oof_pr_auc": 0.3013528409272332,
+          "threshold": 0.28
+        },
+        {
+          "params": {
+            "sensors": "TP2",
+            "k": 1.0,
+            "reference": "rolling"
+          },
+          "oof_cost": 94.0,
+          "oof_pr_auc": 0.22514480032246612,
+          "threshold": 0.29
+        },
+        {
+          "params": {
+            "sensors": "Motor_current+Oil_temperature",
+            "k": 0.5,
+            "reference": "static"
+          },
+          "oof_cost": 257.0,
+          "oof_pr_auc": 0.058626433397431545,
+          "threshold": 0.09
+        },
+        {
+          "params": {
+            "sensors": "Motor_current+Oil_temperature",
+            "k": 1.0,
+            "reference": "static"
+          },
+          "oof_cost": 237.0,
+          "oof_pr_auc": 0.07079088597645568,
+          "threshold": 0.09
+        },
+        {
+          "params": {
+            "sensors": "Motor_current+Oil_temperature",
+            "k": 1.0,
+            "reference": "rolling"
+          },
+          "oof_cost": 135.0,
+          "oof_pr_auc": 0.149279929379288,
+          "threshold": 0.15
+        }
+      ],
+      "seconds": 558.5
+    },
+    {
+      "threshold": 0.5,
+      "pr_auc": 0.026470591419374613,
+      "samples": {
+        "tn": 492543,
+        "fp": 0,
+        "fn": 1483,
+        "tp": 0
+      },
+      "alarms": {
+        "tn": 492543,
+        "fp": 0,
+        "fn": 1483,
+        "tp": 0
+      },
+      "events": {
+        "failures": 1,
+        "detected": 0,
+        "missed": 1,
+        "false_alarm_episodes": 0,
+        "false_alarms_per_day": 0.0,
+        "mean_lead_time_s": null,
+        "expected_cost": 100.0
+      },
+      "seed": 0,
+      "fold": 4,
+      "test_dataset": "2022",
+      "params": {
+        "sensors": "Oil_temperature",
+        "k": 1.0,
+        "reference": "rolling"
+      },
+      "threshold_calibrated": 0.2,
+      "threshold_raw": 8.49733776730684,
+      "threshold_source": "nested LOFO OOF (4 inner folds)",
+      "ece_raw": null,
+      "ece_calibrated": 0.010663430125032021,
+      "search": [
+        {
+          "params": {
+            "sensors": "Motor_current+Oil_temperature",
+            "k": 0.5,
+            "reference": "rolling"
+          },
+          "oof_cost": 217.0,
+          "oof_pr_auc": 0.12162114841197633,
+          "threshold": 0.12
+        },
+        {
+          "params": {
+            "sensors": "Motor_current",
+            "k": 0.5,
+            "reference": "static"
+          },
+          "oof_cost": 176.0,
+          "oof_pr_auc": 0.20988258887744315,
+          "threshold": 0.17
+        },
+        {
+          "params": {
+            "sensors": "Motor_current",
+            "k": 0.5,
+            "reference": "rolling"
+          },
+          "oof_cost": 131.0,
+          "oof_pr_auc": 0.20695974676537054,
+          "threshold": 0.16
+        },
+        {
+          "params": {
+            "sensors": "Motor_current",
+            "k": 1.0,
+            "reference": "static"
+          },
+          "oof_cost": 107.0,
+          "oof_pr_auc": 0.291376951910956,
+          "threshold": 0.22
+        },
+        {
+          "params": {
+            "sensors": "Motor_current",
+            "k": 1.0,
+            "reference": "rolling"
+          },
+          "oof_cost": 126.0,
+          "oof_pr_auc": 0.22154516900325416,
+          "threshold": 0.23
+        },
+        {
+          "params": {
+            "sensors": "Oil_temperature",
+            "k": 0.5,
+            "reference": "static"
+          },
+          "oof_cost": 400.0,
+          "oof_pr_auc": 0.0337539946933674,
+          "threshold": 0.99
+        },
+        {
+          "params": {
+            "sensors": "Oil_temperature",
+            "k": 0.5,
+            "reference": "rolling"
+          },
+          "oof_cost": 134.0,
+          "oof_pr_auc": 0.17800652492796526,
+          "threshold": 0.11
+        },
+        {
+          "params": {
+            "sensors": "Oil_temperature",
+            "k": 1.0,
+            "reference": "static"
+          },
+          "oof_cost": 400.0,
+          "oof_pr_auc": 0.043888954951402645,
+          "threshold": 0.99
+        },
+        {
+          "params": {
+            "sensors": "Oil_temperature",
+            "k": 1.0,
+            "reference": "rolling"
+          },
+          "oof_cost": 68.0,
+          "oof_pr_auc": 0.22103742871770538,
+          "threshold": 0.2
+        },
+        {
+          "params": {
+            "sensors": "TP2",
+            "k": 0.5,
+            "reference": "static"
+          },
+          "oof_cost": 112.0,
+          "oof_pr_auc": 0.29190431189188715,
+          "threshold": 0.2
+        },
+        {
+          "params": {
+            "sensors": "TP2",
+            "k": 0.5,
+            "reference": "rolling"
+          },
+          "oof_cost": 100.0,
+          "oof_pr_auc": 0.2140139075571625,
+          "threshold": 0.23
+        },
+        {
+          "params": {
+            "sensors": "TP2",
+            "k": 1.0,
+            "reference": "static"
+          },
+          "oof_cost": 124.0,
+          "oof_pr_auc": 0.3010842152008049,
+          "threshold": 0.22
+        },
+        {
+          "params": {
+            "sensors": "TP2",
+            "k": 1.0,
+            "reference": "rolling"
+          },
+          "oof_cost": 105.0,
+          "oof_pr_auc": 0.2282641023125722,
+          "threshold": 0.28
+        },
+        {
+          "params": {
+            "sensors": "Motor_current+Oil_temperature",
+            "k": 0.5,
+            "reference": "static"
+          },
+          "oof_cost": 400.0,
+          "oof_pr_auc": 0.03405183732737314,
+          "threshold": 0.99
+        },
+        {
+          "params": {
+            "sensors": "Motor_current+Oil_temperature",
+            "k": 1.0,
+            "reference": "static"
+          },
+          "oof_cost": 400.0,
+          "oof_pr_auc": 0.04407564764607548,
+          "threshold": 0.99
+        },
+        {
+          "params": {
+            "sensors": "Motor_current+Oil_temperature",
+            "k": 1.0,
+            "reference": "rolling"
+          },
+          "oof_cost": 134.0,
+          "oof_pr_auc": 0.14958363063473903,
+          "threshold": 0.15
+        }
+      ],
+      "seconds": 686.7
+    },
+    {
+      "threshold": 0.5,
+      "pr_auc": 0.09090913952443125,
+      "samples": {
+        "tn": 316083,
+        "fp": 0,
+        "fn": 181,
+        "tp": 0
+      },
+      "alarms": {
+        "tn": 316083,
+        "fp": 0,
+        "fn": 181,
+        "tp": 0
+      },
+      "events": {
+        "failures": 1,
+        "detected": 0,
+        "missed": 1,
+        "false_alarm_episodes": 0,
+        "false_alarms_per_day": 0.0,
+        "mean_lead_time_s": null,
+        "expected_cost": 100.0
+      },
+      "seed": 0,
+      "fold": 5,
+      "test_dataset": "2022",
+      "params": {
+        "sensors": "Oil_temperature",
+        "k": 1.0,
+        "reference": "rolling"
+      },
+      "threshold_calibrated": 0.14,
+      "threshold_raw": 8.17084414575429,
+      "threshold_source": "nested LOFO OOF (5 inner folds)",
+      "ece_raw": null,
+      "ece_calibrated": 0.005258051887424733,
+      "search": [
+        {
+          "params": {
+            "sensors": "Motor_current+Oil_temperature",
+            "k": 0.5,
+            "reference": "rolling"
+          },
+          "oof_cost": 297.0,
+          "oof_pr_auc": 0.11380480557046128,
+          "threshold": 0.08
+        },
+        {
+          "params": {
+            "sensors": "Motor_current",
+            "k": 0.5,
+            "reference": "static"
+          },
+          "oof_cost": 273.0,
+          "oof_pr_auc": 0.2118482313821889,
+          "threshold": 0.19
+        },
+        {
+          "params": {
+            "sensors": "Motor_current",
+            "k": 0.5,
+            "reference": "rolling"
+          },
+          "oof_cost": 230.0,
+          "oof_pr_auc": 0.19482924226058382,
+          "threshold": 0.15
+        },
+        {
+          "params": {
+            "sensors": "Motor_current",
+            "k": 1.0,
+            "reference": "static"
+          },
+          "oof_cost": 207.0,
+          "oof_pr_auc": 0.28287731712025593,
+          "threshold": 0.22
+        },
+        {
+          "params": {
+            "sensors": "Motor_current",
+            "k": 1.0,
+            "reference": "rolling"
+          },
+          "oof_cost": 221.0,
+          "oof_pr_auc": 0.21535618108310062,
+          "threshold": 0.23
+        },
+        {
+          "params": {
+            "sensors": "Oil_temperature",
+            "k": 0.5,
+            "reference": "static"
+          },
+          "oof_cost": 500.0,
+          "oof_pr_auc": 0.02999209457851293,
+          "threshold": 0.99
+        },
+        {
+          "params": {
+            "sensors": "Oil_temperature",
+            "k": 0.5,
+            "reference": "rolling"
+          },
+          "oof_cost": 228.0,
+          "oof_pr_auc": 0.16667114384271015,
+          "threshold": 0.1
+        },
+        {
+          "params": {
+            "sensors": "Oil_temperature",
+            "k": 1.0,
+            "reference": "static"
+          },
+          "oof_cost": 500.0,
+          "oof_pr_auc": 0.037190353232508154,
+          "threshold": 0.99
+        },
+        {
+          "params": {
+            "sensors": "Oil_temperature",
+            "k": 1.0,
+            "reference": "rolling"
+          },
+          "oof_cost": 108.0,
+          "oof_pr_auc": 0.20821830110785997,
+          "threshold": 0.14
+        },
+        {
+          "params": {
+            "sensors": "TP2",
+            "k": 0.5,
+            "reference": "static"
+          },
+          "oof_cost": 198.0,
+          "oof_pr_auc": 0.28605203889152625,
+          "threshold": 0.06
+        },
+        {
+          "params": {
+            "sensors": "TP2",
+            "k": 0.5,
+            "reference": "rolling"
+          },
+          "oof_cost": 156.0,
+          "oof_pr_auc": 0.2110401861539554,
+          "threshold": 0.13
+        },
+        {
+          "params": {
+            "sensors": "TP2",
+            "k": 1.0,
+            "reference": "static"
+          },
+          "oof_cost": 175.0,
+          "oof_pr_auc": 0.29561894761679997,
+          "threshold": 0.09
+        },
+        {
+          "params": {
+            "sensors": "TP2",
+            "k": 1.0,
+            "reference": "rolling"
+          },
+          "oof_cost": 145.0,
+          "oof_pr_auc": 0.2263094543173037,
+          "threshold": 0.19
+        },
+        {
+          "params": {
+            "sensors": "Motor_current+Oil_temperature",
+            "k": 0.5,
+            "reference": "static"
+          },
+          "oof_cost": 500.0,
+          "oof_pr_auc": 0.0352137063299342,
+          "threshold": 0.99
+        },
+        {
+          "params": {
+            "sensors": "Motor_current+Oil_temperature",
+            "k": 1.0,
+            "reference": "static"
+          },
+          "oof_cost": 477.0,
+          "oof_pr_auc": 0.04557745371887071,
+          "threshold": 0.07
+        },
+        {
+          "params": {
+            "sensors": "Motor_current+Oil_temperature",
+            "k": 1.0,
+            "reference": "rolling"
+          },
+          "oof_cost": 184.0,
+          "oof_pr_auc": 0.14156225247557566,
+          "threshold": 0.11
+        }
+      ],
+      "seconds": 826.8
+    },
+    {
+      "threshold": 0.5,
+      "pr_auc": 0.05978517586633388,
+      "samples": {
+        "tn": 242601,
+        "fp": 5052,
+        "fn": 19552,
+        "tp": 0
+      },
+      "alarms": {
+        "tn": 242631,
+        "fp": 5022,
+        "fn": 19552,
+        "tp": 0
+      },
+      "events": {
+        "failures": 1,
+        "detected": 0,
+        "missed": 1,
+        "false_alarm_episodes": 18,
+        "false_alarms_per_day": 0.4853220657394202,
+        "mean_lead_time_s": null,
+        "expected_cost": 118.0
+      },
+      "seed": 0,
+      "fold": 6,
+      "test_dataset": "2022",
+      "params": {
+        "sensors": "Oil_temperature",
+        "k": 1.0,
+        "reference": "rolling"
+      },
+      "threshold_calibrated": 0.14,
+      "threshold_raw": 8.20203085300955,
+      "threshold_source": "nested LOFO OOF (6 inner folds)",
+      "ece_raw": null,
+      "ece_calibrated": 0.07173000878507893,
+      "search": [
+        {
+          "params": {
+            "sensors": "Motor_current+Oil_temperature",
+            "k": 0.5,
+            "reference": "rolling"
+          },
+          "oof_cost": 409.0,
+          "oof_pr_auc": 0.11247714931726228,
+          "threshold": 0.12
+        },
+        {
+          "params": {
+            "sensors": "Motor_current",
+            "k": 0.5,
+            "reference": "static"
+          },
+          "oof_cost": 383.0,
+          "oof_pr_auc": 0.18844745461983176,
+          "threshold": 0.15
+        },
+        {
+          "params": {
+            "sensors": "Motor_current",
+            "k": 0.5,
+            "reference": "rolling"
+          },
+          "oof_cost": 327.0,
+          "oof_pr_auc": 0.19224327024523935,
+          "threshold": 0.15
+        },
+        {
+          "params": {
+            "sensors": "Motor_current",
+            "k": 1.0,
+            "reference": "static"
+          },
+          "oof_cost": 311.0,
+          "oof_pr_auc": 0.27791629429875453,
+          "threshold": 0.21
+        },
+        {
+          "params": {
+            "sensors": "Motor_current",
+            "k": 1.0,
+            "reference": "rolling"
+          },
+          "oof_cost": 321.0,
+          "oof_pr_auc": 0.21326235956783962,
+          "threshold": 0.23
+        },
+        {
+          "params": {
+            "sensors": "Oil_temperature",
+            "k": 0.5,
+            "reference": "static"
+          },
+          "oof_cost": 600.0,
+          "oof_pr_auc": 0.02603340968155773,
+          "threshold": 0.99
+        },
+        {
+          "params": {
+            "sensors": "Oil_temperature",
+            "k": 0.5,
+            "reference": "rolling"
+          },
+          "oof_cost": 352.0,
+          "oof_pr_auc": 0.16494088049535013,
+          "threshold": 0.09
+        },
+        {
+          "params": {
+            "sensors": "Oil_temperature",
+            "k": 1.0,
+            "reference": "static"
+          },
+          "oof_cost": 600.0,
+          "oof_pr_auc": 0.03115008361767771,
+          "threshold": 0.99
+        },
+        {
+          "params": {
+            "sensors": "Oil_temperature",
+            "k": 1.0,
+            "reference": "rolling"
+          },
+          "oof_cost": 205.0,
+          "oof_pr_auc": 0.2062460053003288,
+          "threshold": 0.14
+        },
+        {
+          "params": {
+            "sensors": "TP2",
+            "k": 0.5,
+            "reference": "static"
+          },
+          "oof_cost": 291.0,
+          "oof_pr_auc": 0.28075595451358504,
+          "threshold": 0.06
+        },
+        {
+          "params": {
+            "sensors": "TP2",
+            "k": 0.5,
+            "reference": "rolling"
+          },
+          "oof_cost": 255.0,
+          "oof_pr_auc": 0.21017366883453253,
+          "threshold": 0.13
+        },
+        {
+          "params": {
+            "sensors": "TP2",
+            "k": 1.0,
+            "reference": "static"
+          },
+          "oof_cost": 275.0,
+          "oof_pr_auc": 0.2932502985127343,
+          "threshold": 0.09
+        },
+        {
+          "params": {
+            "sensors": "TP2",
+            "k": 1.0,
+            "reference": "rolling"
+          },
+          "oof_cost": 244.0,
+          "oof_pr_auc": 0.22485536170110484,
+          "threshold": 0.19
+        },
+        {
+          "params": {
+            "sensors": "Motor_current+Oil_temperature",
+            "k": 0.5,
+            "reference": "static"
+          },
+          "oof_cost": 600.0,
+          "oof_pr_auc": 0.03150367375409402,
+          "threshold": 0.99
+        },
+        {
+          "params": {
+            "sensors": "Motor_current+Oil_temperature",
+            "k": 1.0,
+            "reference": "static"
+          },
+          "oof_cost": 600.0,
+          "oof_pr_auc": 0.03974361144950286,
+          "threshold": 0.99
+        },
+        {
+          "params": {
+            "sensors": "Motor_current+Oil_temperature",
+            "k": 1.0,
+            "reference": "rolling"
+          },
+          "oof_cost": 297.0,
+          "oof_pr_auc": 0.14012507418968637,
+          "threshold": 0.1
+        }
+      ],
+      "seconds": 873.9
+    }
+  ],
+  "summary": {
+    "per_seed": [
+      {
+        "seed": 0,
+        "samples": {
+          "tn": 1825865,
+          "fp": 21736,
+          "fn": 35791,
+          "tp": 6722
+        },
+        "alarms": {
+          "tn": 1825900,
+          "fp": 21701,
+          "fn": 35801,
+          "tp": 6712
+        },
+        "events": {
+          "failures": 6,
+          "detected": 2,
+          "missed": 4,
+          "false_alarm_episodes": 74
+        },
+        "expected_cost_mean": 79.0,
+        "metrics_alarms": {
+          "precision": 0.23622989476648013,
+          "recall": 0.15788111871662786,
+          "f1": 0.1892676874488904,
+          "specificity": 0.9882544986715205
+        },
+        "metrics_samples": {
+          "precision": 0.2362077447466442,
+          "recall": 0.1581163408839649,
+          "f1": 0.18942948528272113,
+          "specificity": 0.9882355551875107
+        },
+        "ece_raw_mean": null,
+        "ece_calibrated_mean": null
+      }
+    ],
+    "detected_mean": 2.0,
+    "detected_min": 2,
+    "detected_max": 2,
+    "expected_cost_mean": 79.0,
+    "false_alarm_episodes_mean": 74.0
+  },
+  "schema_version": "1.0",
+  "evaluated_at": "2026-10-22T14:57:18.378702+00:00",
+  "protocol": "outer purged walk-forward (6 folds) \u00d7 inner leave-one-failure-out; Platt calibration; RN-02 threshold",
+  "seeds": 1,
+  "search_space": [
+    {
+      "sensors": "Motor_current+Oil_temperature",
+      "k": 0.5,
+      "reference": "rolling"
+    },
+    {
+      "sensors": "Motor_current",
+      "k": 0.5,
+      "reference": "static"
+    },
+    {
+      "sensors": "Motor_current",
+      "k": 0.5,
+      "reference": "rolling"
+    },
+    {
+      "sensors": "Motor_current",
+      "k": 1.0,
+      "reference": "static"
+    },
+    {
+      "sensors": "Motor_current",
+      "k": 1.0,
+      "reference": "rolling"
+    },
+    {
+      "sensors": "Oil_temperature",
+      "k": 0.5,
+      "reference": "static"
+    },
+    {
+      "sensors": "Oil_temperature",
+      "k": 0.5,
+      "reference": "rolling"
+    },
+    {
+      "sensors": "Oil_temperature",
+      "k": 1.0,
+      "reference": "static"
+    },
+    {
+      "sensors": "Oil_temperature",
+      "k": 1.0,
+      "reference": "rolling"
+    },
+    {
+      "sensors": "TP2",
+      "k": 0.5,
+      "reference": "static"
+    },
+    {
+      "sensors": "TP2",
+      "k": 0.5,
+      "reference": "rolling"
+    },
+    {
+      "sensors": "TP2",
+      "k": 1.0,
+      "reference": "static"
+    },
+    {
+      "sensors": "TP2",
+      "k": 1.0,
+      "reference": "rolling"
+    },
+    {
+      "sensors": "Motor_current+Oil_temperature",
+      "k": 0.5,
+      "reference": "static"
+    },
+    {
+      "sensors": "Motor_current+Oil_temperature",
+      "k": 1.0,
+      "reference": "static"
+    },
+    {
+      "sensors": "Motor_current+Oil_temperature",
+      "k": 1.0,
+      "reference": "rolling"
+    }
+  ],
+  "dropped_sensors": [
+    "Reservoirs",
+    "Oil_level"
+  ],
+  "sensors": [
+    "TP2",
+    "TP3",
+    "H1",
+    "DV_pressure",
+    "Motor_current",
+    "Oil_temperature",
+    "COMP",
+    "DV_eletric",
+    "Towers",
+    "MPG"
+  ],
+  "ablation_tag": null,
+  "deep_config": null,
+  "elapsed_s": 3280.3
+}

@@ -37,6 +37,7 @@ import pandas as pd
 import src.deep_temporal as dt
 import src.evaluate_cross_dataset as xd
 import src.nested_protocol as npc
+import src.statistical_baselines as sb
 from src.confusion import add as _add
 from src.confusion import fold_report
 from src.confusion import metrics as _metrics
@@ -222,7 +223,9 @@ def summarise(runs: list[dict[str, Any]]) -> dict[str, Any]:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[1])
-    parser.add_argument("--models", nargs="+", default=ALL_MODELS, choices=ALL_MODELS)
+    parser.add_argument(
+        "--models", nargs="+", default=ALL_MODELS, choices=[*ALL_MODELS, *sb.BASELINES]
+    )
     parser.add_argument("--seeds", type=int, default=3)
     parser.add_argument(
         "--drop-sensors", nargs="+", default=[], help="ablation: drop these sensors too"

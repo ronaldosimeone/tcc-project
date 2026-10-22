@@ -18,7 +18,8 @@ For one TRAINING set (an outer walk-forward fold, or all data for production):
 
 With fewer than two failures in training there is nothing to validate on:
 the first candidate is used, uncalibrated, with the a-priori threshold
-(p = 0.5; autoencoder: 99th percentile of healthy training MSE) — recorded
+(p = 0.5; autoencoder: 99th percentile of healthy training MSE; CUSUM/EWMA:
+99th percentile of the healthy training statistic) — recorded
 as ``fallback``.
 """
 
@@ -39,6 +40,7 @@ from sklearn.preprocessing import StandardScaler
 from xgboost import XGBClassifier
 
 import src.deep_temporal as dt
+import src.statistical_baselines as sb
 from src.evaluate_temporal import EMBARGO_S, EVAL_KW, PERSISTENCE_K, PURGE_S, _subsample
 from src.event_metrics import cost_optimal_threshold
 from src.temporal_validation import FailureEvent, PurgedEventBlockKFold
@@ -120,6 +122,10 @@ for _name, _space in SPACES.items():
     if _name != "autoencoder":
         _space.append({**_space[0], "pos_weight_scale": SOFT_POS_WEIGHT})
 
+# Statistical baselines (CUSUM/EWMA): no class balance to tune — the space
+# is the detector's own parameters (see ``statistical_baselines``).
+SPACES.update(sb.SPACES)
+
 # Keys that configure sampling/weighting, not the learner itself.
 _BALANCE_KEYS: frozenset[str] = frozenset({"neg_stride", "pos_weight_scale"})
 
@@ -188,6 +194,8 @@ def _tree_model(
 def fit_model(
     ctx: Context, name: str, train_idx: np.ndarray, seed: int, params: dict[str, Any]
 ) -> Any:
+    if name in sb.BASELINES:
+        return sb.fit(name, params, ctx.X, ctx.y, ctx.ts, train_idx)
     if name in dt.ARCHS:
         return dt.fit(ctx.data, name, train_idx, seed, params)
     tr = _subsample(train_idx, ctx.y, int(params.get("neg_stride", NEG_STRIDE)))
@@ -201,6 +209,8 @@ def fit_model(
 
 
 def raw_score(ctx: Context, name: str, model: Any, rows: np.ndarray) -> np.ndarray:
+    if name in sb.BASELINES:
+        return sb.raw_score(model, ctx.X, ctx.ts, rows)
     if name in dt.ARCHS:
         s = dt.score(ctx.data, model, rows)
         return np.log(np.maximum(s, 1e-12)) if name == "autoencoder" else s
@@ -369,9 +379,13 @@ def select(
 def _fallback(
     ctx: Context, name: str, train_idx: np.ndarray, seed: int, params: dict[str, Any]
 ) -> Selection:
-    if name == "autoencoder":
+    if name == "autoencoder" or name in sb.BASELINES:
         model = fit_model(ctx, name, train_idx, seed, params)
-        healthy = train_idx[ctx.data.clean_window[train_idx]][::50]
+        healthy = (
+            train_idx[ctx.y.to_numpy()[train_idx] == 0][::50]
+            if name in sb.BASELINES
+            else train_idx[ctx.data.clean_window[train_idx]][::50]
+        )
         raw_thr = float(np.quantile(raw_score(ctx, name, model, healthy), 0.99))
     else:
         raw_thr = 0.0  # p = 0.5 (logit 0)
@@ -390,14 +404,14 @@ def calibrated(sel: Selection, raw: np.ndarray, name: str) -> np.ndarray:
     free 0/1 relative to its threshold, only used for ECE bookkeeping)."""
     if sel.calibrator is not None:
         return sel.calibrator.prob(raw)
-    if name == "autoencoder":
+    if name == "autoencoder" or name in sb.BASELINES:
         return (raw >= sel.raw_threshold).astype(float)
     return 1.0 / (1.0 + np.exp(-raw))
 
 
 def uncalibrated_prob(name: str, raw: np.ndarray) -> np.ndarray:
     """What the model would report without calibration (for the ECE 'before')."""
-    if name == "autoencoder":
+    if name == "autoencoder" or name in sb.BASELINES:
         return np.full_like(raw, np.nan)
     return 1.0 / (1.0 + np.exp(-raw))
 
