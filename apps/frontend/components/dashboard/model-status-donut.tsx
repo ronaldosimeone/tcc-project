@@ -31,8 +31,8 @@ export function ModelStatusDonut({ pieData }: ModelStatusDonutProps) {
         <PieChart accessibilityLayer={false}>
           <Pie
             data={pieData}
-            innerRadius={28}
-            outerRadius={44}
+            innerRadius="64%"
+            outerRadius="98%"
             paddingAngle={2}
             dataKey="value"
             stroke="none"

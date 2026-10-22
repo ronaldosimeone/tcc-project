@@ -31,7 +31,7 @@ export function FeedEventRow({ evt }: FeedEventRowProps) {
     >
       {/* Horário monoespaçado — referência temporal precisa. Só é
           renderizado no cliente (ver EventFeedCard), no fuso local. */}
-      <span className="shrink-0 font-mono text-[11px] tabular-nums text-muted-foreground">
+      <span className="shrink-0 font-mono text-xs tabular-nums text-muted-foreground">
         {formatClockTime(evt.ts)}
       </span>
 
@@ -42,7 +42,7 @@ export function FeedEventRow({ evt }: FeedEventRowProps) {
       />
 
       {/* Asset ID — fixo em mono para alinhamento vertical na coluna. */}
-      <span className="shrink-0 font-mono text-[11px] font-semibold text-foreground/80">
+      <span className="shrink-0 font-mono text-xs font-semibold text-foreground/80">
         {evt.assetId}
       </span>
 
@@ -50,7 +50,7 @@ export function FeedEventRow({ evt }: FeedEventRowProps) {
       <span className="flex min-w-0 flex-1 items-baseline gap-1.5">
         <span className="truncate text-foreground">{evt.message}</span>
         {critical && (
-          <span className="hidden truncate text-[11px] text-muted-foreground lg:inline">
+          <span className="hidden truncate text-xs text-muted-foreground lg:inline">
             <span className="text-muted-foreground/70">·</span>{" "}
             {explanationFor(evt.assetId)}
           </span>
@@ -60,7 +60,7 @@ export function FeedEventRow({ evt }: FeedEventRowProps) {
       {/* Tempo relativo à direita — opcional, dispensável em viewports muito
           estreitos. suppressHydrationWarning porque `fromNow` depende de
           `Date.now()`, calculado só no cliente. */}
-      <span className="hidden shrink-0 text-[10px] text-muted-foreground/70 sm:inline">
+      <span className="hidden shrink-0 text-xs text-muted-foreground/70 sm:inline">
         {fromNow(evt.ts)}
       </span>
     </li>

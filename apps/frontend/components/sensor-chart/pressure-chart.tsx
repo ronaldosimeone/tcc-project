@@ -28,7 +28,7 @@ export const PressureChart = memo(function PressureChart({
 
   return (
     <div>
-      <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
         Pressão &mdash; TP2 &amp; TP3 (bar)
       </p>
       {/* Alternativa textual ao gráfico (RNF-66 §12) — o SVG do Recharts não

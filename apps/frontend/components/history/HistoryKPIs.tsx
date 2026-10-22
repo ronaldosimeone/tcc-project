@@ -52,13 +52,13 @@ function KpiTile({
       <CardContent className="p-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
               {title}
             </p>
             <p className="mt-1 truncate font-mono text-xl font-bold tracking-tight tabular-nums text-foreground">
               {value}
             </p>
-            <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">
+            <p className="mt-0.5 text-xs leading-snug text-muted-foreground">
               {subtitle}
             </p>
           </div>
@@ -154,7 +154,7 @@ export default function HistoryKPIs({ events, kpis }: HistoryKPIsProps) {
   const tiles = useMemo(() => reliabilityTiles(kpis), [kpis]);
 
   return (
-    <div className="grid grid-cols-2 gap-4 md:grid-cols-3 2xl:grid-cols-6">
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 2xl:grid-cols-6">
       {tiles.map((t) => (
         <KpiTile key={t.title} {...t} />
       ))}

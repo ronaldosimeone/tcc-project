@@ -26,7 +26,7 @@ export const CustomTooltip = memo(function CustomTooltip({
 
   return (
     <div className="rounded-lg border border-border/80 bg-popover/95 px-3 py-2 shadow-xl backdrop-blur-sm">
-      <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+      <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
         {label}
       </p>
       {total === 0 ? (

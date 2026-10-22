@@ -37,7 +37,7 @@ export function WorkOrderPanel({
       className="rounded-lg border border-border bg-card p-4"
       aria-label="Ordem de serviço"
     >
-      <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+      <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
         Ordem de serviço
       </p>
 
@@ -118,7 +118,7 @@ export function WorkOrderPanel({
       )}
 
       {error && (
-        <p role="alert" className="mt-2 text-[11px] text-destructive">
+        <p role="alert" className="mt-2 text-xs text-destructive">
           {error}
         </p>
       )}

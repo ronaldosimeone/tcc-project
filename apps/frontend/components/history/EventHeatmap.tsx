@@ -53,7 +53,7 @@ export default function EventHeatmap({ events }: EventHeatmapProps) {
             <Activity className="h-4 w-4 text-muted-foreground" />
             Mapa de Calor de Ocorrências
           </CardTitle>
-          <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground/70">
+          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground/70">
             Turno × Dia da semana · {totalEvents} eventos
           </p>
         </div>
@@ -68,7 +68,7 @@ export default function EventHeatmap({ events }: EventHeatmapProps) {
           {DAYS.map((day) => (
             <span
               key={day}
-              className="text-center font-mono text-[10px] uppercase tracking-wider text-muted-foreground/70"
+              className="text-center font-mono text-xs uppercase tracking-wider text-muted-foreground/70"
             >
               {day}
             </span>
@@ -81,7 +81,7 @@ export default function EventHeatmap({ events }: EventHeatmapProps) {
         </div>
 
         {/* Legenda — escala de intensidade. */}
-        <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-border/60 pt-3 text-[10px] text-muted-foreground">
+        <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-border/60 pt-3 text-xs text-muted-foreground">
           <span className="font-medium uppercase tracking-wider text-muted-foreground/70">
             Intensidade
           </span>

@@ -65,7 +65,7 @@ export const EventLog = memo(function EventLog({
             <ClipboardList className="h-4 w-4 text-muted-foreground" />
             Histórico de Eventos
             {isMounted && history.length > 0 && (
-              <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-primary/15 px-1 text-[9px] font-bold text-primary">
+              <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-primary/15 px-1 text-xs font-bold text-primary">
                 {history.length}
               </span>
             )}
@@ -75,7 +75,7 @@ export const EventLog = memo(function EventLog({
               variant="ghost"
               size="sm"
               onClick={clearHistory}
-              className="h-6 gap-1 px-2 text-[10px] text-muted-foreground hover:text-destructive"
+              className="h-6 gap-1 px-2 text-xs text-muted-foreground hover:text-destructive"
             >
               <Trash2 className="h-3 w-3" />
               Limpar
@@ -91,7 +91,7 @@ export const EventLog = memo(function EventLog({
         ) : history.length === 0 ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-2 py-8 text-center">
             <ClipboardList className="h-8 w-8 text-muted-foreground/20" />
-            <p className="text-[10px] text-muted-foreground/50">
+            <p className="text-xs text-muted-foreground/50">
               Sem eventos registrados
             </p>
           </div>
@@ -107,15 +107,12 @@ export const EventLog = memo(function EventLog({
                     data-risk={entry.riskLevel}
                     className="flex items-center gap-2 border-b border-border/60 px-4 py-2 last:border-0"
                   >
-                    <span className="w-14 shrink-0 font-mono text-[9px] text-muted-foreground/60">
+                    <span className="w-14 shrink-0 font-mono text-xs text-muted-foreground/60">
                       {time}
                     </span>
                     <Badge
                       variant="outline"
-                      className={cn(
-                        "gap-1 px-1.5 py-0 text-[9px] font-bold",
-                        cls,
-                      )}
+                      className={cn("gap-1 px-1.5 py-0 text-xs font-bold", cls)}
                     >
                       <Icon className="h-2.5 w-2.5" />
                       {entry.riskLevel}

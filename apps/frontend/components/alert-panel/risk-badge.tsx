@@ -31,7 +31,7 @@ export function RiskBadge({ level }: { level: RiskLevel }) {
   return (
     <Badge
       variant="outline"
-      className={cn("gap-1 px-2 py-0.5 text-[10px] font-bold", badgeClass)}
+      className={cn("gap-1 px-2 py-0.5 text-xs font-bold", badgeClass)}
     >
       <Icon className="h-3 w-3" />
       {level}

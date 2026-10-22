@@ -93,7 +93,7 @@ export function LiveAssetRow({
           <Badge
             variant="outline"
             className={cn(
-              "px-1.5 py-0 text-[9px] font-bold tracking-wider",
+              "px-1.5 py-0 text-xs font-bold tracking-wider",
               liveIsCritical
                 ? "animate-pulse border-red-500/30 bg-red-500/15 text-red-700 dark:text-red-400"
                 : liveIsAlert
@@ -128,7 +128,7 @@ export function LiveAssetRow({
       >
         <Link
           href={`/sensors/${LIVE_ASSET_ID}`}
-          className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[11px] font-semibold text-foreground/80 transition-colors hover:bg-muted/50"
+          className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-xs font-semibold text-foreground/80 transition-colors hover:bg-muted/50"
         >
           Telemetria
           <ArrowRight className="h-3 w-3" />

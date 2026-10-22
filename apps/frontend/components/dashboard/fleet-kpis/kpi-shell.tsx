@@ -64,7 +64,7 @@ export function KpiShell({
       <CardContent className="p-4 short:p-3">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               {title}
             </p>
             {isLoading ? (
@@ -75,7 +75,7 @@ export function KpiShell({
                   {value}
                 </div>
                 {subtitle && (
-                  <p className="mt-0.5 text-[10px] text-muted-foreground">
+                  <p className="mt-0.5 text-xs text-muted-foreground">
                     {subtitle}
                   </p>
                 )}

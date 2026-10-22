@@ -40,7 +40,7 @@ export const SparkKpiCard = memo(function SparkKpiCard({
       <CardContent className="p-4">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               {title}
             </p>
             {isLoading ? (

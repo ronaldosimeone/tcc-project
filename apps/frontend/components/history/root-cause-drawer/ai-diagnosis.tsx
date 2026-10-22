@@ -30,16 +30,16 @@ export function AiDiagnosis({ rootCause }: AiDiagnosisProps) {
         </span>
         <div className="min-w-0 flex-1 space-y-2">
           <div className="flex flex-wrap items-center gap-2">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-primary">
+            <p className="text-xs font-bold uppercase tracking-wider text-primary">
               Plano sugerido (RAG)
             </p>
             {grounding && (
-              <Badge variant="outline" className="text-[10px]">
+              <Badge variant="outline" className="text-xs">
                 {GROUNDING_LABEL[grounding.status] ?? grounding.status}
               </Badge>
             )}
             {rootCause?.llm_model && (
-              <span className="font-mono text-[10px] text-muted-foreground">
+              <span className="font-mono text-xs text-muted-foreground">
                 {rootCause.llm_model}
               </span>
             )}
@@ -61,7 +61,7 @@ export function AiDiagnosis({ rootCause }: AiDiagnosisProps) {
           {grounding &&
             (grounding.invalid_citations.length > 0 ||
               grounding.safety_violations.length > 0) && (
-              <p className="flex items-start gap-1.5 text-[11px] text-destructive">
+              <p className="flex items-start gap-1.5 text-xs text-destructive">
                 <ShieldAlert
                   className="mt-0.5 h-3 w-3 shrink-0"
                   aria-hidden="true"

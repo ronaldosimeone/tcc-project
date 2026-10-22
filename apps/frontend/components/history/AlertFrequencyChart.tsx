@@ -52,7 +52,7 @@ export default function AlertFrequencyChart({
               <TrendingUp className="h-4 w-4 text-primary" />
               Frequência de Ocorrências
             </CardTitle>
-            <p className="mt-0.5 text-[11px] text-muted-foreground">
+            <p className="mt-0.5 text-xs text-muted-foreground">
               Alertas e falhas por dia · últimos {days} dias
             </p>
           </div>
@@ -62,15 +62,13 @@ export default function AlertFrequencyChart({
               <p className="font-mono text-2xl font-bold tabular-nums text-foreground">
                 {totalAlerts}
               </p>
-              <p className="text-[10px] text-muted-foreground">
-                total no período
-              </p>
+              <p className="text-xs text-muted-foreground">total no período</p>
             </div>
             <div>
               <p className="font-mono text-2xl font-bold tabular-nums tracking-tight text-amber-600 dark:text-amber-400 dark:text-amber-400">
                 {peakDay}
               </p>
-              <p className="text-[10px] text-muted-foreground">pico diário</p>
+              <p className="text-xs text-muted-foreground">pico diário</p>
             </div>
           </div>
         </div>
@@ -126,7 +124,7 @@ export default function AlertFrequencyChart({
               />
               <YAxis
                 stroke="#94a3b8"
-                fontSize={11}
+                fontSize={12}
                 tickLine={false}
                 axisLine={false}
                 allowDecimals={false}
@@ -154,11 +152,11 @@ export default function AlertFrequencyChart({
         </div>
 
         <div className="mt-3 flex items-center justify-end gap-5 border-t border-border pt-3">
-          <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <span className="inline-block h-2 w-2 rounded-full bg-red-400" />
             Falha Crítica
           </div>
-          <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <span className="inline-block h-2 w-2 rounded-full bg-amber-400" />
             Alerta
           </div>

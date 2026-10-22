@@ -53,4 +53,4 @@ export const ANOMALY_STYLE: Record<AnomalyLevel, string> = {
 // transparente (mesmo bug corrigido no @theme inline de app/globals.css).
 
 export const GRID_STROKE = "var(--border)";
-export const ANGLE_TICK = { fontSize: 11, fill: "var(--muted-foreground)" };
+export const ANGLE_TICK = { fontSize: 12, fill: "var(--muted-foreground)" };

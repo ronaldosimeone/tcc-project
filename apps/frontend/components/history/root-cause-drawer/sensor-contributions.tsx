@@ -32,7 +32,7 @@ export function SensorContributions({
 
   return (
     <section aria-label="Contribuição dos sensores">
-      <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+      <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
         Sensores que explicam o alarme · oclusão no momento da abertura
       </p>
       <ul className="space-y-1.5">
@@ -73,7 +73,7 @@ export function SensorContributions({
           );
         })}
       </ul>
-      <p className="mt-2 text-[10px] leading-snug text-muted-foreground">
+      <p className="mt-2 text-xs leading-snug text-muted-foreground">
         Queda de P(falha) quando a janela do sensor é substituída pela mediana
         de operação normal. Positivo = empurra para falha.
       </p>

@@ -12,7 +12,7 @@ export const LINE_COLORS = {
 // (app/globals.css) já são `oklch(...)` completos; `hsl(oklch(...))` é CSS
 // inválido e renderiza transparente (mesmo bug corrigido no @theme inline).
 export const AXIS_TICK_STYLE = {
-  fontSize: 10,
+  fontSize: 12,
   fill: "var(--muted-foreground)",
 } as const;
 

@@ -57,7 +57,7 @@ function PressureGauge({ label, value, max, unit, color }: PressureGaugeProps) {
           y={cy - 4}
           textAnchor="middle"
           fill="var(--foreground)"
-          fontSize="11"
+          fontSize="14"
           fontWeight="700"
           fontFamily="var(--font-geist-sans, sans-serif)"
         >
@@ -69,13 +69,13 @@ function PressureGauge({ label, value, max, unit, color }: PressureGaugeProps) {
           textAnchor="middle"
           dominantBaseline="middle"
           fill="var(--muted-foreground)"
-          fontSize="9"
+          fontSize="11"
           fontFamily="var(--font-geist-sans, sans-serif)"
         >
           {unit}
         </text>
       </svg>
-      <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+      <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
         {label}
       </span>
     </div>
@@ -101,7 +101,7 @@ export const PressureRadials = memo(function PressureRadials({
         <CardTitle className="text-sm font-semibold text-foreground/90">
           Pressões Secundárias
         </CardTitle>
-        <p className="text-[10px] text-muted-foreground">
+        <p className="text-xs text-muted-foreground">
           H1 · DV Pressure · Reservatório
         </p>
       </CardHeader>

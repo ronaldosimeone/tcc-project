@@ -46,7 +46,7 @@ interface FleetHealthTableProps {
 }
 
 const COL_HEAD =
-  "pb-2.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground";
+  "pb-2.5 text-xs font-semibold uppercase tracking-widest text-muted-foreground";
 
 const FleetHealthTable = memo(function FleetHealthTable({
   effectiveRiskLevel,
@@ -62,7 +62,7 @@ const FleetHealthTable = memo(function FleetHealthTable({
           <CardTitle className="text-sm font-semibold text-foreground">
             Saúde da Frota
           </CardTitle>
-          <span className="text-[11px] text-muted-foreground">
+          <span className="text-xs text-muted-foreground">
             5 ativos · 1 em tempo real
           </span>
         </div>

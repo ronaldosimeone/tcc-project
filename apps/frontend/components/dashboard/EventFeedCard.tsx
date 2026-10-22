@@ -81,7 +81,7 @@ const EventFeedCard = memo(function EventFeedCard() {
             <Radio className="h-4 w-4 text-muted-foreground" />
             Eventos Recentes
           </span>
-          <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground/70">
+          <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground/70">
             {events.length} eventos · log
           </span>
         </CardTitle>

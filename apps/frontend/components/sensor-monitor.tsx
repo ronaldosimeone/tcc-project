@@ -112,7 +112,7 @@ export default function SensorMonitor() {
         ) : (
           <>
             {/* ── Seção 1 — Top KPIs (4 colunas) ──────────────── */}
-            <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
               <SparkKpiCard
                 title="TP3 — Pressão Painel"
                 value={formatFixed(currentPayload.TP3, 2)}

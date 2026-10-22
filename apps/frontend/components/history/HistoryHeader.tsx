@@ -86,7 +86,7 @@ export default function HistoryHeader({
   return (
     <div className="flex flex-wrap items-end justify-between gap-4">
       <div>
-        <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+        <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
           PredictIQ · MetroPT-3
         </p>
         <h1 className="mt-0.5 text-xl font-bold tracking-tight text-foreground">

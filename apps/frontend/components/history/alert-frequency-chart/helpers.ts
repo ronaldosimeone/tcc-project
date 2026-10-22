@@ -7,7 +7,7 @@ import type { HistoryEvent } from "@/lib/history-types";
 
 // Literais slate — evita tokens hsl(var(--...)) que renderizam transparente
 // pelo problema conhecido de mistura oklch/hsl no tema.
-export const AXIS_TICK = { fontSize: 11, fill: "#94a3b8" } as const;
+export const AXIS_TICK = { fontSize: 12, fill: "#94a3b8" } as const;
 export const GRID_STROKE = "var(--border)";
 
 export interface DayBucket {

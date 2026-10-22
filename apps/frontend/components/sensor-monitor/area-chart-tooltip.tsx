@@ -23,7 +23,7 @@ const AreaChartTooltip = memo(function AreaChartTooltip({
   if (!active || !payload?.length) return null;
   return (
     <div className="rounded-lg border border-border bg-card px-3 py-2 shadow-md">
-      <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+      <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
         {label}
       </p>
       {payload.map((e) => (

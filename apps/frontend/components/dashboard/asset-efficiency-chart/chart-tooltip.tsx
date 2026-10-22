@@ -30,10 +30,10 @@ export const ChartTooltip = memo(function ChartTooltip({
   return (
     <div className="rounded-lg border border-border/80 bg-popover/90 px-3 py-2 shadow-md backdrop-blur-md">
       <div className="mb-2 flex items-center justify-between gap-4">
-        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           {label}
         </p>
-        <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] font-bold tabular-nums text-foreground">
+        <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs font-bold tabular-nums text-foreground">
           {efficiency}% efic.
         </span>
       </div>

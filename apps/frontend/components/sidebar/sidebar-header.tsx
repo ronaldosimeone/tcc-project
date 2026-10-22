@@ -25,7 +25,7 @@ export function SidebarHeader({ isOpen, onToggle }: SidebarHeaderProps) {
               <span className="truncate text-sm font-semibold tracking-tight text-sidebar-foreground">
                 PredictIQ
               </span>
-              <span className="truncate text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
+              <span className="truncate text-xs font-medium uppercase tracking-normal text-muted-foreground">
                 Manutenção Preditiva
               </span>
             </div>

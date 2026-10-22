@@ -33,7 +33,7 @@ export function ReferencesList({
           <span>
             <span className="font-mono">{ref.file_name}</span> — página{" "}
             {ref.page}
-            <span className="ml-1 text-[10px] opacity-70">
+            <span className="ml-1 text-xs opacity-70">
               (score {ref.score.toFixed(2)})
             </span>
           </span>

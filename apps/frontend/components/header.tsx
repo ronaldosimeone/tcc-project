@@ -17,7 +17,7 @@ export default function Header() {
           <span className="text-sm font-semibold tracking-tight text-foreground">
             PredictIQ
           </span>
-          <span className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
+          <span className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
             Manutenção Preditiva
           </span>
         </div>

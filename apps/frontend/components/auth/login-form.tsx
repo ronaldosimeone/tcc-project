@@ -43,7 +43,7 @@ export default function LoginForm({ next }: LoginFormProps) {
   return (
     <Card className="w-full max-w-sm">
       <CardContent className="p-6">
-        <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+        <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
           PredictIQ
         </p>
         <h1 className="mt-1 text-xl font-bold tracking-tight text-foreground">

@@ -19,7 +19,7 @@ export function PredictiveTooltip({
   const value = payload[0].value;
   return (
     <div className="rounded-md border border-border bg-popover px-2 py-1.5 text-popover-foreground shadow-lg">
-      <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+      <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
         {label}
       </p>
       <p

@@ -9,7 +9,7 @@ interface RawValueProps {
 
 export function RawValue({ label, value, decimals = 2, unit }: RawValueProps) {
   return (
-    <span className="text-[11px] text-muted-foreground">
+    <span className="text-xs text-muted-foreground">
       {label}{" "}
       <span className="font-mono font-semibold text-foreground">
         {value.toFixed(decimals)} <span className="font-normal">{unit}</span>

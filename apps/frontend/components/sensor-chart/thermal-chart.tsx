@@ -23,7 +23,7 @@ export const ThermalChart = memo(function ThermalChart({
 
   return (
     <div>
-      <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
         Corrente (A) &amp; Temperatura (°C)
       </p>
       {/* Alternativa textual ao gráfico (RNF-66 §12) — ver PressureChart. */}

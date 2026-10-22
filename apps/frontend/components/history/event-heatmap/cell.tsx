@@ -41,14 +41,14 @@ export function Cell({ cell, shift, day }: CellProps) {
           "group-hover:block",
         )}
       >
-        <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground/70">
+        <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground/70">
           {day} · {shift}
         </p>
         <p className="mt-0.5 text-sm font-bold tabular-nums">
           {count} {count === 1 ? "ocorrência" : "ocorrências"}
         </p>
         {count > 0 && (
-          <div className="mt-1 flex items-center gap-2 text-[11px] text-slate-200">
+          <div className="mt-1 flex items-center gap-2 text-xs text-slate-200">
             <span className="inline-flex items-center gap-1">
               <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
               <span className="tabular-nums">{critical} críticas</span>

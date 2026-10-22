@@ -111,7 +111,7 @@ export default function TopEquipamentos({
       <CardHeader className="shrink-0 px-4 pb-2 pt-3">
         <CardTitle className="flex items-baseline justify-between text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           <span>Top equipamentos</span>
-          <span className="font-mono text-[10px] normal-case tracking-normal text-muted-foreground/70">
+          <span className="font-mono text-xs normal-case tracking-normal text-muted-foreground/70">
             {rows.length} ativos
           </span>
         </CardTitle>
@@ -134,7 +134,7 @@ export default function TopEquipamentos({
                 <div className="flex items-baseline justify-between gap-2">
                   <span
                     className={cn(
-                      "truncate font-mono text-[11px] font-semibold",
+                      "truncate font-mono text-xs font-semibold",
                       row.count === 0
                         ? "text-muted-foreground/70"
                         : "text-foreground/80",

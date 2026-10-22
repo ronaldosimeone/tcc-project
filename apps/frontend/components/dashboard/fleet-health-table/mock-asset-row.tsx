@@ -44,7 +44,7 @@ export function MockAssetRow({
           </span>
           <Badge
             variant="outline"
-            className="border-border bg-muted/50 px-1.5 py-0 text-[9px] font-medium tracking-wider text-muted-foreground"
+            className="border-border bg-muted/50 px-1.5 py-0 text-xs font-medium tracking-wider text-muted-foreground"
           >
             SIMULADO
           </Badge>
@@ -64,7 +64,7 @@ export function MockAssetRow({
       </td>
 
       <td className="py-3 short:py-1.5 pr-3 text-right">
-        <span className="font-mono text-[10px] italic text-muted-foreground/70">
+        <span className="font-mono text-xs italic text-muted-foreground/70">
           há {asset.lastSeen}
         </span>
       </td>

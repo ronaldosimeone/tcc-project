@@ -45,7 +45,7 @@ export function SortableHead({
       scope="col"
       aria-sort={ariaSort}
       className={cn(
-        "pb-2.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground",
+        "pb-2.5 text-xs font-semibold uppercase tracking-widest text-muted-foreground",
         align === "right" ? "text-right" : "text-left",
       )}
     >

@@ -31,7 +31,7 @@ interface EventLogTableProps {
 }
 
 const COL_HEAD =
-  "pb-2.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground text-left";
+  "pb-2.5 text-xs font-semibold uppercase tracking-widest text-muted-foreground text-left";
 
 export default function EventLogTable({
   events,
@@ -99,7 +99,7 @@ export default function EventLogTable({
           <CardTitle className="text-sm font-semibold text-foreground/90">
             Log de Eventos
           </CardTitle>
-          <span className="text-[11px] text-muted-foreground">
+          <span className="text-xs text-muted-foreground">
             {sorted.length === 0
               ? "0 eventos"
               : `${from}–${to} de ${sorted.length} eventos`}

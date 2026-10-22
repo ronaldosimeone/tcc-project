@@ -119,20 +119,20 @@ export default function RootCauseDrawer({
         <SheetHeader>
           <div className="flex items-start justify-between gap-3 pr-8">
             <div className="min-w-0 flex-1">
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                 Análise de Causa Raiz · {event?.id ?? ""}
               </p>
               <SheetTitle className="mt-0.5 text-base font-semibold text-foreground">
                 {event?.description ?? "—"}
               </SheetTitle>
-              <SheetDescription className="mt-1 font-mono text-[11px] text-muted-foreground">
+              <SheetDescription className="mt-1 font-mono text-xs text-muted-foreground">
                 {event?.equipment ?? ""} · {event?.timestamp ?? ""}
               </SheetDescription>
             </div>
             {event && (
               <Badge
                 variant="outline"
-                className={cn("gap-1 text-[11px] font-semibold", badgeCls)}
+                className={cn("gap-1 text-xs font-semibold", badgeCls)}
               >
                 <SevIcon className="h-3 w-3" />
                 {event.severity}

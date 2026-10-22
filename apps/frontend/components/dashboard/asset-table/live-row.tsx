@@ -50,7 +50,7 @@ export function LiveRow({
           </span>
           <Badge
             variant="outline"
-            className="border-blue-500/30 bg-blue-500/10 px-1.5 py-0 text-[9px] font-bold tracking-wider text-blue-400"
+            className="border-blue-500/30 bg-blue-500/10 px-1.5 py-0 text-xs font-bold tracking-wider text-blue-400"
           >
             AO VIVO
           </Badge>
@@ -79,7 +79,7 @@ export function LiveRow({
           size="sm"
           variant="outline"
           className={cn(
-            "h-7 gap-1.5 px-2.5 text-[11px] font-semibold",
+            "h-7 gap-1.5 px-2.5 text-xs font-semibold",
             "border-primary/30 bg-primary/5 text-primary",
             "transition-colors duration-150 hover:bg-primary/10 hover:text-primary",
           )}

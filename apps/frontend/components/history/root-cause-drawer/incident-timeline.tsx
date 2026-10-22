@@ -86,7 +86,7 @@ export function IncidentTimeline({ event, workOrder }: IncidentTimelineProps) {
   const steps = buildSteps(event, workOrder);
   return (
     <section>
-      <p className="mb-3 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+      <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
         Linha do tempo do incidente
       </p>
       <ol className="relative space-y-3">
@@ -110,7 +110,7 @@ export function IncidentTimeline({ event, workOrder }: IncidentTimelineProps) {
               <p className="text-sm font-semibold text-foreground">
                 {i + 1}. {step.label}
               </p>
-              <p className="font-mono text-[11px] text-muted-foreground">
+              <p className="font-mono text-xs text-muted-foreground">
                 {fmt(step.at)}
               </p>
               {step.detail && (

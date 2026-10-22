@@ -22,7 +22,7 @@ export const ChartTooltip = memo(function ChartTooltip({
   if (!active || !payload?.length) return null;
   return (
     <div className="rounded-lg border border-border/80 bg-popover/90 px-3 py-2 shadow-md backdrop-blur-md">
-      <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+      <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
         {label}
       </p>
       {payload.map((entry) => (

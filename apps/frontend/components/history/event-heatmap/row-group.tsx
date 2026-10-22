@@ -11,7 +11,7 @@ interface RowGroupProps {
 export function RowGroup({ shift, cells }: RowGroupProps) {
   return (
     <>
-      <span className="self-center pr-2 font-mono text-[10px] uppercase tracking-wider text-muted-foreground/70">
+      <span className="self-center pr-2 font-mono text-xs uppercase tracking-wider text-muted-foreground/70">
         {shift}
       </span>
       {DAYS.map((day, colIdx) => {

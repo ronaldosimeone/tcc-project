@@ -100,7 +100,7 @@ export function ModelSection() {
           Modelo de IA
         </Label>
         {data && (
-          <Badge variant="outline" className="font-mono text-[10px]">
+          <Badge variant="outline" className="font-mono text-xs">
             ativo · {formatModelName(data.active_model)}
           </Badge>
         )}

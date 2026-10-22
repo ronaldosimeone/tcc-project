@@ -12,7 +12,7 @@ export const ChartLegend = memo(function ChartLegend() {
             className="inline-block h-2 w-4 rounded-full"
             style={{ background: LINE_COLORS[key] }}
           />
-          <span className="text-[10px] text-muted-foreground">{label}</span>
+          <span className="text-xs text-muted-foreground">{label}</span>
         </div>
       ))}
     </div>

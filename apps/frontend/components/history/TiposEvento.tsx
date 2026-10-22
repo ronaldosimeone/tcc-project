@@ -66,7 +66,7 @@ export default function TiposEvento({ events }: TiposEventoProps) {
         </CardTitle>
       </CardHeader>
       <CardContent className="flex flex-1 flex-col items-center justify-center gap-2 px-4 pb-4">
-        <div className="relative h-20 w-20 shrink-0">
+        <div className="relative h-28 w-28 shrink-0">
           {donutSlices.length > 0 ? (
             // aria-hidden + accessibilityLayer={false} (RNF-66 §12/§13): a
             // lista abaixo já traz nome + % de cada fatia em texto real.
@@ -76,8 +76,8 @@ export default function TiposEvento({ events }: TiposEventoProps) {
                   <Pie
                     data={donutSlices}
                     dataKey="value"
-                    innerRadius={24}
-                    outerRadius={38}
+                    innerRadius="68%"
+                    outerRadius="98%"
                     paddingAngle={2}
                     stroke="none"
                     isAnimationActive={false}
@@ -96,9 +96,7 @@ export default function TiposEvento({ events }: TiposEventoProps) {
             <span className="font-mono text-sm font-bold tabular-nums text-foreground">
               {total}
             </span>
-            <span className="text-[8px] uppercase tracking-wider text-muted-foreground/70">
-              eventos
-            </span>
+            <span className="text-xs text-muted-foreground">eventos</span>
           </div>
         </div>
 
@@ -106,7 +104,7 @@ export default function TiposEvento({ events }: TiposEventoProps) {
           {slices.map((s) => (
             <li
               key={s.name}
-              className="flex items-center gap-1.5 text-[10px] text-muted-foreground"
+              className="flex items-center gap-1.5 text-xs text-muted-foreground"
             >
               <span
                 className="h-2 w-2 shrink-0 rounded-sm"

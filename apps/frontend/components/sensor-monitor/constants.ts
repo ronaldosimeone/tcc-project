@@ -20,7 +20,7 @@ export const C = {
 // transparente (mesmo bug corrigido no @theme inline de app/globals.css).
 export const GRID_STROKE = "var(--border)";
 export const AXIS_TICK = {
-  fontSize: 10,
+  fontSize: 12,
   fill: "var(--muted-foreground)",
 } as const;
 
@@ -65,7 +65,7 @@ export const BOOL_SIGNALS: Array<{
   { key: "Oil_level", label: "Oil Level", mode: "alertWhenOff" },
   {
     key: "Caudal_impulses",
-    label: "Caudal Imp",
+    label: "Caudal",
     mode: "normal",
     isCount: true,
   },

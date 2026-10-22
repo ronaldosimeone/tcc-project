@@ -32,12 +32,10 @@ export function BoolSignal({
         className="flex items-center justify-between rounded-md border border-dashed border-border p-2"
         title="Sinal não transmitido pela API (fora do modelo)"
       >
-        <span className="truncate text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/70">
+        <span className="truncate text-xs font-semibold uppercase tracking-wide text-muted-foreground/70">
           {label}
         </span>
-        <span className="text-[10px] font-bold text-muted-foreground/60">
-          N/D
-        </span>
+        <span className="text-xs font-bold text-muted-foreground/60">N/D</span>
       </div>
     );
   }
@@ -75,7 +73,7 @@ export function BoolSignal({
     >
       <span
         className={cn(
-          "truncate text-[10px] font-semibold uppercase tracking-wide",
+          "truncate text-xs font-semibold uppercase tracking-wide",
           isAlert ? "text-red-700 dark:text-red-400" : "text-muted-foreground",
         )}
       >
@@ -83,7 +81,7 @@ export function BoolSignal({
       </span>
       <div className="flex shrink-0 items-center gap-1">
         <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", dotCls)} />
-        <span className={cn("text-[10px] font-bold tabular-nums", valueCls)}>
+        <span className={cn("text-xs font-bold tabular-nums", valueCls)}>
           {displayValue}
         </span>
       </div>

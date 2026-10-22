@@ -76,7 +76,7 @@ export const PredictiveWindowChart = memo(function PredictiveWindowChart({
 
   return (
     <section>
-      <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+      <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
         Probabilidade de falha · 2 h antes até 30 min depois (leituras reais)
       </p>
       <div className="rounded-lg border border-border bg-card p-3">
@@ -130,14 +130,14 @@ export const PredictiveWindowChart = memo(function PredictiveWindowChart({
               <XAxis
                 dataKey="t"
                 stroke="var(--muted-foreground)"
-                fontSize={10}
+                fontSize={12}
                 tickLine={false}
                 axisLine={false}
                 minTickGap={24}
               />
               <YAxis
                 stroke="var(--muted-foreground)"
-                fontSize={10}
+                fontSize={12}
                 tickLine={false}
                 axisLine={false}
                 domain={[0, 1]}
@@ -153,7 +153,7 @@ export const PredictiveWindowChart = memo(function PredictiveWindowChart({
                 label={{
                   value: `LIMIAR ${Math.round(threshold * 100)}%`,
                   position: "insideTopRight",
-                  fontSize: 9,
+                  fontSize: 12,
                   fill: "var(--destructive)",
                 }}
               />

@@ -62,7 +62,7 @@ export const DEFAULT_EFFICIENCY = EFFICIENCY_BY_ASSET["APU-Trem-042"];
 // transparente (mesmo bug corrigido no @theme inline de app/globals.css).
 
 export const AXIS_TICK = {
-  fontSize: 10,
+  fontSize: 12,
   fill: "var(--muted-foreground)",
 } as const;
 export const GRID_STROKE = "var(--border)";

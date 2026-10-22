@@ -76,7 +76,7 @@ export function EventRow({ event, onSelectEvent }: EventRowProps) {
       <td className="py-3 pr-5">
         <Badge
           variant="outline"
-          className={cn("gap-1 text-[11px] font-semibold", sevCfg.className)}
+          className={cn("gap-1 text-xs font-semibold", sevCfg.className)}
         >
           <SevIcon className="h-3 w-3" />
           {event.severity}

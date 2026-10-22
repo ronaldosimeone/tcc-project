@@ -100,10 +100,8 @@ function ChannelPill({ name, state, labelOverride }: ChannelPillProps) {
         className={cn("h-1.5 w-1.5 rounded-full", dot)}
         aria-hidden="true"
       />
-      <span className="text-[10px] font-medium text-muted-foreground">
-        {name}
-      </span>
-      <span className={cn("text-[10px] font-semibold tabular-nums", text)}>
+      <span className="text-xs font-medium text-muted-foreground">{name}</span>
+      <span className={cn("text-xs font-semibold tabular-nums", text)}>
         {label}
       </span>
     </div>

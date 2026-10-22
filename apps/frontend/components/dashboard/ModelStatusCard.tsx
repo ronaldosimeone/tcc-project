@@ -1,21 +1,22 @@
 "use client";
 
 /**
- * Status do modelo activo + distribuição de saúde da frota.
+ * Status do modelo ativo + distribuição de saúde da frota.
  *
- * Layout: cabeçalho com modelo activo e confiança (mock) à esquerda,
- * donut radial à direita mostrando quantos ativos estão em cada faixa
- * (saudável/atenção/crítico). Donut clean — sem grid, sem legenda flutuante.
+ * Layout: cabeçalho com o modelo ativo e o seu limiar de decisão calibrado
+ * (o mesmo que define CRÍTICO em toda a UI); abaixo, ocupando o resto do
+ * card, o donut com quantos ativos estão em cada faixa e a legenda.
  */
 
 import { memo, useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
-import { Brain, ShieldCheck } from "lucide-react";
+import { Brain, Gauge } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { listModels } from "@/lib/api-client";
+import { formatFixed } from "@/lib/format";
 import { formatModelName } from "@/lib/model-name";
 
 // RNF-74/75 — code splitting: `recharts` (~100KB gzip) sai do First Load JS
@@ -44,8 +45,6 @@ interface ModelStatusCardProps {
     warning: number;
     critical: number;
   };
-  /** Confiança simulada do modelo activo [0–1] — placeholder. */
-  confidence?: number;
 }
 
 const COLORS = {
@@ -53,6 +52,11 @@ const COLORS = {
   warning: "#f59e0b",
   critical: "#f43f5e",
 } as const;
+
+interface ActiveModel {
+  name: string;
+  threshold: number | null;
+}
 
 /**
  * `React.memo`: `distribution` já chega memoizada do pai (useMemo em
@@ -64,16 +68,20 @@ const COLORS = {
  */
 const ModelStatusCard = memo(function ModelStatusCard({
   distribution,
-  confidence = 0.92,
 }: ModelStatusCardProps) {
-  const [activeModel, setActiveModel] = useState<string | null>(null);
+  const [model, setModel] = useState<ActiveModel | null>(null);
   const [error, setError] = useState(false);
 
   useEffect(() => {
     let alive = true;
     listModels()
       .then((res) => {
-        if (alive) setActiveModel(res.active_model);
+        if (alive && res.active_model) {
+          setModel({
+            name: res.active_model,
+            threshold: res.active_threshold ?? null,
+          });
+        }
       })
       .catch(() => {
         if (alive) setError(true);
@@ -105,64 +113,64 @@ const ModelStatusCard = memo(function ModelStatusCard({
       </CardHeader>
 
       <CardContent className="flex min-h-0 flex-1 flex-col overflow-y-auto px-5 pb-5">
-        {/* ── Cabeçalho: modelo ativo + confiança ── */}
-        <div className="flex items-start justify-between gap-3 border-b border-border/60 pb-3">
+        {/* ── Modelo ativo + limiar de decisão ── */}
+        <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2 border-b border-border/60 pb-3">
           <div className="min-w-0 flex-1">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
               Inferência ativa
             </p>
             {error ? (
-              <p className="mt-1 text-sm text-muted-foreground/70">
-                indisponível
-              </p>
-            ) : activeModel ? (
+              <p className="mt-1 text-sm text-muted-foreground">indisponível</p>
+            ) : model ? (
               <>
-                <p className="mt-1 text-base font-semibold text-foreground">
-                  {formatModelName(activeModel)}
+                <p className="mt-1 text-lg font-semibold leading-tight text-foreground">
+                  {formatModelName(model.name)}
                 </p>
-                <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground/70">
-                  {activeModel}
+                <p className="mt-0.5 font-mono text-xs uppercase tracking-wider text-muted-foreground">
+                  {model.name}
                 </p>
               </>
             ) : (
-              <Skeleton className="mt-1 h-5 w-32" />
+              <Skeleton className="mt-1 h-6 w-32" />
             )}
           </div>
-          <Badge
-            variant="outline"
-            className="gap-1 border-emerald-500/30 bg-emerald-500/10 text-[10px] font-semibold text-emerald-700 dark:text-emerald-400"
-          >
-            <ShieldCheck className="h-3 w-3" />
-            {(confidence * 100).toFixed(1)}% conf.
-          </Badge>
+          {model?.threshold != null && (
+            <Badge
+              variant="outline"
+              className="gap-1 text-xs font-semibold"
+              title="Probabilidade a partir da qual o modelo decide 'falha' (CRÍTICO)"
+            >
+              <Gauge className="h-3.5 w-3.5" />
+              Limiar {formatFixed(model.threshold, 3)}
+            </Badge>
+          )}
         </div>
 
-        {/* ── Donut: distribuição de saúde ── */}
-        {/* Quebra a legenda para baixo do donut quando o card é estreito
-            (1024 px): antes os números ficavam cortados à direita. */}
-        <div className="mt-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
-          <div className="relative h-24 w-24 shrink-0">
+        {/* ── Donut + legenda ocupam o resto do card (antes: donut fixo de
+            96 px e metade do card vazia no desktop). ── */}
+        <div className="flex min-h-0 flex-1 flex-wrap items-center justify-center gap-x-6 gap-y-3 pt-3">
+          <div className="relative aspect-square h-full max-h-44 min-h-24 shrink-0 short:max-h-28">
             <ModelStatusDonut pieData={pieData} />
             <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-              <span className="font-mono text-lg font-bold tabular-nums leading-none text-foreground">
+              <span className="font-mono text-2xl font-bold tabular-nums leading-none text-foreground">
                 {total}
               </span>
-              <span className="text-[9px] uppercase tracking-wider text-muted-foreground/70">
+              <span className="text-xs uppercase tracking-wider text-muted-foreground">
                 ativos
               </span>
             </div>
           </div>
 
-          <ul className="flex min-w-28 flex-1 flex-col gap-1.5 text-xs">
+          <ul className="flex min-w-32 flex-col gap-2 text-sm">
             {pieData.map((slice) => (
               <li key={slice.name} className="flex items-center gap-2">
                 <span
-                  className="h-2 w-2 shrink-0 rounded-sm"
+                  className="h-2.5 w-2.5 shrink-0 rounded-sm"
                   style={{ backgroundColor: slice.color }}
                   aria-hidden="true"
                 />
                 <span className="flex-1 text-foreground/80">{slice.name}</span>
-                <span className="font-mono font-semibold tabular-nums text-foreground">
+                <span className="ml-4 font-mono text-base font-semibold tabular-nums text-foreground">
                   {slice.value}
                 </span>
               </li>

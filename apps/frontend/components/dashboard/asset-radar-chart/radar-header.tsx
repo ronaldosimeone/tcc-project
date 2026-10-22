@@ -35,7 +35,7 @@ export function RadarHeader({
 
         <div className="flex shrink-0 items-center gap-1.5">
           {isLive ? (
-            <span className="flex items-center gap-1.5 rounded-full border border-green-500/30 bg-green-500/10 px-2 py-0.5 text-[10px] font-semibold text-green-400">
+            <span className="flex items-center gap-1.5 rounded-full border border-green-500/30 bg-green-500/10 px-2 py-0.5 text-xs font-semibold text-green-400">
               <span
                 className="h-1.5 w-1.5 animate-pulse rounded-full bg-green-400"
                 aria-hidden="true"
@@ -43,7 +43,7 @@ export function RadarHeader({
               AO VIVO
             </span>
           ) : (
-            <span className="rounded-full border border-border bg-muted/30 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+            <span className="rounded-full border border-border bg-muted/30 px-2 py-0.5 text-xs font-medium text-muted-foreground">
               IDLE
             </span>
           )}
@@ -51,7 +51,7 @@ export function RadarHeader({
           {/* Anomaly score badge — only shown in live mode */}
           {isLive && (
             <span
-              className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${ANOMALY_STYLE[level]}`}
+              className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${ANOMALY_STYLE[level]}`}
               aria-label={`Score de anomalia: ${level} ${(
                 anomalyScore * 100
               ).toFixed(1)}%`}
@@ -62,7 +62,7 @@ export function RadarHeader({
         </div>
       </div>
 
-      <p className="text-[11px] text-muted-foreground">
+      <p className="text-xs text-muted-foreground">
         {assetId} · {isLive ? "Ótimo vs Atual" : "Ótimo vs Estático"}{" "}
         (normalizado 0–100)
       </p>

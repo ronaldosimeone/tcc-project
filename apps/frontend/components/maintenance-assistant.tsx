@@ -95,7 +95,7 @@ export function MaintenanceAssistant({
               variant="outline"
               data-status={status}
               className={cn(
-                "font-mono text-[10px]",
+                "font-mono text-xs",
                 status === "error" || status === "offline"
                   ? "border-destructive/40 text-destructive"
                   : status === "done"

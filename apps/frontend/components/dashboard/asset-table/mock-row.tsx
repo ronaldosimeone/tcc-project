@@ -54,7 +54,7 @@ export function MockRow({ asset, isSelected, onSelect }: MockRowProps) {
       </td>
 
       <td className="py-3 pr-3 text-right">
-        <span className="font-mono text-[10px] italic text-muted-foreground/40">
+        <span className="font-mono text-xs italic text-muted-foreground/40">
           {asset.lastSeen} atrás
         </span>
       </td>

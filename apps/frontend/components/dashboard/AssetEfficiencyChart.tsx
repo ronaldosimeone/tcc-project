@@ -51,11 +51,11 @@ const AssetEfficiencyChart = memo(function AssetEfficiencyChart({
             <BarChart2 className="h-4 w-4 text-primary" />
             Eficiência Semanal
           </CardTitle>
-          <span className="font-mono text-[11px] font-semibold tabular-nums text-emerald-600 dark:text-emerald-400 dark:text-emerald-400">
+          <span className="font-mono text-xs font-semibold tabular-nums text-emerald-600 dark:text-emerald-400 dark:text-emerald-400">
             {avgEfficiency}% avg
           </span>
         </div>
-        <p className="text-[11px] text-muted-foreground">
+        <p className="text-xs text-muted-foreground">
           {assetId} · Horas em carga vs ocioso (24h/dia)
         </p>
       </CardHeader>
@@ -94,7 +94,7 @@ const AssetEfficiencyChart = memo(function AssetEfficiencyChart({
               label={{
                 value: "Meta",
                 position: "insideTopRight",
-                fontSize: 9,
+                fontSize: 12,
                 fill: "hsl(38 92% 50%)",
               }}
             />
@@ -106,7 +106,7 @@ const AssetEfficiencyChart = memo(function AssetEfficiencyChart({
               iconSize={8}
               iconType="circle"
               wrapperStyle={{
-                fontSize: 11,
+                fontSize: 12,
                 color: "var(--muted-foreground)",
                 paddingTop: 6,
               }}

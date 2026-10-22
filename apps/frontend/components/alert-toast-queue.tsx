@@ -107,7 +107,7 @@ function AlertToast({ alert, onAcknowledge }: AlertToastProps) {
             {isCritical ? "Falha Crítica" : "Degradação Detectada"}
           </span>
         </div>
-        <span className="shrink-0 font-mono text-[10px] tabular-nums text-muted-foreground">
+        <span className="shrink-0 font-mono text-xs tabular-nums text-muted-foreground">
           {time}
         </span>
       </div>
@@ -115,7 +115,7 @@ function AlertToast({ alert, onAcknowledge }: AlertToastProps) {
       {/* Probabilidade + barra de progresso */}
       <div className="pl-3">
         <div className="mb-1.5 flex items-center justify-between">
-          <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+          <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
             Prob. de Falha
           </span>
           <Badge
@@ -152,7 +152,7 @@ function AlertToast({ alert, onAcknowledge }: AlertToastProps) {
           onClick={() => onAcknowledge(alert.message_id)}
           aria-label={`Reconhecer alerta de ${pct}% às ${time}`}
           className={cn(
-            "h-7 gap-1.5 px-3 text-[11px] font-semibold transition-colors",
+            "h-7 gap-1.5 px-3 text-xs font-semibold transition-colors",
             isCritical
               ? "border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300"
               : "border-amber-500/30 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 hover:text-amber-300",

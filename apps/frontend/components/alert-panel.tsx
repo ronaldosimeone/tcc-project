@@ -105,7 +105,7 @@ export function AlertPanel({ latest, riskLevel }: AlertPanelProps) {
             Auditoria
           </span>
           {isMounted && history.length > 0 && (
-            <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-primary/20 px-1 text-[9px] font-bold text-primary">
+            <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-primary/20 px-1 text-xs font-bold text-primary">
               {history.length}
             </span>
           )}
@@ -117,7 +117,7 @@ export function AlertPanel({ latest, riskLevel }: AlertPanelProps) {
             size="sm"
             onClick={clearHistory}
             aria-label="Limpar histórico"
-            className="h-6 gap-1 px-2 text-[10px] text-muted-foreground hover:text-destructive"
+            className="h-6 gap-1 px-2 text-xs text-muted-foreground hover:text-destructive"
           >
             <Trash2 className="h-3 w-3" />
             Limpar
@@ -127,7 +127,7 @@ export function AlertPanel({ latest, riskLevel }: AlertPanelProps) {
 
       {/* ── Status atual ──────────────────────────────────────────────────── */}
       <div className="border-b border-border/60 px-4 py-3">
-        <p className="mb-2 text-[9px] font-semibold uppercase tracking-widest text-muted-foreground">
+        <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
           Status Atual
         </p>
         <div className="flex items-center justify-between">
@@ -147,7 +147,7 @@ export function AlertPanel({ latest, riskLevel }: AlertPanelProps) {
       {/* ── Histórico de eventos ──────────────────────────────────────────── */}
       <div className="flex min-h-0 flex-1 flex-col">
         <div className="px-4 py-2.5">
-          <p className="text-[9px] font-semibold uppercase tracking-widest text-muted-foreground">
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
             Histórico de eventos
           </p>
         </div>
@@ -164,7 +164,7 @@ export function AlertPanel({ latest, riskLevel }: AlertPanelProps) {
             data-testid="empty-state"
           >
             <ClipboardList className="h-8 w-8 text-muted-foreground/20" />
-            <p className="text-[10px] text-muted-foreground/50">
+            <p className="text-xs text-muted-foreground/50">
               Sem eventos registrados
             </p>
           </div>

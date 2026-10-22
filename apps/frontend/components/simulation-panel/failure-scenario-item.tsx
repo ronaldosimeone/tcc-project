@@ -14,11 +14,11 @@ interface HonestyBadgeProps {
 
 const HonestyBadge = ({ seen }: HonestyBadgeProps) =>
   seen ? (
-    <Badge variant="secondary" className="text-[10px]">
+    <Badge variant="secondary" className="text-xs">
       Vista no treino · demonstração
     </Badge>
   ) : (
-    <Badge className="text-[10px]">Inédita · teste honesto</Badge>
+    <Badge className="text-xs">Inédita · teste honesto</Badge>
   );
 
 interface FailureScenarioItemProps {
@@ -44,7 +44,7 @@ export const FailureScenarioItem = ({
       <span className="text-sm font-medium text-foreground">{s.label}</span>
       <div className="flex flex-wrap items-center gap-1.5">
         <HonestyBadge seen={s.seen_in_training} />
-        <span className="text-[10px] text-muted-foreground">{s.dataset}</span>
+        <span className="text-xs text-muted-foreground">{s.dataset}</span>
       </div>
       <span className="text-xs text-muted-foreground">{s.note}</span>
     </div>

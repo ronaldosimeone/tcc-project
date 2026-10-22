@@ -35,7 +35,7 @@ export const OperationalDonut = memo(function OperationalDonut({
         <CardTitle className="text-sm font-semibold text-foreground/90">
           Estado Operacional
         </CardTitle>
-        <p className="text-[10px] text-muted-foreground">
+        <p className="text-xs text-muted-foreground">
           Derivado da corrente do motor
         </p>
       </CardHeader>
@@ -95,7 +95,7 @@ export const OperationalDonut = memo(function OperationalDonut({
                 style={{ background: s.color }}
                 aria-hidden="true"
               />
-              <span className="whitespace-nowrap text-[10px] text-muted-foreground">
+              <span className="whitespace-nowrap text-xs text-muted-foreground">
                 {s.name}
                 {"value" in s && total > 0 && (
                   <> — {((s.value / total) * 100).toFixed(0)}%</>

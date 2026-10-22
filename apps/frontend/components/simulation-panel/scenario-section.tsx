@@ -110,7 +110,7 @@ export function ScenarioSection() {
       <div className="flex items-baseline justify-between">
         <Label className="text-sm">Cenário de dados</Label>
         {mode && (
-          <Badge variant="outline" className="font-mono text-[10px]">
+          <Badge variant="outline" className="font-mono text-xs">
             {mode}
           </Badge>
         )}

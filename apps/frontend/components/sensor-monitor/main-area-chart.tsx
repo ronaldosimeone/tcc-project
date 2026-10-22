@@ -54,7 +54,7 @@ export const MainAreaChart = memo(function MainAreaChart({
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75" />
                   <span className="relative inline-flex h-2 w-2 rounded-full bg-green-500" />
                 </span>
-                <span className="text-[10px] font-semibold uppercase tracking-wider text-green-600 dark:text-green-400">
+                <span className="text-xs font-semibold uppercase tracking-wider text-green-600 dark:text-green-400">
                   Ao vivo
                 </span>
               </span>
@@ -67,9 +67,7 @@ export const MainAreaChart = memo(function MainAreaChart({
                   className="inline-block h-2 w-4 rounded-full"
                   style={{ background: k === "TP2" ? C.tp2 : C.tp3 }}
                 />
-                <span className="text-[10px] text-muted-foreground">
-                  {k} (bar)
-                </span>
+                <span className="text-xs text-muted-foreground">{k} (bar)</span>
               </div>
             ))}
           </div>
@@ -93,7 +91,7 @@ export const MainAreaChart = memo(function MainAreaChart({
                 <AreaChart
                   accessibilityLayer={false}
                   data={data}
-                  margin={{ top: 4, right: 8, bottom: 0, left: -10 }}
+                  margin={{ top: 8, right: 8, bottom: 0, left: -4 }}
                 >
                   <defs>
                     <linearGradient id="gradTP2" x1="0" y1="0" x2="0" y2="1">
@@ -126,7 +124,7 @@ export const MainAreaChart = memo(function MainAreaChart({
                     tick={AXIS_TICK}
                     tickLine={false}
                     axisLine={false}
-                    width={28}
+                    width={32}
                   />
                   <RechartsTooltip content={AREA_TOOLTIP} />
                   <Area

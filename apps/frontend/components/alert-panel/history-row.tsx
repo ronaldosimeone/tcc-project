@@ -21,7 +21,7 @@ export function HistoryRow({ entry }: { entry: PredictionHistoryEntry }) {
       className="flex items-center gap-2 border-b border-border/40 px-3 py-2 last:border-0"
       data-risk={entry.riskLevel}
     >
-      <span className="w-16 shrink-0 font-mono text-[10px] text-muted-foreground/60">
+      <span className="w-16 shrink-0 font-mono text-xs text-muted-foreground/60">
         {time}
       </span>
       <RiskBadge level={entry.riskLevel} />

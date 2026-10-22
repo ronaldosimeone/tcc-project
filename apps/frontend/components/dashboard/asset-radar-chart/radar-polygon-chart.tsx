@@ -55,7 +55,7 @@ export function RadarPolygonChart({ data }: RadarPolygonChartProps) {
           iconType="circle"
           verticalAlign="bottom"
           wrapperStyle={{
-            fontSize: 11,
+            fontSize: 12,
             color: "var(--muted-foreground)",
             paddingTop: 12,
           }}
