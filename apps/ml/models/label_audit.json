@@ -1,0 +1,4123 @@
+{
+  "schema_version": "1.0",
+  "evaluated_at": "2026-10-22T15:00:34.117794+00:00",
+  "protocol": "docs/label_audit_protocol.md",
+  "primary": {
+    "thresholds": {
+      "2020": {
+        "tp3_p01": 7.866946506500244,
+        "fill_p01": -0.17009899357266825,
+        "duty_p99": 0.8550288075147248
+      },
+      "2022": {
+        "tp3_p01": 8.261646347045899,
+        "fill_p01": -0.1405031107307544,
+        "duty_p99": 0.14476381645555436
+      }
+    },
+    "healthy_blocks": {
+      "2020": 24104,
+      "2022": 17158
+    },
+    "healthy_at_duty_ceiling": {
+      "2020": 0.03426817125788251,
+      "2022": 0.001690173679916074
+    },
+    "stage_a": [
+      {
+        "id": "F20_1",
+        "label": [
+          "2020-04-18 00:00:00",
+          "2020-04-18 23:59:00"
+        ],
+        "physical": null,
+        "evidence": "none",
+        "start_shift_h": 0.0,
+        "end_shift_h": 0.0,
+        "evidence_share_in_label": {
+          "E1": 0.0,
+          "E2": 0.0,
+          "E3": 0.0
+        }
+      },
+      {
+        "id": "F20_2",
+        "label": [
+          "2020-05-29 23:30:00",
+          "2020-05-30 06:00:00"
+        ],
+        "physical": null,
+        "evidence": "none",
+        "start_shift_h": 0.0,
+        "end_shift_h": 0.0,
+        "evidence_share_in_label": {
+          "E1": 0.0,
+          "E2": 0.0,
+          "E3": 0.0
+        }
+      },
+      {
+        "id": "F20_3",
+        "label": [
+          "2020-06-05 10:00:00",
+          "2020-06-07 14:30:00"
+        ],
+        "physical": [
+          "2020-06-05 12:00:00",
+          "2020-06-07 03:20:00"
+        ],
+        "evidence": "sensors",
+        "start_shift_h": 2.0,
+        "end_shift_h": -11.166666666666666,
+        "evidence_share_in_label": {
+          "E1": 0.09027777777777778,
+          "E2": 0.0,
+          "E3": 0.017361111111111112
+        }
+      },
+      {
+        "id": "F20_4",
+        "label": [
+          "2020-07-15 14:30:00",
+          "2020-07-15 19:00:00"
+        ],
+        "physical": [
+          "2020-07-15 16:50:00",
+          "2020-07-15 18:50:00"
+        ],
+        "evidence": "sensors",
+        "start_shift_h": 2.3333333333333335,
+        "end_shift_h": -0.16666666666666666,
+        "evidence_share_in_label": {
+          "E1": 0.42857142857142855,
+          "E2": 0.0,
+          "E3": 0.32142857142857145
+        }
+      },
+      {
+        "id": "F22_1",
+        "label": [
+          "2022-02-28 21:53:00",
+          "2022-03-01 02:00:00"
+        ],
+        "physical": [
+          "2022-02-28 22:20:00",
+          "2022-03-01 02:10:00"
+        ],
+        "evidence": "sensors",
+        "start_shift_h": 0.45,
+        "end_shift_h": 0.16666666666666666,
+        "evidence_share_in_label": {
+          "E1": 0.8846153846153846,
+          "E2": 0.8461538461538461,
+          "E3": 0.7692307692307693
+        }
+      },
+      {
+        "id": "F22_2",
+        "label": [
+          "2022-03-23 14:54:00",
+          "2022-03-23 15:24:00"
+        ],
+        "physical": null,
+        "evidence": "none",
+        "start_shift_h": 0.0,
+        "end_shift_h": 0.0,
+        "evidence_share_in_label": {
+          "E1": 0.0,
+          "E2": 0.0,
+          "E3": 0.0
+        }
+      },
+      {
+        "id": "F22_3",
+        "label": [
+          "2022-05-30 12:00:00",
+          "2022-06-02 06:18:00"
+        ],
+        "physical": [
+          "2022-05-30 18:50:00",
+          "2022-06-02 06:30:00"
+        ],
+        "evidence": "sensors",
+        "start_shift_h": 6.833333333333333,
+        "end_shift_h": 0.2,
+        "evidence_share_in_label": {
+          "E1": 0.030395136778115502,
+          "E2": 0.0,
+          "E3": 0.00303951367781155
+        }
+      }
+    ],
+    "clusters": [
+      {
+        "start": "2020-05-09 16:47:28",
+        "end": "2020-05-09 16:55:14",
+        "hours": 0.12944444444444445,
+        "models": [
+          "autoencoder"
+        ],
+        "blocks": 2,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2020-05-10 22:50:17",
+        "end": "2020-05-10 23:13:05",
+        "hours": 0.38,
+        "models": [
+          "autoencoder",
+          "ewma",
+          "logistic_regression"
+        ],
+        "blocks": 3,
+        "evidence_blocks": {
+          "E1": 1,
+          "E2": 0,
+          "E3": 1,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2020-05-11 02:09:36",
+        "end": "2020-05-11 02:14:23",
+        "hours": 0.07972222222222222,
+        "models": [
+          "autoencoder"
+        ],
+        "blocks": 2,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2020-05-11 22:57:16",
+        "end": "2020-05-11 23:06:41",
+        "hours": 0.15694444444444444,
+        "models": [
+          "ewma"
+        ],
+        "blocks": 2,
+        "evidence_blocks": {
+          "E1": 1,
+          "E2": 0,
+          "E3": 1,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2020-05-12 23:04:19",
+        "end": "2020-05-12 23:13:14",
+        "hours": 0.1486111111111111,
+        "models": [
+          "autoencoder"
+        ],
+        "blocks": 2,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2020-05-13 02:39:55",
+        "end": "2020-05-13 02:43:23",
+        "hours": 0.057777777777777775,
+        "models": [
+          "autoencoder"
+        ],
+        "blocks": 2,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2020-05-13 13:45:04",
+        "end": "2020-05-14 01:18:03",
+        "hours": 11.549722222222222,
+        "models": [
+          "autoencoder",
+          "bilstm",
+          "ewma",
+          "logistic_regression",
+          "mlp",
+          "patchtst",
+          "random_forest",
+          "tcn",
+          "xgboost"
+        ],
+        "blocks": 70,
+        "evidence_blocks": {
+          "E1": 65,
+          "E2": 2,
+          "E3": 2,
+          "E4": 0
+        },
+        "class": "candidate"
+      },
+      {
+        "start": "2020-05-14 22:54:46",
+        "end": "2020-05-14 22:57:15",
+        "hours": 0.04138888888888889,
+        "models": [
+          "ewma"
+        ],
+        "blocks": 1,
+        "evidence_blocks": {
+          "E1": 1,
+          "E2": 0,
+          "E3": 1,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2020-05-15 19:19:05",
+        "end": "2020-05-15 19:23:13",
+        "hours": 0.06888888888888889,
+        "models": [
+          "autoencoder"
+        ],
+        "blocks": 2,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2020-05-16 07:50:28",
+        "end": "2020-05-16 07:58:24",
+        "hours": 0.1322222222222222,
+        "models": [
+          "autoencoder"
+        ],
+        "blocks": 1,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2020-05-16 14:19:52",
+        "end": "2020-05-16 14:27:08",
+        "hours": 0.12111111111111111,
+        "models": [
+          "autoencoder"
+        ],
+        "blocks": 2,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2020-05-16 23:26:54",
+        "end": "2020-05-16 23:27:13",
+        "hours": 0.005277777777777778,
+        "models": [
+          "autoencoder"
+        ],
+        "blocks": 1,
+        "evidence_blocks": {
+          "E1": 1,
+          "E2": 0,
+          "E3": 1,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2020-05-17 23:12:20",
+        "end": "2020-05-17 23:19:06",
+        "hours": 0.11277777777777778,
+        "models": [
+          "ewma"
+        ],
+        "blocks": 1,
+        "evidence_blocks": {
+          "E1": 1,
+          "E2": 0,
+          "E3": 1,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2020-05-18 05:01:15",
+        "end": "2020-05-18 05:21:34",
+        "hours": 0.3386111111111111,
+        "models": [
+          "bilstm",
+          "logistic_regression",
+          "mlp",
+          "patchtst"
+        ],
+        "blocks": 3,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2020-05-19 01:57:17",
+        "end": "2020-05-19 02:40:33",
+        "hours": 0.7211111111111111,
+        "models": [
+          "autoencoder",
+          "bilstm",
+          "logistic_regression"
+        ],
+        "blocks": 6,
+        "evidence_blocks": {
+          "E1": 6,
+          "E2": 0,
+          "E3": 5,
+          "E4": 0
+        },
+        "class": "candidate"
+      },
+      {
+        "start": "2020-05-19 06:01:10",
+        "end": "2020-05-19 06:05:57",
+        "hours": 0.07972222222222222,
+        "models": [
+          "ewma"
+        ],
+        "blocks": 1,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 1,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2020-05-19 22:24:46",
+        "end": "2020-05-20 19:48:20",
+        "hours": 21.392777777777777,
+        "models": [
+          "autoencoder",
+          "bilstm",
+          "logistic_regression",
+          "mlp",
+          "patchtst",
+          "random_forest",
+          "tcn",
+          "xgboost"
+        ],
+        "blocks": 129,
+        "evidence_blocks": {
+          "E1": 54,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2020-05-21 05:57:53",
+        "end": "2020-05-21 06:05:19",
+        "hours": 0.1238888888888889,
+        "models": [
+          "ewma"
+        ],
+        "blocks": 2,
+        "evidence_blocks": {
+          "E1": 1,
+          "E2": 0,
+          "E3": 2,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2020-05-23 00:06:54",
+        "end": "2020-05-23 00:09:43",
+        "hours": 0.04694444444444444,
+        "models": [
+          "ewma"
+        ],
+        "blocks": 1,
+        "evidence_blocks": {
+          "E1": 1,
+          "E2": 0,
+          "E3": 1,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2020-05-23 22:00:00",
+        "end": "2020-05-23 22:05:07",
+        "hours": 0.08527777777777777,
+        "models": [
+          "autoencoder"
+        ],
+        "blocks": 1,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2020-05-25 01:16:23",
+        "end": "2020-05-25 02:04:57",
+        "hours": 0.8094444444444444,
+        "models": [
+          "autoencoder",
+          "ewma",
+          "logistic_regression",
+          "mlp"
+        ],
+        "blocks": 6,
+        "evidence_blocks": {
+          "E1": 1,
+          "E2": 0,
+          "E3": 1,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2020-05-25 23:51:41",
+        "end": "2020-05-25 23:59:07",
+        "hours": 0.1238888888888889,
+        "models": [
+          "ewma"
+        ],
+        "blocks": 1,
+        "evidence_blocks": {
+          "E1": 1,
+          "E2": 0,
+          "E3": 1,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2020-05-26 06:02:29",
+        "end": "2020-05-26 06:15:12",
+        "hours": 0.21194444444444444,
+        "models": [
+          "ewma"
+        ],
+        "blocks": 2,
+        "evidence_blocks": {
+          "E1": 1,
+          "E2": 0,
+          "E3": 1,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2020-05-26 09:30:22",
+        "end": "2020-05-28 03:16:28",
+        "hours": 41.76833333333333,
+        "models": [
+          "autoencoder",
+          "patchtst",
+          "tcn"
+        ],
+        "blocks": 251,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2020-05-31 04:31:49",
+        "end": "2020-05-31 04:59:54",
+        "hours": 0.46805555555555556,
+        "models": [
+          "ewma"
+        ],
+        "blocks": 3,
+        "evidence_blocks": {
+          "E1": 1,
+          "E2": 0,
+          "E3": 1,
+          "E4": 3
+        },
+        "class": "boundary"
+      },
+      {
+        "start": "2020-06-01 14:51:23",
+        "end": "2020-06-01 15:42:27",
+        "hours": 0.8511111111111112,
+        "models": [
+          "autoencoder",
+          "ewma"
+        ],
+        "blocks": 6,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2020-06-03 10:38:14",
+        "end": "2020-06-03 11:18:43",
+        "hours": 0.6747222222222222,
+        "models": [
+          "ewma",
+          "mlp"
+        ],
+        "blocks": 5,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2020-06-08 12:46:52",
+        "end": "2020-06-08 13:07:12",
+        "hours": 0.3388888888888889,
+        "models": [
+          "bilstm",
+          "ewma"
+        ],
+        "blocks": 3,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 3
+        },
+        "class": "boundary"
+      },
+      {
+        "start": "2020-06-22 15:48:01",
+        "end": "2020-06-25 05:08:35",
+        "hours": 61.342777777777776,
+        "models": [
+          "cusum",
+          "ewma"
+        ],
+        "blocks": 369,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 98,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2020-07-08 18:23:45",
+        "end": "2020-07-08 19:27:11",
+        "hours": 1.0572222222222223,
+        "models": [
+          "ewma"
+        ],
+        "blocks": 7,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 2,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2020-07-14 02:28:59",
+        "end": "2020-07-14 02:54:05",
+        "hours": 0.41833333333333333,
+        "models": [
+          "ewma"
+        ],
+        "blocks": 4,
+        "evidence_blocks": {
+          "E1": 3,
+          "E2": 0,
+          "E3": 4,
+          "E4": 0
+        },
+        "class": "candidate"
+      },
+      {
+        "start": "2022-01-01 07:02:30",
+        "end": "2022-01-01 07:31:10",
+        "hours": 0.4777777777777778,
+        "models": [
+          "ewma"
+        ],
+        "blocks": 4,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2022-01-01 21:58:00",
+        "end": "2022-01-01 22:51:30",
+        "hours": 0.8916666666666667,
+        "models": [
+          "autoencoder"
+        ],
+        "blocks": 7,
+        "evidence_blocks": {
+          "E1": 2,
+          "E2": 0,
+          "E3": 3,
+          "E4": 0
+        },
+        "class": "candidate"
+      },
+      {
+        "start": "2022-01-04 01:52:30",
+        "end": "2022-01-04 02:00:00",
+        "hours": 0.125,
+        "models": [
+          "autoencoder"
+        ],
+        "blocks": 2,
+        "evidence_blocks": {
+          "E1": 1,
+          "E2": 0,
+          "E3": 1,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2022-01-04 14:41:30",
+        "end": "2022-01-04 14:41:40",
+        "hours": 0.002777777777777778,
+        "models": [
+          "mlp"
+        ],
+        "blocks": 1,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2022-01-05 06:01:30",
+        "end": "2022-01-05 06:01:30",
+        "hours": 0.0,
+        "models": [
+          "logistic_regression"
+        ],
+        "blocks": 1,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2022-01-10 07:24:50",
+        "end": "2022-01-10 08:15:30",
+        "hours": 0.8444444444444444,
+        "models": [
+          "autoencoder"
+        ],
+        "blocks": 6,
+        "evidence_blocks": {
+          "E1": 1,
+          "E2": 6,
+          "E3": 3,
+          "E4": 0
+        },
+        "class": "candidate"
+      },
+      {
+        "start": "2022-01-10 09:47:10",
+        "end": "2022-01-10 09:55:40",
+        "hours": 0.14166666666666666,
+        "models": [
+          "autoencoder"
+        ],
+        "blocks": 2,
+        "evidence_blocks": {
+          "E1": 1,
+          "E2": 0,
+          "E3": 1,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2022-01-10 17:23:40",
+        "end": "2022-01-10 17:23:50",
+        "hours": 0.002777777777777778,
+        "models": [
+          "mlp"
+        ],
+        "blocks": 1,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 1,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2022-01-11 09:46:20",
+        "end": "2022-01-11 09:55:10",
+        "hours": 0.14722222222222223,
+        "models": [
+          "autoencoder"
+        ],
+        "blocks": 2,
+        "evidence_blocks": {
+          "E1": 2,
+          "E2": 0,
+          "E3": 2,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2022-01-11 15:01:10",
+        "end": "2022-01-11 15:10:00",
+        "hours": 0.14722222222222223,
+        "models": [
+          "autoencoder"
+        ],
+        "blocks": 2,
+        "evidence_blocks": {
+          "E1": 1,
+          "E2": 0,
+          "E3": 1,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2022-01-12 07:15:20",
+        "end": "2022-01-12 07:58:40",
+        "hours": 0.7222222222222222,
+        "models": [
+          "ewma",
+          "mlp",
+          "random_forest"
+        ],
+        "blocks": 5,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 3,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2022-01-12 09:29:00",
+        "end": "2022-01-12 09:49:40",
+        "hours": 0.34444444444444444,
+        "models": [
+          "autoencoder"
+        ],
+        "blocks": 3,
+        "evidence_blocks": {
+          "E1": 2,
+          "E2": 3,
+          "E3": 2,
+          "E4": 0
+        },
+        "class": "candidate"
+      },
+      {
+        "start": "2022-01-12 13:00:40",
+        "end": "2022-01-12 13:09:30",
+        "hours": 0.14722222222222223,
+        "models": [
+          "autoencoder"
+        ],
+        "blocks": 1,
+        "evidence_blocks": {
+          "E1": 1,
+          "E2": 0,
+          "E3": 1,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2022-01-12 19:50:30",
+        "end": "2022-01-12 19:59:20",
+        "hours": 0.14722222222222223,
+        "models": [
+          "autoencoder"
+        ],
+        "blocks": 1,
+        "evidence_blocks": {
+          "E1": 1,
+          "E2": 0,
+          "E3": 1,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2022-01-13 09:09:00",
+        "end": "2022-01-13 09:40:10",
+        "hours": 0.5194444444444445,
+        "models": [
+          "mlp"
+        ],
+        "blocks": 5,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2022-01-13 20:45:20",
+        "end": "2022-01-13 20:54:10",
+        "hours": 0.14722222222222223,
+        "models": [
+          "autoencoder"
+        ],
+        "blocks": 2,
+        "evidence_blocks": {
+          "E1": 1,
+          "E2": 0,
+          "E3": 2,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2022-01-14 15:35:00",
+        "end": "2022-01-14 15:43:50",
+        "hours": 0.14722222222222223,
+        "models": [
+          "autoencoder"
+        ],
+        "blocks": 2,
+        "evidence_blocks": {
+          "E1": 1,
+          "E2": 0,
+          "E3": 2,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2022-01-16 15:44:50",
+        "end": "2022-01-16 16:32:10",
+        "hours": 0.7888888888888889,
+        "models": [
+          "autoencoder"
+        ],
+        "blocks": 6,
+        "evidence_blocks": {
+          "E1": 2,
+          "E2": 0,
+          "E3": 2,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2022-01-25 17:46:50",
+        "end": "2022-01-25 17:55:40",
+        "hours": 0.14722222222222223,
+        "models": [
+          "autoencoder"
+        ],
+        "blocks": 2,
+        "evidence_blocks": {
+          "E1": 1,
+          "E2": 0,
+          "E3": 2,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2022-01-26 06:21:40",
+        "end": "2022-01-26 06:40:10",
+        "hours": 0.30833333333333335,
+        "models": [
+          "autoencoder"
+        ],
+        "blocks": 3,
+        "evidence_blocks": {
+          "E1": 2,
+          "E2": 1,
+          "E3": 2,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2022-01-28 07:11:10",
+        "end": "2022-01-28 07:44:50",
+        "hours": 0.5611111111111111,
+        "models": [
+          "autoencoder"
+        ],
+        "blocks": 4,
+        "evidence_blocks": {
+          "E1": 2,
+          "E2": 1,
+          "E3": 3,
+          "E4": 0
+        },
+        "class": "candidate"
+      },
+      {
+        "start": "2022-01-31 17:45:50",
+        "end": "2022-01-31 17:54:00",
+        "hours": 0.1361111111111111,
+        "models": [
+          "autoencoder"
+        ],
+        "blocks": 2,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 1,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2022-02-01 06:40:00",
+        "end": "2022-02-01 06:48:50",
+        "hours": 0.14722222222222223,
+        "models": [
+          "autoencoder"
+        ],
+        "blocks": 1,
+        "evidence_blocks": {
+          "E1": 1,
+          "E2": 0,
+          "E3": 1,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2022-02-01 22:14:50",
+        "end": "2022-02-01 22:33:30",
+        "hours": 0.3111111111111111,
+        "models": [
+          "autoencoder"
+        ],
+        "blocks": 3,
+        "evidence_blocks": {
+          "E1": 1,
+          "E2": 0,
+          "E3": 2,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2022-02-02 23:01:20",
+        "end": "2022-02-02 23:01:30",
+        "hours": 0.002777777777777778,
+        "models": [
+          "mlp"
+        ],
+        "blocks": 1,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2022-02-06 18:24:10",
+        "end": "2022-02-06 18:33:00",
+        "hours": 0.14722222222222223,
+        "models": [
+          "autoencoder"
+        ],
+        "blocks": 2,
+        "evidence_blocks": {
+          "E1": 1,
+          "E2": 0,
+          "E3": 1,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2022-02-07 01:32:10",
+        "end": "2022-02-07 01:32:10",
+        "hours": 0.0,
+        "models": [
+          "mlp"
+        ],
+        "blocks": 1,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2022-02-07 07:24:50",
+        "end": "2022-02-07 08:07:30",
+        "hours": 0.7111111111111111,
+        "models": [
+          "mlp"
+        ],
+        "blocks": 5,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2022-02-07 09:54:00",
+        "end": "2022-02-07 10:48:20",
+        "hours": 0.9055555555555556,
+        "models": [
+          "mlp"
+        ],
+        "blocks": 6,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2022-02-07 12:43:20",
+        "end": "2022-02-07 12:43:20",
+        "hours": 0.0,
+        "models": [
+          "mlp"
+        ],
+        "blocks": 1,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2022-02-08 20:39:00",
+        "end": "2022-02-08 21:47:20",
+        "hours": 1.1388888888888888,
+        "models": [
+          "autoencoder"
+        ],
+        "blocks": 8,
+        "evidence_blocks": {
+          "E1": 4,
+          "E2": 7,
+          "E3": 5,
+          "E4": 0
+        },
+        "class": "candidate"
+      },
+      {
+        "start": "2022-02-10 20:18:20",
+        "end": "2022-02-10 20:27:10",
+        "hours": 0.14722222222222223,
+        "models": [
+          "autoencoder"
+        ],
+        "blocks": 2,
+        "evidence_blocks": {
+          "E1": 2,
+          "E2": 0,
+          "E3": 2,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2022-02-11 19:46:40",
+        "end": "2022-02-12 01:56:40",
+        "hours": 6.166666666666667,
+        "models": [
+          "autoencoder",
+          "logistic_regression",
+          "mlp",
+          "patchtst",
+          "random_forest",
+          "tcn"
+        ],
+        "blocks": 38,
+        "evidence_blocks": {
+          "E1": 37,
+          "E2": 37,
+          "E3": 37,
+          "E4": 0
+        },
+        "class": "candidate"
+      },
+      {
+        "start": "2022-02-13 09:58:00",
+        "end": "2022-02-13 10:46:40",
+        "hours": 0.8111111111111111,
+        "models": [
+          "autoencoder"
+        ],
+        "blocks": 6,
+        "evidence_blocks": {
+          "E1": 2,
+          "E2": 0,
+          "E3": 3,
+          "E4": 0
+        },
+        "class": "candidate"
+      },
+      {
+        "start": "2022-02-15 12:17:40",
+        "end": "2022-02-15 13:01:10",
+        "hours": 0.725,
+        "models": [
+          "autoencoder"
+        ],
+        "blocks": 6,
+        "evidence_blocks": {
+          "E1": 2,
+          "E2": 0,
+          "E3": 3,
+          "E4": 0
+        },
+        "class": "candidate"
+      },
+      {
+        "start": "2022-02-17 14:27:00",
+        "end": "2022-02-17 14:35:50",
+        "hours": 0.14722222222222223,
+        "models": [
+          "autoencoder"
+        ],
+        "blocks": 2,
+        "evidence_blocks": {
+          "E1": 1,
+          "E2": 0,
+          "E3": 2,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2022-02-19 01:57:20",
+        "end": "2022-02-19 01:58:10",
+        "hours": 0.013888888888888888,
+        "models": [
+          "mlp"
+        ],
+        "blocks": 1,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2022-02-19 06:11:40",
+        "end": "2022-02-19 06:11:50",
+        "hours": 0.002777777777777778,
+        "models": [
+          "mlp"
+        ],
+        "blocks": 1,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2022-02-19 07:41:40",
+        "end": "2022-02-19 08:06:50",
+        "hours": 0.41944444444444445,
+        "models": [
+          "mlp"
+        ],
+        "blocks": 3,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2022-02-19 10:05:50",
+        "end": "2022-02-19 10:18:50",
+        "hours": 0.21666666666666667,
+        "models": [
+          "mlp"
+        ],
+        "blocks": 2,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2022-02-20 11:40:30",
+        "end": "2022-02-20 12:36:30",
+        "hours": 0.9333333333333333,
+        "models": [
+          "mlp"
+        ],
+        "blocks": 6,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2022-02-20 13:59:20",
+        "end": "2022-02-20 14:32:10",
+        "hours": 0.5472222222222223,
+        "models": [
+          "mlp"
+        ],
+        "blocks": 5,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2022-02-20 19:16:40",
+        "end": "2022-02-20 20:05:20",
+        "hours": 0.8111111111111111,
+        "models": [
+          "autoencoder"
+        ],
+        "blocks": 6,
+        "evidence_blocks": {
+          "E1": 2,
+          "E2": 0,
+          "E3": 3,
+          "E4": 0
+        },
+        "class": "candidate"
+      },
+      {
+        "start": "2022-02-23 16:51:20",
+        "end": "2022-02-23 17:00:10",
+        "hours": 0.14722222222222223,
+        "models": [
+          "autoencoder"
+        ],
+        "blocks": 2,
+        "evidence_blocks": {
+          "E1": 1,
+          "E2": 0,
+          "E3": 1,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2022-02-24 20:06:00",
+        "end": "2022-02-24 21:54:20",
+        "hours": 1.8055555555555556,
+        "models": [
+          "autoencoder"
+        ],
+        "blocks": 12,
+        "evidence_blocks": {
+          "E1": 3,
+          "E2": 1,
+          "E3": 5,
+          "E4": 0
+        },
+        "class": "candidate"
+      },
+      {
+        "start": "2022-02-25 21:06:20",
+        "end": "2022-02-25 21:09:00",
+        "hours": 0.044444444444444446,
+        "models": [
+          "mlp"
+        ],
+        "blocks": 1,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2022-02-25 23:10:20",
+        "end": "2022-02-25 23:10:20",
+        "hours": 0.0,
+        "models": [
+          "mlp"
+        ],
+        "blocks": 1,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2022-02-26 01:41:20",
+        "end": "2022-02-26 01:41:20",
+        "hours": 0.0,
+        "models": [
+          "mlp"
+        ],
+        "blocks": 1,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2022-02-26 09:54:50",
+        "end": "2022-02-26 09:59:00",
+        "hours": 0.06944444444444445,
+        "models": [
+          "autoencoder"
+        ],
+        "blocks": 1,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 1,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2022-02-27 00:23:20",
+        "end": "2022-02-27 00:48:50",
+        "hours": 0.425,
+        "models": [
+          "mlp"
+        ],
+        "blocks": 3,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2022-02-27 08:49:50",
+        "end": "2022-02-27 09:03:30",
+        "hours": 0.22777777777777777,
+        "models": [
+          "autoencoder"
+        ],
+        "blocks": 3,
+        "evidence_blocks": {
+          "E1": 2,
+          "E2": 0,
+          "E3": 3,
+          "E4": 0
+        },
+        "class": "candidate"
+      },
+      {
+        "start": "2022-02-27 17:44:00",
+        "end": "2022-02-27 18:08:00",
+        "hours": 0.4,
+        "models": [
+          "mlp"
+        ],
+        "blocks": 3,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2022-02-27 21:07:10",
+        "end": "2022-02-27 22:00:40",
+        "hours": 0.8916666666666667,
+        "models": [
+          "mlp"
+        ],
+        "blocks": 7,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 1
+        },
+        "class": "boundary"
+      },
+      {
+        "start": "2022-02-28 06:01:20",
+        "end": "2022-02-28 06:01:20",
+        "hours": 0.0,
+        "models": [
+          "logistic_regression"
+        ],
+        "blocks": 1,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 1
+        },
+        "class": "boundary"
+      },
+      {
+        "start": "2022-03-01 06:00:00",
+        "end": "2022-03-01 08:16:30",
+        "hours": 2.275,
+        "models": [
+          "autoencoder",
+          "bilstm",
+          "logistic_regression",
+          "mlp",
+          "patchtst",
+          "random_forest",
+          "tcn"
+        ],
+        "blocks": 14,
+        "evidence_blocks": {
+          "E1": 3,
+          "E2": 7,
+          "E3": 3,
+          "E4": 14
+        },
+        "class": "boundary"
+      },
+      {
+        "start": "2022-03-01 23:43:30",
+        "end": "2022-03-02 00:22:40",
+        "hours": 0.6527777777777778,
+        "models": [
+          "mlp"
+        ],
+        "blocks": 5,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 5
+        },
+        "class": "boundary"
+      },
+      {
+        "start": "2022-03-02 06:05:20",
+        "end": "2022-03-02 07:27:10",
+        "hours": 1.363888888888889,
+        "models": [
+          "mlp",
+          "random_forest"
+        ],
+        "blocks": 9,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2022-03-02 09:48:10",
+        "end": "2022-03-02 10:39:30",
+        "hours": 0.8555555555555555,
+        "models": [
+          "mlp"
+        ],
+        "blocks": 6,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2022-03-03 01:20:30",
+        "end": "2022-03-03 01:20:50",
+        "hours": 0.005555555555555556,
+        "models": [
+          "mlp"
+        ],
+        "blocks": 1,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2022-03-03 06:00:50",
+        "end": "2022-03-03 06:01:30",
+        "hours": 0.011111111111111112,
+        "models": [
+          "mlp"
+        ],
+        "blocks": 1,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2022-03-06 18:42:50",
+        "end": "2022-03-06 19:20:10",
+        "hours": 0.6222222222222222,
+        "models": [
+          "mlp"
+        ],
+        "blocks": 5,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2022-03-09 08:02:30",
+        "end": "2022-03-09 08:23:00",
+        "hours": 0.3416666666666667,
+        "models": [
+          "autoencoder",
+          "logistic_regression",
+          "mlp"
+        ],
+        "blocks": 3,
+        "evidence_blocks": {
+          "E1": 2,
+          "E2": 2,
+          "E3": 2,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2022-03-09 12:06:00",
+        "end": "2022-03-09 12:07:30",
+        "hours": 0.025,
+        "models": [
+          "autoencoder"
+        ],
+        "blocks": 1,
+        "evidence_blocks": {
+          "E1": 1,
+          "E2": 0,
+          "E3": 1,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2022-03-09 16:18:50",
+        "end": "2022-03-09 16:32:30",
+        "hours": 0.22777777777777777,
+        "models": [
+          "autoencoder"
+        ],
+        "blocks": 3,
+        "evidence_blocks": {
+          "E1": 2,
+          "E2": 1,
+          "E3": 3,
+          "E4": 0
+        },
+        "class": "candidate"
+      },
+      {
+        "start": "2022-03-10 08:57:40",
+        "end": "2022-03-10 09:05:30",
+        "hours": 0.13055555555555556,
+        "models": [
+          "mlp"
+        ],
+        "blocks": 2,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 1,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2022-03-24 13:13:20",
+        "end": "2022-03-24 13:41:00",
+        "hours": 0.46111111111111114,
+        "models": [
+          "logistic_regression"
+        ],
+        "blocks": 4,
+        "evidence_blocks": {
+          "E1": 3,
+          "E2": 3,
+          "E3": 3,
+          "E4": 4
+        },
+        "class": "boundary"
+      },
+      {
+        "start": "2022-03-24 16:46:20",
+        "end": "2022-03-24 16:46:50",
+        "hours": 0.008333333333333333,
+        "models": [
+          "logistic_regression"
+        ],
+        "blocks": 1,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2022-03-31 06:00:50",
+        "end": "2022-03-31 06:01:50",
+        "hours": 0.016666666666666666,
+        "models": [
+          "logistic_regression"
+        ],
+        "blocks": 1,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 1,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2022-05-07 08:49:30",
+        "end": "2022-05-07 09:26:40",
+        "hours": 0.6194444444444445,
+        "models": [
+          "ewma"
+        ],
+        "blocks": 5,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 5,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2022-05-10 21:33:30",
+        "end": "2022-05-10 22:07:50",
+        "hours": 0.5722222222222222,
+        "models": [
+          "ewma"
+        ],
+        "blocks": 4,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2022-05-11 08:53:50",
+        "end": "2022-05-11 10:38:00",
+        "hours": 1.7361111111111112,
+        "models": [
+          "ewma"
+        ],
+        "blocks": 11,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2022-05-12 01:05:30",
+        "end": "2022-05-12 02:00:00",
+        "hours": 0.9083333333333333,
+        "models": [
+          "cusum",
+          "ewma"
+        ],
+        "blocks": 7,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2022-05-12 06:34:50",
+        "end": "2022-05-12 06:44:30",
+        "hours": 0.16111111111111112,
+        "models": [
+          "ewma"
+        ],
+        "blocks": 2,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2022-05-12 08:05:50",
+        "end": "2022-05-12 08:09:00",
+        "hours": 0.05277777777777778,
+        "models": [
+          "ewma"
+        ],
+        "blocks": 1,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2022-05-28 00:11:40",
+        "end": "2022-05-28 02:00:00",
+        "hours": 1.8055555555555556,
+        "models": [
+          "cusum"
+        ],
+        "blocks": 12,
+        "evidence_blocks": {
+          "E1": 1,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2022-05-28 14:13:50",
+        "end": "2022-05-29 02:00:00",
+        "hours": 11.769444444444444,
+        "models": [
+          "cusum"
+        ],
+        "blocks": 72,
+        "evidence_blocks": {
+          "E1": 4,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "weak"
+      }
+    ],
+    "class_counts": {
+      "boundary": 7,
+      "candidate": 15,
+      "weak": 42,
+      "none": 43
+    },
+    "class_hours": {
+      "boundary": 5.1,
+      "candidate": 27.2,
+      "weak": 105.0,
+      "none": 56.4
+    },
+    "secondary": {
+      "random_forest": {
+        "original": {
+          "fa": 48,
+          "cost": 74.66666666666667,
+          "detected": 2
+        },
+        "audited": {
+          "fa": 27,
+          "cost": 71.16666666666667,
+          "detected": 2
+        }
+      },
+      "xgboost": {
+        "original": {
+          "fa": 36,
+          "cost": 56.0,
+          "detected": 3
+        },
+        "audited": {
+          "fa": 22,
+          "cost": 53.666666666666664,
+          "detected": 3
+        }
+      },
+      "logistic_regression": {
+        "original": {
+          "fa": 63,
+          "cost": 77.16666666666667,
+          "detected": 2
+        },
+        "audited": {
+          "fa": 34,
+          "cost": 72.33333333333333,
+          "detected": 2
+        }
+      },
+      "mlp": {
+        "original": {
+          "fa": 134,
+          "cost": 72.33333333333333,
+          "detected": 3
+        },
+        "audited": {
+          "fa": 98,
+          "cost": 66.33333333333333,
+          "detected": 3
+        }
+      },
+      "tcn": {
+        "original": {
+          "fa": 87,
+          "cost": 81.16666666666667,
+          "detected": 2
+        },
+        "audited": {
+          "fa": 70,
+          "cost": 78.33333333333333,
+          "detected": 2
+        }
+      },
+      "bilstm": {
+        "original": {
+          "fa": 37,
+          "cost": 56.166666666666664,
+          "detected": 3
+        },
+        "audited": {
+          "fa": 23,
+          "cost": 53.833333333333336,
+          "detected": 3
+        }
+      },
+      "patchtst": {
+        "original": {
+          "fa": 119,
+          "cost": 69.83333333333333,
+          "detected": 3
+        },
+        "audited": {
+          "fa": 106,
+          "cost": 67.66666666666667,
+          "detected": 3
+        }
+      },
+      "autoencoder": {
+        "original": {
+          "fa": 177,
+          "cost": 112.83333333333333,
+          "detected": 1
+        },
+        "audited": {
+          "fa": 104,
+          "cost": 100.66666666666667,
+          "detected": 1
+        }
+      },
+      "cusum": {
+        "original": {
+          "fa": 74,
+          "cost": 79.0,
+          "detected": 2
+        },
+        "audited": {
+          "fa": 74,
+          "cost": 79.0,
+          "detected": 2
+        }
+      },
+      "ewma": {
+        "original": {
+          "fa": 101,
+          "cost": 50.166666666666664,
+          "detected": 4
+        },
+        "audited": {
+          "fa": 91,
+          "cost": 48.5,
+          "detected": 4
+        }
+      }
+    },
+    "models": [
+      "random_forest",
+      "xgboost",
+      "logistic_regression",
+      "mlp",
+      "tcn",
+      "bilstm",
+      "patchtst",
+      "autoencoder",
+      "cusum",
+      "ewma"
+    ]
+  },
+  "deviation_e2_inclusive": {
+    "thresholds": {
+      "2020": {
+        "tp3_p01": 7.866946506500244,
+        "fill_p01": -0.17009899357266825,
+        "duty_p99": 0.8550288075147248
+      },
+      "2022": {
+        "tp3_p01": 8.261646347045899,
+        "fill_p01": -0.1405031107307544,
+        "duty_p99": 0.14476381645555436
+      }
+    },
+    "healthy_blocks": {
+      "2020": 24104,
+      "2022": 17158
+    },
+    "healthy_at_duty_ceiling": {
+      "2020": 0.03426817125788251,
+      "2022": 0.001690173679916074
+    },
+    "stage_a": [
+      {
+        "id": "F20_1",
+        "label": [
+          "2020-04-18 00:00:00",
+          "2020-04-18 23:59:00"
+        ],
+        "physical": [
+          "2020-04-18 01:30:00",
+          "2020-04-19 01:50:00"
+        ],
+        "evidence": "sensors",
+        "start_shift_h": 1.5,
+        "end_shift_h": 1.85,
+        "evidence_share_in_label": {
+          "E1": 0.0,
+          "E2": 0.9375,
+          "E3": 0.0
+        }
+      },
+      {
+        "id": "F20_2",
+        "label": [
+          "2020-05-29 23:30:00",
+          "2020-05-30 06:00:00"
+        ],
+        "physical": [
+          "2020-05-30 00:20:00",
+          "2020-05-30 05:50:00"
+        ],
+        "evidence": "sensors",
+        "start_shift_h": 0.8333333333333334,
+        "end_shift_h": -0.16666666666666666,
+        "evidence_share_in_label": {
+          "E1": 0.0,
+          "E2": 0.825,
+          "E3": 0.0
+        }
+      },
+      {
+        "id": "F20_3",
+        "label": [
+          "2020-06-05 10:00:00",
+          "2020-06-07 14:30:00"
+        ],
+        "physical": [
+          "2020-06-05 10:50:00",
+          "2020-06-07 14:20:00"
+        ],
+        "evidence": "sensors",
+        "start_shift_h": 0.8333333333333334,
+        "end_shift_h": -0.16666666666666666,
+        "evidence_share_in_label": {
+          "E1": 0.09027777777777778,
+          "E2": 0.9791666666666666,
+          "E3": 0.017361111111111112
+        }
+      },
+      {
+        "id": "F20_4",
+        "label": [
+          "2020-07-15 14:30:00",
+          "2020-07-15 19:00:00"
+        ],
+        "physical": [
+          "2020-07-15 15:30:00",
+          "2020-07-15 18:50:00"
+        ],
+        "evidence": "sensors",
+        "start_shift_h": 1.0,
+        "end_shift_h": -0.16666666666666666,
+        "evidence_share_in_label": {
+          "E1": 0.42857142857142855,
+          "E2": 0.7142857142857143,
+          "E3": 0.32142857142857145
+        }
+      },
+      {
+        "id": "F22_1",
+        "label": [
+          "2022-02-28 21:53:00",
+          "2022-03-01 02:00:00"
+        ],
+        "physical": [
+          "2022-02-28 22:20:00",
+          "2022-03-01 02:10:00"
+        ],
+        "evidence": "sensors",
+        "start_shift_h": 0.45,
+        "end_shift_h": 0.16666666666666666,
+        "evidence_share_in_label": {
+          "E1": 0.8846153846153846,
+          "E2": 0.8461538461538461,
+          "E3": 0.7692307692307693
+        }
+      },
+      {
+        "id": "F22_2",
+        "label": [
+          "2022-03-23 14:54:00",
+          "2022-03-23 15:24:00"
+        ],
+        "physical": null,
+        "evidence": "none",
+        "start_shift_h": 0.0,
+        "end_shift_h": 0.0,
+        "evidence_share_in_label": {
+          "E1": 0.0,
+          "E2": 0.0,
+          "E3": 0.0
+        }
+      },
+      {
+        "id": "F22_3",
+        "label": [
+          "2022-05-30 12:00:00",
+          "2022-06-02 06:18:00"
+        ],
+        "physical": [
+          "2022-05-30 18:50:00",
+          "2022-06-02 06:30:00"
+        ],
+        "evidence": "sensors",
+        "start_shift_h": 6.833333333333333,
+        "end_shift_h": 0.2,
+        "evidence_share_in_label": {
+          "E1": 0.030395136778115502,
+          "E2": 0.0,
+          "E3": 0.00303951367781155
+        }
+      }
+    ],
+    "clusters": [
+      {
+        "start": "2020-05-09 16:47:28",
+        "end": "2020-05-09 16:55:14",
+        "hours": 0.12944444444444445,
+        "models": [
+          "autoencoder"
+        ],
+        "blocks": 2,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2020-05-10 22:50:17",
+        "end": "2020-05-10 23:13:05",
+        "hours": 0.38,
+        "models": [
+          "autoencoder",
+          "ewma",
+          "logistic_regression"
+        ],
+        "blocks": 3,
+        "evidence_blocks": {
+          "E1": 1,
+          "E2": 0,
+          "E3": 1,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2020-05-11 02:09:36",
+        "end": "2020-05-11 02:14:23",
+        "hours": 0.07972222222222222,
+        "models": [
+          "autoencoder"
+        ],
+        "blocks": 2,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2020-05-11 22:57:16",
+        "end": "2020-05-11 23:06:41",
+        "hours": 0.15694444444444444,
+        "models": [
+          "ewma"
+        ],
+        "blocks": 2,
+        "evidence_blocks": {
+          "E1": 1,
+          "E2": 0,
+          "E3": 1,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2020-05-12 23:04:19",
+        "end": "2020-05-12 23:13:14",
+        "hours": 0.1486111111111111,
+        "models": [
+          "autoencoder"
+        ],
+        "blocks": 2,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2020-05-13 02:39:55",
+        "end": "2020-05-13 02:43:23",
+        "hours": 0.057777777777777775,
+        "models": [
+          "autoencoder"
+        ],
+        "blocks": 2,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2020-05-13 13:45:04",
+        "end": "2020-05-14 01:18:03",
+        "hours": 11.549722222222222,
+        "models": [
+          "autoencoder",
+          "bilstm",
+          "ewma",
+          "logistic_regression",
+          "mlp",
+          "patchtst",
+          "random_forest",
+          "tcn",
+          "xgboost"
+        ],
+        "blocks": 70,
+        "evidence_blocks": {
+          "E1": 65,
+          "E2": 63,
+          "E3": 2,
+          "E4": 0
+        },
+        "class": "candidate"
+      },
+      {
+        "start": "2020-05-14 22:54:46",
+        "end": "2020-05-14 22:57:15",
+        "hours": 0.04138888888888889,
+        "models": [
+          "ewma"
+        ],
+        "blocks": 1,
+        "evidence_blocks": {
+          "E1": 1,
+          "E2": 0,
+          "E3": 1,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2020-05-15 19:19:05",
+        "end": "2020-05-15 19:23:13",
+        "hours": 0.06888888888888889,
+        "models": [
+          "autoencoder"
+        ],
+        "blocks": 2,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2020-05-16 07:50:28",
+        "end": "2020-05-16 07:58:24",
+        "hours": 0.1322222222222222,
+        "models": [
+          "autoencoder"
+        ],
+        "blocks": 1,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2020-05-16 14:19:52",
+        "end": "2020-05-16 14:27:08",
+        "hours": 0.12111111111111111,
+        "models": [
+          "autoencoder"
+        ],
+        "blocks": 2,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2020-05-16 23:26:54",
+        "end": "2020-05-16 23:27:13",
+        "hours": 0.005277777777777778,
+        "models": [
+          "autoencoder"
+        ],
+        "blocks": 1,
+        "evidence_blocks": {
+          "E1": 1,
+          "E2": 0,
+          "E3": 1,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2020-05-17 23:12:20",
+        "end": "2020-05-17 23:19:06",
+        "hours": 0.11277777777777778,
+        "models": [
+          "ewma"
+        ],
+        "blocks": 1,
+        "evidence_blocks": {
+          "E1": 1,
+          "E2": 0,
+          "E3": 1,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2020-05-18 05:01:15",
+        "end": "2020-05-18 05:21:34",
+        "hours": 0.3386111111111111,
+        "models": [
+          "bilstm",
+          "logistic_regression",
+          "mlp",
+          "patchtst"
+        ],
+        "blocks": 3,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2020-05-19 01:57:17",
+        "end": "2020-05-19 02:40:33",
+        "hours": 0.7211111111111111,
+        "models": [
+          "autoencoder",
+          "bilstm",
+          "logistic_regression"
+        ],
+        "blocks": 6,
+        "evidence_blocks": {
+          "E1": 6,
+          "E2": 0,
+          "E3": 5,
+          "E4": 0
+        },
+        "class": "candidate"
+      },
+      {
+        "start": "2020-05-19 06:01:10",
+        "end": "2020-05-19 06:05:57",
+        "hours": 0.07972222222222222,
+        "models": [
+          "ewma"
+        ],
+        "blocks": 1,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 1,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2020-05-19 22:24:46",
+        "end": "2020-05-20 19:48:20",
+        "hours": 21.392777777777777,
+        "models": [
+          "autoencoder",
+          "bilstm",
+          "logistic_regression",
+          "mlp",
+          "patchtst",
+          "random_forest",
+          "tcn",
+          "xgboost"
+        ],
+        "blocks": 129,
+        "evidence_blocks": {
+          "E1": 54,
+          "E2": 122,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "candidate"
+      },
+      {
+        "start": "2020-05-21 05:57:53",
+        "end": "2020-05-21 06:05:19",
+        "hours": 0.1238888888888889,
+        "models": [
+          "ewma"
+        ],
+        "blocks": 2,
+        "evidence_blocks": {
+          "E1": 1,
+          "E2": 0,
+          "E3": 2,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2020-05-23 00:06:54",
+        "end": "2020-05-23 00:09:43",
+        "hours": 0.04694444444444444,
+        "models": [
+          "ewma"
+        ],
+        "blocks": 1,
+        "evidence_blocks": {
+          "E1": 1,
+          "E2": 0,
+          "E3": 1,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2020-05-23 22:00:00",
+        "end": "2020-05-23 22:05:07",
+        "hours": 0.08527777777777777,
+        "models": [
+          "autoencoder"
+        ],
+        "blocks": 1,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2020-05-25 01:16:23",
+        "end": "2020-05-25 02:04:57",
+        "hours": 0.8094444444444444,
+        "models": [
+          "autoencoder",
+          "ewma",
+          "logistic_regression",
+          "mlp"
+        ],
+        "blocks": 6,
+        "evidence_blocks": {
+          "E1": 1,
+          "E2": 0,
+          "E3": 1,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2020-05-25 23:51:41",
+        "end": "2020-05-25 23:59:07",
+        "hours": 0.1238888888888889,
+        "models": [
+          "ewma"
+        ],
+        "blocks": 1,
+        "evidence_blocks": {
+          "E1": 1,
+          "E2": 0,
+          "E3": 1,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2020-05-26 06:02:29",
+        "end": "2020-05-26 06:15:12",
+        "hours": 0.21194444444444444,
+        "models": [
+          "ewma"
+        ],
+        "blocks": 2,
+        "evidence_blocks": {
+          "E1": 1,
+          "E2": 0,
+          "E3": 1,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2020-05-26 09:30:22",
+        "end": "2020-05-28 03:16:28",
+        "hours": 41.76833333333333,
+        "models": [
+          "autoencoder",
+          "patchtst",
+          "tcn"
+        ],
+        "blocks": 251,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2020-05-31 04:31:49",
+        "end": "2020-05-31 04:59:54",
+        "hours": 0.46805555555555556,
+        "models": [
+          "ewma"
+        ],
+        "blocks": 3,
+        "evidence_blocks": {
+          "E1": 1,
+          "E2": 0,
+          "E3": 1,
+          "E4": 3
+        },
+        "class": "boundary"
+      },
+      {
+        "start": "2020-06-01 14:51:23",
+        "end": "2020-06-01 15:42:27",
+        "hours": 0.8511111111111112,
+        "models": [
+          "autoencoder",
+          "ewma"
+        ],
+        "blocks": 6,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2020-06-03 10:38:14",
+        "end": "2020-06-03 11:18:43",
+        "hours": 0.6747222222222222,
+        "models": [
+          "ewma",
+          "mlp"
+        ],
+        "blocks": 5,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2020-06-08 12:46:52",
+        "end": "2020-06-08 13:07:12",
+        "hours": 0.3388888888888889,
+        "models": [
+          "bilstm",
+          "ewma"
+        ],
+        "blocks": 3,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 3,
+          "E3": 0,
+          "E4": 3
+        },
+        "class": "boundary"
+      },
+      {
+        "start": "2020-06-22 15:48:01",
+        "end": "2020-06-25 05:08:35",
+        "hours": 61.342777777777776,
+        "models": [
+          "cusum",
+          "ewma"
+        ],
+        "blocks": 369,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 365,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2020-07-08 18:23:45",
+        "end": "2020-07-08 19:27:11",
+        "hours": 1.0572222222222223,
+        "models": [
+          "ewma"
+        ],
+        "blocks": 7,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 2,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2020-07-14 02:28:59",
+        "end": "2020-07-14 02:54:05",
+        "hours": 0.41833333333333333,
+        "models": [
+          "ewma"
+        ],
+        "blocks": 4,
+        "evidence_blocks": {
+          "E1": 3,
+          "E2": 0,
+          "E3": 4,
+          "E4": 0
+        },
+        "class": "candidate"
+      },
+      {
+        "start": "2022-01-01 07:02:30",
+        "end": "2022-01-01 07:31:10",
+        "hours": 0.4777777777777778,
+        "models": [
+          "ewma"
+        ],
+        "blocks": 4,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2022-01-01 21:58:00",
+        "end": "2022-01-01 22:51:30",
+        "hours": 0.8916666666666667,
+        "models": [
+          "autoencoder"
+        ],
+        "blocks": 7,
+        "evidence_blocks": {
+          "E1": 2,
+          "E2": 0,
+          "E3": 3,
+          "E4": 0
+        },
+        "class": "candidate"
+      },
+      {
+        "start": "2022-01-04 01:52:30",
+        "end": "2022-01-04 02:00:00",
+        "hours": 0.125,
+        "models": [
+          "autoencoder"
+        ],
+        "blocks": 2,
+        "evidence_blocks": {
+          "E1": 1,
+          "E2": 0,
+          "E3": 1,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2022-01-04 14:41:30",
+        "end": "2022-01-04 14:41:40",
+        "hours": 0.002777777777777778,
+        "models": [
+          "mlp"
+        ],
+        "blocks": 1,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2022-01-05 06:01:30",
+        "end": "2022-01-05 06:01:30",
+        "hours": 0.0,
+        "models": [
+          "logistic_regression"
+        ],
+        "blocks": 1,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2022-01-10 07:24:50",
+        "end": "2022-01-10 08:15:30",
+        "hours": 0.8444444444444444,
+        "models": [
+          "autoencoder"
+        ],
+        "blocks": 6,
+        "evidence_blocks": {
+          "E1": 1,
+          "E2": 6,
+          "E3": 3,
+          "E4": 0
+        },
+        "class": "candidate"
+      },
+      {
+        "start": "2022-01-10 09:47:10",
+        "end": "2022-01-10 09:55:40",
+        "hours": 0.14166666666666666,
+        "models": [
+          "autoencoder"
+        ],
+        "blocks": 2,
+        "evidence_blocks": {
+          "E1": 1,
+          "E2": 0,
+          "E3": 1,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2022-01-10 17:23:40",
+        "end": "2022-01-10 17:23:50",
+        "hours": 0.002777777777777778,
+        "models": [
+          "mlp"
+        ],
+        "blocks": 1,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 1,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2022-01-11 09:46:20",
+        "end": "2022-01-11 09:55:10",
+        "hours": 0.14722222222222223,
+        "models": [
+          "autoencoder"
+        ],
+        "blocks": 2,
+        "evidence_blocks": {
+          "E1": 2,
+          "E2": 0,
+          "E3": 2,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2022-01-11 15:01:10",
+        "end": "2022-01-11 15:10:00",
+        "hours": 0.14722222222222223,
+        "models": [
+          "autoencoder"
+        ],
+        "blocks": 2,
+        "evidence_blocks": {
+          "E1": 1,
+          "E2": 0,
+          "E3": 1,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2022-01-12 07:15:20",
+        "end": "2022-01-12 07:58:40",
+        "hours": 0.7222222222222222,
+        "models": [
+          "ewma",
+          "mlp",
+          "random_forest"
+        ],
+        "blocks": 5,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 3,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2022-01-12 09:29:00",
+        "end": "2022-01-12 09:49:40",
+        "hours": 0.34444444444444444,
+        "models": [
+          "autoencoder"
+        ],
+        "blocks": 3,
+        "evidence_blocks": {
+          "E1": 2,
+          "E2": 3,
+          "E3": 2,
+          "E4": 0
+        },
+        "class": "candidate"
+      },
+      {
+        "start": "2022-01-12 13:00:40",
+        "end": "2022-01-12 13:09:30",
+        "hours": 0.14722222222222223,
+        "models": [
+          "autoencoder"
+        ],
+        "blocks": 1,
+        "evidence_blocks": {
+          "E1": 1,
+          "E2": 0,
+          "E3": 1,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2022-01-12 19:50:30",
+        "end": "2022-01-12 19:59:20",
+        "hours": 0.14722222222222223,
+        "models": [
+          "autoencoder"
+        ],
+        "blocks": 1,
+        "evidence_blocks": {
+          "E1": 1,
+          "E2": 0,
+          "E3": 1,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2022-01-13 09:09:00",
+        "end": "2022-01-13 09:40:10",
+        "hours": 0.5194444444444445,
+        "models": [
+          "mlp"
+        ],
+        "blocks": 5,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2022-01-13 20:45:20",
+        "end": "2022-01-13 20:54:10",
+        "hours": 0.14722222222222223,
+        "models": [
+          "autoencoder"
+        ],
+        "blocks": 2,
+        "evidence_blocks": {
+          "E1": 1,
+          "E2": 0,
+          "E3": 2,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2022-01-14 15:35:00",
+        "end": "2022-01-14 15:43:50",
+        "hours": 0.14722222222222223,
+        "models": [
+          "autoencoder"
+        ],
+        "blocks": 2,
+        "evidence_blocks": {
+          "E1": 1,
+          "E2": 0,
+          "E3": 2,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2022-01-16 15:44:50",
+        "end": "2022-01-16 16:32:10",
+        "hours": 0.7888888888888889,
+        "models": [
+          "autoencoder"
+        ],
+        "blocks": 6,
+        "evidence_blocks": {
+          "E1": 2,
+          "E2": 0,
+          "E3": 2,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2022-01-25 17:46:50",
+        "end": "2022-01-25 17:55:40",
+        "hours": 0.14722222222222223,
+        "models": [
+          "autoencoder"
+        ],
+        "blocks": 2,
+        "evidence_blocks": {
+          "E1": 1,
+          "E2": 0,
+          "E3": 2,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2022-01-26 06:21:40",
+        "end": "2022-01-26 06:40:10",
+        "hours": 0.30833333333333335,
+        "models": [
+          "autoencoder"
+        ],
+        "blocks": 3,
+        "evidence_blocks": {
+          "E1": 2,
+          "E2": 1,
+          "E3": 2,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2022-01-28 07:11:10",
+        "end": "2022-01-28 07:44:50",
+        "hours": 0.5611111111111111,
+        "models": [
+          "autoencoder"
+        ],
+        "blocks": 4,
+        "evidence_blocks": {
+          "E1": 2,
+          "E2": 1,
+          "E3": 3,
+          "E4": 0
+        },
+        "class": "candidate"
+      },
+      {
+        "start": "2022-01-31 17:45:50",
+        "end": "2022-01-31 17:54:00",
+        "hours": 0.1361111111111111,
+        "models": [
+          "autoencoder"
+        ],
+        "blocks": 2,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 1,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2022-02-01 06:40:00",
+        "end": "2022-02-01 06:48:50",
+        "hours": 0.14722222222222223,
+        "models": [
+          "autoencoder"
+        ],
+        "blocks": 1,
+        "evidence_blocks": {
+          "E1": 1,
+          "E2": 0,
+          "E3": 1,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2022-02-01 22:14:50",
+        "end": "2022-02-01 22:33:30",
+        "hours": 0.3111111111111111,
+        "models": [
+          "autoencoder"
+        ],
+        "blocks": 3,
+        "evidence_blocks": {
+          "E1": 1,
+          "E2": 0,
+          "E3": 2,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2022-02-02 23:01:20",
+        "end": "2022-02-02 23:01:30",
+        "hours": 0.002777777777777778,
+        "models": [
+          "mlp"
+        ],
+        "blocks": 1,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2022-02-06 18:24:10",
+        "end": "2022-02-06 18:33:00",
+        "hours": 0.14722222222222223,
+        "models": [
+          "autoencoder"
+        ],
+        "blocks": 2,
+        "evidence_blocks": {
+          "E1": 1,
+          "E2": 0,
+          "E3": 1,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2022-02-07 01:32:10",
+        "end": "2022-02-07 01:32:10",
+        "hours": 0.0,
+        "models": [
+          "mlp"
+        ],
+        "blocks": 1,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2022-02-07 07:24:50",
+        "end": "2022-02-07 08:07:30",
+        "hours": 0.7111111111111111,
+        "models": [
+          "mlp"
+        ],
+        "blocks": 5,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2022-02-07 09:54:00",
+        "end": "2022-02-07 10:48:20",
+        "hours": 0.9055555555555556,
+        "models": [
+          "mlp"
+        ],
+        "blocks": 6,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2022-02-07 12:43:20",
+        "end": "2022-02-07 12:43:20",
+        "hours": 0.0,
+        "models": [
+          "mlp"
+        ],
+        "blocks": 1,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2022-02-08 20:39:00",
+        "end": "2022-02-08 21:47:20",
+        "hours": 1.1388888888888888,
+        "models": [
+          "autoencoder"
+        ],
+        "blocks": 8,
+        "evidence_blocks": {
+          "E1": 4,
+          "E2": 7,
+          "E3": 5,
+          "E4": 0
+        },
+        "class": "candidate"
+      },
+      {
+        "start": "2022-02-10 20:18:20",
+        "end": "2022-02-10 20:27:10",
+        "hours": 0.14722222222222223,
+        "models": [
+          "autoencoder"
+        ],
+        "blocks": 2,
+        "evidence_blocks": {
+          "E1": 2,
+          "E2": 0,
+          "E3": 2,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2022-02-11 19:46:40",
+        "end": "2022-02-12 01:56:40",
+        "hours": 6.166666666666667,
+        "models": [
+          "autoencoder",
+          "logistic_regression",
+          "mlp",
+          "patchtst",
+          "random_forest",
+          "tcn"
+        ],
+        "blocks": 38,
+        "evidence_blocks": {
+          "E1": 37,
+          "E2": 37,
+          "E3": 37,
+          "E4": 0
+        },
+        "class": "candidate"
+      },
+      {
+        "start": "2022-02-13 09:58:00",
+        "end": "2022-02-13 10:46:40",
+        "hours": 0.8111111111111111,
+        "models": [
+          "autoencoder"
+        ],
+        "blocks": 6,
+        "evidence_blocks": {
+          "E1": 2,
+          "E2": 0,
+          "E3": 3,
+          "E4": 0
+        },
+        "class": "candidate"
+      },
+      {
+        "start": "2022-02-15 12:17:40",
+        "end": "2022-02-15 13:01:10",
+        "hours": 0.725,
+        "models": [
+          "autoencoder"
+        ],
+        "blocks": 6,
+        "evidence_blocks": {
+          "E1": 2,
+          "E2": 0,
+          "E3": 3,
+          "E4": 0
+        },
+        "class": "candidate"
+      },
+      {
+        "start": "2022-02-17 14:27:00",
+        "end": "2022-02-17 14:35:50",
+        "hours": 0.14722222222222223,
+        "models": [
+          "autoencoder"
+        ],
+        "blocks": 2,
+        "evidence_blocks": {
+          "E1": 1,
+          "E2": 0,
+          "E3": 2,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2022-02-19 01:57:20",
+        "end": "2022-02-19 01:58:10",
+        "hours": 0.013888888888888888,
+        "models": [
+          "mlp"
+        ],
+        "blocks": 1,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2022-02-19 06:11:40",
+        "end": "2022-02-19 06:11:50",
+        "hours": 0.002777777777777778,
+        "models": [
+          "mlp"
+        ],
+        "blocks": 1,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2022-02-19 07:41:40",
+        "end": "2022-02-19 08:06:50",
+        "hours": 0.41944444444444445,
+        "models": [
+          "mlp"
+        ],
+        "blocks": 3,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2022-02-19 10:05:50",
+        "end": "2022-02-19 10:18:50",
+        "hours": 0.21666666666666667,
+        "models": [
+          "mlp"
+        ],
+        "blocks": 2,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2022-02-20 11:40:30",
+        "end": "2022-02-20 12:36:30",
+        "hours": 0.9333333333333333,
+        "models": [
+          "mlp"
+        ],
+        "blocks": 6,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2022-02-20 13:59:20",
+        "end": "2022-02-20 14:32:10",
+        "hours": 0.5472222222222223,
+        "models": [
+          "mlp"
+        ],
+        "blocks": 5,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2022-02-20 19:16:40",
+        "end": "2022-02-20 20:05:20",
+        "hours": 0.8111111111111111,
+        "models": [
+          "autoencoder"
+        ],
+        "blocks": 6,
+        "evidence_blocks": {
+          "E1": 2,
+          "E2": 0,
+          "E3": 3,
+          "E4": 0
+        },
+        "class": "candidate"
+      },
+      {
+        "start": "2022-02-23 16:51:20",
+        "end": "2022-02-23 17:00:10",
+        "hours": 0.14722222222222223,
+        "models": [
+          "autoencoder"
+        ],
+        "blocks": 2,
+        "evidence_blocks": {
+          "E1": 1,
+          "E2": 0,
+          "E3": 1,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2022-02-24 20:06:00",
+        "end": "2022-02-24 21:54:20",
+        "hours": 1.8055555555555556,
+        "models": [
+          "autoencoder"
+        ],
+        "blocks": 12,
+        "evidence_blocks": {
+          "E1": 3,
+          "E2": 1,
+          "E3": 5,
+          "E4": 0
+        },
+        "class": "candidate"
+      },
+      {
+        "start": "2022-02-25 21:06:20",
+        "end": "2022-02-25 21:09:00",
+        "hours": 0.044444444444444446,
+        "models": [
+          "mlp"
+        ],
+        "blocks": 1,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2022-02-25 23:10:20",
+        "end": "2022-02-25 23:10:20",
+        "hours": 0.0,
+        "models": [
+          "mlp"
+        ],
+        "blocks": 1,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2022-02-26 01:41:20",
+        "end": "2022-02-26 01:41:20",
+        "hours": 0.0,
+        "models": [
+          "mlp"
+        ],
+        "blocks": 1,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2022-02-26 09:54:50",
+        "end": "2022-02-26 09:59:00",
+        "hours": 0.06944444444444445,
+        "models": [
+          "autoencoder"
+        ],
+        "blocks": 1,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 1,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2022-02-27 00:23:20",
+        "end": "2022-02-27 00:48:50",
+        "hours": 0.425,
+        "models": [
+          "mlp"
+        ],
+        "blocks": 3,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2022-02-27 08:49:50",
+        "end": "2022-02-27 09:03:30",
+        "hours": 0.22777777777777777,
+        "models": [
+          "autoencoder"
+        ],
+        "blocks": 3,
+        "evidence_blocks": {
+          "E1": 2,
+          "E2": 0,
+          "E3": 3,
+          "E4": 0
+        },
+        "class": "candidate"
+      },
+      {
+        "start": "2022-02-27 17:44:00",
+        "end": "2022-02-27 18:08:00",
+        "hours": 0.4,
+        "models": [
+          "mlp"
+        ],
+        "blocks": 3,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2022-02-27 21:07:10",
+        "end": "2022-02-27 22:00:40",
+        "hours": 0.8916666666666667,
+        "models": [
+          "mlp"
+        ],
+        "blocks": 7,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 1
+        },
+        "class": "boundary"
+      },
+      {
+        "start": "2022-02-28 06:01:20",
+        "end": "2022-02-28 06:01:20",
+        "hours": 0.0,
+        "models": [
+          "logistic_regression"
+        ],
+        "blocks": 1,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 1
+        },
+        "class": "boundary"
+      },
+      {
+        "start": "2022-03-01 06:00:00",
+        "end": "2022-03-01 08:16:30",
+        "hours": 2.275,
+        "models": [
+          "autoencoder",
+          "bilstm",
+          "logistic_regression",
+          "mlp",
+          "patchtst",
+          "random_forest",
+          "tcn"
+        ],
+        "blocks": 14,
+        "evidence_blocks": {
+          "E1": 3,
+          "E2": 7,
+          "E3": 3,
+          "E4": 14
+        },
+        "class": "boundary"
+      },
+      {
+        "start": "2022-03-01 23:43:30",
+        "end": "2022-03-02 00:22:40",
+        "hours": 0.6527777777777778,
+        "models": [
+          "mlp"
+        ],
+        "blocks": 5,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 5
+        },
+        "class": "boundary"
+      },
+      {
+        "start": "2022-03-02 06:05:20",
+        "end": "2022-03-02 07:27:10",
+        "hours": 1.363888888888889,
+        "models": [
+          "mlp",
+          "random_forest"
+        ],
+        "blocks": 9,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2022-03-02 09:48:10",
+        "end": "2022-03-02 10:39:30",
+        "hours": 0.8555555555555555,
+        "models": [
+          "mlp"
+        ],
+        "blocks": 6,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2022-03-03 01:20:30",
+        "end": "2022-03-03 01:20:50",
+        "hours": 0.005555555555555556,
+        "models": [
+          "mlp"
+        ],
+        "blocks": 1,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2022-03-03 06:00:50",
+        "end": "2022-03-03 06:01:30",
+        "hours": 0.011111111111111112,
+        "models": [
+          "mlp"
+        ],
+        "blocks": 1,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2022-03-06 18:42:50",
+        "end": "2022-03-06 19:20:10",
+        "hours": 0.6222222222222222,
+        "models": [
+          "mlp"
+        ],
+        "blocks": 5,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2022-03-09 08:02:30",
+        "end": "2022-03-09 08:23:00",
+        "hours": 0.3416666666666667,
+        "models": [
+          "autoencoder",
+          "logistic_regression",
+          "mlp"
+        ],
+        "blocks": 3,
+        "evidence_blocks": {
+          "E1": 2,
+          "E2": 2,
+          "E3": 2,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2022-03-09 12:06:00",
+        "end": "2022-03-09 12:07:30",
+        "hours": 0.025,
+        "models": [
+          "autoencoder"
+        ],
+        "blocks": 1,
+        "evidence_blocks": {
+          "E1": 1,
+          "E2": 0,
+          "E3": 1,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2022-03-09 16:18:50",
+        "end": "2022-03-09 16:32:30",
+        "hours": 0.22777777777777777,
+        "models": [
+          "autoencoder"
+        ],
+        "blocks": 3,
+        "evidence_blocks": {
+          "E1": 2,
+          "E2": 1,
+          "E3": 3,
+          "E4": 0
+        },
+        "class": "candidate"
+      },
+      {
+        "start": "2022-03-10 08:57:40",
+        "end": "2022-03-10 09:05:30",
+        "hours": 0.13055555555555556,
+        "models": [
+          "mlp"
+        ],
+        "blocks": 2,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 1,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2022-03-24 13:13:20",
+        "end": "2022-03-24 13:41:00",
+        "hours": 0.46111111111111114,
+        "models": [
+          "logistic_regression"
+        ],
+        "blocks": 4,
+        "evidence_blocks": {
+          "E1": 3,
+          "E2": 3,
+          "E3": 3,
+          "E4": 4
+        },
+        "class": "boundary"
+      },
+      {
+        "start": "2022-03-24 16:46:20",
+        "end": "2022-03-24 16:46:50",
+        "hours": 0.008333333333333333,
+        "models": [
+          "logistic_regression"
+        ],
+        "blocks": 1,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2022-03-31 06:00:50",
+        "end": "2022-03-31 06:01:50",
+        "hours": 0.016666666666666666,
+        "models": [
+          "logistic_regression"
+        ],
+        "blocks": 1,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 1,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2022-05-07 08:49:30",
+        "end": "2022-05-07 09:26:40",
+        "hours": 0.6194444444444445,
+        "models": [
+          "ewma"
+        ],
+        "blocks": 5,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 5,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2022-05-10 21:33:30",
+        "end": "2022-05-10 22:07:50",
+        "hours": 0.5722222222222222,
+        "models": [
+          "ewma"
+        ],
+        "blocks": 4,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2022-05-11 08:53:50",
+        "end": "2022-05-11 10:38:00",
+        "hours": 1.7361111111111112,
+        "models": [
+          "ewma"
+        ],
+        "blocks": 11,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2022-05-12 01:05:30",
+        "end": "2022-05-12 02:00:00",
+        "hours": 0.9083333333333333,
+        "models": [
+          "cusum",
+          "ewma"
+        ],
+        "blocks": 7,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2022-05-12 06:34:50",
+        "end": "2022-05-12 06:44:30",
+        "hours": 0.16111111111111112,
+        "models": [
+          "ewma"
+        ],
+        "blocks": 2,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2022-05-12 08:05:50",
+        "end": "2022-05-12 08:09:00",
+        "hours": 0.05277777777777778,
+        "models": [
+          "ewma"
+        ],
+        "blocks": 1,
+        "evidence_blocks": {
+          "E1": 0,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "none"
+      },
+      {
+        "start": "2022-05-28 00:11:40",
+        "end": "2022-05-28 02:00:00",
+        "hours": 1.8055555555555556,
+        "models": [
+          "cusum"
+        ],
+        "blocks": 12,
+        "evidence_blocks": {
+          "E1": 1,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "weak"
+      },
+      {
+        "start": "2022-05-28 14:13:50",
+        "end": "2022-05-29 02:00:00",
+        "hours": 11.769444444444444,
+        "models": [
+          "cusum"
+        ],
+        "blocks": 72,
+        "evidence_blocks": {
+          "E1": 4,
+          "E2": 0,
+          "E3": 0,
+          "E4": 0
+        },
+        "class": "weak"
+      }
+    ],
+    "class_counts": {
+      "boundary": 7,
+      "candidate": 16,
+      "weak": 41,
+      "none": 43
+    },
+    "class_hours": {
+      "boundary": 5.1,
+      "candidate": 48.6,
+      "weak": 83.6,
+      "none": 56.4
+    },
+    "secondary": {
+      "random_forest": {
+        "original": {
+          "fa": 48,
+          "cost": 74.66666666666667,
+          "detected": 2
+        },
+        "audited": {
+          "fa": 3,
+          "cost": 67.16666666666667,
+          "detected": 2
+        }
+      },
+      "xgboost": {
+        "original": {
+          "fa": 36,
+          "cost": 56.0,
+          "detected": 3
+        },
+        "audited": {
+          "fa": 0,
+          "cost": 50.0,
+          "detected": 3
+        }
+      },
+      "logistic_regression": {
+        "original": {
+          "fa": 63,
+          "cost": 77.16666666666667,
+          "detected": 2
+        },
+        "audited": {
+          "fa": 12,
+          "cost": 68.66666666666667,
+          "detected": 2
+        }
+      },
+      "mlp": {
+        "original": {
+          "fa": 134,
+          "cost": 72.33333333333333,
+          "detected": 3
+        },
+        "audited": {
+          "fa": 76,
+          "cost": 62.666666666666664,
+          "detected": 3
+        }
+      },
+      "tcn": {
+        "original": {
+          "fa": 87,
+          "cost": 81.16666666666667,
+          "detected": 2
+        },
+        "audited": {
+          "fa": 48,
+          "cost": 74.66666666666667,
+          "detected": 2
+        }
+      },
+      "bilstm": {
+        "original": {
+          "fa": 37,
+          "cost": 56.166666666666664,
+          "detected": 3
+        },
+        "audited": {
+          "fa": 1,
+          "cost": 50.166666666666664,
+          "detected": 3
+        }
+      },
+      "patchtst": {
+        "original": {
+          "fa": 119,
+          "cost": 69.83333333333333,
+          "detected": 3
+        },
+        "audited": {
+          "fa": 84,
+          "cost": 64.0,
+          "detected": 3
+        }
+      },
+      "autoencoder": {
+        "original": {
+          "fa": 177,
+          "cost": 112.83333333333333,
+          "detected": 1
+        },
+        "audited": {
+          "fa": 101,
+          "cost": 100.16666666666667,
+          "detected": 1
+        }
+      },
+      "cusum": {
+        "original": {
+          "fa": 74,
+          "cost": 79.0,
+          "detected": 2
+        },
+        "audited": {
+          "fa": 74,
+          "cost": 79.0,
+          "detected": 2
+        }
+      },
+      "ewma": {
+        "original": {
+          "fa": 101,
+          "cost": 50.166666666666664,
+          "detected": 4
+        },
+        "audited": {
+          "fa": 91,
+          "cost": 48.5,
+          "detected": 4
+        }
+      }
+    },
+    "models": [
+      "random_forest",
+      "xgboost",
+      "logistic_regression",
+      "mlp",
+      "tcn",
+      "bilstm",
+      "patchtst",
+      "autoencoder",
+      "cusum",
+      "ewma"
+    ]
+  }
+}
