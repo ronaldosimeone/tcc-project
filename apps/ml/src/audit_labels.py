@@ -10,9 +10,9 @@ Stage A: physical start/end of each labelled failure from sensor evidence
 10-min blocks, ±48 h around the label.
 Stage B: false-alarm episodes of every nested-evaluation model (seed 0,
 out-of-time test folds), clustered across models and classified as
-boundary / unreported-failure candidate / weak evidence / no evidence.
+boundary / unconfirmed anomaly / weak evidence / no evidence.
 Secondary analysis: false alarms and RN-02 cost with the alarm time inside
-boundary and candidate clusters treated as ambiguous. The original labels stay
+boundary and unconfirmed-anomaly clusters treated as ambiguous. The original labels stay
 the primary metric; nothing here feeds back into any model.
 
 Output: models/label_audit.json and docs/label_audit.md.
@@ -54,7 +54,7 @@ MAINT_PROXIMITY: pd.Timedelta = pd.Timedelta(hours=24)
 CLUSTER_GAP: pd.Timedelta = pd.Timedelta(hours=1)
 MIN_BLOCKS_STRONG: int = 3
 SENSOR_EVIDENCE: tuple[str, ...] = ("E1", "E2", "E3")
-CLASSES: tuple[str, ...] = ("boundary", "candidate", "weak", "none")
+CLASSES: tuple[str, ...] = ("boundary", "unconfirmed", "weak", "none")
 
 logging.basicConfig(
     level=logging.INFO,
@@ -291,7 +291,7 @@ def classify(
     if touches or counts["E4"] > 0:
         cls = "boundary"
     elif len(present) >= 2 and max(counts[e] for e in present) >= MIN_BLOCKS_STRONG:
-        cls = "candidate"
+        cls = "unconfirmed"
     elif len(present) == 1:
         cls = "weak"
     elif len(present) >= 2:
@@ -309,6 +309,35 @@ def classify(
     }
 
 
+def _merge(
+    spans: list[tuple[pd.Timestamp, pd.Timestamp]],
+) -> list[tuple[pd.Timestamp, pd.Timestamp]]:
+    out: list[tuple[pd.Timestamp, pd.Timestamp]] = []
+    for a, b in sorted(spans):
+        if out and a <= out[-1][1]:
+            out[-1] = (out[-1][0], max(out[-1][1], b))
+        else:
+            out.append((a, b))
+    return out
+
+
+def excluded_seconds(
+    t0: pd.Timestamp,
+    t1: pd.Timestamp,
+    ambiguous: list[tuple[pd.Timestamp, pd.Timestamp]],
+    windows: list[tuple[pd.Timestamp, pd.Timestamp]],
+) -> float:
+    """Time of [t0, t1] inside an ambiguous span and outside every event
+    window — removed from the exposure of the audited false-alarm rate."""
+    total = 0.0
+    for a, b in _merge(ambiguous):
+        a, b = max(a, t0), min(b, t1)
+        if b <= a:
+            continue
+        total += sum((e - s).total_seconds() for s, e in _outside(a, b, windows))
+    return total
+
+
 def secondary(
     folds: list[dict[str, Any]],
     events: list[FailureEvent],
@@ -316,11 +345,14 @@ def secondary(
     windows: list[tuple[pd.Timestamp, pd.Timestamp]],
 ) -> dict[str, Any]:
     """Original vs audited false alarms / cost (alarm samples inside an
-    ambiguous span AND outside every event window are dropped)."""
-    tot = {
-        "original": {"fa": 0, "cost": 0.0, "detected": 0},
-        "audited": {"fa": 0, "cost": 0.0, "detected": 0},
+    ambiguous span AND outside every event window are dropped). Exposure =
+    test-fold span (as in ``evaluate_events``); the audited exposure also
+    drops the excluded time, so the per-day rates are comparable."""
+    tot: dict[str, dict[str, Any]] = {
+        k: {"fa": 0, "cost": 0.0, "detected": 0, "exposure_days": 0.0}
+        for k in ("original", "audited")
     }
+    per_fold = []
     for f in folds:
         ts = f["ts"]
         rep = evaluate_events(ts, f["alarms"], events, **EVAL_KW)
@@ -332,13 +364,27 @@ def secondary(
             amb |= ((ts >= a) & (ts <= b)).to_numpy()
         alarms2 = f["alarms"] & ~(amb & ~in_win)
         rep2 = evaluate_events(ts, alarms2, events, **EVAL_KW)
-        for key, r in (("original", rep), ("audited", rep2)):
+        days = rep.observed_days
+        excl = excluded_seconds(ts.min(), ts.max(), ambiguous, windows) / 86400.0
+        for key, r, d in (("original", rep, days), ("audited", rep2, days - excl)):
             tot[key]["fa"] += r.n_false_alarm_episodes
             tot[key]["cost"] += r.expected_cost
             tot[key]["detected"] += r.n_detected
+            tot[key]["exposure_days"] += d
+        per_fold.append(
+            {
+                "fold": f["fold"],
+                "exposure_days": days,
+                "excluded_days": excl,
+                "first_alarm": {
+                    o.event_start: o.first_alarm for o in rep.outcomes if o.detected
+                },
+            }
+        )
     for key in tot:
         tot[key]["cost"] /= max(len(folds), 1)  # mean per fold, as in the reports
-    return tot
+        tot[key]["fa_per_day"] = tot[key]["fa"] / max(tot[key]["exposure_days"], 1e-9)
+    return {**tot, "per_fold": per_fold}
 
 
 # ---------------------------------------------------------------------------
@@ -392,7 +438,7 @@ def run(
     ambiguous = [
         (pd.Timestamp(c["start"]), pd.Timestamp(c["end"]))
         for c in clusters
-        if c["class"] in ("boundary", "candidate")
+        if c["class"] in ("boundary", "unconfirmed")
     ]
     sec = {n: secondary(f, events, ambiguous, windows) for n, f in per_model.items()}
     return {
@@ -454,9 +500,11 @@ def _section(r: dict[str, Any], hx: str) -> list[str]:
     lines = [
         f"{hx} Etapa A — fronteiras dos eventos",
         "",
-        "Deslocamento negativo = a evidência física começa **antes** do rótulo.",
+        "Evidência observável nos sensores, não o início físico real (que não é "
+        "conhecido). Δ = primeira evidência − início documentado; negativo = a "
+        "evidência aparece **antes** do registro.",
         "",
-        "| Falha | Rótulo | Intervalo físico (E1–E3) | Δ início (h) | Δ fim (h) | % blocos do rótulo com E1 / E2 / E3 |",
+        "| Falha | Intervalo documentado | Primeira → última evidência (E1–E3) | Δ início (h) | Δ fim (h) | % blocos do rótulo com E1 / E2 / E3 |",
         "|---|---|---|---|---|---|",
     ]
     for a in r["stage_a"]:
@@ -474,7 +522,7 @@ def _section(r: dict[str, Any], hx: str) -> list[str]:
     cc, ch = r["class_counts"], r["class_hours"]
     names = {
         "boundary": "Fronteira (perto de falha rotulada)",
-        "candidate": "Candidato a falha não reportada",
+        "unconfirmed": "Anomalia não confirmada",
         "weak": "Evidência fraca",
         "none": "Sem evidência (alarme falso de fato)",
     }
@@ -489,12 +537,18 @@ def _section(r: dict[str, Any], hx: str) -> list[str]:
         "|---|---|---|",
         *[f"| {names[k]} | {cc[k]} | {ch[k]} |" for k in CLASSES],
         "",
-        f"{hx}# Candidatos a falha não reportada",
+        f"{hx}# Anomalias não confirmadas",
+        "",
+        "Comportamento anormal nos sensores, sem registro de manutenção e sem "
+        "diagnóstico. **Não são falhas presumidas**: os detectores e as "
+        "evidências E1–E3 usam os mesmos sensores (TP3, COMP, LPS), então a "
+        "concordância entre eles mostra uma mudança forte no sinal, não sua "
+        "causa. Mudança operacional ou de instrumentação também explicaria.",
         "",
         "| Início | Fim | Horas | Modelos | Blocos E1 / E2 / E3 |",
         "|---|---|---|---|---|",
     ]
-    cands = [c for c in r["clusters"] if c["class"] == "candidate"]
+    cands = [c for c in r["clusters"] if c["class"] == "unconfirmed"]
     for c in cands:
         e = c["evidence_blocks"]
         lines.append(
@@ -504,23 +558,123 @@ def _section(r: dict[str, Any], hx: str) -> list[str]:
         lines.append("| — | — | — | — | — |")
     lines += [
         "",
+        f"{hx} Intervalos excluídos na análise secundária",
+        "",
+        "Todo o tempo destes agrupamentos fora das janelas de evento da métrica "
+        "(início − 6 h, fim + 1 h) sai do numerador **e** do denominador dos "
+        "alarmes falsos. Nenhum outro critério ou limiar muda.",
+        "",
+        "| Início | Fim | Horas | Classe |",
+        "|---|---|---|---|",
+        *[
+            f"| {c['start']} | {c['end']} | {c['hours']:.1f} | {names[c['class']]} |"
+            for c in r["clusters"]
+            if c["class"] in ("boundary", "unconfirmed")
+        ],
+        "",
         f"{hx} Análise secundária — falsos alarmes e custo com rótulos auditados",
         "",
-        "Tempo de alarme dentro de agrupamentos *fronteira* e *candidato* tratado "
-        "como ambíguo (nem acerto nem alarme falso). Detecções inalteradas.",
+        "Tempo de alarme dentro dos intervalos excluídos tratado como ambíguo (nem "
+        "acerto nem alarme falso). Detecções inalteradas. FA/dia = alarmes falsos "
+        "somados ÷ dias de exposição somados dos 6 folds de teste; no auditado, "
+        "a exposição desconta o tempo excluído. É a taxa agregada, por isso "
+        "difere da média das taxas por fold dos outros relatórios.",
         "",
-        "| Modelo | Detectadas | FA original | FA auditado | Custo original | Custo auditado |",
-        "|---|---|---|---|---|---|",
+        "| Modelo | Detectadas | FA original | FA auditado | Exposição original (dias) | Exposição auditada (dias) | FA/dia original | FA/dia auditado | Custo original | Custo auditado |",
+        "|---|---|---|---|---|---|---|---|---|---|",
     ]
     for m, s in sorted(
         r["secondary"].items(), key=lambda kv: kv[1]["original"]["cost"]
     ):
         o, a = s["original"], s["audited"]
         lines.append(
-            f"| `{m}` | {o['detected']}/6 | {o['fa']} | {a['fa']} | {o['cost']:.1f} | {a['cost']:.1f} |"
+            f"| `{m}` | {o['detected']}/6 | {o['fa']} | {a['fa']} "
+            f"| {o['exposure_days']:.1f} | {a['exposure_days']:.1f} "
+            f"| {o['fa_per_day']:.2f} | {a['fa_per_day']:.2f} "
+            f"| {o['cost']:.1f} | {a['cost']:.1f} |"
         )
     lines.append("")
     return lines
+
+
+def _chronology(p: dict[str, Any], d: dict[str, Any]) -> list[str]:
+    """Documented start, first sensor evidence (both E2 variants) and first
+    alarm per detector — three different instants, none assumed physical."""
+    models = list(p["secondary"])
+    first: dict[str, dict[str, float | None]] = {}
+    for a in p["stage_a"]:
+        start = pd.Timestamp(a["label"][0])
+        row: dict[str, float | None] = {}
+        for m in models:
+            hit = None
+            for f in p["secondary"][m]["per_fold"]:
+                hit = f["first_alarm"].get(a["label"][0], hit)
+            row[m] = (pd.Timestamp(hit) - start).total_seconds() / 3600 if hit else None
+        first[a["id"]] = row
+    ev_dev = {a["id"]: a for a in d["stage_a"]}
+    tested_ids = _tested_ids(p)
+    lines = [
+        "## 3. Cronologia por falha",
+        "",
+        "Três instantes separados, sem presumir que algum seja o início físico "
+        "real: o **início documentado** (relatório de manutenção), a **primeira "
+        "evidência** observável nos sensores (E1–E3) e o **primeiro alarme** de "
+        "cada detector (seed 0, no fold em que a falha é teste; o alarme só conta "
+        "a partir de 6 h antes do início documentado). Horas relativas ao início "
+        "documentado; negativo = antes.",
+        "",
+        "| Falha | Início documentado | 1ª evidência (critério principal) | 1ª evidência (variante `≥`) | Detectores que alarmaram | 1º alarme mais cedo | Mediana do 1º alarme |",
+        "|---|---|---|---|---|---|---|",
+    ]
+    for a in p["stage_a"]:
+        fid = a["id"]
+        if fid not in tested_ids:
+            ev1 = "—" if a["physical"] is None else _h(a["start_shift_h"])
+            dv = ev_dev[fid]
+            ev2 = "—" if dv["physical"] is None else _h(dv["start_shift_h"])
+            lines.append(
+                f"| {fid} | {a['label'][0]} | {ev1} | {ev2} | nunca é teste (só treino) | — | — |"
+            )
+            continue
+        vals = {m: v for m, v in first[fid].items() if v is not None}
+        ev1 = "—" if a["physical"] is None else _h(a["start_shift_h"])
+        dv = ev_dev[fid]
+        ev2 = "—" if dv["physical"] is None else _h(dv["start_shift_h"])
+        if vals:
+            m0 = min(vals, key=lambda k: vals[k])
+            earliest = f"{_h(vals[m0])} (`{m0}`)"
+            median = _h(float(np.median(list(vals.values()))))
+        else:
+            earliest = median = "—"
+        lines.append(
+            f"| {fid} | {a['label'][0]} | {ev1} | {ev2} | {len(vals)}/{len(models)} "
+            f"| {earliest} | {median} |"
+        )
+    lines += [
+        "",
+        "Primeiro alarme por detector (h em relação ao início documentado; — = não detectou):",
+        "",
+        "| Falha | " + " | ".join(f"`{m}`" for m in models) + " |",
+        "|---|" + "---|" * len(models),
+    ]
+    for a in p["stage_a"]:
+        if a["id"] not in tested_ids:
+            continue
+        lines.append(
+            f"| {a['id']} | "
+            + " | ".join(
+                "—" if (v := first[a["id"]][m]) is None else _h(v) for m in models
+            )
+            + " |"
+        )
+    lines.append("")
+    return lines
+
+
+def _tested_ids(p: dict[str, Any]) -> set[str]:
+    """Failures that are the test event of some outer fold (F20_1 never is:
+    the walk-forward needs at least one failure in training)."""
+    return {a["id"] for a in p["stage_a"]} - {p["stage_a"][0]["id"]}
 
 
 def render(result: dict[str, Any]) -> str:
@@ -550,8 +704,8 @@ def render(result: dict[str, Any]) -> str:
         "percentil 99 da referência coincide com o máximo e `duty > p99` nunca "
         "dispara, nem dentro de F20_1/F20_2, onde o compressor fica em carga "
         "contínua por horas. Esses blocos saudáveis no teto têm a **mesma "
-        "assinatura das falhas rotuladas de 2020**, o que já é evidência de "
-        'vazamentos não reportados no período "saudável".',
+        "assinatura das falhas rotuladas de 2020**. Isso é compatível com "
+        'vazamentos não reportados no período "saudável", mas não os confirma.',
         "",
         "Pelo protocolo, o critério principal não é corrigido. A variante abaixo "
         "(`duty ≥ p99`) foi decidida **depois** de ver a etapa A e **antes** de "
@@ -559,6 +713,7 @@ def render(result: dict[str, Any]) -> str:
         "seção 1.",
         "",
         *_section(d, "###"),
+        *_chronology(p, d),
     ]
     return "\n".join(lines)
 

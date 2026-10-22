@@ -70,7 +70,7 @@ Classe de cada agrupamento, na ordem:
 1. **Fronteira** — toca o intervalo físico auditado da etapa A ampliado pela
    mesma janela da métrica (−6 h, +1 h), ou E4 está ativo. É um problema de
    fronteira do rótulo, não um alarme sem causa.
-2. **Candidato a falha não reportada** — pelo menos 2 evidências distintas de
+2. **Anomalia não confirmada** (nome original: "candidato a falha não reportada") — pelo menos 2 evidências distintas de
    E1–E3 aparecem no agrupamento, e pelo menos uma delas em 3 ou mais blocos
    (30 min).
 3. **Evidência fraca** — exatamente uma de E1–E3.
@@ -83,3 +83,17 @@ como **período ambíguo** (nem acerto nem alarme falso) o tempo dentro de
 agrupamentos das classes 1 e 2. Detecções não mudam, pois os eventos rotulados
 continuam os mesmos. Reporta-se lado a lado: rótulo original (principal) e
 rótulo auditado (secundário).
+
+## Emendas (registradas depois da execução, sem mudar critérios)
+
+* **2026-10-22 — desvio declarado do E2.** A etapa A mostrou que `duty > p99`
+  nunca dispara em 2020 (o resíduo satura e o p99 coincide com o teto). O
+  critério acima continua sendo o resultado principal; a variante `duty ≥ p99`
+  é reportada à parte como análise de sensibilidade.
+* **2026-10-22 — nomenclatura e exposição.** A classe 2 passa a se chamar
+  **"anomalia não confirmada"** (antes "candidato a falha não reportada"): a
+  regra de classificação é a mesma, só o nome deixa de sugerir uma falha. A
+  análise secundária passa a listar os intervalos excluídos e a reportar
+  alarmes falsos por dia com o tempo excluído descontado da exposição. Também
+  foi acrescentada a cronologia por falha (início documentado, primeira
+  evidência, primeiro alarme), que é descritiva.

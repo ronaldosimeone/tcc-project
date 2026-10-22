@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "evaluated_at": "2026-10-22T15:00:34.117794+00:00",
+  "evaluated_at": "2026-10-22T15:52:31.871976+00:00",
   "protocol": "docs/label_audit_protocol.md",
   "primary": {
     "thresholds": {
@@ -270,7 +270,7 @@
           "E3": 2,
           "E4": 0
         },
-        "class": "candidate"
+        "class": "unconfirmed"
       },
       {
         "start": "2020-05-14 22:54:46",
@@ -403,7 +403,7 @@
           "E3": 5,
           "E4": 0
         },
-        "class": "candidate"
+        "class": "unconfirmed"
       },
       {
         "start": "2020-05-19 06:01:10",
@@ -675,7 +675,7 @@
           "E3": 4,
           "E4": 0
         },
-        "class": "candidate"
+        "class": "unconfirmed"
       },
       {
         "start": "2022-01-01 07:02:30",
@@ -707,7 +707,7 @@
           "E3": 3,
           "E4": 0
         },
-        "class": "candidate"
+        "class": "unconfirmed"
       },
       {
         "start": "2022-01-04 01:52:30",
@@ -771,7 +771,7 @@
           "E3": 3,
           "E4": 0
         },
-        "class": "candidate"
+        "class": "unconfirmed"
       },
       {
         "start": "2022-01-10 09:47:10",
@@ -869,7 +869,7 @@
           "E3": 2,
           "E4": 0
         },
-        "class": "candidate"
+        "class": "unconfirmed"
       },
       {
         "start": "2022-01-12 13:00:40",
@@ -1013,7 +1013,7 @@
           "E3": 3,
           "E4": 0
         },
-        "class": "candidate"
+        "class": "unconfirmed"
       },
       {
         "start": "2022-01-31 17:45:50",
@@ -1173,7 +1173,7 @@
           "E3": 5,
           "E4": 0
         },
-        "class": "candidate"
+        "class": "unconfirmed"
       },
       {
         "start": "2022-02-10 20:18:20",
@@ -1210,7 +1210,7 @@
           "E3": 37,
           "E4": 0
         },
-        "class": "candidate"
+        "class": "unconfirmed"
       },
       {
         "start": "2022-02-13 09:58:00",
@@ -1226,7 +1226,7 @@
           "E3": 3,
           "E4": 0
         },
-        "class": "candidate"
+        "class": "unconfirmed"
       },
       {
         "start": "2022-02-15 12:17:40",
@@ -1242,7 +1242,7 @@
           "E3": 3,
           "E4": 0
         },
-        "class": "candidate"
+        "class": "unconfirmed"
       },
       {
         "start": "2022-02-17 14:27:00",
@@ -1370,7 +1370,7 @@
           "E3": 3,
           "E4": 0
         },
-        "class": "candidate"
+        "class": "unconfirmed"
       },
       {
         "start": "2022-02-23 16:51:20",
@@ -1402,7 +1402,7 @@
           "E3": 5,
           "E4": 0
         },
-        "class": "candidate"
+        "class": "unconfirmed"
       },
       {
         "start": "2022-02-25 21:06:20",
@@ -1498,7 +1498,7 @@
           "E3": 3,
           "E4": 0
         },
-        "class": "candidate"
+        "class": "unconfirmed"
       },
       {
         "start": "2022-02-27 17:44:00",
@@ -1715,7 +1715,7 @@
           "E3": 3,
           "E4": 0
         },
-        "class": "candidate"
+        "class": "unconfirmed"
       },
       {
         "start": "2022-03-10 08:57:40",
@@ -1913,13 +1913,13 @@
     ],
     "class_counts": {
       "boundary": 7,
-      "candidate": 15,
+      "unconfirmed": 15,
       "weak": 42,
       "none": 43
     },
     "class_hours": {
       "boundary": 5.1,
-      "candidate": 27.2,
+      "unconfirmed": 27.2,
       "weak": 105.0,
       "none": 56.4
     },
@@ -1928,121 +1928,591 @@
         "original": {
           "fa": 48,
           "cost": 74.66666666666667,
-          "detected": 2
+          "detected": 2,
+          "exposure_days": 267.08636574074075,
+          "fa_per_day": 0.17971714829724156
         },
         "audited": {
           "fa": 27,
           "cost": 71.16666666666667,
-          "detected": 2
-        }
+          "detected": 2,
+          "exposure_days": 265.73918981481484,
+          "fa_per_day": 0.1016033804378475
+        },
+        "per_fold": [
+          {
+            "fold": 1,
+            "exposure_days": 23.84396990740741,
+            "excluded_days": 0.530787037037037,
+            "first_alarm": {
+              "2020-05-29 23:30:00": "2020-05-29 23:19:14"
+            }
+          },
+          {
+            "fold": 2,
+            "exposure_days": 24.270694444444445,
+            "excluded_days": 0.01412037037037037,
+            "first_alarm": {}
+          },
+          {
+            "fold": 3,
+            "exposure_days": 66.56232638888889,
+            "excluded_days": 0.017430555555555557,
+            "first_alarm": {}
+          },
+          {
+            "fold": 4,
+            "exposure_days": 70.10196759259259,
+            "excluded_days": 0.765625,
+            "first_alarm": {
+              "2022-02-28 21:53:00": "2022-02-28 22:17:40"
+            }
+          },
+          {
+            "fold": 5,
+            "exposure_days": 45.21863425925926,
+            "excluded_days": 0.019212962962962963,
+            "first_alarm": {}
+          },
+          {
+            "fold": 6,
+            "exposure_days": 37.08877314814815,
+            "excluded_days": 0.0,
+            "first_alarm": {}
+          }
+        ]
       },
       "xgboost": {
         "original": {
           "fa": 36,
           "cost": 56.0,
-          "detected": 3
+          "detected": 3,
+          "exposure_days": 267.08636574074075,
+          "fa_per_day": 0.13478786122293115
         },
         "audited": {
           "fa": 22,
           "cost": 53.666666666666664,
-          "detected": 3
-        }
+          "detected": 3,
+          "exposure_days": 265.73918981481484,
+          "fa_per_day": 0.08278793961602389
+        },
+        "per_fold": [
+          {
+            "fold": 1,
+            "exposure_days": 23.84396990740741,
+            "excluded_days": 0.530787037037037,
+            "first_alarm": {
+              "2020-05-29 23:30:00": "2020-05-29 23:18:24"
+            }
+          },
+          {
+            "fold": 2,
+            "exposure_days": 24.270694444444445,
+            "excluded_days": 0.01412037037037037,
+            "first_alarm": {
+              "2020-06-05 10:00:00": "2020-06-05 10:00:44"
+            }
+          },
+          {
+            "fold": 3,
+            "exposure_days": 66.56232638888889,
+            "excluded_days": 0.017430555555555557,
+            "first_alarm": {}
+          },
+          {
+            "fold": 4,
+            "exposure_days": 70.10196759259259,
+            "excluded_days": 0.765625,
+            "first_alarm": {
+              "2022-02-28 21:53:00": "2022-02-28 22:21:50"
+            }
+          },
+          {
+            "fold": 5,
+            "exposure_days": 45.21863425925926,
+            "excluded_days": 0.019212962962962963,
+            "first_alarm": {}
+          },
+          {
+            "fold": 6,
+            "exposure_days": 37.08877314814815,
+            "excluded_days": 0.0,
+            "first_alarm": {}
+          }
+        ]
       },
       "logistic_regression": {
         "original": {
           "fa": 63,
           "cost": 77.16666666666667,
-          "detected": 2
+          "detected": 2,
+          "exposure_days": 267.08636574074075,
+          "fa_per_day": 0.23587875714012954
         },
         "audited": {
           "fa": 34,
           "cost": 72.33333333333333,
-          "detected": 2
-        }
+          "detected": 2,
+          "exposure_days": 265.73918981481484,
+          "fa_per_day": 0.12794499758840056
+        },
+        "per_fold": [
+          {
+            "fold": 1,
+            "exposure_days": 23.84396990740741,
+            "excluded_days": 0.530787037037037,
+            "first_alarm": {
+              "2020-05-29 23:30:00": "2020-05-29 23:18:44"
+            }
+          },
+          {
+            "fold": 2,
+            "exposure_days": 24.270694444444445,
+            "excluded_days": 0.01412037037037037,
+            "first_alarm": {}
+          },
+          {
+            "fold": 3,
+            "exposure_days": 66.56232638888889,
+            "excluded_days": 0.017430555555555557,
+            "first_alarm": {}
+          },
+          {
+            "fold": 4,
+            "exposure_days": 70.10196759259259,
+            "excluded_days": 0.765625,
+            "first_alarm": {
+              "2022-02-28 21:53:00": "2022-02-28 22:17:50"
+            }
+          },
+          {
+            "fold": 5,
+            "exposure_days": 45.21863425925926,
+            "excluded_days": 0.019212962962962963,
+            "first_alarm": {}
+          },
+          {
+            "fold": 6,
+            "exposure_days": 37.08877314814815,
+            "excluded_days": 0.0,
+            "first_alarm": {}
+          }
+        ]
       },
       "mlp": {
         "original": {
           "fa": 134,
           "cost": 72.33333333333333,
-          "detected": 3
+          "detected": 3,
+          "exposure_days": 267.08636574074075,
+          "fa_per_day": 0.5017103723297993
         },
         "audited": {
           "fa": 98,
           "cost": 66.33333333333333,
-          "detected": 3
-        }
+          "detected": 3,
+          "exposure_days": 265.73918981481484,
+          "fa_per_day": 0.36878264010774275
+        },
+        "per_fold": [
+          {
+            "fold": 1,
+            "exposure_days": 23.84396990740741,
+            "excluded_days": 0.530787037037037,
+            "first_alarm": {
+              "2020-05-29 23:30:00": "2020-05-29 23:17:15"
+            }
+          },
+          {
+            "fold": 2,
+            "exposure_days": 24.270694444444445,
+            "excluded_days": 0.01412037037037037,
+            "first_alarm": {
+              "2020-06-05 10:00:00": "2020-06-05 09:53:37"
+            }
+          },
+          {
+            "fold": 3,
+            "exposure_days": 66.56232638888889,
+            "excluded_days": 0.017430555555555557,
+            "first_alarm": {}
+          },
+          {
+            "fold": 4,
+            "exposure_days": 70.10196759259259,
+            "excluded_days": 0.765625,
+            "first_alarm": {
+              "2022-02-28 21:53:00": "2022-02-28 22:18:00"
+            }
+          },
+          {
+            "fold": 5,
+            "exposure_days": 45.21863425925926,
+            "excluded_days": 0.019212962962962963,
+            "first_alarm": {}
+          },
+          {
+            "fold": 6,
+            "exposure_days": 37.08877314814815,
+            "excluded_days": 0.0,
+            "first_alarm": {}
+          }
+        ]
       },
       "tcn": {
         "original": {
           "fa": 87,
           "cost": 81.16666666666667,
-          "detected": 2
+          "detected": 2,
+          "exposure_days": 267.08636574074075,
+          "fa_per_day": 0.3257373312887503
         },
         "audited": {
           "fa": 70,
           "cost": 78.33333333333333,
-          "detected": 2
-        }
+          "detected": 2,
+          "exposure_days": 265.73918981481484,
+          "fa_per_day": 0.26341617150553054
+        },
+        "per_fold": [
+          {
+            "fold": 1,
+            "exposure_days": 23.84396990740741,
+            "excluded_days": 0.530787037037037,
+            "first_alarm": {
+              "2020-05-29 23:30:00": "2020-05-29 23:22:12"
+            }
+          },
+          {
+            "fold": 2,
+            "exposure_days": 24.270694444444445,
+            "excluded_days": 0.01412037037037037,
+            "first_alarm": {}
+          },
+          {
+            "fold": 3,
+            "exposure_days": 66.56232638888889,
+            "excluded_days": 0.017430555555555557,
+            "first_alarm": {}
+          },
+          {
+            "fold": 4,
+            "exposure_days": 70.10196759259259,
+            "excluded_days": 0.765625,
+            "first_alarm": {
+              "2022-02-28 21:53:00": "2022-02-28 22:28:30"
+            }
+          },
+          {
+            "fold": 5,
+            "exposure_days": 45.21863425925926,
+            "excluded_days": 0.019212962962962963,
+            "first_alarm": {}
+          },
+          {
+            "fold": 6,
+            "exposure_days": 37.08877314814815,
+            "excluded_days": 0.0,
+            "first_alarm": {}
+          }
+        ]
       },
       "bilstm": {
         "original": {
           "fa": 37,
           "cost": 56.166666666666664,
-          "detected": 3
+          "detected": 3,
+          "exposure_days": 267.08636574074075,
+          "fa_per_day": 0.1385319684791237
         },
         "audited": {
           "fa": 23,
           "cost": 53.833333333333336,
-          "detected": 3
-        }
+          "detected": 3,
+          "exposure_days": 265.73918981481484,
+          "fa_per_day": 0.0865510277803886
+        },
+        "per_fold": [
+          {
+            "fold": 1,
+            "exposure_days": 23.84396990740741,
+            "excluded_days": 0.530787037037037,
+            "first_alarm": {
+              "2020-05-29 23:30:00": "2020-05-29 23:23:51"
+            }
+          },
+          {
+            "fold": 2,
+            "exposure_days": 24.270694444444445,
+            "excluded_days": 0.01412037037037037,
+            "first_alarm": {
+              "2020-06-05 10:00:00": "2020-06-05 09:59:24"
+            }
+          },
+          {
+            "fold": 3,
+            "exposure_days": 66.56232638888889,
+            "excluded_days": 0.017430555555555557,
+            "first_alarm": {}
+          },
+          {
+            "fold": 4,
+            "exposure_days": 70.10196759259259,
+            "excluded_days": 0.765625,
+            "first_alarm": {
+              "2022-02-28 21:53:00": "2022-02-28 22:26:20"
+            }
+          },
+          {
+            "fold": 5,
+            "exposure_days": 45.21863425925926,
+            "excluded_days": 0.019212962962962963,
+            "first_alarm": {}
+          },
+          {
+            "fold": 6,
+            "exposure_days": 37.08877314814815,
+            "excluded_days": 0.0,
+            "first_alarm": {}
+          }
+        ]
       },
       "patchtst": {
         "original": {
           "fa": 119,
           "cost": 69.83333333333333,
-          "detected": 3
+          "detected": 3,
+          "exposure_days": 267.08636574074075,
+          "fa_per_day": 0.44554876348691136
         },
         "audited": {
           "fa": 106,
           "cost": 67.66666666666667,
-          "detected": 3
-        }
+          "detected": 3,
+          "exposure_days": 265.73918981481484,
+          "fa_per_day": 0.3988873454226605
+        },
+        "per_fold": [
+          {
+            "fold": 1,
+            "exposure_days": 23.84396990740741,
+            "excluded_days": 0.530787037037037,
+            "first_alarm": {
+              "2020-05-29 23:30:00": "2020-05-29 23:19:23"
+            }
+          },
+          {
+            "fold": 2,
+            "exposure_days": 24.270694444444445,
+            "excluded_days": 0.01412037037037037,
+            "first_alarm": {
+              "2020-06-05 10:00:00": "2020-06-05 09:56:26"
+            }
+          },
+          {
+            "fold": 3,
+            "exposure_days": 66.56232638888889,
+            "excluded_days": 0.017430555555555557,
+            "first_alarm": {}
+          },
+          {
+            "fold": 4,
+            "exposure_days": 70.10196759259259,
+            "excluded_days": 0.765625,
+            "first_alarm": {
+              "2022-02-28 21:53:00": "2022-02-28 22:18:20"
+            }
+          },
+          {
+            "fold": 5,
+            "exposure_days": 45.21863425925926,
+            "excluded_days": 0.019212962962962963,
+            "first_alarm": {}
+          },
+          {
+            "fold": 6,
+            "exposure_days": 37.08877314814815,
+            "excluded_days": 0.0,
+            "first_alarm": {}
+          }
+        ]
       },
       "autoencoder": {
         "original": {
           "fa": 177,
           "cost": 112.83333333333333,
-          "detected": 1
+          "detected": 1,
+          "exposure_days": 267.08636574074075,
+          "fa_per_day": 0.6627069843460782
         },
         "audited": {
           "fa": 104,
           "cost": 100.66666666666667,
-          "detected": 1
-        }
+          "detected": 1,
+          "exposure_days": 265.73918981481484,
+          "fa_per_day": 0.3913611690939311
+        },
+        "per_fold": [
+          {
+            "fold": 1,
+            "exposure_days": 23.84396990740741,
+            "excluded_days": 0.530787037037037,
+            "first_alarm": {}
+          },
+          {
+            "fold": 2,
+            "exposure_days": 24.270694444444445,
+            "excluded_days": 0.01412037037037037,
+            "first_alarm": {}
+          },
+          {
+            "fold": 3,
+            "exposure_days": 66.56232638888889,
+            "excluded_days": 0.017430555555555557,
+            "first_alarm": {}
+          },
+          {
+            "fold": 4,
+            "exposure_days": 70.10196759259259,
+            "excluded_days": 0.765625,
+            "first_alarm": {
+              "2022-02-28 21:53:00": "2022-02-28 22:32:10"
+            }
+          },
+          {
+            "fold": 5,
+            "exposure_days": 45.21863425925926,
+            "excluded_days": 0.019212962962962963,
+            "first_alarm": {}
+          },
+          {
+            "fold": 6,
+            "exposure_days": 37.08877314814815,
+            "excluded_days": 0.0,
+            "first_alarm": {}
+          }
+        ]
       },
       "cusum": {
         "original": {
           "fa": 74,
           "cost": 79.0,
-          "detected": 2
+          "detected": 2,
+          "exposure_days": 267.08636574074075,
+          "fa_per_day": 0.2770639369582474
         },
         "audited": {
           "fa": 74,
           "cost": 79.0,
-          "detected": 2
-        }
+          "detected": 2,
+          "exposure_days": 265.73918981481484,
+          "fa_per_day": 0.27846852416298945
+        },
+        "per_fold": [
+          {
+            "fold": 1,
+            "exposure_days": 23.84396990740741,
+            "excluded_days": 0.530787037037037,
+            "first_alarm": {}
+          },
+          {
+            "fold": 2,
+            "exposure_days": 24.270694444444445,
+            "excluded_days": 0.01412037037037037,
+            "first_alarm": {
+              "2020-06-05 10:00:00": "2020-06-05 22:45:10"
+            }
+          },
+          {
+            "fold": 3,
+            "exposure_days": 66.56232638888889,
+            "excluded_days": 0.017430555555555557,
+            "first_alarm": {
+              "2020-07-15 14:30:00": "2020-07-15 16:03:51"
+            }
+          },
+          {
+            "fold": 4,
+            "exposure_days": 70.10196759259259,
+            "excluded_days": 0.765625,
+            "first_alarm": {}
+          },
+          {
+            "fold": 5,
+            "exposure_days": 45.21863425925926,
+            "excluded_days": 0.019212962962962963,
+            "first_alarm": {}
+          },
+          {
+            "fold": 6,
+            "exposure_days": 37.08877314814815,
+            "excluded_days": 0.0,
+            "first_alarm": {}
+          }
+        ]
       },
       "ewma": {
         "original": {
           "fa": 101,
           "cost": 50.166666666666664,
-          "detected": 4
+          "detected": 4,
+          "exposure_days": 267.08636574074075,
+          "fa_per_day": 0.37815483287544577
         },
         "audited": {
           "fa": 91,
           "cost": 48.5,
-          "detected": 4
-        }
+          "detected": 4,
+          "exposure_days": 265.73918981481484,
+          "fa_per_day": 0.3424410229571897
+        },
+        "per_fold": [
+          {
+            "fold": 1,
+            "exposure_days": 23.84396990740741,
+            "excluded_days": 0.530787037037037,
+            "first_alarm": {
+              "2020-05-29 23:30:00": "2020-05-30 00:43:19"
+            }
+          },
+          {
+            "fold": 2,
+            "exposure_days": 24.270694444444445,
+            "excluded_days": 0.01412037037037037,
+            "first_alarm": {
+              "2020-06-05 10:00:00": "2020-06-05 10:28:49"
+            }
+          },
+          {
+            "fold": 3,
+            "exposure_days": 66.56232638888889,
+            "excluded_days": 0.017430555555555557,
+            "first_alarm": {
+              "2020-07-15 14:30:00": "2020-07-15 14:38:36"
+            }
+          },
+          {
+            "fold": 4,
+            "exposure_days": 70.10196759259259,
+            "excluded_days": 0.765625,
+            "first_alarm": {
+              "2022-02-28 21:53:00": "2022-02-28 22:44:50"
+            }
+          },
+          {
+            "fold": 5,
+            "exposure_days": 45.21863425925926,
+            "excluded_days": 0.019212962962962963,
+            "first_alarm": {}
+          },
+          {
+            "fold": 6,
+            "exposure_days": 37.08877314814815,
+            "excluded_days": 0.0,
+            "first_alarm": {}
+          }
+        ]
       }
     },
     "models": [
@@ -2332,7 +2802,7 @@
           "E3": 2,
           "E4": 0
         },
-        "class": "candidate"
+        "class": "unconfirmed"
       },
       {
         "start": "2020-05-14 22:54:46",
@@ -2465,7 +2935,7 @@
           "E3": 5,
           "E4": 0
         },
-        "class": "candidate"
+        "class": "unconfirmed"
       },
       {
         "start": "2020-05-19 06:01:10",
@@ -2504,7 +2974,7 @@
           "E3": 0,
           "E4": 0
         },
-        "class": "candidate"
+        "class": "unconfirmed"
       },
       {
         "start": "2020-05-21 05:57:53",
@@ -2737,7 +3207,7 @@
           "E3": 4,
           "E4": 0
         },
-        "class": "candidate"
+        "class": "unconfirmed"
       },
       {
         "start": "2022-01-01 07:02:30",
@@ -2769,7 +3239,7 @@
           "E3": 3,
           "E4": 0
         },
-        "class": "candidate"
+        "class": "unconfirmed"
       },
       {
         "start": "2022-01-04 01:52:30",
@@ -2833,7 +3303,7 @@
           "E3": 3,
           "E4": 0
         },
-        "class": "candidate"
+        "class": "unconfirmed"
       },
       {
         "start": "2022-01-10 09:47:10",
@@ -2931,7 +3401,7 @@
           "E3": 2,
           "E4": 0
         },
-        "class": "candidate"
+        "class": "unconfirmed"
       },
       {
         "start": "2022-01-12 13:00:40",
@@ -3075,7 +3545,7 @@
           "E3": 3,
           "E4": 0
         },
-        "class": "candidate"
+        "class": "unconfirmed"
       },
       {
         "start": "2022-01-31 17:45:50",
@@ -3235,7 +3705,7 @@
           "E3": 5,
           "E4": 0
         },
-        "class": "candidate"
+        "class": "unconfirmed"
       },
       {
         "start": "2022-02-10 20:18:20",
@@ -3272,7 +3742,7 @@
           "E3": 37,
           "E4": 0
         },
-        "class": "candidate"
+        "class": "unconfirmed"
       },
       {
         "start": "2022-02-13 09:58:00",
@@ -3288,7 +3758,7 @@
           "E3": 3,
           "E4": 0
         },
-        "class": "candidate"
+        "class": "unconfirmed"
       },
       {
         "start": "2022-02-15 12:17:40",
@@ -3304,7 +3774,7 @@
           "E3": 3,
           "E4": 0
         },
-        "class": "candidate"
+        "class": "unconfirmed"
       },
       {
         "start": "2022-02-17 14:27:00",
@@ -3432,7 +3902,7 @@
           "E3": 3,
           "E4": 0
         },
-        "class": "candidate"
+        "class": "unconfirmed"
       },
       {
         "start": "2022-02-23 16:51:20",
@@ -3464,7 +3934,7 @@
           "E3": 5,
           "E4": 0
         },
-        "class": "candidate"
+        "class": "unconfirmed"
       },
       {
         "start": "2022-02-25 21:06:20",
@@ -3560,7 +4030,7 @@
           "E3": 3,
           "E4": 0
         },
-        "class": "candidate"
+        "class": "unconfirmed"
       },
       {
         "start": "2022-02-27 17:44:00",
@@ -3777,7 +4247,7 @@
           "E3": 3,
           "E4": 0
         },
-        "class": "candidate"
+        "class": "unconfirmed"
       },
       {
         "start": "2022-03-10 08:57:40",
@@ -3975,13 +4445,13 @@
     ],
     "class_counts": {
       "boundary": 7,
-      "candidate": 16,
+      "unconfirmed": 16,
       "weak": 41,
       "none": 43
     },
     "class_hours": {
       "boundary": 5.1,
-      "candidate": 48.6,
+      "unconfirmed": 48.6,
       "weak": 83.6,
       "none": 56.4
     },
@@ -3990,121 +4460,591 @@
         "original": {
           "fa": 48,
           "cost": 74.66666666666667,
-          "detected": 2
+          "detected": 2,
+          "exposure_days": 267.08636574074075,
+          "fa_per_day": 0.17971714829724156
         },
         "audited": {
           "fa": 3,
           "cost": 67.16666666666667,
-          "detected": 2
-        }
+          "detected": 2,
+          "exposure_days": 264.8478240740741,
+          "fa_per_day": 0.011327259381828804
+        },
+        "per_fold": [
+          {
+            "fold": 1,
+            "exposure_days": 23.84396990740741,
+            "excluded_days": 1.4221527777777778,
+            "first_alarm": {
+              "2020-05-29 23:30:00": "2020-05-29 23:19:14"
+            }
+          },
+          {
+            "fold": 2,
+            "exposure_days": 24.270694444444445,
+            "excluded_days": 0.01412037037037037,
+            "first_alarm": {}
+          },
+          {
+            "fold": 3,
+            "exposure_days": 66.56232638888889,
+            "excluded_days": 0.017430555555555557,
+            "first_alarm": {}
+          },
+          {
+            "fold": 4,
+            "exposure_days": 70.10196759259259,
+            "excluded_days": 0.765625,
+            "first_alarm": {
+              "2022-02-28 21:53:00": "2022-02-28 22:17:40"
+            }
+          },
+          {
+            "fold": 5,
+            "exposure_days": 45.21863425925926,
+            "excluded_days": 0.019212962962962963,
+            "first_alarm": {}
+          },
+          {
+            "fold": 6,
+            "exposure_days": 37.08877314814815,
+            "excluded_days": 0.0,
+            "first_alarm": {}
+          }
+        ]
       },
       "xgboost": {
         "original": {
           "fa": 36,
           "cost": 56.0,
-          "detected": 3
+          "detected": 3,
+          "exposure_days": 267.08636574074075,
+          "fa_per_day": 0.13478786122293115
         },
         "audited": {
           "fa": 0,
           "cost": 50.0,
-          "detected": 3
-        }
+          "detected": 3,
+          "exposure_days": 264.8478240740741,
+          "fa_per_day": 0.0
+        },
+        "per_fold": [
+          {
+            "fold": 1,
+            "exposure_days": 23.84396990740741,
+            "excluded_days": 1.4221527777777778,
+            "first_alarm": {
+              "2020-05-29 23:30:00": "2020-05-29 23:18:24"
+            }
+          },
+          {
+            "fold": 2,
+            "exposure_days": 24.270694444444445,
+            "excluded_days": 0.01412037037037037,
+            "first_alarm": {
+              "2020-06-05 10:00:00": "2020-06-05 10:00:44"
+            }
+          },
+          {
+            "fold": 3,
+            "exposure_days": 66.56232638888889,
+            "excluded_days": 0.017430555555555557,
+            "first_alarm": {}
+          },
+          {
+            "fold": 4,
+            "exposure_days": 70.10196759259259,
+            "excluded_days": 0.765625,
+            "first_alarm": {
+              "2022-02-28 21:53:00": "2022-02-28 22:21:50"
+            }
+          },
+          {
+            "fold": 5,
+            "exposure_days": 45.21863425925926,
+            "excluded_days": 0.019212962962962963,
+            "first_alarm": {}
+          },
+          {
+            "fold": 6,
+            "exposure_days": 37.08877314814815,
+            "excluded_days": 0.0,
+            "first_alarm": {}
+          }
+        ]
       },
       "logistic_regression": {
         "original": {
           "fa": 63,
           "cost": 77.16666666666667,
-          "detected": 2
+          "detected": 2,
+          "exposure_days": 267.08636574074075,
+          "fa_per_day": 0.23587875714012954
         },
         "audited": {
           "fa": 12,
           "cost": 68.66666666666667,
-          "detected": 2
-        }
+          "detected": 2,
+          "exposure_days": 264.8478240740741,
+          "fa_per_day": 0.045309037527315216
+        },
+        "per_fold": [
+          {
+            "fold": 1,
+            "exposure_days": 23.84396990740741,
+            "excluded_days": 1.4221527777777778,
+            "first_alarm": {
+              "2020-05-29 23:30:00": "2020-05-29 23:18:44"
+            }
+          },
+          {
+            "fold": 2,
+            "exposure_days": 24.270694444444445,
+            "excluded_days": 0.01412037037037037,
+            "first_alarm": {}
+          },
+          {
+            "fold": 3,
+            "exposure_days": 66.56232638888889,
+            "excluded_days": 0.017430555555555557,
+            "first_alarm": {}
+          },
+          {
+            "fold": 4,
+            "exposure_days": 70.10196759259259,
+            "excluded_days": 0.765625,
+            "first_alarm": {
+              "2022-02-28 21:53:00": "2022-02-28 22:17:50"
+            }
+          },
+          {
+            "fold": 5,
+            "exposure_days": 45.21863425925926,
+            "excluded_days": 0.019212962962962963,
+            "first_alarm": {}
+          },
+          {
+            "fold": 6,
+            "exposure_days": 37.08877314814815,
+            "excluded_days": 0.0,
+            "first_alarm": {}
+          }
+        ]
       },
       "mlp": {
         "original": {
           "fa": 134,
           "cost": 72.33333333333333,
-          "detected": 3
+          "detected": 3,
+          "exposure_days": 267.08636574074075,
+          "fa_per_day": 0.5017103723297993
         },
         "audited": {
           "fa": 76,
           "cost": 62.666666666666664,
-          "detected": 3
-        }
+          "detected": 3,
+          "exposure_days": 264.8478240740741,
+          "fa_per_day": 0.28695723767299636
+        },
+        "per_fold": [
+          {
+            "fold": 1,
+            "exposure_days": 23.84396990740741,
+            "excluded_days": 1.4221527777777778,
+            "first_alarm": {
+              "2020-05-29 23:30:00": "2020-05-29 23:17:15"
+            }
+          },
+          {
+            "fold": 2,
+            "exposure_days": 24.270694444444445,
+            "excluded_days": 0.01412037037037037,
+            "first_alarm": {
+              "2020-06-05 10:00:00": "2020-06-05 09:53:37"
+            }
+          },
+          {
+            "fold": 3,
+            "exposure_days": 66.56232638888889,
+            "excluded_days": 0.017430555555555557,
+            "first_alarm": {}
+          },
+          {
+            "fold": 4,
+            "exposure_days": 70.10196759259259,
+            "excluded_days": 0.765625,
+            "first_alarm": {
+              "2022-02-28 21:53:00": "2022-02-28 22:18:00"
+            }
+          },
+          {
+            "fold": 5,
+            "exposure_days": 45.21863425925926,
+            "excluded_days": 0.019212962962962963,
+            "first_alarm": {}
+          },
+          {
+            "fold": 6,
+            "exposure_days": 37.08877314814815,
+            "excluded_days": 0.0,
+            "first_alarm": {}
+          }
+        ]
       },
       "tcn": {
         "original": {
           "fa": 87,
           "cost": 81.16666666666667,
-          "detected": 2
+          "detected": 2,
+          "exposure_days": 267.08636574074075,
+          "fa_per_day": 0.3257373312887503
         },
         "audited": {
           "fa": 48,
           "cost": 74.66666666666667,
-          "detected": 2
-        }
+          "detected": 2,
+          "exposure_days": 264.8478240740741,
+          "fa_per_day": 0.18123615010926086
+        },
+        "per_fold": [
+          {
+            "fold": 1,
+            "exposure_days": 23.84396990740741,
+            "excluded_days": 1.4221527777777778,
+            "first_alarm": {
+              "2020-05-29 23:30:00": "2020-05-29 23:22:12"
+            }
+          },
+          {
+            "fold": 2,
+            "exposure_days": 24.270694444444445,
+            "excluded_days": 0.01412037037037037,
+            "first_alarm": {}
+          },
+          {
+            "fold": 3,
+            "exposure_days": 66.56232638888889,
+            "excluded_days": 0.017430555555555557,
+            "first_alarm": {}
+          },
+          {
+            "fold": 4,
+            "exposure_days": 70.10196759259259,
+            "excluded_days": 0.765625,
+            "first_alarm": {
+              "2022-02-28 21:53:00": "2022-02-28 22:28:30"
+            }
+          },
+          {
+            "fold": 5,
+            "exposure_days": 45.21863425925926,
+            "excluded_days": 0.019212962962962963,
+            "first_alarm": {}
+          },
+          {
+            "fold": 6,
+            "exposure_days": 37.08877314814815,
+            "excluded_days": 0.0,
+            "first_alarm": {}
+          }
+        ]
       },
       "bilstm": {
         "original": {
           "fa": 37,
           "cost": 56.166666666666664,
-          "detected": 3
+          "detected": 3,
+          "exposure_days": 267.08636574074075,
+          "fa_per_day": 0.1385319684791237
         },
         "audited": {
           "fa": 1,
           "cost": 50.166666666666664,
-          "detected": 3
-        }
+          "detected": 3,
+          "exposure_days": 264.8478240740741,
+          "fa_per_day": 0.003775753127276268
+        },
+        "per_fold": [
+          {
+            "fold": 1,
+            "exposure_days": 23.84396990740741,
+            "excluded_days": 1.4221527777777778,
+            "first_alarm": {
+              "2020-05-29 23:30:00": "2020-05-29 23:23:51"
+            }
+          },
+          {
+            "fold": 2,
+            "exposure_days": 24.270694444444445,
+            "excluded_days": 0.01412037037037037,
+            "first_alarm": {
+              "2020-06-05 10:00:00": "2020-06-05 09:59:24"
+            }
+          },
+          {
+            "fold": 3,
+            "exposure_days": 66.56232638888889,
+            "excluded_days": 0.017430555555555557,
+            "first_alarm": {}
+          },
+          {
+            "fold": 4,
+            "exposure_days": 70.10196759259259,
+            "excluded_days": 0.765625,
+            "first_alarm": {
+              "2022-02-28 21:53:00": "2022-02-28 22:26:20"
+            }
+          },
+          {
+            "fold": 5,
+            "exposure_days": 45.21863425925926,
+            "excluded_days": 0.019212962962962963,
+            "first_alarm": {}
+          },
+          {
+            "fold": 6,
+            "exposure_days": 37.08877314814815,
+            "excluded_days": 0.0,
+            "first_alarm": {}
+          }
+        ]
       },
       "patchtst": {
         "original": {
           "fa": 119,
           "cost": 69.83333333333333,
-          "detected": 3
+          "detected": 3,
+          "exposure_days": 267.08636574074075,
+          "fa_per_day": 0.44554876348691136
         },
         "audited": {
           "fa": 84,
           "cost": 64.0,
-          "detected": 3
-        }
+          "detected": 3,
+          "exposure_days": 264.8478240740741,
+          "fa_per_day": 0.3171632626912065
+        },
+        "per_fold": [
+          {
+            "fold": 1,
+            "exposure_days": 23.84396990740741,
+            "excluded_days": 1.4221527777777778,
+            "first_alarm": {
+              "2020-05-29 23:30:00": "2020-05-29 23:19:23"
+            }
+          },
+          {
+            "fold": 2,
+            "exposure_days": 24.270694444444445,
+            "excluded_days": 0.01412037037037037,
+            "first_alarm": {
+              "2020-06-05 10:00:00": "2020-06-05 09:56:26"
+            }
+          },
+          {
+            "fold": 3,
+            "exposure_days": 66.56232638888889,
+            "excluded_days": 0.017430555555555557,
+            "first_alarm": {}
+          },
+          {
+            "fold": 4,
+            "exposure_days": 70.10196759259259,
+            "excluded_days": 0.765625,
+            "first_alarm": {
+              "2022-02-28 21:53:00": "2022-02-28 22:18:20"
+            }
+          },
+          {
+            "fold": 5,
+            "exposure_days": 45.21863425925926,
+            "excluded_days": 0.019212962962962963,
+            "first_alarm": {}
+          },
+          {
+            "fold": 6,
+            "exposure_days": 37.08877314814815,
+            "excluded_days": 0.0,
+            "first_alarm": {}
+          }
+        ]
       },
       "autoencoder": {
         "original": {
           "fa": 177,
           "cost": 112.83333333333333,
-          "detected": 1
+          "detected": 1,
+          "exposure_days": 267.08636574074075,
+          "fa_per_day": 0.6627069843460782
         },
         "audited": {
           "fa": 101,
           "cost": 100.16666666666667,
-          "detected": 1
-        }
+          "detected": 1,
+          "exposure_days": 264.8478240740741,
+          "fa_per_day": 0.381351065854903
+        },
+        "per_fold": [
+          {
+            "fold": 1,
+            "exposure_days": 23.84396990740741,
+            "excluded_days": 1.4221527777777778,
+            "first_alarm": {}
+          },
+          {
+            "fold": 2,
+            "exposure_days": 24.270694444444445,
+            "excluded_days": 0.01412037037037037,
+            "first_alarm": {}
+          },
+          {
+            "fold": 3,
+            "exposure_days": 66.56232638888889,
+            "excluded_days": 0.017430555555555557,
+            "first_alarm": {}
+          },
+          {
+            "fold": 4,
+            "exposure_days": 70.10196759259259,
+            "excluded_days": 0.765625,
+            "first_alarm": {
+              "2022-02-28 21:53:00": "2022-02-28 22:32:10"
+            }
+          },
+          {
+            "fold": 5,
+            "exposure_days": 45.21863425925926,
+            "excluded_days": 0.019212962962962963,
+            "first_alarm": {}
+          },
+          {
+            "fold": 6,
+            "exposure_days": 37.08877314814815,
+            "excluded_days": 0.0,
+            "first_alarm": {}
+          }
+        ]
       },
       "cusum": {
         "original": {
           "fa": 74,
           "cost": 79.0,
-          "detected": 2
+          "detected": 2,
+          "exposure_days": 267.08636574074075,
+          "fa_per_day": 0.2770639369582474
         },
         "audited": {
           "fa": 74,
           "cost": 79.0,
-          "detected": 2
-        }
+          "detected": 2,
+          "exposure_days": 264.8478240740741,
+          "fa_per_day": 0.2794057314184438
+        },
+        "per_fold": [
+          {
+            "fold": 1,
+            "exposure_days": 23.84396990740741,
+            "excluded_days": 1.4221527777777778,
+            "first_alarm": {}
+          },
+          {
+            "fold": 2,
+            "exposure_days": 24.270694444444445,
+            "excluded_days": 0.01412037037037037,
+            "first_alarm": {
+              "2020-06-05 10:00:00": "2020-06-05 22:45:10"
+            }
+          },
+          {
+            "fold": 3,
+            "exposure_days": 66.56232638888889,
+            "excluded_days": 0.017430555555555557,
+            "first_alarm": {
+              "2020-07-15 14:30:00": "2020-07-15 16:03:51"
+            }
+          },
+          {
+            "fold": 4,
+            "exposure_days": 70.10196759259259,
+            "excluded_days": 0.765625,
+            "first_alarm": {}
+          },
+          {
+            "fold": 5,
+            "exposure_days": 45.21863425925926,
+            "excluded_days": 0.019212962962962963,
+            "first_alarm": {}
+          },
+          {
+            "fold": 6,
+            "exposure_days": 37.08877314814815,
+            "excluded_days": 0.0,
+            "first_alarm": {}
+          }
+        ]
       },
       "ewma": {
         "original": {
           "fa": 101,
           "cost": 50.166666666666664,
-          "detected": 4
+          "detected": 4,
+          "exposure_days": 267.08636574074075,
+          "fa_per_day": 0.37815483287544577
         },
         "audited": {
           "fa": 91,
           "cost": 48.5,
-          "detected": 4
-        }
+          "detected": 4,
+          "exposure_days": 264.8478240740741,
+          "fa_per_day": 0.34359353458214037
+        },
+        "per_fold": [
+          {
+            "fold": 1,
+            "exposure_days": 23.84396990740741,
+            "excluded_days": 1.4221527777777778,
+            "first_alarm": {
+              "2020-05-29 23:30:00": "2020-05-30 00:43:19"
+            }
+          },
+          {
+            "fold": 2,
+            "exposure_days": 24.270694444444445,
+            "excluded_days": 0.01412037037037037,
+            "first_alarm": {
+              "2020-06-05 10:00:00": "2020-06-05 10:28:49"
+            }
+          },
+          {
+            "fold": 3,
+            "exposure_days": 66.56232638888889,
+            "excluded_days": 0.017430555555555557,
+            "first_alarm": {
+              "2020-07-15 14:30:00": "2020-07-15 14:38:36"
+            }
+          },
+          {
+            "fold": 4,
+            "exposure_days": 70.10196759259259,
+            "excluded_days": 0.765625,
+            "first_alarm": {
+              "2022-02-28 21:53:00": "2022-02-28 22:44:50"
+            }
+          },
+          {
+            "fold": 5,
+            "exposure_days": 45.21863425925926,
+            "excluded_days": 0.019212962962962963,
+            "first_alarm": {}
+          },
+          {
+            "fold": 6,
+            "exposure_days": 37.08877314814815,
+            "excluded_days": 0.0,
+            "first_alarm": {}
+          }
+        ]
       }
     },
     "models": [
