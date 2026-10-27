@@ -59,4 +59,10 @@ forma aprendível.
 
 ## Adendos
 
-*(nenhum)*
+* **2026-10-27 — matriz de correlação dos atributos**
+  ([`correlation_matrix.md`](correlation_matrix.md)). Análise descritiva nova,
+  não altera nenhum resultado congelado. Achado: no MetroPT2, `Oil_level` vale 0
+  em todas as 23.156 linhas em falha e em só 2.880 linhas normais
+  (r = −0,94 com o rótulo). `Oil_level` já estava fora dos modelos (constante no
+  MetroPT 2022), então a avaliação no MetroPT2 não usa esse sinal; fica
+  registrado como limitação do rótulo/dataset, não como resultado.

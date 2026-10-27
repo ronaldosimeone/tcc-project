@@ -51,3 +51,6 @@ teste externo.
 * A auditoria de rótulos ([`label_audit.md`](label_audit.md)) achou que 3,4 %
   dos blocos "saudáveis" de 2020 têm a mesma assinatura de carga contínua das
   falhas F20_1/F20_2.
+* Matriz de correlação de todos os atributos dos três datasets:
+  [`correlation_matrix.md`](correlation_matrix.md). No MetroPT2, `Oil_level`
+  vale 0 em todas as linhas em falha (r = −0,94 com o rótulo).

@@ -70,6 +70,7 @@ run_ml() {
   # Auditoria da validação e das features (revisão técnica, rodada 6)
   "$ML_PY" -m src.fold_chronology                               # datas de cada fold externo/interno
   "$ML_PY" -m src.event_correlation                             # associação sensor × falha por evento
+  "$ML_PY" -m src.correlation_matrix                            # matriz de correlação de todos os atributos (3 datasets)
   for v in "--drop-sensors DV_pressure --tag no_dv_pressure" "--only-sensors DV_pressure --tag dv_pressure_only"; do
     "$ML_PY" -m src.evaluate_nested --models random_forest logistic_regression --seeds 1 $v
     "$GPU_PY" -m src.evaluate_nested --models xgboost --seeds 1 $v
