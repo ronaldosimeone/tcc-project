@@ -24,7 +24,7 @@ from __future__ import annotations
 import asyncio
 from datetime import datetime, timedelta, timezone
 from typing import Any
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, Mock
 
 import httpx
 import pytest
@@ -393,15 +393,16 @@ def _make_service(
     return service, adapter, rate_limiter
 
 
-def test_critical_failure_threshold_is_zero_point_eight_five() -> None:
-    assert CRITICAL_FAILURE_THRESHOLD == 0.85
+def test_critical_failure_threshold_is_the_critical_risk_level() -> None:
+    # 0.65 = o painel fica CRÍTICO (o modelo decide "falha").
+    assert CRITICAL_FAILURE_THRESHOLD == 0.65
 
 
-@pytest.mark.parametrize("probability", [0.0, 0.5, 0.84, 0.85])
+@pytest.mark.parametrize("probability", [0.0, 0.5, 0.64, 0.65])
 async def test_probability_at_or_below_threshold_never_calls_telegram(
     probability: float,
 ) -> None:
-    """A) 0.84 e B) 0.85 — Telegram não chamado."""
+    """A) 0.64 e B) 0.65 — Telegram não chamado."""
     service, adapter, rate_limiter = _make_service()
 
     await service.notify_if_critical(
@@ -415,9 +416,27 @@ async def test_probability_at_or_below_threshold_never_calls_telegram(
     rate_limiter.try_acquire.assert_not_called()
 
 
-@pytest.mark.parametrize("probability", [0.8501, 0.90, 0.9999])
+async def test_enqueue_failure_does_not_raise_and_releases_rate_limit() -> None:
+    """Broker (Redis) fora do ar: a predição segue e o rate limit é liberado."""
+    rate_limiter = AsyncMock()
+    rate_limiter.try_acquire = AsyncMock(return_value=True)
+    service = CriticalFailureNotificationService(
+        adapter=AsyncMock(),
+        rate_limiter=rate_limiter,
+        dashboard_url="http://localhost",
+        enqueue_notification=Mock(side_effect=ConnectionError("redis down")),
+    )
+
+    await service.notify_if_critical(
+        equipment_id="eq-1", equipment_name="Eq 1", probability=0.9, timestamp="t"
+    )
+
+    rate_limiter.release.assert_awaited_once_with("eq-1")
+
+
+@pytest.mark.parametrize("probability", [0.6501, 0.90, 0.9999])
 async def test_probability_above_threshold_calls_telegram(probability: float) -> None:
-    """C) 0.8501 e D) 0.90 — Telegram chamado."""
+    """C) 0.6501 e D) 0.90 — Telegram chamado."""
     service, adapter, rate_limiter = _make_service()
 
     await service.notify_if_critical(

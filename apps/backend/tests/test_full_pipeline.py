@@ -288,7 +288,7 @@ def build_notifier(
         quando `enqueue_notification` está presente (prova de RNF-50: envio
         não é síncrono).
       - `settings_service=None` — usa os defaults do RF-24
-        (`CRITICAL_FAILURE_THRESHOLD=0.85`, Telegram sempre ligado) sem
+        (`CRITICAL_FAILURE_THRESHOLD=0.65`, Telegram sempre ligado) sem
         precisar de Postgres para ler configuração (RF-25).
     """
     rate_limiter = AsyncMock()
@@ -459,48 +459,39 @@ async def test_below_maintenance_threshold_skips_mcp_llm_and_notification() -> N
     assert ollama.calls == []
 
 
-async def test_between_maintenance_and_critical_threshold_suggests_but_does_not_notify() -> (
+async def test_between_critical_default_and_suggestion_notifies_but_does_not_suggest() -> (
     None
 ):
     """
-    0.80 — acima do limiar de sugestão de manutenção (RF-22, `> 0.70`) MAS
-    abaixo do limiar de falha crítica (RF-24, `> 0.85`).
-
-    Nota de auditoria: o enunciado original desta task usa 0.80 como exemplo
-    de "abaixo do threshold" partindo da premissa de um único limiar único
-    para todo o pipeline. A auditoria obrigatória (item 1) confirmou que
-    RF-22 e RF-24 usam CONSTANTES DIFERENTES e INDEPENDENTES
-    (`MAINTENANCE_SUGGESTION_THRESHOLD=0.70`, `CRITICAL_FAILURE_THRESHOLD=0.85`
-    — documentado desde RF-24/RF-25). Este teste reflete o comportamento
-    REAL do projeto (item 13 do enunciado: "use o threshold real configurado
-    pelo projeto, sem hardcode incorreto") em vez de forçar uma premissa
-    equivocada: em 0.80, a sugestão de manutenção (MCP/LLM) É acionada, mas
-    a notificação crítica NÃO é enfileirada.
+    0.68 — acima do nível padrão de notificação crítica (RF-24/RF-25: 0.65,
+    o mesmo ponto em que o painel fica CRÍTICO) MAS abaixo do limiar legado
+    de sugestão manual (RF-22, `> 0.70`, sem limiar do modelo). As duas
+    constantes continuam independentes: a notificação é enfileirada, a
+    sugestão de manutenção (MCP/LLM) não é acionada.
     """
     enqueue_mock = Mock()
     notifier, telegram_adapter = build_notifier(enqueue_mock)
     ws_manager = AsyncMock(spec=ConnectionManager)
     alert_service = AlertService(ws_manager, critical_notifier=notifier)
 
-    alert_payload = await alert_service.process_prediction(detection_result(0.80))
-    assert alert_payload["triggered"] is True  # RF-14: 0.80 > 0.70
-    ws_manager.broadcast_alert.assert_awaited_once()
-    enqueue_mock.assert_not_called()  # RF-24: 0.80 <= 0.85 — não enfileira
-    telegram_adapter.send_critical_failure.assert_not_awaited()
+    alert_payload = await alert_service.process_prediction(detection_result(0.68))
+    assert alert_payload["triggered"] is False  # RF-14 legado: 0.68 <= 0.70
+    enqueue_mock.assert_called_once()  # RF-24: 0.68 > 0.65 — enfileira
+    telegram_adapter.send_critical_failure.assert_not_awaited()  # RNF-50
 
     mcp = fake_mcp_client({"bomba": [PUMP_MANUAL_RESULT]})
     ollama = fake_ollama_client()
     suggestion_service = MaintenanceSuggestionService(mcp, ollama, "llama3.2:3b")
     response = await suggestion_service.suggest(
         MaintenanceSuggestionRequest(
-            failure_probability=0.80,
+            failure_probability=0.68,
             equipment_name=EQUIPMENT_NAME,
             symptom_description="ruído excessivo na sucção da bomba",
         )
     )
-    assert response.triggered is True  # RF-22: 0.80 > 0.70 — MCP/LLM SÃO chamados
-    assert mcp.calls
-    assert ollama.calls
+    assert response.triggered is False  # RF-22: 0.68 <= 0.70
+    assert mcp.calls == []
+    assert ollama.calls == []
 
 
 # ---------------------------------------------------------------------------

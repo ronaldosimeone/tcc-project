@@ -218,7 +218,17 @@ class CriticalFailureNotificationService:
             # inferência. `dispatch_kwargs` é um dict só com tipos
             # JSON-serializáveis (str/float/bool/None) — nenhum objeto
             # SQLAlchemy/FastAPI/adapter atravessa o broker.
-            self._enqueue_notification(dispatch_kwargs)
+            try:
+                self._enqueue_notification(dispatch_kwargs)
+            except Exception as exc:  # broker fora do ar não derruba a predição
+                log.warning(
+                    "critical_failure_notification_enqueue_failed",
+                    equipment_id=equipment_id,
+                    error=str(exc),
+                )
+                # Libera o rate limit: a próxima leitura crítica tenta de novo.
+                await self._rate_limiter.release(equipment_id)
+                return
             log.info(
                 "critical_failure_notification_enqueued",
                 equipment_id=equipment_id,
