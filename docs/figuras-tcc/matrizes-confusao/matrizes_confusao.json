@@ -1,266 +1,232 @@
 {
- "Random Forest": {
-  "kind": "tabular",
-  "threshold": 0.6598,
-  "n": 303390,
-  "cm_default": [
-   [
-    297140,
-    259
-   ],
-   [
-    16,
-    5975
-   ]
-  ],
-  "cm_tuned": [
-   [
-    297347,
-    52
-   ],
-   [
-    23,
-    5968
-   ]
-  ],
-  "source": "model card (classification_report)"
- },
- "XGBoost": {
-  "kind": "tabular",
-  "threshold": 0.5909,
-  "n": 303390,
-  "cm_default": [
-   [
-    297344,
-    55
-   ],
-   [
-    25,
-    5966
-   ]
-  ],
-  "cm_tuned": [
-   [
-    297350,
-    49
-   ],
-   [
-    25,
-    5966
-   ]
-  ],
-  "source": "model card (classification_report)",
-  "verify_tuned": [
-   [
-    297350,
-    49
-   ],
-   [
-    25,
-    5966
-   ]
-  ],
-  "verify_default": [
-   [
-    297344,
-    55
-   ],
-   [
-    25,
-    5966
-   ]
-  ]
- },
- "MLP": {
-  "kind": "tabular",
-  "threshold": 0.8364,
-  "n": 303390,
-  "cm_default": [
-   [
-    295577,
-    1822
-   ],
-   [
-    23,
-    5968
-   ]
-  ],
-  "cm_tuned": [
-   [
-    296876,
-    523
-   ],
-   [
-    88,
-    5903
-   ]
-  ],
-  "source": "model card (classification_report)"
- },
- "TCN": {
-  "kind": "janelas",
-  "threshold": 0.9069,
-  "n": 30338,
-  "cm_default": [
-   [
-    29526,
-    208
-   ],
-   [
-    4,
-    600
-   ]
-  ],
-  "cm_tuned": [
-   [
-    29677,
-    57
-   ],
-   [
-    10,
-    594
-   ]
-  ],
-  "source": "model card (classification_report)",
-  "verify_tuned": [
-   [
-    29677,
-    57
-   ],
-   [
-    11,
-    593
-   ]
-  ],
-  "verify_default": [
-   [
-    29526,
-    208
-   ],
-   [
-    4,
-    600
-   ]
-  ]
- },
- "BiLSTM": {
-  "kind": "janelas",
-  "threshold": 0.742,
-  "n": 30338,
-  "cm_default": [
-   [
-    29525,
-    209
-   ],
-   [
-    6,
-    598
-   ]
-  ],
-  "cm_tuned": [
-   [
-    29641,
-    93
-   ],
-   [
-    10,
-    594
-   ]
-  ],
-  "source": "model card (classification_report)",
-  "verify_tuned": [
-   [
-    29641,
-    93
-   ],
-   [
-    11,
-    593
-   ]
-  ],
-  "verify_default": [
-   [
-    29525,
-    209
-   ],
-   [
-    6,
-    598
-   ]
-  ]
- },
- "PatchTST": {
-  "kind": "janelas",
-  "threshold": 0.9171,
-  "n": 30338,
-  "cm_default": [
-   [
-    29471,
-    263
-   ],
-   [
-    7,
-    597
-   ]
-  ],
-  "cm_tuned": [
-   [
-    29663,
-    71
-   ],
-   [
-    16,
-    588
-   ]
-  ],
-  "source": "model card (classification_report)",
-  "verify_tuned": [
-   [
-    29663,
-    71
-   ],
-   [
-    16,
-    588
-   ]
-  ],
-  "verify_default": [
-   [
-    29471,
-    263
-   ],
-   [
-    7,
-    597
-   ]
-  ]
- },
- "Autoencoder": {
-  "kind": "janelas",
-  "threshold": 0.06288089260458939,
-  "n": 30338,
-  "cm_tuned": [
-   [
-    29436,
-    298
-   ],
-   [
-    588,
-    16
-   ]
-  ],
-  "cm_default": [
-   [
-    29436,
-    298
-   ],
-   [
-    588,
-    16
-   ]
-  ],
-  "auc": 0.8710994103568194,
-  "source": "recalculado (ONNX no conjunto de validação)",
-  "ae": true
- }
+  "Random Forest": {
+    "alarms": [
+      [
+        1833717,
+        13884
+      ],
+      [
+        39203,
+        3310
+      ]
+    ],
+    "samples": [
+      [
+        1833534,
+        14067
+      ],
+      [
+        39178,
+        3335
+      ]
+    ],
+    "detected": 2
+  },
+  "XGBoost": {
+    "alarms": [
+      [
+        1835711,
+        11890
+      ],
+      [
+        39676,
+        2837
+      ]
+    ],
+    "samples": [
+      [
+        1835689,
+        11912
+      ],
+      [
+        38508,
+        4005
+      ]
+    ],
+    "detected": 3
+  },
+  "Regressão Logística": {
+    "alarms": [
+      [
+        1832947,
+        14654
+      ],
+      [
+        38930,
+        3583
+      ]
+    ],
+    "samples": [
+      [
+        1832422,
+        15179
+      ],
+      [
+        38866,
+        3647
+      ]
+    ],
+    "detected": 2
+  },
+  "MLP": {
+    "alarms": [
+      [
+        1833022,
+        14579
+      ],
+      [
+        39400,
+        3113
+      ]
+    ],
+    "samples": [
+      [
+        1831513,
+        16088
+      ],
+      [
+        39390,
+        3123
+      ]
+    ],
+    "detected": 3
+  },
+  "TCN": {
+    "alarms": [
+      [
+        1822304,
+        25297
+      ],
+      [
+        39424,
+        3089
+      ]
+    ],
+    "samples": [
+      [
+        1822186,
+        25415
+      ],
+      [
+        39414,
+        3099
+      ]
+    ],
+    "detected": 2
+  },
+  "BiLSTM": {
+    "alarms": [
+      [
+        1835477,
+        12124
+      ],
+      [
+        29984,
+        12529
+      ]
+    ],
+    "samples": [
+      [
+        1835430,
+        12171
+      ],
+      [
+        29872,
+        12641
+      ]
+    ],
+    "detected": 3
+  },
+  "PatchTST": {
+    "alarms": [
+      [
+        1834016,
+        13585
+      ],
+      [
+        39639,
+        2874
+      ]
+    ],
+    "samples": [
+      [
+        1830550,
+        17051
+      ],
+      [
+        39599,
+        2914
+      ]
+    ],
+    "detected": 3
+  },
+  "Autoencoder": {
+    "alarms": [
+      [
+        1827423,
+        20178
+      ],
+      [
+        41316,
+        1197
+      ]
+    ],
+    "samples": [
+      [
+        1825954,
+        21647
+      ],
+      [
+        41294,
+        1219
+      ]
+    ],
+    "detected": 1
+  },
+  "CUSUM": {
+    "alarms": [
+      [
+        1825900,
+        21701
+      ],
+      [
+        35801,
+        6712
+      ]
+    ],
+    "samples": [
+      [
+        1825865,
+        21736
+      ],
+      [
+        35791,
+        6722
+      ]
+    ],
+    "detected": 2
+  },
+  "EWMA": {
+    "alarms": [
+      [
+        1825593,
+        22008
+      ],
+      [
+        24583,
+        17930
+      ]
+    ],
+    "samples": [
+      [
+        1825413,
+        22188
+      ],
+      [
+        24548,
+        17965
+      ]
+    ],
+    "detected": 4
+  }
 }
