@@ -100,3 +100,6 @@ apps/ml/models/nested/ablation/*/scores/
 apps/ml/models/legacy/*_int8.onnx
 apps/ml/models/eval_metropt2_scores.npz
 apps/ml/models/anticipation_alarms/
+
+# Backups locais de banco (dumps antes de reset/seed de demonstração)
+backups/
