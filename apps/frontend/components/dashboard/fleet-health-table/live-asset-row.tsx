@@ -16,18 +16,20 @@ export const LIVE_ASSET_ID = "APU-Trem-042";
 
 interface LiveAssetRowProps {
   effectiveRiskLevel: RiskLevel;
-  effectiveProb: number;
+  effectiveRisk: number;
+  rawProbability: number;
   isSelected: boolean;
   onSelect: (id: string) => void;
 }
 
 export function LiveAssetRow({
   effectiveRiskLevel,
-  effectiveProb,
+  effectiveRisk,
+  rawProbability,
   isSelected,
   onSelect,
 }: LiveAssetRowProps) {
-  const liveHealth = Math.round((1 - effectiveProb) * 100);
+  const liveHealth = Math.round((1 - effectiveRisk) * 100);
   // Tendência da linha LIVE: deriva do nível de risco corrente para dar
   // feedback imediato no scan visual (sem necessitar de histórico real).
   const liveTrendPp =
@@ -118,8 +120,13 @@ export function LiveAssetRow({
         />
       </td>
 
-      <td className="py-3 short:py-1.5 pr-4 text-right font-mono text-xs tabular-nums text-foreground">
-        {(effectiveProb * 100).toFixed(1)}%
+      <td
+        className="py-3 short:py-1.5 pr-4 text-right font-mono text-xs tabular-nums text-foreground"
+        title={`Probabilidade bruta do modelo: ${(rawProbability * 100).toFixed(
+          1,
+        )}%`}
+      >
+        {(effectiveRisk * 100).toFixed(1)}%
       </td>
 
       <td

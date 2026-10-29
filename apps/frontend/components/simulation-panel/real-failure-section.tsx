@@ -1,22 +1,24 @@
 "use client";
 
-// ── Seção "Falhas reais" — reproduz uma falha documentada, com selo de
-// honestidade: "vista no treino" (demonstração) × "inédita" (teste honesto).
+// ── Seção "Cenário de dados" — operação normal ou uma falha real documentada,
+// com selo de honestidade: "vista no treino" (demonstração) × "inédita"
+// (teste honesto). Ao fim da falha o simulador volta sozinho ao normal.
 
 import { memo, useCallback, useEffect, useState } from "react";
-import { CircleAlert, FlaskConical, Loader2, Square } from "lucide-react";
+import {
+  Activity,
+  CircleAlert,
+  FlaskConical,
+  Loader2,
+  Square,
+} from "lucide-react";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useScenarioStatus } from "@/hooks/use-scenario-status";
+import { setSimulatorMode } from "@/lib/api-client";
 import {
   fetchFailureScenarios,
   playFailureScenario,
@@ -24,11 +26,10 @@ import {
 } from "@/lib/failure-scenarios-api";
 import { FailureScenarioItem } from "./failure-scenario-item";
 
-const LEAD_OPTIONS: readonly number[] = [10, 30, 60, 360];
+const NORMAL = "normal";
 
 const RealFailureSectionComponent = () => {
   const [scenarios, setScenarios] = useState<FailureScenario[] | null>(null);
-  const [lead, setLead] = useState(30);
   const [pending, setPending] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const { status, refresh } = useScenarioStatus();
@@ -49,64 +50,85 @@ const RealFailureSectionComponent = () => {
     };
   }, []);
 
-  const play = useCallback(
-    async (id: string | null) => {
-      setPending(id ?? "stop");
+  const run = useCallback(
+    async (key: string, action: () => Promise<unknown>) => {
+      setPending(key);
       setError(null);
       try {
-        await playFailureScenario({ id, leadMinutes: lead });
+        await action();
         refresh();
       } catch (err) {
         setError(
-          err instanceof Error ? err.message : "Falha ao iniciar cenário",
+          err instanceof Error ? err.message : "Falha ao trocar cenário",
         );
       } finally {
         setPending(null);
       }
     },
-    [lead, refresh],
+    [refresh],
+  );
+
+  const playNormal = useCallback(
+    () => void run(NORMAL, () => setSimulatorMode("NORMAL")),
+    [run],
+  );
+  const play = useCallback(
+    (id: string) => void run(id, () => playFailureScenario(id)),
+    [run],
   );
 
   const active = status?.scenario ?? null;
+  const isNormal = status?.mode === "NORMAL" && !active;
   const progress =
     status?.step != null && status.total
       ? (status.step / status.total) * 100
       : 0;
 
   return (
-    <section className="flex flex-col gap-3" aria-label="Falhas reais">
-      <div className="flex items-center justify-between gap-2">
-        <Label className="flex items-center gap-1.5 text-sm">
-          <FlaskConical className="h-3.5 w-3.5" aria-hidden="true" />
-          Falhas reais
-        </Label>
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-muted-foreground">Antecedência</span>
-          <Select
-            value={String(lead)}
-            onValueChange={(v) => setLead(Number(v))}
-          >
-            <SelectTrigger
-              className="h-7 w-[92px] text-xs"
-              aria-label="Antecedência"
-            >
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {LEAD_OPTIONS.map((m) => (
-                <SelectItem key={m} value={String(m)} className="text-xs">
-                  {m >= 60 ? `${m / 60} h` : `${m} min`}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+    <section className="flex flex-col gap-3" aria-label="Cenário de dados">
+      <div className="flex items-baseline justify-between">
+        <Label className="text-sm">Cenário de dados</Label>
+        {status && (
+          <Badge variant="outline" className="font-mono text-xs">
+            {active ? "FALHA REAL" : status.mode}
+          </Badge>
+        )}
       </div>
 
+      <Button
+        type="button"
+        variant="outline"
+        aria-pressed={isNormal}
+        data-active={isNormal}
+        disabled={pending !== null}
+        onClick={playNormal}
+        className="h-auto justify-start gap-3 px-3 py-2.5 text-left data-[active=true]:border-primary data-[active=true]:shadow-[0_0_0_1px_var(--primary)]"
+      >
+        {pending === NORMAL ? (
+          <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
+        ) : (
+          <Activity
+            className="h-3.5 w-3.5 shrink-0 text-muted-foreground data-[active=true]:text-primary"
+            data-active={isNormal}
+          />
+        )}
+        <span className="flex min-w-0 flex-col">
+          <span className="text-sm font-medium text-foreground">Normal</span>
+          <span className="whitespace-normal text-xs font-normal text-muted-foreground">
+            Operação real, sem falha.
+          </span>
+        </span>
+      </Button>
+
+      <Label className="mt-1 flex items-center gap-1.5 text-sm">
+        <FlaskConical className="h-3.5 w-3.5" aria-hidden="true" />
+        Falha real
+      </Label>
+
       <p className="text-xs text-muted-foreground">
-        Reproduz a sequência real de sensores de uma falha documentada. Falhas
-        “inéditas” ocorreram depois de todo o treino: o que o modelo fizer é
-        resultado, não demonstração.
+        Reproduz a sequência real de sensores de uma falha documentada, a partir
+        do momento em que ela começou. Falhas “inéditas” ocorreram depois de
+        todo o treino: o que o modelo fizer é resultado, não demonstração.
       </p>
 
       {scenarios === null && !error && (
@@ -133,7 +155,7 @@ const RealFailureSectionComponent = () => {
             isActive={active?.id === s.id}
             isPending={pending === s.id}
             disabled={pending !== null}
-            onPlay={(id) => void play(id)}
+            onPlay={play}
           />
         ))}
       </ul>
@@ -145,17 +167,13 @@ const RealFailureSectionComponent = () => {
           className="flex flex-col gap-1.5 rounded-md border border-border bg-muted/40 p-2"
         >
           <div className="flex items-center justify-between text-xs">
-            <span className="font-medium text-foreground">
-              {status?.phase === "pre_failure"
-                ? "Antes da falha (janela de antecedência)"
-                : "Durante a falha"}
-            </span>
+            <span className="font-medium text-foreground">Durante a falha</span>
             <Button
               type="button"
               size="sm"
               variant="ghost"
               className="h-6 px-2 text-xs"
-              onClick={() => void play(null)}
+              onClick={playNormal}
               disabled={pending !== null}
             >
               <Square className="mr-1 h-3 w-3" /> Parar

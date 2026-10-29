@@ -20,6 +20,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime
 
+from src.core.risk import risk_index
+
 
 @dataclass(frozen=True)
 class EpisodeStats:
@@ -111,6 +113,9 @@ class EventTracker:
         return TrackerUpdate(closed=final)
 
 
-def severity_for(peak: float, critical_at: float = 0.9) -> str:
-    """``critico`` when the episode peak reaches ``critical_at``, else ``alerta``."""
-    return "critico" if peak >= critical_at else "alerta"
+def severity_for(peak: float, threshold: float, critical_at: float = 0.9) -> str:
+    """``critico`` when the episode peak reaches ``critical_at`` on the
+    model-relative risk scale (``src/core/risk.py``: 0.65 = the threshold the
+    event opened at), else ``alerta``. A raw-probability cut would mean a
+    different thing for every model (MLP 0.06 … XGBoost 0.98)."""
+    return "critico" if risk_index(peak, threshold) >= critical_at else "alerta"

@@ -26,8 +26,8 @@ export interface FeedEvent {
   message: string;
   ts: number; // epoch ms
   tone: EventTone;
-  /** Probabilidade de falha [0–1] — usada para gating de explicabilidade. */
-  probability?: number;
+  /** Índice de risco [0–1] — usado para gating de explicabilidade. */
+  risk?: number;
 }
 
 // ── Explicabilidade da IA (Feature Importance mock) ─────────────────────────
@@ -51,10 +51,7 @@ export function explanationFor(assetId: string): string {
 }
 
 export function isCriticalEvent(evt: FeedEvent): boolean {
-  if (
-    evt.probability !== undefined &&
-    evt.probability >= RISK_THRESHOLDS.CRITICAL
-  )
+  if (evt.risk !== undefined && evt.risk >= RISK_THRESHOLDS.CRITICAL)
     return true;
   return evt.tone === "warn";
 }

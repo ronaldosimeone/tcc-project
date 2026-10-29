@@ -61,6 +61,32 @@ def test_simulator_replays_scenario_in_order_with_phase(
     assert sim.scenario_status() is None
 
 
+def test_replay_ends_back_in_normal_mode(
+    monkeypatch: pytest.MonkeyPatch, fake_rows: np.ndarray
+) -> None:
+    import src.services.failure_scenarios as module
+
+    monkeypatch.setattr(module, "load_rows", lambda sid, lead: fake_rows)
+    sim = _sim()
+    sim.set_scenario("oil_leak_mt2_07", lead_minutes=0)
+    for _ in range(len(fake_rows)):
+        sim.generate_reading()
+    assert sim.mode == SimulatorMode.NORMAL
+    assert sim.scenario_status() is None
+
+
+def test_switching_to_normal_stops_the_replay(
+    monkeypatch: pytest.MonkeyPatch, fake_rows: np.ndarray
+) -> None:
+    import src.services.failure_scenarios as module
+
+    monkeypatch.setattr(module, "load_rows", lambda sid, lead: fake_rows)
+    sim = _sim()
+    sim.set_scenario("oil_leak_mt2_07", lead_minutes=0)
+    sim.mode = SimulatorMode.NORMAL
+    assert sim.scenario_status() is None
+
+
 def test_lead_window_is_reported_as_pre_failure(fake_rows: np.ndarray) -> None:
     sim = _sim()
     sim.set_scenario("air_leak_mt2_06", lead_minutes=10)  # 60 rows > 5 → clipped

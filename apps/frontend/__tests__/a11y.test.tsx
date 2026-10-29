@@ -4,7 +4,7 @@
  * Cobre os componentes/estados priorizados no brief: Dashboard principal
  * (FleetDashboard, composição real — não stubs), FleetHealthTable (tabela de
  * equipamentos), ModelStatusCard, EventFeedCard, SimulationPanel (Sheet +
- * RadioGroup + Select), AlertToastQueue (toasts + banner de conexão).
+ * cenários + Select), AlertToastQueue (toasts + banner de conexão).
  *
  * `toHaveNoViolations()` falha o teste se HOUVER qualquer violação (de
  * qualquer impacto) — o RNF-66 exige zero Critical/Serious especificamente,
@@ -97,6 +97,12 @@ beforeEach(() => {
   });
   mockUseSensorData.mockReturnValue({
     latest: { failure_probability: 0.12, predicted_class: 0, timestamp: "" },
+
+    risk: 0.12,
+
+    rawProbability: 0.12,
+
+    riskLevel: "NORMAL",
     currentLatency: { key: "frame-1", latencyMs: 22 },
     isLoading: false,
     sseStatus: "connected",
@@ -119,6 +125,12 @@ describe("a11y — FleetDashboard (Dashboard principal)", () => {
   it("não tem violações axe Critical/Serious em CRÍTICO (frota com ativo em falha)", async () => {
     mockUseSensorData.mockReturnValue({
       latest: { failure_probability: 0.91, predicted_class: 1, timestamp: "" },
+
+      risk: 0.91,
+
+      rawProbability: 0.91,
+
+      riskLevel: "CRÍTICO",
       currentLatency: null,
       isLoading: false,
       sseStatus: "connected",
@@ -139,7 +151,8 @@ describe("a11y — FleetHealthTable (tabela de equipamentos)", () => {
     const { container } = render(
       <FleetHealthTable
         effectiveRiskLevel="NORMAL"
-        effectiveProb={0.1}
+        effectiveRisk={0.1}
+        rawProbability={0.1}
         isLoading={false}
         selectedId="APU-Trem-042"
         onSelect={vi.fn()}
@@ -195,7 +208,7 @@ describe("a11y — EventFeedCard", () => {
   });
 });
 
-// ── SimulationPanel (Sheet/dialog + RadioGroup + Select) ────────────────────
+// ── SimulationPanel (Sheet/dialog + cenários + Select) ─────────────────────
 
 describe("a11y — SimulationPanel (dialog)", () => {
   it("não tem violações axe Critical/Serious quando aberto", async () => {
@@ -283,7 +296,8 @@ describe("teclado — FleetHealthTable (seleção de linha)", () => {
     render(
       <FleetHealthTable
         effectiveRiskLevel="NORMAL"
-        effectiveProb={0.1}
+        effectiveRisk={0.1}
+        rawProbability={0.1}
         isLoading={false}
         selectedId="none"
         onSelect={onSelect}
@@ -304,7 +318,8 @@ describe("teclado — FleetHealthTable (seleção de linha)", () => {
     render(
       <FleetHealthTable
         effectiveRiskLevel="NORMAL"
-        effectiveProb={0.1}
+        effectiveRisk={0.1}
+        rawProbability={0.1}
         isLoading={false}
         selectedId="none"
         onSelect={onSelect}
@@ -359,20 +374,14 @@ describe("teclado — SimulationPanel (Sheet/dialog)", () => {
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 
-  it("Tab navega pelas opções do RadioGroup de cenário", async () => {
-    const user = userEvent.setup();
+  it("a opção Normal do cenário é alcançável e indica o estado", async () => {
     render(<SimulationPanel open={true} onOpenChange={vi.fn()} />);
     await screen.findByText("Painel de Simulação");
 
-    const radios = screen.getAllByRole("radio");
-    radios[0].focus();
-    expect(radios[0]).toHaveFocus();
-
-    // Radix RadioGroup usa navegação por seta, não Tab, entre itens do
-    // mesmo grupo — comportamento nativo de "single tab stop" (WAI-ARIA
-    // APG Radio Group), preservado intencionalmente.
-    await user.keyboard("{ArrowDown}");
-    expect(radios[1]).toHaveFocus();
+    const normal = screen.getByRole("button", { name: /normal/i });
+    normal.focus();
+    expect(normal).toHaveFocus();
+    expect(normal).toHaveAttribute("aria-pressed");
   });
 });
 

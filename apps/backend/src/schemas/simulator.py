@@ -38,10 +38,13 @@ class ScenarioRequest(BaseModel):
         default=None, description="Scenario id; null = legacy MetroPT-3 windows."
     )
     lead_minutes: int = Field(
-        default=30,
+        default=0,
         ge=0,
         le=360,
-        description="Replay starts this long before the failure.",
+        description=(
+            "Replay starts this long before the failure (0 = at its "
+            "documented start, the UI default)."
+        ),
     )
 
 

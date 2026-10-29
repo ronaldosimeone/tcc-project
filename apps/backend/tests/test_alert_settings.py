@@ -588,7 +588,7 @@ async def test_all_channels_failing_releases_the_lock(db_session_factory) -> Non
 
 async def test_settings_service_none_preserves_rf24_fixed_behavior() -> None:
     """Não-regressão explícita: sem AlertSettingsService (RF-24 original),
-    o limiar continua fixo em 0.85, Telegram sempre tentado, e-mail nunca."""
+    o limiar continua fixo no default (0.65), Telegram sempre tentado, e-mail nunca."""
     adapter = AsyncMock()
     rate_limiter = AsyncMock()
     rate_limiter.try_acquire = AsyncMock(return_value=True)
@@ -596,12 +596,12 @@ async def test_settings_service_none_preserves_rf24_fixed_behavior() -> None:
         adapter=adapter, rate_limiter=rate_limiter, dashboard_url="http://localhost"
     )
     await notifier.notify_if_critical(
-        equipment_id="eq-1", equipment_name="Equip", probability=0.85, timestamp="t"
+        equipment_id="eq-1", equipment_name="Equip", probability=0.65, timestamp="t"
     )
     adapter.send_critical_failure.assert_not_awaited()
 
     await notifier.notify_if_critical(
-        equipment_id="eq-1", equipment_name="Equip", probability=0.86, timestamp="t"
+        equipment_id="eq-1", equipment_name="Equip", probability=0.66, timestamp="t"
     )
     adapter.send_critical_failure.assert_awaited_once()
 
@@ -623,7 +623,7 @@ async def test_settings_read_failure_falls_back_to_rf24_defaults() -> None:
     await notifier.notify_if_critical(
         equipment_id="eq-1", equipment_name="Equip", probability=0.86, timestamp="t"
     )
-    adapter.send_critical_failure.assert_awaited_once()  # 0.86 > 0.85 (fallback)
+    adapter.send_critical_failure.assert_awaited_once()  # 0.86 > 0.65 (fallback)
 
 
 # ---------------------------------------------------------------------------

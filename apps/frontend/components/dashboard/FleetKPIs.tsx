@@ -37,8 +37,10 @@ import { KpiShell } from "./fleet-kpis/kpi-shell";
 export type { LatencyTelemetry };
 
 interface FleetKPIsProps {
-  /** Probabilidade de falha do ativo ao vivo (0–1). */
-  liveProbability: number;
+  /** Índice de risco suavizado do ativo ao vivo (0–1, 0,65 = limiar). */
+  liveRisk: number;
+  /** Probabilidade bruta da última predição (0–1) — só no tooltip. */
+  rawProbability: number;
   /** Nível de risco efectivo do ativo ao vivo. */
   effectiveRiskLevel: RiskLevel;
   /** Última leitura de latência reportada pelo backend. `null` → ainda nenhuma. */
@@ -47,13 +49,14 @@ interface FleetKPIsProps {
 }
 
 export default function FleetKPIs({
-  liveProbability,
+  liveRisk,
+  rawProbability,
   effectiveRiskLevel,
   latencyTelemetry,
   isLoading,
 }: FleetKPIsProps) {
   // ── KPI 1: Saúde Global ──
-  const liveHealth = Math.round((1 - liveProbability) * 100);
+  const liveHealth = Math.round((1 - liveRisk) * 100);
   const fleetHealth = Math.round((liveHealth + 95 + 92 + 96 + 88) / 5);
 
   // ── KPI 4: Latência da inferência ──
@@ -90,14 +93,14 @@ export default function FleetKPIs({
 
   const inAlert = fleetAndon.filter((a) => a.status !== "NORMAL").length;
 
-  // ── KPI 3: Anomalia Máxima ──
-  const maxAnomalyPct = (liveProbability * 100).toFixed(1);
+  // ── KPI 3: Índice de risco ──
+  const riskPct = (liveRisk * 100).toFixed(1);
 
   // Sparkline da anomalia — extende a série mock com o valor actual no final
   // para que o gráfico reaja à leitura ao vivo do APU-Trem-042.
   const anomalySpark = useMemo(
-    () => [...SPARK_ANOMALY.slice(0, -1), Math.round(liveProbability * 100)],
-    [liveProbability],
+    () => [...SPARK_ANOMALY.slice(0, -1), Math.round(liveRisk * 100)],
+    [liveRisk],
   );
 
   return (
@@ -137,10 +140,14 @@ export default function FleetKPIs({
       </KpiShell>
 
       <KpiShell
-        title="Anomalia Máxima Atual"
+        title="Índice de Risco Atual"
         value={
-          <span>
-            {maxAnomalyPct}
+          <span
+            title={`Probabilidade bruta do modelo: ${(
+              rawProbability * 100
+            ).toFixed(1)}%`}
+          >
+            {riskPct}
             <span className="ml-0.5 text-base font-medium text-muted-foreground/70">
               %
             </span>

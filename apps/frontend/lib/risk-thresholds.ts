@@ -85,6 +85,41 @@ export const riskIndex = (prob: number, decisionThreshold: number): number => {
   return CRITICAL_RISK + ((1 - CRITICAL_RISK) * (p - thr)) / (1 - thr);
 };
 
+/**
+ * Índice de risco exibido na UI (0–1). Com limiar conhecido é `riskIndex`;
+ * sem ele, a própria probabilidade — coerente com as faixas fixas.
+ * Classificar o valor devolvido: `getRiskLevel(risk)` (sem limiar).
+ */
+export const toRisk = (
+  prob: number,
+  decisionThreshold?: number | null,
+): number =>
+  decisionThreshold == null
+    ? Math.min(Math.max(prob, 0), 1)
+    : riskIndex(prob, decisionThreshold);
+
+/** `0.653` → `"65.3%"`. */
+export const formatRisk = (risk: number): string =>
+  `${(Math.min(Math.max(risk, 0), 1) * 100).toFixed(1)}%`;
+
+/** Leituras na mediana exibida — a mesma persistência k = 6 do alarme (RN-03). */
+export const SMOOTHING_WINDOW = 6;
+
+/**
+ * Mediana das `SMOOTHING_WINDOW` probabilidades mais recentes (mais nova
+ * primeiro). Só para exibição: o ciclo carga/alívio do compressor faz a
+ * probabilidade de cada leitura oscilar; o alarme já exige k leituras.
+ */
+export const smoothProbability = (recent: readonly number[]): number => {
+  const xs = recent
+    .slice(0, SMOOTHING_WINDOW)
+    .filter(Number.isFinite)
+    .sort((a, b) => a - b);
+  if (xs.length === 0) return 0;
+  const mid = Math.floor(xs.length / 2);
+  return xs.length % 2 ? xs[mid] : (xs[mid - 1] + xs[mid]) / 2;
+};
+
 /** Inverso de `riskIndex`: a probabilidade em que o modelo atinge `risk`. */
 export const probabilityForRisk = (
   risk: number,

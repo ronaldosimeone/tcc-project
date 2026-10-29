@@ -36,6 +36,7 @@ function makePoint(override: Partial<SensorDataPoint> = {}): SensorDataPoint {
     Motor_current: 4.1,
     Oil_temperature: 68.3,
     failure_probability: 0.06,
+    risk: 0.06,
     predicted_class: 0,
     ...override,
   };

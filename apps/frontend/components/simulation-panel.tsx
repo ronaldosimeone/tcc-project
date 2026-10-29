@@ -5,7 +5,7 @@
  *
  * Aberto a partir do botão "Simulação" da Sidebar. Permite:
  *  - Trocar o modelo activo de inferência (RF-11)
- *  - Trocar o cenário de dados do simulador (RNF-29)
+ *  - Trocar o cenário de dados: operação normal ou uma falha real (RNF-29)
  *
  * Regra crítica: o `value` enviado para a API é SEMPRE o nome bruto
  * (`random_forest_v3`), enquanto o utilizador vê apenas a label limpa
@@ -13,7 +13,7 @@
  * `lib/model-name.ts` e é puramente sincrona.
  *
  * RNF-58: decomposto em `components/simulation-panel/*` — `ModelSection`
- * e `ScenarioSection`. Este arquivo é só o wrapper Sheet.
+ * e `RealFailureSection`. Este arquivo é só o wrapper Sheet.
  */
 
 import { Sparkles } from "lucide-react";
@@ -27,7 +27,6 @@ import {
 } from "@/components/ui/sheet";
 import { ModelSection } from "./simulation-panel/model-section";
 import { RealFailureSection } from "./simulation-panel/real-failure-section";
-import { ScenarioSection } from "./simulation-panel/scenario-section";
 
 interface SimulationPanelProps {
   open: boolean;
@@ -51,7 +50,6 @@ export function SimulationPanel({ open, onOpenChange }: SimulationPanelProps) {
 
         <div className="flex flex-1 flex-col gap-6 overflow-y-auto px-6 py-4">
           <ModelSection />
-          <ScenarioSection />
           <RealFailureSection />
         </div>
       </SheetContent>

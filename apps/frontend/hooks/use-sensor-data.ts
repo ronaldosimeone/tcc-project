@@ -7,12 +7,15 @@
  *  1. Seed (mount): GET /api/v1/predictions?size=30 — popula histórico inicial.
  *  2. SSE (contínuo): /api/stream/sensors @1Hz — atualiza currentPayload e
  *     janela deslizante de até 60 pontos (sensor data pura, sem predição).
- *  3. Prediction poll (5s): GET /api/v1/predictions?size=1 — atualiza
- *     failure_probability e predicted_class usados no gauge e no riskLevel.
- *  4. WebSocket (RF-14): push imediato quando probabilidade > 0.70.
+ *  3. Prediction poll (5s): GET /api/v1/predictions?size=6 — atualiza
+ *     failure_probability (bruta) e a mediana das 6 últimas (exibida).
+ *  4. WebSocket (RF-14): push imediato quando o modelo decide "falha".
+ *
+ * A UI mostra o ÍNDICE DE RISCO (`risk`, relativo ao limiar do modelo, ver
+ * lib/risk-thresholds) da probabilidade SUAVIZADA; a bruta fica no tooltip.
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { PredictPayload, PredictResponse } from "@/lib/api-client";
 import { formatClock } from "@/lib/format";
 import { useSSE } from "@/hooks/use-sse";
@@ -34,7 +37,12 @@ import {
   publishActiveThreshold,
   useActiveThreshold,
 } from "@/hooks/use-active-threshold";
-import { getRiskLevel } from "@/lib/risk-thresholds";
+import {
+  getRiskLevel,
+  SMOOTHING_WINDOW,
+  smoothProbability,
+  toRisk,
+} from "@/lib/risk-thresholds";
 import type { RiskLevel } from "@/lib/risk-thresholds";
 export { getRiskLevel };
 export type { RiskLevel };
@@ -45,9 +53,15 @@ export interface SensorDataPoint {
   TP3: number;
   Motor_current: number;
   Oil_temperature: number;
+  /** Probabilidade suavizada no instante do ponto (0–1). */
   failure_probability: number;
+  /** Índice de risco do ponto (0–1) — o que os gráficos exibem. */
+  risk: number;
   predicted_class: number;
 }
+
+/** Ponto como o hook o guarda; `risk` é derivado com o limiar atual. */
+type RawPoint = Omit<SensorDataPoint, "risk">;
 
 export interface SensorDataState {
   history: SensorDataPoint[];
@@ -57,7 +71,14 @@ export interface SensorDataState {
   currentLatency: LatencyTick | null;
   isLoading: boolean;
   isAnomaly: boolean;
+  /** Nível do índice de risco suavizado. */
   riskLevel: RiskLevel;
+  /** Probabilidade bruta da predição mais recente (0–1) — só tooltip. */
+  rawProbability: number;
+  /** Mediana das `SMOOTHING_WINDOW` probabilidades mais recentes (0–1). */
+  smoothedProbability: number;
+  /** Índice de risco exibido (0–1): 0,65 = o modelo decide "falha". */
+  risk: number;
   /** Limiar calibrado do modelo ativo — `null` = faixas fixas. */
   decisionThreshold: number | null;
   error: Error | null;
@@ -140,7 +161,7 @@ function sseReadingToPoint(
   r: SensorReading,
   prob: number,
   cls: number,
-): SensorDataPoint {
+): RawPoint {
   return {
     time: toTimeLabel(r.timestamp),
     TP2: parseFloat(r.TP2.toFixed(3)),
@@ -152,7 +173,7 @@ function sseReadingToPoint(
   };
 }
 
-function historyItemToPoint(item: HistoryItem): SensorDataPoint {
+function historyItemToPoint(item: HistoryItem): RawPoint {
   return {
     time: toTimeLabel(item.timestamp),
     TP2: parseFloat(item.TP2.toFixed(3)),
@@ -199,7 +220,7 @@ const EMPTY_PAYLOAD: PredictPayload = {
 // ── Hook ──────────────────────────────────────────────────────────────────
 
 export function useSensorData(): SensorDataState {
-  const [history, setHistory] = useState<SensorDataPoint[]>([]);
+  const [history, setHistory] = useState<RawPoint[]>([]);
   const [latest, setLatest] = useState<PredictResponse | null>(null);
   const [currentPayload, setCurrentPayload] =
     useState<PredictPayload>(EMPTY_PAYLOAD);
@@ -209,9 +230,20 @@ export function useSensorData(): SensorDataState {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
-  // Refs de predição — atualizados pelo prediction poll e WS sem re-render
+  // Refs de predição — atualizados pelo prediction poll e WS sem re-render.
+  // `latestProbRef` guarda a probabilidade SUAVIZADA (pontos do gráfico).
   const latestProbRef = useRef(0);
   const latestClassRef = useRef(0);
+  const recentProbsRef = useRef<number[]>([]);
+  const [smoothedProb, setSmoothedProb] = useState(0);
+
+  /** Atualiza a janela de suavização (mais nova primeiro). */
+  const updateRecent = useCallback((recent: number[]): void => {
+    recentProbsRef.current = recent.slice(0, SMOOTHING_WINDOW);
+    const smoothed = smoothProbability(recentProbsRef.current);
+    latestProbRef.current = smoothed;
+    setSmoothedProb(smoothed);
+  }, []);
 
   // Refs de deduplicação e contexto para WS
   const lastTimestampRef = useRef<string | null>(null);
@@ -278,7 +310,7 @@ export function useSensorData(): SensorDataState {
         }
 
         const newest = page.items[0];
-        latestProbRef.current = newest.failure_probability;
+        updateRecent(page.items.map((i) => i.failure_probability));
         latestClassRef.current = newest.predicted_class;
 
         setLatest({
@@ -302,15 +334,18 @@ export function useSensorData(): SensorDataState {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [updateRecent]);
 
   // ── Prediction poll: atualiza failure_probability a cada 5 s ─────────────
   useEffect(() => {
     const poll = async (): Promise<void> => {
       try {
-        const res = await fetch("/api/v1/predictions?page=1&size=1", {
-          cache: "no-store",
-        });
+        const res = await fetch(
+          `/api/v1/predictions?page=1&size=${SMOOTHING_WINDOW}`,
+          {
+            cache: "no-store",
+          },
+        );
         if (!res.ok) return;
 
         const page = (await res.json()) as HistoryPage;
@@ -318,7 +353,7 @@ export function useSensorData(): SensorDataState {
         if (page.items.length === 0) return;
 
         const newest = page.items[0];
-        latestProbRef.current = newest.failure_probability;
+        updateRecent(page.items.map((i) => i.failure_probability));
         latestClassRef.current = newest.predicted_class;
 
         setLatest({
@@ -334,7 +369,7 @@ export function useSensorData(): SensorDataState {
 
     const id = setInterval(() => void poll(), POLL_INTERVAL_MS);
     return () => clearInterval(id);
-  }, []);
+  }, [updateRecent]);
 
   // ── WebSocket: alertas push do backend quando probability > 0.70 (RF-14) ─
   useEffect(() => {
@@ -359,7 +394,7 @@ export function useSensorData(): SensorDataState {
       if (frame.type === "alert") {
         ws.send(JSON.stringify({ type: "ack", message_id: frame.message_id }));
 
-        latestProbRef.current = frame.probability;
+        updateRecent([frame.probability, ...recentProbsRef.current]);
         latestClassRef.current = frame.predicted_class;
 
         setLatest({
@@ -371,7 +406,7 @@ export function useSensorData(): SensorDataState {
 
         // Usa os últimos valores de sensor reais para o ponto do gráfico
         const sensor = lastSensorRef.current;
-        const point: SensorDataPoint = {
+        const point: RawPoint = {
           time: toTimeLabel(),
           TP2: parseFloat((sensor?.TP2 ?? 0).toFixed(3)),
           TP3: parseFloat((sensor?.TP3 ?? 0).toFixed(3)),
@@ -379,7 +414,7 @@ export function useSensorData(): SensorDataState {
           Oil_temperature: parseFloat(
             (sensor?.Oil_temperature ?? 0).toFixed(2),
           ),
-          failure_probability: parseFloat(frame.probability.toFixed(4)),
+          failure_probability: parseFloat(latestProbRef.current.toFixed(4)),
           predicted_class: frame.predicted_class,
         };
 
@@ -391,20 +426,32 @@ export function useSensorData(): SensorDataState {
     };
 
     return () => ws.close();
-  }, []);
+  }, [updateRecent]);
 
-  const prob = latest?.failure_probability ?? 0;
+  const rawProbability = latest?.failure_probability ?? 0;
   const decisionThreshold = useActiveThreshold();
-  const riskLevel = getRiskLevel(prob, decisionThreshold);
+  const risk = toRisk(smoothedProb, decisionThreshold);
+  const riskLevel = getRiskLevel(risk);
+  const historyWithRisk = useMemo(
+    () =>
+      history.map((p) => ({
+        ...p,
+        risk: toRisk(p.failure_probability, decisionThreshold),
+      })),
+    [history, decisionThreshold],
+  );
 
   return {
-    history,
+    history: historyWithRisk,
     latest,
     currentPayload,
     currentLatency,
     isLoading,
     isAnomaly: riskLevel !== "NORMAL",
     riskLevel,
+    rawProbability,
+    smoothedProbability: smoothedProb,
+    risk,
     decisionThreshold,
     error,
     sseStatus,

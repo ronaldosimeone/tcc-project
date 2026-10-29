@@ -36,6 +36,7 @@ from opentelemetry import trace
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.metrics import RAG_SAFETY_BLOCKS_TOTAL, record_grounding
+from src.core.risk import CRITICAL_RISK, risk_index
 from src.core.config import settings
 from src.core.database import get_db
 from src.core.tracing import get_tracer
@@ -92,6 +93,31 @@ def _trace_grounding(report: GroundingReport) -> None:
 
 # RF-22 — regra de negócio fixa: estritamente > 0.7 (nunca >=).
 MAINTENANCE_SUGGESTION_THRESHOLD: float = 0.7
+
+
+def _skip_reason(request: MaintenanceSuggestionRequest) -> str | None:
+    """Gate shared by ``suggest`` and ``suggest_stream``; ``None`` = fires.
+
+    With the calibrated threshold of the scoring model, the plan follows the
+    model's decision: risk >= 0.65 (``src/core/risk.py``), i.e. probability
+    >= threshold. Without it (legacy manual call): RF-22, strictly > 0.7."""
+    p = request.failure_probability
+    gate = request.decision_threshold
+    if gate is not None:
+        risk = risk_index(p, gate)
+        if risk >= CRITICAL_RISK:
+            return None
+        return (
+            f"Índice de risco ({risk * 100:.0f}%) abaixo de "
+            f"{CRITICAL_RISK * 100:.0f}% (CRÍTICO) — sugestão não acionada."
+        )
+    if p > MAINTENANCE_SUGGESTION_THRESHOLD:
+        return None
+    return (
+        f"Probabilidade de falha ({p:.2f}) não excede o limiar de "
+        f"{MAINTENANCE_SUGGESTION_THRESHOLD} — sugestão automática não acionada."
+    )
+
 
 # Deliberadamente uma constante própria de RF-22, não reaproveitada de
 # `ALERT_PROBABILITY_THRESHOLD` (core/ws_manager.py, RF-14) — mesmo valor
@@ -227,19 +253,13 @@ class MaintenanceSuggestionService:
         # o pico de um evento de modelo com limiar baixo (MLP 0,06; BiLSTM
         # 0,24) fica bem abaixo de 0,7 e nunca recebia plano. Sem limiar
         # (pedido manual): RF-22, estrito > 0.7. Abaixo: nem MCP nem Ollama.
-        gate = request.decision_threshold
-        fires = (
-            request.failure_probability >= gate
-            if gate is not None
-            else request.failure_probability > MAINTENANCE_SUGGESTION_THRESHOLD
-        )
-        if not fires:
+        skipped = _skip_reason(request)
+        if skipped is not None:
             log.info(
                 "maintenance_suggestion_skipped",
                 probability=request.failure_probability,
-                threshold=(
-                    gate if gate is not None else MAINTENANCE_SUGGESTION_THRESHOLD
-                ),
+                threshold=request.decision_threshold
+                or MAINTENANCE_SUGGESTION_THRESHOLD,
             )
             return MaintenanceSuggestionResponse(
                 triggered=False,
@@ -247,11 +267,7 @@ class MaintenanceSuggestionService:
                 markdown=None,
                 references=[],
                 model=None,
-                message=(
-                    f"Probabilidade de falha ({request.failure_probability:.2f}) não "
-                    f"excede o limiar de {MAINTENANCE_SUGGESTION_THRESHOLD} — "
-                    "sugestão automática não acionada."
-                ),
+                message=skipped,
             )
 
         # 2. Consultar o MCP (RF-21) — nenhuma lógica de busca duplicada aqui.
@@ -350,20 +366,15 @@ class MaintenanceSuggestionService:
         nunca deixa a conexão pendurada. Qualquer exceção NÃO prevista aqui
         propaga para o router, que tem sua própria rede de segurança.
         """
-        if request.failure_probability <= MAINTENANCE_SUGGESTION_THRESHOLD:
+        skipped = _skip_reason(request)
+        if skipped is not None:
             log.info(
                 "maintenance_suggestion_stream_skipped",
                 probability=request.failure_probability,
-                threshold=MAINTENANCE_SUGGESTION_THRESHOLD,
+                threshold=request.decision_threshold
+                or MAINTENANCE_SUGGESTION_THRESHOLD,
             )
-            yield SuggestionStreamEvent(
-                type="skipped",
-                message=(
-                    f"Probabilidade de falha ({request.failure_probability:.2f}) não "
-                    f"excede o limiar de {MAINTENANCE_SUGGESTION_THRESHOLD} — "
-                    "sugestão automática não acionada."
-                ),
-            )
+            yield SuggestionStreamEvent(type="skipped", message=skipped)
             return
 
         query = self._build_query(request)

@@ -14,7 +14,8 @@ describe("FleetKPIs", () => {
   it("exibe skeletons nos 4 cards quando isLoading=true", () => {
     const { container } = render(
       <FleetKPIs
-        liveProbability={0}
+        liveRisk={0}
+        rawProbability={0}
         effectiveRiskLevel="NORMAL"
         latencyTelemetry={null}
         isLoading
@@ -31,7 +32,8 @@ describe("FleetKPIs", () => {
   it("estado NORMAL: mostra a matriz Andon com o bloco ao vivo verde e o rótulo correto", () => {
     render(
       <FleetKPIs
-        liveProbability={0.12}
+        liveRisk={0.12}
+        rawProbability={0.12}
         effectiveRiskLevel="NORMAL"
         latencyTelemetry={null}
         isLoading={false}
@@ -48,7 +50,8 @@ describe("FleetKPIs", () => {
   it("estado CRÍTICO: o bloco ao vivo da matriz Andon reflete o risco", () => {
     render(
       <FleetKPIs
-        liveProbability={0.91}
+        liveRisk={0.91}
+        rawProbability={0.91}
         effectiveRiskLevel="CRÍTICO"
         latencyTelemetry={null}
         isLoading={false}
@@ -63,7 +66,8 @@ describe("FleetKPIs", () => {
   it("sem telemetria de latência: mostra 'aguardando primeira inferência'", () => {
     render(
       <FleetKPIs
-        liveProbability={0.2}
+        liveRisk={0.2}
+        rawProbability={0.2}
         effectiveRiskLevel="NORMAL"
         latencyTelemetry={null}
         isLoading={false}
@@ -77,7 +81,8 @@ describe("FleetKPIs", () => {
   it("acumula o histórico de latência a cada novo messageId e mostra a leitura mais recente", () => {
     const { rerender } = render(
       <FleetKPIs
-        liveProbability={0.2}
+        liveRisk={0.2}
+        rawProbability={0.2}
         effectiveRiskLevel="NORMAL"
         latencyTelemetry={{ messageId: "msg-1", latencyMs: 42 }}
         isLoading={false}
@@ -88,7 +93,8 @@ describe("FleetKPIs", () => {
 
     rerender(
       <FleetKPIs
-        liveProbability={0.2}
+        liveRisk={0.2}
+        rawProbability={0.2}
         effectiveRiskLevel="NORMAL"
         latencyTelemetry={{ messageId: "msg-2", latencyMs: 58 }}
         isLoading={false}
@@ -100,7 +106,8 @@ describe("FleetKPIs", () => {
     // Re-render com o MESMO messageId não deve duplicar a amostra (de-dupe).
     rerender(
       <FleetKPIs
-        liveProbability={0.2}
+        liveRisk={0.2}
+        rawProbability={0.2}
         effectiveRiskLevel="NORMAL"
         latencyTelemetry={{ messageId: "msg-2", latencyMs: 58 }}
         isLoading={false}
@@ -112,7 +119,8 @@ describe("FleetKPIs", () => {
   it("ignora leituras de latência não-finitas (NaN/Infinity)", () => {
     render(
       <FleetKPIs
-        liveProbability={0.2}
+        liveRisk={0.2}
+        rawProbability={0.2}
         effectiveRiskLevel="NORMAL"
         latencyTelemetry={{ messageId: "msg-bad", latencyMs: NaN }}
         isLoading={false}

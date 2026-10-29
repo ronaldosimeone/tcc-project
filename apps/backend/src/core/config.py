@@ -108,7 +108,8 @@ class Settings(BaseSettings):
 
     # ── Histórico / frota ────────────────────────────────────────────────
     # RN-03 aplicado online: evento abre com k amostras >= limiar e fecha
-    # com k amostras abaixo; pico >= critical_at -> severidade "critico".
+    # com k amostras abaixo; pico com risco >= critical_at (escala relativa ao
+    # limiar do modelo, src/core/risk.py: 0,65 = limiar) -> severidade "critico".
     # None (padrão) = limiar de decisão do modelo que gerou a predição (card,
     # escolhido sem vazamento). Um valor fixo só sobrepõe para experimentos —
     # com limiares OOF como 0,90/0,985 um 0,7 fixo abriria eventos falsos.

@@ -16,11 +16,10 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AlertToastQueue } from "@/components/alert-toast-queue";
-import { useSensorData, getRiskLevel } from "@/hooks/use-sensor-data";
+import { useSensorData } from "@/hooks/use-sensor-data";
 import { useAlertWebSocket } from "@/hooks/use-alert-websocket";
 import { useErrorRateStatus } from "@/hooks/use-error-rate";
 import { formatFixed } from "@/lib/format";
-import { isCriticalProb } from "@/lib/risk-thresholds";
 import { C } from "./sensor-monitor/constants";
 import { SensorMonitorHeader } from "./sensor-monitor/header";
 import { DegradedModeBanner } from "./sensor-monitor/degraded-mode-banner";
@@ -40,7 +39,9 @@ export default function SensorMonitor() {
     error,
     sseStatus,
     sseReconnectAttempt,
-    decisionThreshold,
+    risk,
+    riskLevel: effectiveRiskLevel,
+    rawProbability,
   } = useSensorData();
 
   const { alerts, status: wsStatus, acknowledge } = useAlertWebSocket();
@@ -51,10 +52,8 @@ export default function SensorMonitor() {
   // "Reconhecer" — se for usada como fallback/max aqui, o dashboard fica
   // "latched" no último pico até o operador fechar os toasts à mão.
   // A única fonte de verdade para o estado actual do compressor é o
-  // último pacote SSE (`latest.failure_probability`).
-  const effectiveProb = latest?.failure_probability ?? 0;
-  const effectiveRiskLevel = getRiskLevel(effectiveProb, decisionThreshold);
-  const anomalyScoreStr = (effectiveProb * 100).toFixed(1);
+  // predição mais recente — exibida como índice de risco suavizado.
+  const riskStr = (risk * 100).toFixed(1);
 
   const isOffline = error !== null && !isLoading;
   const isHardOffline = isOffline && history.length === 0;
@@ -63,7 +62,7 @@ export default function SensorMonitor() {
 
   // Modo "imersivo" 3-tier: cores estritamente por nível de risco oficial.
   // CRÍTICO → vermelho (reservado), ALERTA → âmbar, NORMAL → branco neutro.
-  const isCriticalState = isCriticalProb(effectiveProb, decisionThreshold);
+  const isCriticalState = effectiveRiskLevel === "CRÍTICO";
   const isAlertState = effectiveRiskLevel === "ALERTA";
 
   return (
@@ -144,12 +143,15 @@ export default function SensorMonitor() {
                 isLoading={isLoading}
               />
               <SparkKpiCard
-                title="Índice de Anomalia"
-                value={anomalyScoreStr}
+                title="Índice de Risco"
+                value={riskStr}
+                valueTitle={`Probabilidade bruta do modelo: ${(
+                  rawProbability * 100
+                ).toFixed(1)}%`}
                 unit="%"
                 icon={AlertTriangle}
                 sparkData={history}
-                sparkKey="failure_probability"
+                sparkKey="risk"
                 sparkColor={effectiveRiskLevel === "NORMAL" ? C.tp3 : C.anomaly}
                 isLoading={isLoading}
                 alertColor={effectiveRiskLevel === "CRÍTICO"}

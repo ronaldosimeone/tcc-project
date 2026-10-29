@@ -16,6 +16,7 @@ import {
   type SensorContribution,
   type WorkOrderStatus,
 } from "@/lib/history-types";
+import { riskIndex } from "@/lib/risk-thresholds";
 
 // ── DTOs (espelham src/schemas/history.py) ───────────────────────────────
 
@@ -216,7 +217,9 @@ export const updateWorkOrder = (
 // ── Conversão para o formato de UI ───────────────────────────────────────
 
 const describe = (dto: FailureEventDto): string => {
-  const peak = `pico P(falha) ${Math.round(dto.peak_probability * 100)}%`;
+  const peak = `pico de risco ${Math.round(
+    riskIndex(dto.peak_probability, dto.threshold) * 100,
+  )}%`;
   const sensors = dto.top_sensors
     .filter((s) => s.contribution > 0)
     .map((s) => s.sensor);

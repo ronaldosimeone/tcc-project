@@ -4,6 +4,7 @@ import dayjs from "dayjs";
 
 import type { FailureEventDto, WorkOrderDto } from "@/lib/history-api";
 import { FAILURE_CAUSE_LABEL } from "@/lib/history-types";
+import { CRITICAL_RISK, riskIndex } from "@/lib/risk-thresholds";
 import { cn } from "@/lib/utils";
 
 interface Step {
@@ -29,9 +30,11 @@ const buildSteps = (
     {
       label: "Episódio aberto",
       at: event.started_at,
-      detail: `P(falha) ≥ ${Math.round(
+      detail: `Risco ≥ ${Math.round(
+        CRITICAL_RISK * 100,
+      )}% (P(falha) ≥ ${Math.round(
         event.threshold * 100,
-      )}% por amostras consecutivas (RN-03)`,
+      )}%) por amostras consecutivas (RN-03)`,
       tone: "warn",
     },
   ];
@@ -39,8 +42,8 @@ const buildSteps = (
     steps.push({
       label: "Episódio encerrado",
       at: event.ended_at,
-      detail: `${event.n_samples} amostras · pico ${Math.round(
-        event.peak_probability * 100,
+      detail: `${event.n_samples} amostras · pico de risco ${Math.round(
+        riskIndex(event.peak_probability, event.threshold) * 100,
       )}%`,
       tone: event.severity === "critico" ? "danger" : "warn",
     });

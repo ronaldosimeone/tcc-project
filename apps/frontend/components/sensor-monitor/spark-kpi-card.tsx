@@ -12,6 +12,8 @@ import { Sparkline } from "./sparkline";
 export interface SparkKpiCardProps {
   title: string;
   value: string;
+  /** Tooltip do valor (ex.: probabilidade bruta por trás do índice). */
+  valueTitle?: string;
   unit: string;
   icon: React.ComponentType<{
     className?: string;
@@ -27,6 +29,7 @@ export interface SparkKpiCardProps {
 export const SparkKpiCard = memo(function SparkKpiCard({
   title,
   value,
+  valueTitle,
   unit,
   icon: Icon,
   sparkData,
@@ -47,6 +50,7 @@ export const SparkKpiCard = memo(function SparkKpiCard({
               <Skeleton data-testid="kpi-skeleton" className="mt-2 h-7 w-20" />
             ) : (
               <p
+                title={valueTitle}
                 className={cn(
                   "mt-1 text-2xl font-bold tabular-nums",
                   alertColor ? "text-destructive" : "text-foreground",

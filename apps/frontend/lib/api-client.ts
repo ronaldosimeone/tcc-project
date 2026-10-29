@@ -93,6 +93,9 @@ export interface ManualReference {
 /** Corpo de `POST /v1/maintenance/suggest[/stream]`. */
 export interface MaintenanceSuggestionPayload {
   failure_probability: number;
+  /** Limiar do modelo que gerou a probabilidade — com ele o backend aciona
+   *  a sugestão no índice de risco ≥ 65% (decisão do modelo). */
+  decision_threshold?: number;
   equipment_name: string;
   symptom_description?: string;
 }
@@ -272,7 +275,7 @@ export async function setSimulatorMode(
 
 // ── Configuração de alertas (RF-25 / RNF-49) ─────────────────────────────────
 
-/** GET /v1/settings/alerts — configuração global atual (ou o default 0.85). */
+/** GET /v1/settings/alerts — configuração global atual (ou o default 0.65). */
 export async function getAlertSettings(): Promise<AlertSettingsResponse> {
   const baseUrl = resolveBaseUrl();
 

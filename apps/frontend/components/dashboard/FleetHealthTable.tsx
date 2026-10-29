@@ -9,7 +9,7 @@
  * Cada linha exibe a saúde via <Progress> (verde/laranja/vermelho) em vez de
  * apenas texto, deixando o estado da frota legível em scan rápido.
  *
- * `React.memo` (RNF-39): props (`effectiveRiskLevel`/`effectiveProb`) só
+ * `React.memo` (RNF-39): props (`effectiveRiskLevel`/`effectiveRisk`) só
  * mudam de valor no poll de 5s ou em alerta WS — não no tick SSE de 1Hz.
  * Medido com React Profiler: sem memo, este componente re-renderizava a
  * ~1/tick SSE mesmo com os mesmos valores de props (ver
@@ -39,7 +39,10 @@ import { MOCK_ASSETS } from "./fleet-health-table/mock-assets";
 
 interface FleetHealthTableProps {
   effectiveRiskLevel: RiskLevel;
-  effectiveProb: number;
+  /** Índice de risco suavizado do ativo ao vivo (0–1). */
+  effectiveRisk: number;
+  /** Probabilidade bruta da última predição — só no tooltip. */
+  rawProbability: number;
   isLoading: boolean;
   selectedId: string;
   onSelect: (id: string) => void;
@@ -50,7 +53,8 @@ const COL_HEAD =
 
 const FleetHealthTable = memo(function FleetHealthTable({
   effectiveRiskLevel,
-  effectiveProb,
+  effectiveRisk,
+  rawProbability,
   isLoading,
   selectedId,
   onSelect,
@@ -97,7 +101,8 @@ const FleetHealthTable = memo(function FleetHealthTable({
               <tbody>
                 <LiveAssetRow
                   effectiveRiskLevel={effectiveRiskLevel}
-                  effectiveProb={effectiveProb}
+                  effectiveRisk={effectiveRisk}
+                  rawProbability={rawProbability}
                   isSelected={selectedId === LIVE_ASSET_ID}
                   onSelect={onSelect}
                 />

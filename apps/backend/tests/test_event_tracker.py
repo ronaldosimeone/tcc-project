@@ -62,5 +62,9 @@ def test_invalid_k_rejected() -> None:
 
 
 def test_severity() -> None:
-    assert severity_for(0.95) == "critico"
-    assert severity_for(0.75) == "alerta"
+    # RF threshold 0.70: 0.95 is risk 0.94, 0.75 is risk 0.71
+    assert severity_for(0.95, 0.70) == "critico"
+    assert severity_for(0.75, 0.70) == "alerta"
+    # same rule on a low-threshold model (MLP 0.06): raw 0.5 is not critical
+    assert severity_for(0.50, 0.06) == "alerta"
+    assert severity_for(0.80, 0.06) == "critico"

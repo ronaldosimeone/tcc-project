@@ -19,6 +19,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { usePredictionHistory } from "@/hooks/use-prediction-history";
 import type { RiskLevel } from "@/hooks/use-sensor-data";
 import type { PredictResponse } from "@/lib/api-client";
+import { formatRisk } from "@/lib/risk-thresholds";
 import { cn } from "@/lib/utils";
 
 export interface EventLogProps {
@@ -117,8 +118,13 @@ export const EventLog = memo(function EventLog({
                       <Icon className="h-2.5 w-2.5" />
                       {entry.riskLevel}
                     </Badge>
-                    <span className="ml-auto font-mono text-xs font-semibold tabular-nums text-foreground">
-                      {(entry.failure_probability * 100).toFixed(1)}%
+                    <span
+                      className="ml-auto font-mono text-xs font-semibold tabular-nums text-foreground"
+                      title={`Probabilidade bruta do modelo: ${(
+                        entry.failure_probability * 100
+                      ).toFixed(1)}%`}
+                    >
+                      {formatRisk(entry.risk ?? entry.failure_probability)}
                     </span>
                   </div>
                 );

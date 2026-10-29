@@ -10,6 +10,7 @@ const SPARK_DATA: SensorDataPoint[] = Array.from({ length: 12 }, (_, i) => ({
   Motor_current: 5 + Math.sin(i / 3) * 1.2,
   Oil_temperature: 72 + i * 0.3,
   failure_probability: 0.1 + i * 0.02,
+  risk: 0.1 + i * 0.02,
   predicted_class: 0,
 }));
 

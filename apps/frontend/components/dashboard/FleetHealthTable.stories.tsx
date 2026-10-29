@@ -18,7 +18,8 @@ type Story = StoryObj<typeof FleetHealthTable>;
 export const Normal: Story = {
   args: {
     effectiveRiskLevel: "NORMAL",
-    effectiveProb: 0.12,
+    effectiveRisk: 0.12,
+    rawProbability: 0.12,
     isLoading: false,
   },
 };
@@ -26,7 +27,8 @@ export const Normal: Story = {
 export const Alerta: Story = {
   args: {
     effectiveRiskLevel: "ALERTA",
-    effectiveProb: 0.48,
+    effectiveRisk: 0.48,
+    rawProbability: 0.48,
     isLoading: false,
   },
 };
@@ -34,7 +36,8 @@ export const Alerta: Story = {
 export const Critico: Story = {
   args: {
     effectiveRiskLevel: "CRÍTICO",
-    effectiveProb: 0.91,
+    effectiveRisk: 0.91,
+    rawProbability: 0.91,
     isLoading: false,
   },
 };
@@ -42,7 +45,8 @@ export const Critico: Story = {
 export const Loading: Story = {
   args: {
     effectiveRiskLevel: "NORMAL",
-    effectiveProb: 0,
+    effectiveRisk: 0,
+    rawProbability: 0,
     isLoading: true,
   },
 };

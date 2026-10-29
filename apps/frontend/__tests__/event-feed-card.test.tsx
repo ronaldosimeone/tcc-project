@@ -80,7 +80,7 @@ describe("EventFeedCard", () => {
     });
     render(<EventFeedCard />);
     expect(
-      screen.getByText(/Anomalia detectada \(72\.0%\)/),
+      screen.getByText(/Anomalia detectada \(risco 72\.0%\)/),
     ).toBeInTheDocument();
   });
 

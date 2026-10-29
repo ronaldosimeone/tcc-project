@@ -18,7 +18,7 @@ import { AlertTriangle, WifiOff, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatClock } from "@/lib/format";
-import { isCriticalProb } from "@/lib/risk-thresholds";
+import { isCriticalProb, toRisk } from "@/lib/risk-thresholds";
 import { cn } from "@/lib/utils";
 import type { WsAlert, WsStatus } from "@/hooks/use-alert-websocket";
 
@@ -63,7 +63,8 @@ interface AlertToastProps {
 }
 
 function AlertToast({ alert, onAcknowledge }: AlertToastProps) {
-  const pct = (alert.probability * 100).toFixed(1);
+  const risk = toRisk(alert.probability, alert.decision_threshold);
+  const pct = (risk * 100).toFixed(1);
   const isCritical = isCriticalProb(
     alert.probability,
     alert.decision_threshold,
@@ -112,14 +113,17 @@ function AlertToast({ alert, onAcknowledge }: AlertToastProps) {
         </span>
       </div>
 
-      {/* Probabilidade + barra de progresso */}
+      {/* Índice de risco + barra de progresso */}
       <div className="pl-3">
         <div className="mb-1.5 flex items-center justify-between">
           <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-            Prob. de Falha
+            Índice de risco
           </span>
           <Badge
             variant="outline"
+            title={`Probabilidade bruta do modelo: ${(
+              alert.probability * 100
+            ).toFixed(1)}%`}
             className={cn(
               "font-mono text-xs font-bold tabular-nums",
               isCritical
@@ -139,7 +143,7 @@ function AlertToast({ alert, onAcknowledge }: AlertToastProps) {
               "h-full rounded-full transition-[width] duration-500",
               isCritical ? "bg-red-500" : "bg-amber-500",
             )}
-            style={{ width: `${Math.min(100, alert.probability * 100)}%` }}
+            style={{ width: `${Math.min(100, risk * 100)}%` }}
           />
         </div>
       </div>

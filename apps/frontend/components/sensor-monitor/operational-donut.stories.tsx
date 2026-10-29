@@ -15,6 +15,7 @@ const MIXED_HISTORY: SensorDataPoint[] = [
   TP3: 7.8,
   Oil_temperature: 72,
   failure_probability: 0.1,
+  risk: 0.1,
   predicted_class: 0,
   ...partial,
 }));

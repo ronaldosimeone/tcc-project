@@ -87,7 +87,7 @@ describe("EventFeedCard + React.memo (integração com WebSocket real)", () => {
     // O alerta chegou via setState INTERNO do hook (não via prop do pai) —
     // o React.memo em EventFeedCard não deve (e não pode) bloquear isto.
     expect(
-      screen.getByText(/Anomalia detectada \(91\.0%\)/),
+      screen.getByText(/Anomalia detectada \(risco 91\.0%\)/),
     ).toBeInTheDocument();
   });
 });

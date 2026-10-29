@@ -13,6 +13,7 @@ import {
 } from "recharts";
 
 import type { SensorPoint } from "@/lib/history-api";
+import { CRITICAL_RISK, riskIndex } from "@/lib/risk-thresholds";
 import { PredictiveTooltip } from "./predictive-tooltip";
 
 interface PredictiveWindowChartProps {
@@ -62,9 +63,10 @@ export const PredictiveWindowChart = memo(function PredictiveWindowChart({
     const shortSpan = span < 600;
     return points.map((p) => ({
       t: relativeLabel(p.timestamp, startedAt, shortSpan),
-      p: p.failure_probability,
+      p: riskIndex(p.failure_probability, threshold),
+      raw: p.failure_probability,
     }));
-  }, [points, startedAt]);
+  }, [points, startedAt, threshold]);
 
   if (chartData.length === 0) {
     return (
@@ -77,18 +79,19 @@ export const PredictiveWindowChart = memo(function PredictiveWindowChart({
   return (
     <section>
       <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-        Probabilidade de falha · 2 h antes até 30 min depois (leituras reais)
+        Índice de risco · 2 h antes até 30 min depois (leituras reais)
       </p>
       <div className="rounded-lg border border-border bg-card p-3">
         <table className="sr-only">
           <caption>
-            Probabilidade de falha registrada ao redor do evento (limiar{" "}
+            Índice de risco registrado ao redor do evento (crítico a partir de{" "}
+            {Math.round(CRITICAL_RISK * 100)}%; limiar do modelo P(falha){" "}
             {Math.round(threshold * 100)}%)
           </caption>
           <thead>
             <tr>
               <th scope="col">Tempo relativo ao início</th>
-              <th scope="col">Probabilidade</th>
+              <th scope="col">Índice de risco</th>
             </tr>
           </thead>
           <tbody>
@@ -144,14 +147,14 @@ export const PredictiveWindowChart = memo(function PredictiveWindowChart({
                 tickFormatter={(v: number) => `${Math.round(v * 100)}%`}
                 width={40}
               />
-              <Tooltip content={<PredictiveTooltip threshold={threshold} />} />
+              <Tooltip content={<PredictiveTooltip />} />
               <ReferenceLine
-                y={threshold}
+                y={CRITICAL_RISK}
                 stroke="var(--destructive)"
                 strokeDasharray="4 3"
                 strokeWidth={1.5}
                 label={{
-                  value: `LIMIAR ${Math.round(threshold * 100)}%`,
+                  value: `CRÍTICO ${Math.round(CRITICAL_RISK * 100)}%`,
                   position: "insideTopRight",
                   fontSize: 12,
                   fill: "var(--destructive)",

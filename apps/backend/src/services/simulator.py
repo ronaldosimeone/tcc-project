@@ -171,6 +171,10 @@ class SensorSimulator:
             )
             self._mode = new_mode
             self._step = 0
+        if new_mode != SimulatorMode.FAILURE:
+            # Leaving FAILURE ends any real-failure replay.
+            self._scenario_rows, self._scenario_id = None, None
+            self._scenario_lead_rows = 0
 
     # ── Public API ────────────────────────────────────────────────────────
 
@@ -214,7 +218,10 @@ class SensorSimulator:
     def _read_failure(self, ts: datetime) -> SensorReading:
         if self._scenario_rows is not None:
             scenario_row: np.ndarray = self._scenario_rows[self._idx_scenario]
-            self._idx_scenario = (self._idx_scenario + 1) % len(self._scenario_rows)
+            self._idx_scenario += 1
+            if self._idx_scenario >= len(self._scenario_rows):
+                # The failure is over: back to normal operation, no loop.
+                self.mode = SimulatorMode.NORMAL
             return _row_to_reading(scenario_row, ts)
         row: np.ndarray = self._failure[self._idx_failure]
         self._idx_failure = (self._idx_failure + 1) % len(self._failure)
@@ -222,7 +229,7 @@ class SensorSimulator:
 
     # ── Real failure scenarios (failure_scenarios.py) ─────────────────────
 
-    def set_scenario(self, scenario_id: str | None, lead_minutes: int = 30) -> None:
+    def set_scenario(self, scenario_id: str | None, lead_minutes: int = 0) -> None:
         """Replay one real failure (from ``lead_minutes`` before it) in FAILURE
         mode; ``None`` restores the legacy MetroPT-3 failure windows."""
         if scenario_id is None:

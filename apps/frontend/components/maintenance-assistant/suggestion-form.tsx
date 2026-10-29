@@ -8,30 +8,31 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import type { MaintenanceSuggestionPayload } from "@/lib/api-client";
+import { CRITICAL_RISK } from "@/lib/risk-thresholds";
 
 export interface SuggestionFormProps {
   disabled: boolean;
-  onSubmit: (input: {
-    failure_probability: number;
-    equipment_name: string;
-    symptom_description?: string;
-  }) => void;
+  onSubmit: (input: MaintenanceSuggestionPayload) => void;
 }
 
 export function SuggestionForm({ disabled, onSubmit }: SuggestionFormProps) {
-  const probabilityId = useId();
+  const riskId = useId();
   const [equipmentName, setEquipmentName] = useState(
     "Compressor de ar industrial",
   );
   const [symptomDescription, setSymptomDescription] = useState("");
-  const [failureProbability, setFailureProbability] = useState("0.85");
+  const [riskPct, setRiskPct] = useState(String(CRITICAL_RISK * 100));
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
-    const probability = Number(failureProbability);
-    if (Number.isNaN(probability)) return;
+    const risk = Number(riskPct) / 100;
+    if (Number.isNaN(risk)) return;
+    // Índice de risco = probabilidade num modelo de limiar 0,65 (escala de
+    // lib/risk-thresholds), então o backend aciona com risco ≥ 65%.
     onSubmit({
-      failure_probability: probability,
+      failure_probability: Math.min(Math.max(risk, 0), 1),
+      decision_threshold: CRITICAL_RISK,
       equipment_name: equipmentName.trim() || "Equipamento",
       symptom_description: symptomDescription.trim() || undefined,
     });
@@ -63,20 +64,19 @@ export function SuggestionForm({ disabled, onSubmit }: SuggestionFormProps) {
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor={probabilityId}>Probabilidade de falha</Label>
+        <Label htmlFor={riskId}>Índice de risco (%)</Label>
         <Input
-          id={probabilityId}
+          id={riskId}
           type="number"
           min={0}
-          max={1}
-          step={0.01}
-          value={failureProbability}
-          onChange={(e) => setFailureProbability(e.target.value)}
+          max={100}
+          step={1}
+          value={riskPct}
+          onChange={(e) => setRiskPct(e.target.value)}
           disabled={disabled}
         />
         <p className="text-xs text-muted-foreground">
-          Neste formulário a sugestão só é gerada com probabilidade acima de 0,7
-          (RF-22). Nos eventos reais vale o limiar do modelo ativo.
+          A sugestão é gerada a partir de 65% (CRÍTICO), como nos eventos reais.
         </p>
       </div>
 

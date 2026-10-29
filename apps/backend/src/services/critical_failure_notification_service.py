@@ -1,14 +1,14 @@
 """
 CriticalFailureNotificationService — RF-24 / RNF-48 (+ RF-25 / RNF-49 + RF-?? / RNF-50/51).
 
-Orquestra: threshold (> 0.85 por padrão, estrito) -> rate limit por
+Orquestra: threshold (risco >= 0.65 por padrão) -> rate limit por
 equipamento (15 min, TelegramAlertRateLimiter) -> canais de notificação
 habilitados (Telegram e/ou e-mail, RF-25).
 
 RF-25: o limiar efetivo e os canais habilitados agora vêm de
 `AlertSettingsService` (configuração global persistida em
 `/v1/settings/alerts`) quando uma configuração foi salva;
-`CRITICAL_FAILURE_THRESHOLD` (0.85) + Telegram sempre ligado + e-mail sempre
+`CRITICAL_FAILURE_THRESHOLD` (0.65) + Telegram sempre ligado + e-mail sempre
 desligado continuam sendo os valores usados enquanto ninguém configurou nada
 (comportamento original do RF-24 preservado — ver
 `AlertSettingsService.get_settings`) e o fallback de segurança se a leitura
@@ -37,7 +37,7 @@ Telegram/Resend, o que pode bloquear por segundos) foi extraído para
 
     prediction
         v
-    probability > threshold efetivo ?  (RF-25: configurável; RF-24: 0.85 fixo
+    probability > threshold efetivo ?  (RF-25: configurável; RF-24: 0.65 fixo
         |                                enquanto não configurado)
         v
     try_acquire(equipment_id)  -- atômico, ver telegram_alert_rate_limiter.py
@@ -83,11 +83,11 @@ from src.services.telegram_notification_adapter import (
 
 log = structlog.get_logger(__name__)
 
-# RF-24 — regra de negócio fixa: estritamente > 0.85 (nunca >=). Constante
-# própria — ver comparação com RF-14 (0.70) e RF-22 (0.70) no docstring do
-# módulo: mesma faixa de valores por coincidência de domínio, três decisões
-# de negócio independentes.
-CRITICAL_FAILURE_THRESHOLD: float = 0.85
+# RF-24/RF-25 — nível padrão de notificação na escala de risco
+# (src/core/risk.py): 0.65 = notifica assim que o modelo decide "falha"
+# (o painel fica CRÍTICO). Sem limiar do modelo, vale como probabilidade
+# estritamente > nível (regra original do RF-24).
+CRITICAL_FAILURE_THRESHOLD: float = 0.65
 
 # Snapshot usado quando `settings_service` é `None` ou a leitura falha —
 # comportamento ORIGINAL do RF-24, byte a byte: Telegram sempre tentado,

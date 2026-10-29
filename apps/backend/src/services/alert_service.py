@@ -10,7 +10,7 @@ Responsible for:
   isn't configured, see ``get_alert_service``). RF-25: that threshold is
   now the global setting from ``AlertSettingsService`` when one has been
   saved via ``PUT /v1/settings/alerts``, falling back to the fixed
-  ``CRITICAL_FAILURE_THRESHOLD`` (0.85) otherwise.
+  ``CRITICAL_FAILURE_THRESHOLD`` (0.65) otherwise.
 
 Deliberately decoupled from the transport layer so it can be tested without
 a real WebSocket connection. RF-24 reuses this SAME integration point

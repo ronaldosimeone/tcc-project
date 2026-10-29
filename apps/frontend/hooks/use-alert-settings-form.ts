@@ -13,6 +13,7 @@ import {
   updateAlertSettings,
   type AlertSettingsResponse,
 } from "@/lib/api-client";
+import { CRITICAL_RISK } from "@/lib/risk-thresholds";
 
 export const MIN_THRESHOLD = 0.5;
 export const MAX_THRESHOLD = 0.95;
@@ -35,7 +36,8 @@ type SaveState = "idle" | "saving" | "saved" | "error";
 type TestState = "idle" | "testing" | "success" | "error";
 
 export function useAlertSettingsForm() {
-  const [threshold, setThreshold] = useState<number>(0.85);
+  // 0,65 = notifica assim que o painel fica CRÍTICO (o modelo decide "falha").
+  const [threshold, setThreshold] = useState<number>(CRITICAL_RISK);
   const [telegramEnabled, setTelegramEnabled] = useState<boolean>(true);
   const [emailEnabled, setEmailEnabled] = useState<boolean>(false);
   const [alertEmail, setAlertEmail] = useState<string>("");

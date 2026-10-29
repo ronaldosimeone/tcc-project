@@ -32,10 +32,8 @@ import {
   TestNotificationSection,
 } from "./alert-settings-form/save-and-test-sections";
 import { ThresholdSection } from "./alert-settings-form/threshold-section";
-import { useActiveModelInfo } from "@/hooks/use-active-model-info";
 
 export function AlertSettingsForm() {
-  const activeModel = useActiveModelInfo();
   const {
     threshold,
     telegramEnabled,
@@ -100,7 +98,6 @@ export function AlertSettingsForm() {
         threshold={threshold}
         isSaving={isSaving}
         onSliderChange={handleSliderChange}
-        activeModel={activeModel}
       />
 
       <ChannelsSection

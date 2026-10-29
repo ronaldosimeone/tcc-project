@@ -3,8 +3,8 @@ Catalogue of REAL failure scenarios for the simulator (demonstration and
 honest live test).
 
 Each scenario replays the true sensor sequence of one documented failure,
-starting ``lead_minutes`` before its reported start so the audience sees
-whether the model warns early. Sources: MetroPT-3 (2020), MetroPT 2022 and
+from its reported start (``lead_minutes`` = 0, the UI default): the platform
+detects failures in progress, it does not predict them. Sources: MetroPT-3 (2020), MetroPT 2022 and
 MetroPT2 (2022, Zenodo 7766691; labels from arXiv:2502.07394 Table 1).
 
 ``seen_in_training`` is the honesty flag shown in the UI:
@@ -112,8 +112,8 @@ SCENARIOS: tuple[FailureScenario, ...] = (
         "metropt2.parquet",
         datetime(2022, 6, 4, 10, 19, 24),
         datetime(2022, 6, 4, 14, 22, 39),
-        "Posterior a todo o treino e de outra APU. Offline: os 7 modelos "
-        "servidos a detectam antes do alarme LPS do trem.",
+        "Posterior a todo o treino e de outra APU. Offline: 6 dos 7 modelos "
+        "servidos a detectam antes do alarme LPS do trem (o autoencoder, depois).",
     ),
     FailureScenario(
         "oil_leak_mt2_07",
@@ -177,7 +177,7 @@ class _Buffer(Protocol):
 
 
 class _Simulator(Protocol):
-    def set_scenario(self, scenario_id: str | None, lead_minutes: int = 30) -> None: ...
+    def set_scenario(self, scenario_id: str | None, lead_minutes: int = 0) -> None: ...
 
 
 def start_scenario(

@@ -99,7 +99,7 @@ describe("SensorMonitor", () => {
     expect(screen.getByText(/tp3 — pressão painel/i)).toBeInTheDocument();
     expect(screen.getByText(/temperatura óleo/i)).toBeInTheDocument();
     expect(screen.getByText(/corrente motor/i)).toBeInTheDocument();
-    expect(screen.getByText(/índice de anomalia/i)).toBeInTheDocument();
+    expect(screen.getByText(/índice de risco/i)).toBeInTheDocument();
   });
 
   it("exibe a seção do Painel de Sensores com os labels corretos", async () => {

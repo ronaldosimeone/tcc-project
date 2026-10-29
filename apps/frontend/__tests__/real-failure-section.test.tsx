@@ -4,7 +4,7 @@
  * 1. Cada cenário mostra o selo certo: vista no treino (demonstração) ×
  *    inédita (teste honesto).
  * 2. Cenário sem dados no servidor fica desabilitado.
- * 3. Reproduzir envia PUT /simulator/scenario com a antecedência escolhida.
+ * 3. Reproduzir envia PUT /simulator/scenario a partir do início da falha.
  */
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -96,7 +96,7 @@ describe("RealFailureSection", () => {
     expect(button).toBeDisabled();
   });
 
-  it("reproduz com a antecedência escolhida", async () => {
+  it("reproduz a partir do início da falha", async () => {
     render(<RealFailureSection />);
     fireEvent.click(
       await screen.findByRole("button", {
@@ -117,7 +117,40 @@ describe("RealFailureSection", () => {
     );
     expect(JSON.parse(String((put?.[1] as RequestInit).body))).toEqual({
       id: "oil_leak_2022_05",
-      lead_minutes: 30,
+      lead_minutes: 0,
+    });
+  });
+
+  it("marca Normal quando nenhuma falha está em reprodução", async () => {
+    render(<RealFailureSection />);
+    const normal = await screen.findByRole("button", { name: /normal/i });
+    await waitFor(() => expect(normal).toHaveAttribute("aria-pressed", "true"));
+  });
+
+  it("Parar volta ao modo normal", async () => {
+    const playing = {
+      mode: "FAILURE",
+      scenario: SCENARIOS[0],
+      step: 3,
+      total: 10,
+      phase: "failure",
+    };
+    fetchMock.mockImplementation((url: string, init?: RequestInit) => {
+      if (url.endsWith("/simulator/scenarios"))
+        return Promise.resolve(json(SCENARIOS));
+      if (url.endsWith("/simulator/mode"))
+        return Promise.resolve(json({ mode: "NORMAL", message: "ok" }));
+      return Promise.resolve(json(init?.method === "PUT" ? IDLE : playing));
+    });
+    render(<RealFailureSection />);
+    fireEvent.click(await screen.findByRole("button", { name: /parar/i }));
+    await waitFor(() => {
+      const put = fetchMock.mock.calls.find(([url]) =>
+        String(url).endsWith("/simulator/mode"),
+      );
+      expect(JSON.parse(String((put?.[1] as RequestInit).body))).toEqual({
+        mode: "NORMAL",
+      });
     });
   });
 });

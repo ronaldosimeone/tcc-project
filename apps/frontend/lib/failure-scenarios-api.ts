@@ -51,15 +51,13 @@ export const fetchFailureScenarios = (): Promise<FailureScenario[]> =>
 export const fetchScenarioStatus = (): Promise<ScenarioStatus> =>
   getJson<ScenarioStatus>("/simulator/scenario");
 
-export const playFailureScenario = ({
-  id,
-  leadMinutes,
-}: {
-  id: string | null;
-  leadMinutes: number;
-}): Promise<ScenarioStatus> =>
+// Replay starts at the documented failure start (lead 0): the platform
+// detects failures in progress, it does not predict them.
+export const playFailureScenario = (
+  id: string | null,
+): Promise<ScenarioStatus> =>
   getJson<ScenarioStatus>("/simulator/scenario", {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ id, lead_minutes: leadMinutes }),
+    body: JSON.stringify({ id, lead_minutes: 0 }),
   });

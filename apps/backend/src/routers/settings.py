@@ -47,7 +47,7 @@ router: APIRouter = APIRouter(
     summary="Configuração global de alerta atual",
     description=(
         "[RF-25] Devolve o limiar de alerta crítico configurado. Se nenhuma "
-        "configuração foi salva ainda, devolve o default do RF-24 (0.85) "
+        "configuração foi salva ainda, devolve o default do RF-24 (0.65) "
         "SEM criar um registro no banco — leitura sem efeito colateral. "
         "Requires `X-Admin-Token` header."
     ),

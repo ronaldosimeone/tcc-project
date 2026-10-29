@@ -90,7 +90,7 @@ class FailureEventService:
         event.peak_probability = stats.peak
         event.mean_probability = stats.mean
         event.n_samples = stats.n
-        event.severity = severity_for(stats.peak, self.critical_at)
+        event.severity = severity_for(stats.peak, event.threshold, self.critical_at)
 
     async def process(
         self,
@@ -118,7 +118,9 @@ class FailureEventService:
                 asset_id=asset_id,
                 started_at=upd.opened.started_at,
                 status="open",
-                severity=severity_for(upd.opened.peak, self.critical_at),
+                severity=severity_for(
+                    upd.opened.peak, tracker.threshold, self.critical_at
+                ),
                 peak_probability=upd.opened.peak,
                 mean_probability=upd.opened.mean,
                 n_samples=upd.opened.n,
@@ -194,7 +196,9 @@ class FailureEventService:
                     asset_id=asset_id,
                     started_at=upd.opened.started_at,
                     status="open",
-                    severity=severity_for(upd.opened.peak, self.critical_at),
+                    severity=severity_for(
+                        upd.opened.peak, tracker.threshold, self.critical_at
+                    ),
                     peak_probability=upd.opened.peak,
                     mean_probability=upd.opened.mean,
                     n_samples=upd.opened.n,

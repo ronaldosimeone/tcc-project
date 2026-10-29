@@ -25,7 +25,8 @@ import { cn } from "@/lib/utils";
 
 const baseProps = {
   effectiveRiskLevel: "NORMAL" as const,
-  effectiveProb: 0.05,
+  effectiveRisk: 0.05,
+  rawProbability: 0.05,
   isLoading: false,
   selectedId: "APU-Trem-042",
   onSelect: vi.fn(),
@@ -50,7 +51,8 @@ describe("FleetHealthTable", () => {
       <FleetHealthTable
         {...baseProps}
         effectiveRiskLevel="NORMAL"
-        effectiveProb={0.05}
+        effectiveRisk={0.05}
+        rawProbability={0.05}
       />,
     );
     const liveRow = () => screen.getByText("APU-Trem-042").closest("tr")!;
@@ -60,7 +62,8 @@ describe("FleetHealthTable", () => {
       <FleetHealthTable
         {...baseProps}
         effectiveRiskLevel="CRÍTICO"
-        effectiveProb={0.8}
+        effectiveRisk={0.8}
+        rawProbability={0.8}
       />,
     );
     expect(within(liveRow()).getByText("20%")).toBeInTheDocument(); // (1-0.8)*100
@@ -104,7 +107,8 @@ describe("FleetHealthTable", () => {
       <FleetHealthTable
         {...baseProps}
         effectiveRiskLevel="CRÍTICO"
-        effectiveProb={0.9}
+        effectiveRisk={0.9}
+        rawProbability={0.9}
       />,
     );
     expect(mockedCn.mock.calls.length).toBeGreaterThan(callsAfterMount);

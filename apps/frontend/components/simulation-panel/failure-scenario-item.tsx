@@ -46,7 +46,6 @@ export const FailureScenarioItem = ({
         <HonestyBadge seen={s.seen_in_training} />
         <span className="text-xs text-muted-foreground">{s.dataset}</span>
       </div>
-      <span className="text-xs text-muted-foreground">{s.note}</span>
     </div>
     <Button
       type="button"

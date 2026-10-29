@@ -23,6 +23,7 @@ import { POLL_INTERVAL_MS } from "@/hooks/use-sensor-data";
 
 const MOCK_ITEM = {
   failure_probability: 0.05,
+  risk: 0.05,
   predicted_class: 0,
   timestamp: "2024-06-01T12:00:00.000Z",
   TP2: 5.5,
@@ -289,6 +290,7 @@ describe("Empty state — RNF-21", () => {
       Motor_current: 4.2,
       Oil_temperature: 68.5,
       failure_probability: 0.05,
+      risk: 0.05,
       predicted_class: 0,
     };
     render(
@@ -309,6 +311,7 @@ describe("Empty state — RNF-21", () => {
       Motor_current: 4.2,
       Oil_temperature: 68.5,
       failure_probability: 0.05,
+      risk: 0.05,
       predicted_class: 0,
     }));
     render(

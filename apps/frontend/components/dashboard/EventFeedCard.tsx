@@ -26,6 +26,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useIsClient } from "@/hooks/use-is-client";
 import { useAlertWebSocket } from "@/hooks/use-alert-websocket";
+import { formatRisk, toRisk } from "@/lib/risk-thresholds";
 import {
   DEMO_EVENTS,
   MAX_FEED_EVENTS,
@@ -53,15 +54,18 @@ const EventFeedCard = memo(function EventFeedCard() {
 
     const liveEvents: FeedEvent[] = alerts
       .slice(0, MAX_FEED_EVENTS)
-      .map((a, i) => ({
-        // ID estável por message_id; index só desempata colisões na render.
-        id: `live-${a.message_id ?? a.timestamp ?? i}`,
-        assetId: "APU-Trem-042",
-        message: `Anomalia detectada (${(a.probability * 100).toFixed(1)}%)`,
-        ts: a.timestamp ? new Date(a.timestamp).getTime() : now - i * 1000,
-        tone: "warn",
-        probability: a.probability,
-      }));
+      .map((a, i) => {
+        const risk = toRisk(a.probability, a.decision_threshold);
+        return {
+          // ID estável por message_id; index só desempata colisões na render.
+          id: `live-${a.message_id ?? a.timestamp ?? i}`,
+          assetId: "APU-Trem-042",
+          message: `Anomalia detectada (risco ${formatRisk(risk)})`,
+          ts: a.timestamp ? new Date(a.timestamp).getTime() : now - i * 1000,
+          tone: "warn",
+          risk,
+        };
+      });
 
     const demoEvents: FeedEvent[] = DEMO_EVENTS.map((e) => ({
       ...e,

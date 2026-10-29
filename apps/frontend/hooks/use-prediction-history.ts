@@ -15,8 +15,10 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import dayjs from "dayjs";
 import type { PredictResponse } from "@/lib/api-client";
 import { getRiskLevel, type RiskLevel } from "@/hooks/use-sensor-data";
+import { toRisk } from "@/lib/risk-thresholds";
 import { useActiveThreshold } from "@/hooks/use-active-threshold";
 
 // ── Constantes ────────────────────────────────────────────────────────────
@@ -35,7 +37,10 @@ export interface PredictionHistoryEntry {
   failure_probability: number;
   /** Classe predita: 0 = normal · 1 = falha */
   predicted_class: number;
-  /** Nível de risco derivado da probabilidade */
+  /** Índice de risco relativo ao limiar do modelo (0–1). Ausente em
+   *  entradas antigas do localStorage — nesse caso vale a probabilidade. */
+  risk?: number;
+  /** Nível de risco derivado do índice */
   riskLevel: RiskLevel;
 }
 
@@ -106,6 +111,9 @@ function writeToStorage(entries: PredictionHistoryEntry[]): void {
 
 // ── Hook ──────────────────────────────────────────────────────────────────
 
+/** Instante em segundos inteiros (chave de deduplicação). */
+const toSecond = (timestamp: string): number => dayjs(timestamp).unix();
+
 export function usePredictionHistory(
   latest: PredictResponse | null,
 ): UsePredictionHistoryReturn {
@@ -113,8 +121,10 @@ export function usePredictionHistory(
   const decisionThreshold = useActiveThreshold();
   const [history, setHistory] = useState<PredictionHistoryEntry[]>([]);
 
-  // Rastreia o último timestamp processado para impedir duplicatas
-  const lastTimestampRef = useRef<string | null>(null);
+  // Último segundo registrado. A mesma predição chega pelo poll (timestamp
+  // da predição) e pelo WebSocket em CRÍTICO (timestamp do alerta, ms
+  // depois): uma entrada por segundo, nunca uma mais antiga que a última.
+  const lastSecondRef = useRef<number | null>(null);
 
   // Efeito 1 — hidratação: lê o localStorage apenas no cliente
   useEffect(() => {
@@ -124,7 +134,9 @@ export function usePredictionHistory(
     setTimeout(() => {
       if (stored.length > 0) {
         setHistory(stored);
-        lastTimestampRef.current = stored[0]?.timestamp ?? null;
+        lastSecondRef.current = stored[0]
+          ? toSecond(stored[0].timestamp)
+          : null;
       }
       setIsMounted(true);
     }, 0);
@@ -133,19 +145,23 @@ export function usePredictionHistory(
   // Efeito 2 — persiste nova entrada quando latest muda (após hidratação)
   useEffect(() => {
     if (!isMounted || latest === null) return;
-    if (latest.timestamp === lastTimestampRef.current) return;
+    const second = toSecond(latest.timestamp);
+    if (lastSecondRef.current !== null && second <= lastSecondRef.current) {
+      return;
+    }
 
     // Descarta entradas com probabilidade inválida (NaN, Infinity, null, etc.)
     const prob = sanitizeProbability(latest.failure_probability);
     if (prob === null) return;
 
-    lastTimestampRef.current = latest.timestamp;
+    lastSecondRef.current = second;
 
     const entry: PredictionHistoryEntry = {
       id: `${latest.timestamp}-${Math.random().toString(36).slice(2, 7)}`,
       timestamp: latest.timestamp,
       failure_probability: prob,
       predicted_class: latest.predicted_class,
+      risk: toRisk(prob, decisionThreshold),
       riskLevel: getRiskLevel(prob, decisionThreshold),
     };
 
@@ -160,7 +176,7 @@ export function usePredictionHistory(
 
   const clearHistory = useCallback((): void => {
     setHistory([]);
-    lastTimestampRef.current = null;
+    lastSecondRef.current = null;
     try {
       localStorage.removeItem(PREDICTION_HISTORY_STORAGE_KEY);
     } catch {

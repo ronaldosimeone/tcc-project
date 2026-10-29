@@ -42,6 +42,12 @@ describe("FleetDashboard", () => {
   it("mostra 'Telemetria ao vivo' quando o SSE está conectado", () => {
     mockUseSensorData.mockReturnValue({
       latest: { failure_probability: 0.12, predicted_class: 0, timestamp: "" },
+
+      risk: 0.12,
+
+      rawProbability: 0.12,
+
+      riskLevel: "NORMAL",
       currentLatency: null,
       isLoading: false,
       sseStatus: "connected",
@@ -55,6 +61,12 @@ describe("FleetDashboard", () => {
   it("mostra 'Reconectando…' quando o SSE não está conectado", () => {
     mockUseSensorData.mockReturnValue({
       latest: null,
+
+      risk: 0,
+
+      rawProbability: 0,
+
+      riskLevel: "NORMAL",
       currentLatency: null,
       isLoading: true,
       sseStatus: "reconnecting",
@@ -67,6 +79,12 @@ describe("FleetDashboard", () => {
   it("sem predição ainda (latest=null): trata a probabilidade efetiva como 0 (NORMAL)", () => {
     mockUseSensorData.mockReturnValue({
       latest: null,
+
+      risk: 0,
+
+      rawProbability: 0,
+
+      riskLevel: "NORMAL",
       currentLatency: null,
       isLoading: true,
       sseStatus: "connecting",
@@ -83,6 +101,12 @@ describe("FleetDashboard", () => {
   it("estado CRÍTICO: soma +1 ao contador `critical` da distribuição", () => {
     mockUseSensorData.mockReturnValue({
       latest: { failure_probability: 0.91, predicted_class: 1, timestamp: "" },
+
+      risk: 0.91,
+
+      rawProbability: 0.91,
+
+      riskLevel: "CRÍTICO",
       currentLatency: null,
       isLoading: false,
       sseStatus: "connected",
@@ -98,6 +122,12 @@ describe("FleetDashboard", () => {
   it("adapta currentLatency.key para latencyTelemetry.messageId e repassa ao FleetKPIs", () => {
     mockUseSensorData.mockReturnValue({
       latest: { failure_probability: 0.1, predicted_class: 0, timestamp: "" },
+
+      risk: 0.1,
+
+      rawProbability: 0.1,
+
+      riskLevel: "NORMAL",
       currentLatency: { key: "frame-42", latencyMs: 37 },
       isLoading: false,
       sseStatus: "connected",
@@ -112,6 +142,12 @@ describe("FleetDashboard", () => {
   it("renderiza os stubs de EventFeedCard e ModelStatusCard", () => {
     mockUseSensorData.mockReturnValue({
       latest: null,
+
+      risk: 0,
+
+      rawProbability: 0,
+
+      riskLevel: "NORMAL",
       currentLatency: null,
       isLoading: true,
       sseStatus: "connecting",
@@ -130,6 +166,12 @@ describe("FleetDashboard", () => {
     // que encolhe é o grid tabela + modelo (min-h-0 flex-1).
     mockUseSensorData.mockReturnValue({
       latest: null,
+
+      risk: 0,
+
+      rawProbability: 0,
+
+      riskLevel: "NORMAL",
       currentLatency: null,
       isLoading: true,
       sseStatus: "connecting",

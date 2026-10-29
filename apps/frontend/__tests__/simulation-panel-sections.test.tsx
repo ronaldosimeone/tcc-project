@@ -1,5 +1,5 @@
 /**
- * Testes de ModelSection e ScenarioSection — RF-11/RNF-29 — RNF-59.
+ * Testes de ModelSection — RF-11/RNF-29 — RNF-59.
  *
  * `@/lib/api-client` é mockado (mesmo padrão de alert-settings-form.test.tsx)
  * — nenhuma chamada de rede real. `lib/model-name.ts` é usado de verdade
@@ -26,20 +26,14 @@ vi.mock("@/lib/api-client", () => ({
 }));
 
 import {
-  getSimulatorMode,
   listModels,
-  setSimulatorMode,
   swapActiveModel,
   type ModelsListResponse,
-  type SimulatorModeResponse,
 } from "@/lib/api-client";
 import { ModelSection } from "@/components/simulation-panel/model-section";
-import { ScenarioSection } from "@/components/simulation-panel/scenario-section";
 
 const mockedListModels = listModels as unknown as ReturnType<typeof vi.fn>;
 const mockedSwap = swapActiveModel as unknown as ReturnType<typeof vi.fn>;
-const mockedGetMode = getSimulatorMode as unknown as ReturnType<typeof vi.fn>;
-const mockedSetMode = setSimulatorMode as unknown as ReturnType<typeof vi.fn>;
 
 const MODELS_RESPONSE: ModelsListResponse = {
   active_model: "random_forest_v2",
@@ -121,78 +115,6 @@ describe("ModelSection", () => {
 
     await waitFor(() => {
       expect(screen.getByText("Falha ao carregar modelos")).toBeInTheDocument();
-    });
-  });
-});
-
-describe("ScenarioSection", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  const NORMAL: SimulatorModeResponse = { mode: "NORMAL", message: "ok" };
-
-  it("carrega o cenário atual e marca o radio correspondente", async () => {
-    mockedGetMode.mockResolvedValue(NORMAL);
-    render(<ScenarioSection />);
-
-    await waitFor(() => {
-      expect(screen.getByText("NORMAL")).toBeInTheDocument();
-    });
-    const normalRadio = screen.getByRole("radio", { name: /normal/i });
-    expect(normalRadio).toHaveAttribute("data-state", "checked");
-  });
-
-  it("troca de cenário ao clicar num radio diferente", async () => {
-    mockedGetMode.mockResolvedValue(NORMAL);
-    mockedSetMode.mockResolvedValue({
-      mode: "FAILURE",
-      message: "ok",
-    } as SimulatorModeResponse);
-    render(<ScenarioSection />);
-
-    await waitFor(() => {
-      expect(screen.getByRole("radio", { name: /normal/i })).toHaveAttribute(
-        "data-state",
-        "checked",
-      );
-    });
-
-    fireEvent.click(document.getElementById("scenario-FAILURE")!);
-
-    await waitFor(() => {
-      expect(mockedSetMode).toHaveBeenCalledWith("FAILURE");
-    });
-    await waitFor(() => {
-      expect(screen.getByText("FAILURE")).toBeInTheDocument();
-    });
-  });
-
-  it("exibe erro quando a troca de cenário falha", async () => {
-    mockedGetMode.mockResolvedValue(NORMAL);
-    mockedSetMode.mockRejectedValue(new Error("Falha ao trocar cenário"));
-    render(<ScenarioSection />);
-
-    await waitFor(() => {
-      expect(screen.getByRole("radio", { name: /normal/i })).toHaveAttribute(
-        "data-state",
-        "checked",
-      );
-    });
-
-    fireEvent.click(screen.getByRole("radio", { name: /degradação/i }));
-
-    await waitFor(() => {
-      expect(screen.getByText("Falha ao trocar cenário")).toBeInTheDocument();
-    });
-  });
-
-  it("exibe erro quando a leitura inicial do cenário falha", async () => {
-    mockedGetMode.mockRejectedValue(new Error("Falha ao ler cenário"));
-    render(<ScenarioSection />);
-
-    await waitFor(() => {
-      expect(screen.getByText("Falha ao ler cenário")).toBeInTheDocument();
     });
   });
 });

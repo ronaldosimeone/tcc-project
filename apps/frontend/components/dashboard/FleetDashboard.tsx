@@ -27,24 +27,23 @@ import FleetHealthTable from "@/components/dashboard/FleetHealthTable";
 import FleetKPIs from "@/components/dashboard/FleetKPIs";
 import ModelStatusCard from "@/components/dashboard/ModelStatusCard";
 import { DevProfiler } from "@/lib/dev-profiler";
-import {
-  getRiskLevel,
-  useSensorData,
-  type RiskLevel,
-} from "@/hooks/use-sensor-data";
+import { useSensorData, type RiskLevel } from "@/hooks/use-sensor-data";
 
 const LIVE_ASSET_ID = "APU-Trem-042";
 
 export default function FleetDashboard() {
   // currentLatency vem da stream SSE contínua (1 Hz) — atualiza-se em modo
   // NORMAL também, ao contrário do canal WS que só dispara em alertas.
-  const { latest, currentLatency, isLoading, sseStatus, decisionThreshold } =
-    useSensorData();
+  const {
+    currentLatency,
+    isLoading,
+    sseStatus,
+    risk: effectiveRisk,
+    riskLevel: effectiveRiskLevel,
+    rawProbability,
+  } = useSensorData();
 
   const [selectedAssetId, setSelectedAssetId] = useState<string>(LIVE_ASSET_ID);
-
-  const effectiveProb = latest?.failure_probability ?? 0;
-  const effectiveRiskLevel = getRiskLevel(effectiveProb, decisionThreshold);
 
   // Adapta o shape de `currentLatency` ({ key, latencyMs }) para a prop do
   // FleetKPIs ({ messageId, latencyMs }) — o nome do campo identificador é
@@ -111,7 +110,8 @@ export default function FleetDashboard() {
       {/* ── 4 KPIs industriais ── */}
       <DevProfiler id="FleetKPIs">
         <FleetKPIs
-          liveProbability={effectiveProb}
+          liveRisk={effectiveRisk}
+          rawProbability={rawProbability}
           effectiveRiskLevel={effectiveRiskLevel}
           latencyTelemetry={latencyTelemetry}
           isLoading={isLoading}
@@ -125,7 +125,8 @@ export default function FleetDashboard() {
           <DevProfiler id="FleetHealthTable">
             <FleetHealthTable
               effectiveRiskLevel={effectiveRiskLevel}
-              effectiveProb={effectiveProb}
+              effectiveRisk={effectiveRisk}
+              rawProbability={rawProbability}
               isLoading={isLoading}
               selectedId={selectedAssetId}
               onSelect={setSelectedAssetId}
