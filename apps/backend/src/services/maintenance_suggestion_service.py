@@ -140,6 +140,8 @@ REGRAS OBRIGATÓRIAS:
 9. Cite explicitamente o arquivo e a página de onde cada informação relevante veio, na seção "Referências".
 10. Diferencie claramente o que foi encontrado no manual do que é uma limitação do contexto recuperado.
 11. Quando houver um bloco "Evidência dos sensores", use-o apenas para orientar o diagnóstico provável e relacioná-lo aos componentes descritos nos trechos [MANUAL N]. A evidência dos sensores NUNCA justifica sozinha um passo do procedimento: todo passo deve vir dos trechos do manual.
+12. Os trechos podem tratar de falhas diferentes. Use somente os trechos que correspondem ao sintoma informado e ignore os demais.
+13. Quando o trecho trouxer passos de reparo, ferramentas, peças, testes ou ressalvas, transcreva-os de forma completa — não resuma o procedimento a uma verificação.
 
 FORMATO DE SAÍDA — Markdown, exatamente nesta estrutura:
 
@@ -148,13 +150,22 @@ FORMATO DE SAÍDA — Markdown, exatamente nesta estrutura:
 ## Diagnóstico provável
 (breve diagnóstico baseado apenas no contexto fornecido)
 
+## Causas prováveis
+(causas listadas no contexto; se nenhuma, escreva "Não especificado nos trechos recuperados.")
+
+## Ferramentas / peças
+(liste apenas o que estiver explicitamente no contexto; se nada for mencionado, escreva "Não especificado nos trechos recuperados.")
+
 ## Procedimento recomendado
 1. ...
 2. ...
 3. ...
 
-## Ferramentas / peças
-(liste apenas o que estiver explicitamente no contexto; se nada for mencionado, escreva "Não especificado nos trechos recuperados.")
+## Teste após o reparo
+(testes e critérios de liberação do contexto; se nenhum, escreva "Não especificado nos trechos recuperados.")
+
+## Ressalvas
+(ressalvas e cuidados do contexto; se nenhuma, escreva "Não especificado nos trechos recuperados.")
 
 ## Cuidados de segurança
 (avisos de segurança presentes no contexto — se nenhum estiver presente, escreva "Nenhum aviso de segurança específico encontrado nos trechos recuperados.")
@@ -600,6 +611,7 @@ def build_maintenance_suggestion_service(
         base_url=settings.ollama_base_url,
         model=settings.ollama_model,
         timeout=settings.ollama_client_timeout_seconds,
+        num_ctx=settings.ollama_num_ctx,
     )
     return MaintenanceSuggestionService(
         mcp_client=mcp_client,

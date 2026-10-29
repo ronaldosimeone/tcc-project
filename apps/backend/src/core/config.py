@@ -72,6 +72,10 @@ class Settings(BaseSettings):
         default=120.0,
         alias="OLLAMA_CLIENT_TIMEOUT_SECONDS",
     )
+    # Janela de contexto do Llama: o guia de reparo de uma falha inteira
+    # (~1k tokens por trecho, até 5 trechos) + System Prompt não cabe no
+    # default do Ollama.
+    ollama_num_ctx: int = Field(default=8192, ge=512, alias="OLLAMA_NUM_CTX")
 
     # RF-19 / RNF-43 — endereço do serviço MCP standalone (apps/mcp-server),
     # container e processo próprios (ver docker-compose.yml::mcp-server).

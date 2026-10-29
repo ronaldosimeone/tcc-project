@@ -527,3 +527,17 @@ def test_guides_dir_is_indexed_with_section_pages(tmp_path: Path) -> None:
     assert guide_meta and all(m["source"] == "guia.md" for m in guide_meta)
     assert {m["page"] for m in guide_meta} == {1, 2}
     assert all(m["doc_type"] == "diagnostic_guide" for m in guide_meta)
+
+
+def test_profile_chunk_size_keeps_a_guide_section_in_one_chunk(tmp_path: Path) -> None:
+    guides_dir = tmp_path / "guides"
+    guides_dir.mkdir()
+    chroma_dir = tmp_path / "chroma"
+    body = "Vazamento de ar: diagnostico, reparo e teste. " * 10  # > 50 chars
+    (guides_dir / "guia.md").write_text(f"## Falha\n{body}\n", encoding="utf-8")
+    (guides_dir / "guia.meta.json").write_text('{"chunk_size": 5000}', encoding="utf-8")
+
+    _index(tmp_path / "manuals", chroma_dir, extra_dirs=(guides_dir,))
+
+    docs = im.get_collection(chroma_dir).get(include=["documents"])["documents"]
+    assert len(docs) == 1 and docs[0].endswith(body.strip())

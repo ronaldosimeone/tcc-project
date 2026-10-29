@@ -63,6 +63,19 @@ async def test_generate_success_returns_message_content(monkeypatch) -> None:
     ]
 
 
+async def test_generate_sends_num_ctx_only_when_configured(monkeypatch) -> None:
+    mock_post = AsyncMock(return_value=_response(200, {"message": {"content": "# P"}}))
+    monkeypatch.setattr(httpx.AsyncClient, "post", mock_post)
+
+    await OllamaClient(base_url=BASE_URL, model=MODEL).generate("s", "u")
+    assert mock_post.await_args is not None
+    assert "options" not in mock_post.await_args.kwargs["json"]
+
+    await OllamaClient(base_url=BASE_URL, model=MODEL, num_ctx=8192).generate("s", "u")
+    assert mock_post.await_args is not None
+    assert mock_post.await_args.kwargs["json"]["options"] == {"num_ctx": 8192}
+
+
 async def test_generate_timeout_raises_ollama_unavailable(monkeypatch) -> None:
     monkeypatch.setattr(
         httpx.AsyncClient, "post", AsyncMock(side_effect=httpx.TimeoutException("x"))

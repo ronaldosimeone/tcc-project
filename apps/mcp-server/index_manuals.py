@@ -172,6 +172,9 @@ def compute_file_hash(path: Path) -> str:
 # alterar o PDF original:
 #   pages                    [primeira, última] (1-based, inclusive)
 #   strip_cross_references   remove frases "Refer to Volume/Suppliers ..."
+#   chunk_size               tamanho de chunk só deste documento (ex.: um
+#                            guia com uma seção completa por falha vira um
+#                            chunk por seção). Default: CHUNK_SIZE global
 #   min_chunk_chars          descarta chunk com menos letras que isso depois
 #                            da limpeza (ruído de OCR/cabeçalho). Default 0
 #   metadata                 pares escalares extras gravados em cada chunk
@@ -195,6 +198,7 @@ class ManualProfile:
     last_page: int | None = None
     strip_cross_references: bool = False
     min_chunk_chars: int = 0
+    chunk_size: int | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
     raw: str = ""  # JSON canônico — entra no hash efetivo
 
@@ -243,6 +247,10 @@ def load_manual_profile(pdf_path: Path) -> ManualProfile:
     ):
         raise ValueError(f"{path.name}: 'metadata' deve ter só valores escalares")
 
+    chunk_size = data.get("chunk_size")
+    if chunk_size is not None and (not isinstance(chunk_size, int) or chunk_size < 1):
+        raise ValueError(f"{path.name}: 'chunk_size' deve ser inteiro >= 1")
+
     min_chars = data.get("min_chunk_chars", 0)
     if not isinstance(min_chars, int) or min_chars < 0:
         raise ValueError(f"{path.name}: 'min_chunk_chars' deve ser inteiro >= 0")
@@ -252,6 +260,7 @@ def load_manual_profile(pdf_path: Path) -> ManualProfile:
         last_page=last,
         strip_cross_references=bool(data.get("strip_cross_references", False)),
         min_chunk_chars=min_chars,
+        chunk_size=chunk_size,
         metadata=dict(metadata),
         raw=json.dumps(data, sort_keys=True, ensure_ascii=False),
     )
@@ -442,7 +451,9 @@ def _build_chunks_for_pdf(
             continue
         if profile.strip_cross_references:
             page_text = " ".join(strip_cross_references(page_text).split())
-        page_chunks = chunk_text(page_text, chunk_size, chunk_overlap)
+        page_chunks = chunk_text(
+            page_text, profile.chunk_size or chunk_size, chunk_overlap
+        )
         for chunk_index, chunk in enumerate(page_chunks):
             if _useful_chars(chunk) < profile.min_chunk_chars:
                 continue

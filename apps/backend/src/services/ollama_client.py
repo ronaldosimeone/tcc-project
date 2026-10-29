@@ -31,10 +31,19 @@ class OllamaClient:
     """Cliente para `POST /api/chat` do Ollama — sem streaming (RF-22 pede um
     Markdown completo por resposta, não um endpoint incremental)."""
 
-    def __init__(self, base_url: str, model: str, timeout: float = 120.0) -> None:
+    def __init__(
+        self,
+        base_url: str,
+        model: str,
+        timeout: float = 120.0,
+        num_ctx: int | None = None,
+    ) -> None:
         self._base_url = base_url.rstrip("/")
         self._model = model
         self._timeout = timeout
+        # Janela de contexto pedida ao Ollama. O default dele é pequeno para
+        # um guia de reparo inteiro + System Prompt; `None` = default do Ollama.
+        self._options: dict[str, Any] = {} if num_ctx is None else {"num_ctx": num_ctx}
 
     async def generate(self, system_prompt: str, user_prompt: str) -> str:
         """
@@ -55,6 +64,8 @@ class OllamaClient:
             ],
             "stream": False,
         }
+        if self._options:
+            payload["options"] = self._options
 
         try:
             async with httpx.AsyncClient(timeout=self._timeout) as client:
@@ -126,6 +137,8 @@ class OllamaClient:
             ],
             "stream": True,
         }
+        if self._options:
+            payload["options"] = self._options
 
         try:
             async with httpx.AsyncClient(timeout=self._timeout) as client:
