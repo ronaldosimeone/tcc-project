@@ -1,7 +1,9 @@
 """
 PredictIQ — Pipeline de ingestão de manuais de manutenção (RF-20 / RNF-44).
 
-Lê PDFs de `MANUALS_DIR`, extrai texto (pypdf), divide em chunks com overlap,
+Lê PDFs de `MANUALS_DIR` e guias Markdown versionados de `GUIDES_DIR`
+(cada seção `## ` de um guia conta como uma "página" na citação), extrai
+texto (pypdf para PDF), divide em chunks com overlap,
 gera embeddings localmente (sentence-transformers) e persiste tudo no vector
 store local (`CHROMA_DB_PATH`, `vector_store.py` — sqlite3 + numpy), na
 collection `maintenance_manuals`.
@@ -94,6 +96,14 @@ MANUALS_DIR: Path = _resolve_dir(os.environ.get("MANUALS_DIR", "data/manuals"))
 # volume acima. Nome da env mantido (`CHROMA_DB_PATH`) para não quebrar
 # deploys/compose existentes; o diretório agora guarda um sqlite próprio.
 CHROMA_DB_PATH: Path = _resolve_dir(os.environ.get("CHROMA_DB_PATH", "data/chroma"))
+
+# Guias escritos pelo próprio projeto (Markdown), versionados no git — ao
+# contrário de data/manuals (PDFs de terceiros, fora do repo). Indexados
+# junto com os manuais, na mesma collection.
+GUIDES_DIR: Path = _resolve_dir(os.environ.get("GUIDES_DIR", "guides"))
+
+# Extensões indexadas (sidecars `.meta.json` nunca são documentos).
+DOCUMENT_SUFFIXES: frozenset[str] = frozenset({".pdf", ".md"})
 
 COLLECTION_NAME = "maintenance_manuals"
 
@@ -289,6 +299,25 @@ def extract_pdf_pages(path: Path) -> list[str]:
     return pages
 
 
+def extract_markdown_sections(path: Path) -> list[str]:
+    """Guia Markdown -> uma "página" por seção `## ` (o texto antes da
+    primeira seção é a página 1). Cada seção mantém o próprio título, que
+    ancora a busca semântica no assunto da seção."""
+    sections: list[list[str]] = [[]]
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if line.startswith("## ") and any(s.strip() for s in sections[-1]):
+            sections.append([])
+        sections[-1].append(line)
+    return ["\n".join(s).strip() for s in sections]
+
+
+def extract_pages(path: Path) -> list[str]:
+    """Texto por página (PDF) ou por seção (Markdown)."""
+    if path.suffix.lower() == ".md":
+        return extract_markdown_sections(path)
+    return extract_pdf_pages(path)
+
+
 # ---------------------------------------------------------------------------
 # Chunking — determinístico, com overlap, por página (mantém o metadado
 # `page` correto sem cruzar limites de página).
@@ -401,7 +430,7 @@ def _build_chunks_for_pdf(
     PDF. Não toca o vector store — só monta os dados em memória, para que um
     erro aqui nunca deixe a base em estado parcial/inconsistente."""
     profile = profile or ManualProfile()
-    pages = extract_pdf_pages(path)
+    pages = extract_pages(path)
     source = path.relative_to(manuals_dir).as_posix()
 
     ids: list[str] = []
@@ -513,15 +542,23 @@ def run_indexing(
     embedding_model_name: str,
     chunk_size: int,
     chunk_overlap: int,
+    extra_dirs: tuple[Path, ...] = (),
 ) -> IndexingStats:
     stats = IndexingStats()
 
     manuals_dir.mkdir(parents=True, exist_ok=True)
-    pdf_paths = sorted(manuals_dir.rglob("*.pdf"))  # ordem determinística
+    # (raiz, arquivo): `source` é relativo à raiz de cada documento.
+    documents = [
+        (root, path)
+        for root in (manuals_dir, *extra_dirs)
+        if root.is_dir()
+        for path in sorted(root.rglob("*"))  # ordem determinística
+        if path.is_file() and path.suffix.lower() in DOCUMENT_SUFFIXES
+    ]
 
-    if not pdf_paths:
+    if not documents:
         log.warning(
-            "Nenhum PDF encontrado em %s — coloque manuais lá e rode de novo.",
+            "Nenhum documento encontrado em %s — coloque manuais lá e rode de novo.",
             manuals_dir,
         )
         return stats
@@ -529,11 +566,11 @@ def run_indexing(
     collection = get_collection(chroma_path)
     model = load_embedding_model(embedding_model_name)  # uma vez para toda a execução
 
-    log.info("%d PDF(s) encontrado(s) em %s", len(pdf_paths), manuals_dir)
-    for pdf_path in pdf_paths:
+    log.info("%d documento(s) encontrado(s)", len(documents))
+    for root, doc_path in documents:
         index_manual(
-            pdf_path,
-            manuals_dir,
+            doc_path,
+            root,
             collection,
             model,
             chunk_size,
@@ -555,7 +592,12 @@ def main() -> IndexingStats:
         CHUNK_OVERLAP,
     )
     return run_indexing(
-        MANUALS_DIR, CHROMA_DB_PATH, EMBEDDING_MODEL, CHUNK_SIZE, CHUNK_OVERLAP
+        MANUALS_DIR,
+        CHROMA_DB_PATH,
+        EMBEDDING_MODEL,
+        CHUNK_SIZE,
+        CHUNK_OVERLAP,
+        extra_dirs=(GUIDES_DIR,),
     )
 
 

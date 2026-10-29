@@ -485,3 +485,45 @@ def test_invalid_profile_is_an_error_and_not_indexed(tmp_path: Path, bad: Any) -
     stats = _index(manuals_dir, chroma_dir)
 
     assert stats.errors == ["loco.pdf"] and stats.indexed == 0
+
+
+# ---------------------------------------------------------------------------
+# 11. Guias Markdown do projeto (GUIDES_DIR)
+# ---------------------------------------------------------------------------
+
+
+def test_markdown_sections_become_pages(tmp_path: Path) -> None:
+    guide = tmp_path / "guia.md"
+    guide.write_text(
+        "# Titulo\nintro\n\n## Vazamento de ar\nTP3 cai\n\n## Oleo\nnivel baixo\n",
+        encoding="utf-8",
+    )
+    pages = im.extract_markdown_sections(guide)
+    assert len(pages) == 3
+    assert pages[1].startswith("## Vazamento de ar")
+    assert "TP3 cai" in pages[1]
+
+
+def test_guides_dir_is_indexed_with_section_pages(tmp_path: Path) -> None:
+    manuals_dir = tmp_path / "manuals"
+    guides_dir = tmp_path / "guides"
+    manuals_dir.mkdir()
+    guides_dir.mkdir()
+    chroma_dir = tmp_path / "chroma"
+    _write_pdf(manuals_dir / "bomba.pdf", ["Manual da bomba centrifuga. " * 3])
+    (guides_dir / "guia.md").write_text(
+        "# Guia\n\n## Vazamento de ar\nTP3 cai com o compressor em alivio.\n",
+        encoding="utf-8",
+    )
+    (guides_dir / "guia.meta.json").write_text(
+        '{"metadata": {"doc_type": "diagnostic_guide"}}', encoding="utf-8"
+    )
+
+    stats = _index(manuals_dir, chroma_dir, extra_dirs=(guides_dir,))
+
+    assert stats.indexed == 2 and not stats.errors
+    metadatas = im.get_collection(chroma_dir).get(include=["metadatas"])["metadatas"]
+    guide_meta = [m for m in metadatas if m["file_name"] == "guia.md"]
+    assert guide_meta and all(m["source"] == "guia.md" for m in guide_meta)
+    assert {m["page"] for m in guide_meta} == {1, 2}
+    assert all(m["doc_type"] == "diagnostic_guide" for m in guide_meta)
